@@ -130,11 +130,11 @@ const LTEStatusComponent = ({ data, isLoading }: LTEStatusComponentProps) => {
             </div>
             {getSignalBarIcon(signalQuality)}
           </div>
-          <div className="grid gap-2">
+          <div className="grid">
             {rows.map((row) => (
               <div key={row.label}>
-                <Separator />
-                <div className="flex items-center justify-between">
+                <Separator className="mb-2" />
+                <div className="flex items-center justify-between mb-2">
                   <p className="font-semibold text-muted-foreground text-sm">
                     {row.label}
                   </p>

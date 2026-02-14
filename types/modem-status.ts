@@ -77,10 +77,14 @@ export interface NetworkStatus {
   carrier: string;
   /** Overall service quality assessment */
   service_status: ServiceStatus;
-  /** Whether carrier aggregation is active (SCC lines present in QCAINFO) */
+  /** Whether LTE carrier aggregation is active (LTE SCC lines present in QCAINFO) */
   ca_active: boolean;
-  /** Number of secondary carriers (SCC count) */
+  /** Number of LTE secondary carriers (SCC count) */
   ca_count: number;
+  /** Whether NR carrier aggregation is active (NR SCC lines present in QCAINFO) */
+  nr_ca_active: boolean;
+  /** Number of NR secondary carriers (NR SCC count) */
+  nr_ca_count: number;
 }
 
 export interface LteStatus {

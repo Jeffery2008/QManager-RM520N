@@ -48,6 +48,8 @@ t2_sim_status=""
 t2_sim_slot="1"
 t2_ca_active=false
 t2_ca_count=0
+t2_nr_ca_active=false
+t2_nr_ca_count=0
 
 # Tier 1 data (updated every cycle)
 lte_state="unknown"
@@ -184,7 +186,7 @@ parse_serving_cell() {
     sc_line=$(printf '%s\n' "$raw" | grep '"servingcell"' | head -1)
 
     case "$sc_line" in
-        *'"NOCONN"'*)  service_status="no_service" ;;
+        *'"NOCONN"'*)  service_status="idle" ;;
         *'"LIMSRV"'*)  service_status="limited" ;;
         *'"CONNECT"'*) service_status="connected" ;;
         *'"SEARCH"'*)  service_status="searching" ;;
@@ -278,9 +280,12 @@ parse_serving_cell() {
         csv=$(printf '%s' "$sc_line" | sed 's/+QENG: //g' | tr -d '"' | tr -d ' ')
 
         case "$csv" in
-            *NOCONN*|*SEARCH*)
-                lte_state="disconnected"
+            *SEARCH*)
+                lte_state="searching"
                 return
+                ;;
+            *NOCONN*)
+                lte_state="connected"
                 ;;
             *)
                 lte_state="connected"
@@ -425,15 +430,28 @@ parse_mimo() {
 parse_ca_info() {
     local raw="$1"
 
-    local scc_count
-    scc_count=$(printf '%s\n' "$raw" | grep -c '+QCAINFO: "SCC"')
+    # LTE SCC count (lines containing "LTE BAND")
+    local lte_scc_count
+    lte_scc_count=$(printf '%s\n' "$raw" | grep '+QCAINFO: "SCC"' | grep -c 'LTE BAND')
 
-    if [ "$scc_count" -gt 0 ]; then
+    if [ "$lte_scc_count" -gt 0 ]; then
         t2_ca_active=true
-        t2_ca_count=$scc_count
+        t2_ca_count=$lte_scc_count
     else
         t2_ca_active=false
         t2_ca_count=0
+    fi
+
+    # NR SCC count (lines containing "NR5G BAND" or "NRDC BAND")
+    local nr_scc_count
+    nr_scc_count=$(printf '%s\n' "$raw" | grep '+QCAINFO: "SCC"' | grep -c 'NR')
+
+    if [ "$nr_scc_count" -gt 0 ]; then
+        t2_nr_ca_active=true
+        t2_nr_ca_count=$nr_scc_count
+    else
+        t2_nr_ca_active=false
+        t2_nr_ca_count=0
     fi
 }
 
@@ -657,6 +675,8 @@ poll_tier2() {
     else
         t2_ca_active=false
         t2_ca_count=0
+        t2_nr_ca_active=false
+        t2_nr_ca_count=0
     fi
 }
 
@@ -685,6 +705,7 @@ determine_service_status() {
         return
     fi
 
+    # If we have signal values, assess quality
     local primary_rsrp=""
     if [ "$nr_state" = "connected" ] && [ -n "$nr_rsrp" ]; then
         primary_rsrp=$nr_rsrp
@@ -695,6 +716,11 @@ determine_service_status() {
     if [ -n "$primary_rsrp" ] && [ "$primary_rsrp" -gt -100 ] 2>/dev/null; then
         service_status="optimal"
     elif [ -n "$primary_rsrp" ]; then
+        service_status="connected"
+    fi
+
+    # If still idle but registered on a network, show connected
+    if [ "$service_status" = "idle" ]; then
         service_status="connected"
     fi
 }
@@ -743,7 +769,9 @@ write_cache() {
     "carrier": "${t2_carrier}",
     "service_status": "${service_status}",
     "ca_active": ${t2_ca_active},
-    "ca_count": ${t2_ca_count}
+    "ca_count": ${t2_ca_count},
+    "nr_ca_active": ${t2_nr_ca_active},
+    "nr_ca_count": ${t2_nr_ca_count}
   },
   "lte": {
     "state": "${lte_state}",

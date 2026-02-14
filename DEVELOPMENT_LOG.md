@@ -14,7 +14,8 @@
 4. [JSON Data Contract](#4-json-data-contract)
 5. [Component Wiring Progress](#5-component-wiring-progress)
 6. [Deployment Notes](#6-deployment-notes)
-7. [Remaining Work](#7-remaining-work)
+7. [Platform Quirks & Lessons Learned](#7-platform-quirks--lessons-learned)
+8. [Remaining Work](#8-remaining-work)
 
 ---
 
@@ -69,6 +70,8 @@
 | `scripts/cgi/quecmanager/at_cmd/fetch_data.sh` | `/www/cgi-bin/quecmanager/at_cmd/fetch_data.sh` | **Dashboard CGI** — serves cached JSON, zero modem contact |
 | `scripts/cgi/quecmanager/at_cmd/send_command.sh` | `/www/cgi-bin/quecmanager/at_cmd/send_command.sh` | **Terminal CGI** — POST endpoint for manual AT commands via qcmd |
 
+**Note on file extensions:** Directly-executed scripts in `/usr/bin/` have **no** `.sh` extension (`qcmd`, `qmanager_poller`, `qmanager_logread`). The logging library keeps `.sh` because it's sourced (`. /usr/lib/qmanager/qlog.sh`), not executed directly. CGI scripts keep `.sh` because the extension is part of their URL path.
+
 ### Logging System
 
 All backend scripts use the centralized logging library (`/usr/lib/qmanager/qlog.sh`). Logs are written to `/tmp/qmanager.log` (RAM disk — no flash wear).
@@ -120,14 +123,25 @@ echo "DEBUG" > /etc/qmanager/log_level
 |---|---|
 | `types/modem-status.ts` | JSON data contract as TypeScript interfaces + utility functions (signal quality, formatting) |
 | `hooks/use-modem-status.ts` | Polling hook — fetches `/cgi-bin/quecmanager/at_cmd/fetch_data.sh` every 2s, provides `data`, `isLoading`, `isStale`, `error`, `refresh()` |
-| `components/dashboard/home-component.tsx` | **Updated** — Now `"use client"`, calls `useModemStatus()`, passes data down to child components |
-| `components/dashboard/network-status.tsx` | **Updated** — Accepts `data`, `isLoading`, `isStale` props, renders dynamic network status |
+| `components/dashboard/home-component.tsx` | **Wired** — `"use client"`, calls `useModemStatus()`, passes data + `modemReachable` down to child components |
+| `components/dashboard/network-status.tsx` | **Wired** — Accepts `data`, `modemReachable`, `isLoading`, `isStale` props, renders dynamic network status |
 
 ---
 
 ## 3. AT Command Reference (Verified)
 
 All commands below have been tested against the actual RM551E-GL hardware and their response formats verified.
+
+### Important: sms_tool Output Format
+
+`sms_tool` echoes the AT command back before the modem response:
+```
+AT+COPS?                    ← echo (MUST be stripped)
++COPS: 0,0,"SMART",7       ← actual response
+OK                          ← trailing OK (MUST be stripped)
+```
+
+The `qcmd_exec()` helper in the poller strips lines starting with `AT` and `OK` before passing data to parsers. Individual parsers additionally filter for their expected prefix (e.g., `grep '^+QENG:'`) as a safety net.
 
 ### Tier 1 — Hot Data (Every 2 Seconds)
 
@@ -159,7 +173,10 @@ Note: LTE line is SEPARATE from the "servingcell" line. NR5G-NSA field order: PC
 +QENG: "servingcell","CONNECT","NR5G-SA",<duplex>,<MCC>,<MNC>,<cellID>,<PCID>,<TAC>,<ARFCN>,<band>,<NR_DL_bw>,<RSRP>,<RSRQ>,<SINR>,<scs>,<srxlev>
 ```
 
-**Key parsing note:** In LTE-only mode, `"LTE"` appears on the SAME line as `"servingcell"` (field positions shift +2 compared to EN-DC mode where they're on separate lines).
+**Key parsing notes:**
+- In LTE-only mode, `"LTE"` appears on the SAME line as `"servingcell"` (field positions shift +2 compared to EN-DC mode where they're on separate lines).
+- `NOCONN` means "registered on network, no active data session" — signal values ARE present and valid. The modem IS camped on a cell. This is NOT "no service".
+- `SEARCH` means actively searching — no signal values available, parser returns early.
 
 #### `/proc` reads (no modem lock needed)
 
@@ -212,7 +229,7 @@ Semicolon-chained command — works as a single `sms_tool` call (one lock acquis
 +QCAINFO: "PCC",1350,75,"LTE BAND 3",1,135,-115,-15,-82,5
 +QCAINFO: "SCC",9485,75,"LTE BAND 28",1,135,-108,-10,-89,0,0,-,-
 ```
-**Parsing:** Count `"SCC"` lines. If > 0, carrier aggregation is active.
+**Parsing:** Count `"SCC"` lines containing `LTE BAND` for LTE CA. Count `"SCC"` lines containing `NR` for NR CA. Both counts tracked separately.
 
 ### Boot-Only — Static Data (Once at Startup)
 
@@ -282,20 +299,22 @@ Full schema for `/tmp/qmanager_status.json`. TypeScript interfaces are in `types
   "network": {
     "type": "LTE | 5G-NSA | 5G-SA | ",
     "sim_slot": 1,
-    "carrier": "Smart",
+    "carrier": "SMART",
     "service_status": "optimal | connected | limited | no_service | searching | sim_error | unknown",
     "ca_active": false,
-    "ca_count": 0
+    "ca_count": 0,
+    "nr_ca_active": false,
+    "nr_ca_count": 0
   },
   "lte": {
     "state": "connected | disconnected | searching | limited | inactive | unknown | error",
-    "band": "B3",
-    "earfcn": 1350,
+    "band": "B28",
+    "earfcn": 9485,
     "bandwidth": 4,
     "pci": 135,
-    "rsrp": -118,
-    "rsrq": -14,
-    "sinr": 11,
+    "rsrp": -121,
+    "rsrq": -17,
+    "sinr": 7,
     "rssi": -85
   },
   "nr": {
@@ -309,21 +328,21 @@ Full schema for `/tmp/qmanager_status.json`. TypeScript interfaces are in `types
     "scs": 30
   },
   "device": {
-    "temperature": 36,
-    "cpu_usage": 0.5,
-    "memory_used_mb": 150,
-    "memory_total_mb": 512,
-    "uptime_seconds": 45910,
-    "conn_uptime_seconds": 19412,
+    "temperature": 37,
+    "cpu_usage": 1.26,
+    "memory_used_mb": 284,
+    "memory_total_mb": 569,
+    "uptime_seconds": 2110,
+    "conn_uptime_seconds": 561,
     "firmware": "RM551EGL00AAR01A04M8G",
     "build_date": "Jun 25 2025",
     "manufacturer": "Quectel",
     "imei": "356303480863545",
     "imsi": "515031726432435",
-    "iccid": "8901260420001234567",
+    "iccid": "89630321281171069681",
     "phone_number": "+639391513538",
     "lte_category": "20",
-    "mimo": "LTE 1x4"
+    "mimo": "LTE 1x2"
   },
   "traffic": {
     "rx_bytes_per_sec": 0,
@@ -343,6 +362,20 @@ Full schema for `/tmp/qmanager_status.json`. TypeScript interfaces are in `types
 5. Traffic values are raw bytes per second. Frontend converts to Mbps/Kbps.
 6. Numeric fields that may be unavailable use `null` (not `0` or `""`).
 
+### Service Status Mapping
+
+The poller maps the AT+QENG `state` field to `service_status` as follows:
+
+| AT+QENG State | Internal Mapping | Final `service_status` |
+|---|---|---|
+| `CONNECT` | `connected` | `optimal` (RSRP > -100) or `connected` (RSRP ≤ -100) |
+| `NOCONN` | `idle` → upgraded | `optimal` or `connected` based on RSRP (modem is registered, has signal) |
+| `LIMSRV` | `limited` | `limited` |
+| `SEARCH` | `searching` | `searching` |
+| No response | `unknown` | `unknown` |
+
+**Key insight:** `NOCONN` does NOT mean "no service". It means the modem is registered on the network with valid signal values but has no active data bearer (PDP context). The frontend should treat it as connected.
+
 ---
 
 ## 5. Component Wiring Progress
@@ -351,24 +384,35 @@ Full schema for `/tmp/qmanager_status.json`. TypeScript interfaces are in `types
 
 | Component | File | Status | Data Source |
 |-----------|------|--------|-------------|
-| **Network Status** | `network-status.tsx` | ✅ **DONE** | `data.network` — network type icon (5G/LTE+/LTE/3G), carrier, SIM slot, service status with pulsating rings, loading skeletons, stale indicator |
-| **4G Primary Status** | `lte-status.tsx` | ❌ Hardcoded | `data.lte` — band, EARFCN, PCI, RSRP, RSRQ, RSSI, SINR |
-| **5G Primary Status** | `nr-status.tsx` | ❌ Hardcoded | `data.nr` — band, ARFCN, PCI, RSRP, RSRQ, SINR, SCS |
+| **Network Status** | `network-status.tsx` | ✅ **DONE** | `data.network` + `data.modem_reachable` — network type icon, carrier, SIM slot, service status with pulsating rings, radio badge, loading skeletons, stale indicator |
+| **4G Primary Status** | `lte-status.tsx` | ✅ **DONE** | `data.lte` — band, EARFCN, PCI, RSRP, RSRQ, RSSI, SINR |
+| **5G Primary Status** | `nr-status.tsx` | ✅ **DONE** | `data.nr` — band, ARFCN, PCI, RSRP, RSRQ, SINR, SCS |
 | **Device Information** | `device-status.tsx` | ❌ Hardcoded | `data.device` — firmware, build date, manufacturer, IMEI, IMSI, ICCID, phone, LTE category, MIMO |
 | **Device Metrics** | `device-metrics.tsx` | ❌ Hardcoded | `data.device` (temp, CPU, memory, uptime) + `data.traffic` (live traffic, data usage) |
 | **Live Latency** | `live-latency.tsx` | ❌ Hardcoded | Separate implementation (not from poller cache) |
 | **Recent Activities** | `recent-activities.tsx` | ❌ Hardcoded | Separate implementation (event log) |
 | **Signal History** | `signal-history.tsx` | ❌ Mock data | `data.lte.rsrp/sinr` + `data.nr.rsrp/sinr` (accumulated client-side) |
 
-### Network Status Icon Logic
+### Network Status Component Details
 
-| Condition | Icon | Label |
-|-----------|------|-------|
-| `5G-NSA` | `MdOutline5G` | "5G Signal / Non-Standalone" |
-| `5G-SA` | `MdOutline5G` | "5G Signal / Standalone" |
-| `LTE` + CA active | `Md4gPlusMobiledata` | "LTE+ Signal / 4G Carrier Aggregation" |
-| `LTE` no CA | `Md4gMobiledata` | "LTE Signal / 4G Connected" |
-| No 4G/5G | `Md3gMobiledata` | "Signal / No 4G/5G" |
+**Props:** `data: NetworkStatus | null`, `modemReachable: boolean`, `isLoading: boolean`, `isStale: boolean`
+
+**Radio Badge Logic:**
+| Condition | Display |
+|-----------|---------|
+| `modemReachable === true` | 🟢 Radio On |
+| `modemReachable === false` | 🔴 Radio Off |
+
+**Network Type Circle:**
+| Condition | Icon | Background | Badge | Label / Sublabel |
+|-----------|------|------------|-------|------------------|
+| `5G-NSA` | `MdOutline5G` | `bg-primary` | ✅ green | "5G Signal" / "5G + LTE" |
+| `5G-NSA` + NR CA | `MdOutline5G` | `bg-primary` | ✅ green | "5G Signal" / "5G + LTE / NR-CA" |
+| `5G-SA` | `MdOutline5G` | `bg-primary` | ✅ green | "5G Signal" / "Standalone" |
+| `5G-SA` + NR CA | `MdOutline5G` | `bg-primary` | ✅ green | "5G Signal" / "Standalone / NR-CA" |
+| `LTE` + CA active | `Md4gPlusMobiledata` | `bg-primary` | ✅ green | "LTE+ Signal" / "4G Carrier Aggregation" |
+| `LTE` no CA | `Md4gMobiledata` | `bg-primary` | ✅ green | "LTE Signal" / "4G Connected" |
+| No 4G/5G (default) | `Md3gMobiledata` (dimmed) | `bg-muted` | ❌ red | "Signal" / "No 4G/5G" |
 
 ---
 
@@ -379,7 +423,8 @@ Full schema for `/tmp/qmanager_status.json`. TypeScript interfaces are in `types
 - Static export built with `async rewrites()` block **commented out** in `next.config.ts` (rewrites are server-side only, not compatible with `output: "export"`).
 - Init script deployed to `/etc/init.d/qmanager` with proper permissions.
 - Scripts deployed to their respective modem paths (see Section 2).
-- Modem rebooted after deployment.
+- Poller running, JSON cache updating every ~2 seconds.
+- Network Status and LTE Status components wired and displaying live data.
 
 ### Development Proxy
 
@@ -434,27 +479,123 @@ qmanager_logread -n 20           # Last 20 log entries
 qmanager_logread -f              # Follow live (Ctrl+C to stop)
 ```
 
+### Clean Restart (After Major Changes)
+
+```bash
+rm -f /var/lock/qmanager.lock /var/lock/qmanager.pid
+/etc/init.d/qmanager restart
+sleep 3
+cat /tmp/qmanager_status.json
+```
+
 ---
 
-## 7. Remaining Work
+## 7. Platform Quirks & Lessons Learned
+
+Issues encountered during deployment to the actual RM551E-GL hardware and their solutions.
+
+### BusyBox flock Does NOT Support `-w` (Timeout)
+
+**Problem:** The architecture spec uses `flock -w 5` for timed lock waits. BusyBox v1.35.0 on this OpenWRT build only supports `-s` (shared), `-x` (exclusive), `-u` (unlock), `-n` (non-blocking). No `-w` flag.
+
+**Solution:** Manual retry loop using `-n` (non-blocking) with `sleep 1`:
+```sh
+flock_wait() {
+    local fd="$1" wait_secs="$2" elapsed=0
+    while [ "$elapsed" -lt "$wait_secs" ]; do
+        flock -x -n "$fd" 2>/dev/null && return 0
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+    flock -x -n "$fd" 2>/dev/null
+}
+```
+
+### BusyBox `eval "exec 9>file"` Fails Silently on ash
+
+**Problem:** The standard `eval "exec ${LOCK_FD}>\"${LOCK_FILE}\""` pattern for opening a file descriptor fails silently on ash shell (OpenWRT's default). FD 9 is never opened, so all subsequent `flock` calls fail immediately.
+
+**Solution:** Subshell + FD redirect pattern — the shell opens the FD on subshell boundary, and the lock auto-releases on subshell exit:
+```sh
+result=$(
+    (
+        flock_wait 9 5 || exit 2
+        echo $$ > "$PID_FILE"
+        timeout 3 sms_tool at "$COMMAND" 2>/dev/null
+    ) 9>"$LOCK_FILE"
+)
+```
+
+### sms_tool Has No `-d` Device Flag
+
+**Problem:** Architecture spec assumed `sms_tool -d "/dev/ttyUSB2" at "COMMAND"`. The actual binary doesn't accept `-d`.
+
+**Solution:** Correct invocation is simply `sms_tool at 'COMMAND'`. The device is auto-detected.
+
+### sms_tool Echoes the AT Command Back
+
+**Problem:** `sms_tool` output includes the echoed command and a trailing `OK`:
+```
+AT+COPS?              ← echo
++COPS: 0,0,"SMART",7  ← actual response
+OK                     ← trailing
+```
+
+Parsers that grep for patterns like `"servingcell"` would match the echo line `AT+QENG="servingcell"` instead of the actual `+QENG:` response, producing garbage data (e.g., `"band": "BAT+QENG=servingcell"`).
+
+**Solution:** Two layers of protection:
+1. `qcmd_exec()` strips `^AT` and `^OK$` lines globally before returning
+2. Individual parsers filter for their expected prefix (e.g., `grep '^+QENG:'`)
+
+### BusyBox `tr` Does NOT Allow Empty STRING2
+
+**Problem:** `tr '\r' ''` produces `tr: STRING2 cannot be empty` on BusyBox.
+
+**Solution:** Use `tr -d '\r'` (delete mode) instead.
+
+### NOCONN ≠ No Service
+
+**Problem:** Initial implementation mapped AT+QENG state `NOCONN` → `service_status: "no_service"` and `lte_state: "disconnected"` with an early return that skipped signal parsing. This caused the dashboard to show "No Service" even though the modem was registered on LTE with valid signal.
+
+**Root Cause:** `NOCONN` means "registered on network, no active data bearer (PDP context)" — the modem IS camped on a cell with signal values present. It is NOT equivalent to "no service".
+
+**Solution:** `NOCONN` now maps to `service_status: "idle"` internally, `lte_state: "connected"`, and signal values are parsed normally. `determine_service_status()` then upgrades `idle` to `connected`/`optimal` based on actual RSRP. Only `SEARCH` triggers an early return (no signal values available).
+
+### Exit Code Convention in qcmd
+
+| Exit Code | Meaning |
+|-----------|---------|
+| 0 | Success |
+| 1 | Command timeout or modem error |
+| 2 | Lock acquisition timeout (modem busy) |
+
+This allows callers to distinguish lock contention from modem failures.
+
+### `$$` in Subshells
+
+`$$` inside command substitution gives the **parent** shell's PID, not the subshell's. This is correct for PID file tracking — the PID file records who holds the lock.
+
+---
+
+## 8. Remaining Work
 
 ### Immediate Next Steps (Home Page)
 
-1. **Wire `LTEStatusComponent`** — Accept `data.lte` props, replace hardcoded band/EARFCN/PCI/signal values.
-2. **Wire `NrStatusComponent`** — Accept `data.nr` props, same pattern.
-3. **Wire `DeviceStatus`** — Accept `data.device` props for firmware, IMEI, IMSI, ICCID, phone, LTE category, MIMO, build date, manufacturer.
-4. **Wire `DeviceMetricsComponent`** — Accept `data.device` (temperature, CPU, memory, uptime) and `data.traffic` (live traffic, data usage). Implement warning badges for high temp/CPU.
-5. **Wire `SignalHistoryComponent`** — Replace mock data generator with real-time accumulation of `data.lte.rsrp/sinr` and `data.nr.rsrp/sinr` values using a client-side ring buffer.
+1. ~~**Wire `NrStatusComponent`** — Accept `data.nr` props, same pattern as LTE status.~~ ✅ Done
+2. **Wire `DeviceStatus`** — Accept `data.device` props for firmware, IMEI, IMSI, ICCID, phone, LTE category, MIMO, build date, manufacturer.
+3. **Wire `DeviceMetricsComponent`** — Accept `data.device` (temperature, CPU, memory, uptime) and `data.traffic` (live traffic, data usage). Implement warning badges for high temp/CPU.
+4. **Wire `SignalHistoryComponent`** — Replace mock data generator with real-time accumulation of `data.lte.rsrp/sinr` and `data.nr.rsrp/sinr` values using a client-side ring buffer.
 
 ### Subsequent Pages
 
-6. **Terminal Page** — Wire to `send_command.sh` CGI endpoint (POST). Block `QSCAN` commands with user-facing message.
-7. **Cell Scanner Page** — Dedicated endpoint for `AT+QSCAN` with progress indicator and long-command flag coordination.
-8. **Cellular Information Page** — Detailed CA info, neighbor cells, band configuration.
-9. **Band Locking / APN Management** — Write-path CGI endpoints (currently only read-path exists).
+5. **Terminal Page** — Wire to `send_command.sh` CGI endpoint (POST). Block `QSCAN` commands with user-facing message.
+6. **Cell Scanner Page** — Dedicated endpoint for `AT+QSCAN` with progress indicator and long-command flag coordination.
+7. **Cellular Information Page** — Detailed CA info, neighbor cells, band configuration.
+8. **Band Locking / APN Management** — Write-path CGI endpoints (currently only read-path exists).
 
 ### Backend Improvements
 
+9. **Internet connectivity detection** — Separate mechanism to determine actual internet reachability (ping-based or DNS check), distinct from radio/modem status.
 10. **Watchdog** — Connectivity health checks (periodic ping), modem restart on extended failure.
 11. **Error recovery testing** — SIM ejection, modem unresponsive, `sms_tool` crash, stale lock scenarios.
 12. **Long command support** — Verify `AT+QSCAN` flag-based coordination between poller and Cell Scanner page.

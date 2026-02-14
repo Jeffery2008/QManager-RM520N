@@ -26,24 +26,31 @@ import type { NetworkStatus, ServiceStatus } from "@/types/modem-status";
 
 interface NetworkStatusComponentProps {
   data: NetworkStatus | null;
+  modemReachable: boolean;
   isLoading: boolean;
   isStale: boolean;
 }
 
 // --- Helper: Determine network icon & label from type + CA status ---
-function getNetworkDisplay(type: string, caActive: boolean) {
+function getNetworkDisplay(
+  type: string,
+  caActive: boolean,
+  nrCaActive: boolean
+) {
   switch (type) {
     case "5G-NSA":
       return {
         icon: <MdOutline5G className="size-full text-white" />,
         label: "5G Signal",
-        sublabel: "Non-Standalone",
+        sublabel: nrCaActive ? "5G + LTE / NR-CA" : "5G + LTE",
+        hasNetwork: true,
       };
     case "5G-SA":
       return {
         icon: <MdOutline5G className="size-full text-white" />,
         label: "5G Signal",
-        sublabel: "Standalone",
+        sublabel: nrCaActive ? "Standalone / NR-CA" : "Standalone",
+        hasNetwork: true,
       };
     case "LTE":
       return caActive
@@ -51,17 +58,20 @@ function getNetworkDisplay(type: string, caActive: boolean) {
             icon: <Md4gPlusMobiledata className="size-full text-white" />,
             label: "LTE+ Signal",
             sublabel: "4G Carrier Aggregation",
+            hasNetwork: true,
           }
         : {
             icon: <Md4gMobiledata className="size-full text-white" />,
             label: "LTE Signal",
             sublabel: "4G Connected",
+            hasNetwork: true,
           };
     default:
       return {
         icon: <Md3gMobiledata className="size-full text-white/50" />,
         label: "Signal",
         sublabel: "No 4G/5G",
+        hasNetwork: false,
       };
   }
 }
@@ -87,16 +97,45 @@ function getServiceDisplay(status: ServiceStatus) {
 }
 
 // Color map for the pulsating service rings
-const serviceColorMap: Record<string, { ring1: string; ring2: string; ring3: string; center: string }> = {
-  green: { ring1: "bg-green-200", ring2: "bg-green-300", ring3: "bg-green-400", center: "bg-green-600" },
-  blue: { ring1: "bg-blue-200", ring2: "bg-blue-300", ring3: "bg-blue-400", center: "bg-blue-600" },
-  yellow: { ring1: "bg-yellow-200", ring2: "bg-yellow-300", ring3: "bg-yellow-400", center: "bg-yellow-600" },
-  red: { ring1: "bg-red-200", ring2: "bg-red-300", ring3: "bg-red-400", center: "bg-red-600" },
-  gray: { ring1: "bg-gray-200", ring2: "bg-gray-300", ring3: "bg-gray-400", center: "bg-gray-600" },
+const serviceColorMap: Record<
+  string,
+  { ring1: string; ring2: string; ring3: string; center: string }
+> = {
+  green: {
+    ring1: "bg-green-200",
+    ring2: "bg-green-300",
+    ring3: "bg-green-400",
+    center: "bg-green-600",
+  },
+  blue: {
+    ring1: "bg-blue-200",
+    ring2: "bg-blue-300",
+    ring3: "bg-blue-400",
+    center: "bg-blue-600",
+  },
+  yellow: {
+    ring1: "bg-yellow-200",
+    ring2: "bg-yellow-300",
+    ring3: "bg-yellow-400",
+    center: "bg-yellow-600",
+  },
+  red: {
+    ring1: "bg-red-200",
+    ring2: "bg-red-300",
+    ring3: "bg-red-400",
+    center: "bg-red-600",
+  },
+  gray: {
+    ring1: "bg-gray-200",
+    ring2: "bg-gray-300",
+    ring3: "bg-gray-400",
+    center: "bg-gray-600",
+  },
 };
 
 const NetworkStatusComponent = ({
   data,
+  modemReachable,
   isLoading,
   isStale,
 }: NetworkStatusComponentProps) => {
@@ -106,14 +145,25 @@ const NetworkStatusComponent = ({
   const carrier = data?.carrier ?? "";
   const simSlot = data?.sim_slot ?? 1;
   const caActive = data?.ca_active ?? false;
+  const nrCaActive = data?.nr_ca_active ?? false;
 
-  const networkDisplay = getNetworkDisplay(networkType, caActive);
+  const networkDisplay = getNetworkDisplay(networkType, caActive, nrCaActive);
   const serviceDisplay = getServiceDisplay(serviceStatus);
-  const serviceColors = serviceColorMap[serviceDisplay.color] ?? serviceColorMap.gray;
+  const serviceColors =
+    serviceColorMap[serviceDisplay.color] ?? serviceColorMap.gray;
 
-  const isConnected =
+  // Radio is ON when the modem is reachable (AT+CFUN=1 implied by modem responding)
+  const radioOn = modemReachable;
+
+  // Service is active when we have a good service status
+  const isServiceActive =
     serviceStatus === "optimal" || serviceStatus === "connected";
-  const hasInternet = isConnected;
+
+  // Whether we have a real network (LTE/5G), not fallback 3G
+  const hasNetwork = networkDisplay.hasNetwork;
+
+  // Internet status — placeholder for now, user will handle later
+  const hasInternet = isServiceActive;
 
   return (
     <Card className="@container/card">
@@ -142,19 +192,19 @@ const NetworkStatusComponent = ({
                 </Badge>
               )}
 
-              {/* Radio status */}
+              {/* Radio status — based on modem reachability */}
               <Badge
                 variant="outline"
                 className={
-                  isConnected
+                  radioOn
                     ? "bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-300/50 backdrop-blur-sm"
                     : "bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-300/50 backdrop-blur-sm"
                 }
               >
                 <div
-                  className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+                  className={`w-2 h-2 rounded-full ${radioOn ? "bg-green-500" : "bg-red-500"}`}
                 />
-                {isConnected ? "Radio On" : "Radio Off"}
+                {radioOn ? "Radio On" : "Radio Off"}
               </Badge>
 
               {/* Internet status */}
@@ -189,18 +239,18 @@ const NetworkStatusComponent = ({
               <div className="relative">
                 <div
                   className={`rounded-full size-36 flex items-center justify-center p-2 ${
-                    isConnected ? "bg-primary" : "bg-muted"
+                    hasNetwork ? "bg-primary" : "bg-muted"
                   }`}
                 >
                   {networkDisplay.icon}
                 </div>
-                {/* Status badge overlay */}
+                {/* Status badge overlay — check when 4G/5G, X when 3G fallback */}
                 <div
                   className={`absolute top-1 right-4 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${
-                    isConnected ? "bg-green-500" : "bg-red-500"
+                    hasNetwork ? "bg-green-500" : "bg-red-500"
                   }`}
                 >
-                  {isConnected ? (
+                  {hasNetwork ? (
                     <FaCheck className="w-4 h-4 text-white" />
                   ) : (
                     <FaXmark className="w-4 h-4 text-white" />
@@ -233,10 +283,10 @@ const NetworkStatusComponent = ({
                 </div>
                 <div
                   className={`absolute top-1 right-4 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${
-                    isConnected ? "bg-green-500" : "bg-red-500"
+                    isServiceActive ? "bg-green-500" : "bg-red-500"
                   }`}
                 >
-                  {isConnected ? (
+                  {isServiceActive ? (
                     <FaCheck className="w-4 h-4 text-white" />
                   ) : (
                     <FaXmark className="w-4 h-4 text-white" />
@@ -264,7 +314,7 @@ const NetworkStatusComponent = ({
           ) : (
             <div className="grid gap-2">
               <div className="relative flex items-center justify-center size-36">
-                {isConnected ? (
+                {isServiceActive ? (
                   <>
                     <div
                       className={`absolute rounded-full size-36 ${serviceColors.ring1} animate-pulse-ring`}
@@ -280,9 +330,15 @@ const NetworkStatusComponent = ({
                   </>
                 ) : (
                   <>
-                    <div className={`absolute rounded-full size-36 ${serviceColors.ring1}`} />
-                    <div className={`absolute rounded-full size-28 ${serviceColors.ring2}`} />
-                    <div className={`absolute rounded-full size-20 ${serviceColors.ring3}`} />
+                    <div
+                      className={`absolute rounded-full size-36 ${serviceColors.ring1}`}
+                    />
+                    <div
+                      className={`absolute rounded-full size-28 ${serviceColors.ring2}`}
+                    />
+                    <div
+                      className={`absolute rounded-full size-20 ${serviceColors.ring3}`}
+                    />
                   </>
                 )}
                 <div
