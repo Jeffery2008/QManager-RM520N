@@ -18,10 +18,11 @@ import {
   WorkflowIcon,
   DogIcon,
   RouterIcon,
-  RulerIcon,
   TimerIcon,
-  User2Icon
+  User2Icon,
 } from "lucide-react";
+
+import QManagerLogo from "@/public/qmanager-logo.svg";
 
 import { NavMain } from "@/components/nav-main";
 import { NavLocalNetwork } from "@/components/nav-localNetwork";
@@ -38,11 +39,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import Image from "next/image";
 
 const data = {
   user: {
     name: "user-test",
-    avatar: "/qmanager-logo.svg",
+    avatar: QManagerLogo,
   },
   navMain: [
     {
@@ -202,7 +204,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild>
               <a href="#">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <img src="/qmanager-logo.svg" alt="QManager Logo" />
+                  <Image
+                    src={QManagerLogo}
+                    alt="QManager Logo"
+                    className="size-full"
+                    priority
+                  />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">QManager</span>

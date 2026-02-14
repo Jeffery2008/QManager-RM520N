@@ -48,7 +48,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 
 const NetworkEventsCard = () => {
   const [activeTab, setActiveTab] = useState<string>("all");
