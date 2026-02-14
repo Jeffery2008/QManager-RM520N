@@ -1,0 +1,856 @@
+#!/bin/sh
+# =============================================================================
+# qmanager_poller — QManager Background Poller Daemon
+# =============================================================================
+# Continuously gathers modem data and system metrics, writes to the
+# JSON state cache at /tmp/qmanager_status.json.
+#
+# Strategy: "Sip, Don't Gulp"
+#   - Acquire lock → run ONE AT command → release → sleep → repeat
+#   - Leaves gaps for terminal/watchdog to access the modem
+#
+# Tiers:
+#   Tier 1 (Hot):  Every cycle (~2s)  — AT+QENG="servingcell", /proc reads
+#   Tier 2 (Warm): Every 15 cycles    — AT+QTEMP, AT+COPS?, AT+CPIN?, AT+QUIMSLOT?
+#   Boot-only:     Once at startup    — AT+CVERSION, AT+CGSN, AT+CIMI, AT+QCCID,
+#                                       AT+CNUM, AT+QGETCAPABILITY, AT+QNWCFG="lte_mimo_layers"
+#
+# Install location: /usr/bin/qmanager_poller
+# =============================================================================
+
+# --- Configuration -----------------------------------------------------------
+CACHE_FILE="/tmp/qmanager_status.json"
+CACHE_TMP="/tmp/qmanager_status.json.tmp"
+LONG_FLAG="/tmp/qmanager_long_running"
+POLL_INTERVAL=2        # seconds between Tier 1 cycles
+TIER2_EVERY=15         # Tier 2 runs every N cycles
+NETWORK_IFACE="wwan0"  # Network interface for traffic stats
+SIP_DELAY=0.1          # Delay between AT commands (seconds)
+
+# --- State Variables ---------------------------------------------------------
+cycle_count=0
+
+# Boot-only data (populated once)
+boot_firmware=""
+boot_build_date=""
+boot_manufacturer=""
+boot_imei=""
+boot_imsi=""
+boot_iccid=""
+boot_phone_number=""
+boot_lte_category=""
+boot_mimo=""
+
+# Tier 2 data (updated periodically)
+t2_temperature=""
+t2_carrier=""
+t2_sim_status=""
+t2_sim_slot="1"
+t2_ca_active=false
+t2_ca_count=0
+
+# Tier 1 data (updated every cycle)
+lte_state="unknown"
+lte_band=""
+lte_earfcn=""
+lte_bandwidth=""
+lte_pci=""
+lte_rsrp=""
+lte_rsrq=""
+lte_sinr=""
+lte_rssi=""
+
+nr_state="unknown"
+nr_band=""
+nr_arfcn=""
+nr_pci=""
+nr_rsrp=""
+nr_rsrq=""
+nr_sinr=""
+nr_scs=""
+
+# Network state
+network_type=""
+service_status="unknown"
+system_state="normal"
+modem_reachable=true
+
+# Error tracking
+errors=""
+
+# Traffic tracking
+prev_rx_bytes=0
+prev_tx_bytes=0
+rx_bytes_per_sec=0
+tx_bytes_per_sec=0
+
+# Data usage tracking
+total_rx_bytes=0
+total_tx_bytes=0
+
+# Connection uptime tracking
+conn_uptime_seconds=0
+conn_start_time=0
+
+# System metrics
+cpu_usage=0
+memory_used_mb=0
+memory_total_mb=0
+uptime_seconds=0
+
+# --- Logging -----------------------------------------------------------------
+. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+    # Fallback if logging library not found
+    qlog_init() { :; }
+    qlog_debug() { :; }
+    qlog_info() { :; }
+    qlog_warn() { :; }
+    qlog_error() { :; }
+    qlog_at_cmd() { :; }
+    qlog_lock() { :; }
+    qlog_state_change() { :; }
+}
+qlog_init "poller"
+
+# Backward-compatible aliases (used throughout this script)
+log_info()  { qlog_info  "$1"; }
+log_warn()  { qlog_warn  "$1"; }
+log_error() { qlog_error "$1"; }
+
+# --- Helper: Safe qcmd Call --------------------------------------------------
+# Calls qcmd and strips the echoed AT command + trailing OK from sms_tool output.
+# Returns exit codes:
+#   0 = success
+#   1 = modem unreachable / timeout
+#   2 = command returned ERROR (but modem is reachable)
+qcmd_exec() {
+    local cmd="$1"
+    local result
+
+    result=$(qcmd "$cmd" 2>/dev/null)
+    local exit_code=$?
+
+    if [ $exit_code -ne 0 ] || [ -z "$result" ]; then
+        qlog_warn "qcmd_exec failed: cmd=${cmd} exit=${exit_code}"
+        return 1
+    fi
+
+    # Strip echoed AT command and trailing OK from sms_tool output.
+    # sms_tool echoes the command back (e.g., "AT+COPS?" before "+COPS: ...").
+    # We keep only the actual response lines.
+    result=$(printf '%s\n' "$result" | grep -v '^AT' | grep -v '^OK$' | grep -v '^$')
+
+    case "$result" in
+        *ERROR*)
+            qlog_debug "qcmd_exec AT ERROR: cmd=${cmd}"
+            echo "$result"
+            return 2
+            ;;
+    esac
+
+    echo "$result"
+    return 0
+}
+
+# =============================================================================
+# PARSERS
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Parse AT+QENG="servingcell"
+# -----------------------------------------------------------------------------
+parse_serving_cell() {
+    local raw="$1"
+
+    # Reset all fields
+    lte_state="unknown"
+    nr_state="unknown"
+    lte_band="" ; lte_earfcn="" ; lte_bandwidth="" ; lte_pci=""
+    lte_rsrp="" ; lte_rsrq="" ; lte_sinr="" ; lte_rssi=""
+    nr_band="" ; nr_arfcn="" ; nr_pci=""
+    nr_rsrp="" ; nr_rsrq="" ; nr_sinr="" ; nr_scs=""
+
+    # Only keep +QENG: response lines (strip any residual echo/OK lines)
+    raw=$(printf '%s\n' "$raw" | grep '^+QENG:')
+
+    if [ -z "$raw" ]; then
+        qlog_warn "parse_serving_cell: no +QENG: lines in response"
+        service_status="unknown"
+        return
+    fi
+
+    # --- Detect connection state ---
+    local sc_line
+    sc_line=$(printf '%s\n' "$raw" | grep '"servingcell"' | head -1)
+
+    case "$sc_line" in
+        *'"NOCONN"'*)  service_status="no_service" ;;
+        *'"LIMSRV"'*)  service_status="limited" ;;
+        *'"CONNECT"'*) service_status="connected" ;;
+        *'"SEARCH"'*)  service_status="searching" ;;
+    esac
+
+    # --- Determine mode ---
+    local has_nsa
+    local has_sa
+    local has_lte
+    has_nsa=$(printf '%s\n' "$raw" | grep -c '"NR5G-NSA"')
+    has_sa=$(printf '%s\n' "$raw" | grep -c '"NR5G-SA"')
+    has_lte=$(printf '%s\n' "$raw" | grep -c '"LTE"')
+
+    # ===== EN-DC / NSA MODE =====
+    if [ "$has_nsa" -gt 0 ]; then
+        network_type="5G-NSA"
+
+        # LTE line (separate from "servingcell" line in EN-DC)
+        local lte_line
+        lte_line=$(printf '%s\n' "$raw" | grep '"LTE"' | grep -v '"servingcell"' | head -1)
+
+        if [ -n "$lte_line" ]; then
+            lte_state="connected"
+            local csv
+            csv=$(printf '%s' "$lte_line" | sed 's/+QENG: //g' | tr -d '"' | tr -d ' ')
+
+            # LTE,is_tdd,MCC,MNC,cellID,PCID,earfcn,freq_band_ind,UL_bw,DL_bw,TAC,RSRP,RSRQ,RSSI,SINR
+            # 1   2      3   4   5      6    7      8              9     10    11  12   13   14   15
+            lte_pci=$(printf '%s' "$csv" | cut -d',' -f6)
+            lte_earfcn=$(printf '%s' "$csv" | cut -d',' -f7)
+            local band_num
+            band_num=$(printf '%s' "$csv" | cut -d',' -f8)
+            lte_band="B${band_num}"
+            lte_bandwidth=$(printf '%s' "$csv" | cut -d',' -f10)
+            lte_rsrp=$(printf '%s' "$csv" | cut -d',' -f12)
+            lte_rsrq=$(printf '%s' "$csv" | cut -d',' -f13)
+            lte_rssi=$(printf '%s' "$csv" | cut -d',' -f14)
+            lte_sinr=$(printf '%s' "$csv" | cut -d',' -f15)
+        fi
+
+        # NR5G-NSA line
+        local nr_line
+        nr_line=$(printf '%s\n' "$raw" | grep '"NR5G-NSA"' | head -1)
+
+        if [ -n "$nr_line" ]; then
+            nr_state="connected"
+            local csv
+            csv=$(printf '%s' "$nr_line" | sed 's/+QENG: //g' | tr -d '"' | tr -d ' ')
+
+            # NR5G-NSA,MCC,MNC,PCID,RSRP,SINR,RSRQ,ARFCN,band,NR_DL_bw,scs
+            # 1        2   3   4    5    6    7    8     9    10        11
+            nr_pci=$(printf '%s' "$csv" | cut -d',' -f4)
+            nr_rsrp=$(printf '%s' "$csv" | cut -d',' -f5)
+            nr_sinr=$(printf '%s' "$csv" | cut -d',' -f6)
+            nr_rsrq=$(printf '%s' "$csv" | cut -d',' -f7)
+            nr_arfcn=$(printf '%s' "$csv" | cut -d',' -f8)
+            local nr_band_num
+            nr_band_num=$(printf '%s' "$csv" | cut -d',' -f9)
+            nr_band="N${nr_band_num}"
+            nr_scs=$(printf '%s' "$csv" | cut -d',' -f11)
+        fi
+
+    # ===== SA MODE =====
+    elif [ "$has_sa" -gt 0 ]; then
+        network_type="5G-SA"
+        lte_state="inactive"
+        nr_state="connected"
+
+        local csv
+        csv=$(printf '%s' "$sc_line" | sed 's/+QENG: //g' | tr -d '"' | tr -d ' ')
+
+        # servingcell,state,NR5G-SA,duplex,MCC,MNC,cellID,PCID,TAC,ARFCN,band,NR_DL_bw,RSRP,RSRQ,SINR,scs,srxlev
+        # 1           2     3       4      5   6   7      8    9   10     11   12       13   14   15   16  17
+        nr_pci=$(printf '%s' "$csv" | cut -d',' -f8)
+        nr_arfcn=$(printf '%s' "$csv" | cut -d',' -f10)
+        local nr_band_num
+        nr_band_num=$(printf '%s' "$csv" | cut -d',' -f11)
+        nr_band="N${nr_band_num}"
+        nr_rsrp=$(printf '%s' "$csv" | cut -d',' -f13)
+        nr_rsrq=$(printf '%s' "$csv" | cut -d',' -f14)
+        nr_sinr=$(printf '%s' "$csv" | cut -d',' -f15)
+        nr_scs=$(printf '%s' "$csv" | cut -d',' -f16)
+
+    # ===== LTE-ONLY MODE =====
+    elif [ "$has_lte" -gt 0 ]; then
+        network_type="LTE"
+        nr_state="inactive"
+
+        # LTE-only: "LTE" on the SAME line as "servingcell"
+        local csv
+        csv=$(printf '%s' "$sc_line" | sed 's/+QENG: //g' | tr -d '"' | tr -d ' ')
+
+        case "$csv" in
+            *NOCONN*|*SEARCH*)
+                lte_state="disconnected"
+                return
+                ;;
+            *)
+                lte_state="connected"
+                ;;
+        esac
+
+        # servingcell,state,LTE,is_tdd,MCC,MNC,cellID,PCID,earfcn,freq_band_ind,UL_bw,DL_bw,TAC,RSRP,RSRQ,RSSI,SINR,...
+        # 1           2     3   4      5   6   7      8    9      10             11    12    13  14   15   16   17
+        lte_pci=$(printf '%s' "$csv" | cut -d',' -f8)
+        lte_earfcn=$(printf '%s' "$csv" | cut -d',' -f9)
+        local band_num
+        band_num=$(printf '%s' "$csv" | cut -d',' -f10)
+        lte_band="B${band_num}"
+        lte_bandwidth=$(printf '%s' "$csv" | cut -d',' -f12)
+        lte_rsrp=$(printf '%s' "$csv" | cut -d',' -f14)
+        lte_rsrq=$(printf '%s' "$csv" | cut -d',' -f15)
+        lte_rssi=$(printf '%s' "$csv" | cut -d',' -f16)
+        lte_sinr=$(printf '%s' "$csv" | cut -d',' -f17)
+
+    else
+        lte_state="unknown"
+        nr_state="unknown"
+        service_status="unknown"
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Parse AT+QTEMP — Average temperature (excluding -273 unavailable sensors)
+# -----------------------------------------------------------------------------
+parse_temperature() {
+    local raw="$1"
+
+    local result
+    result=$(printf '%s\n' "$raw" | grep '+QTEMP:' | \
+        sed -n 's/.*,"\(-\{0,1\}[0-9]*\)".*/\1/p' | \
+        grep -v '^\-273$' | \
+        awk '{ sum += $1; count++ } END { if (count > 0) printf "%.0f", sum/count; }')
+
+    if [ -n "$result" ]; then
+        t2_temperature="$result"
+    else
+        t2_temperature=""
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Parse AT+COPS?
+# -----------------------------------------------------------------------------
+parse_carrier() {
+    local raw="$1"
+    local cops_line
+    cops_line=$(printf '%s\n' "$raw" | grep '+COPS:' | head -1)
+
+    if [ -z "$cops_line" ]; then
+        t2_carrier=""
+        return
+    fi
+
+    t2_carrier=$(printf '%s' "$cops_line" | sed 's/+COPS: //g' | cut -d',' -f3 | tr -d '"')
+}
+
+# -----------------------------------------------------------------------------
+# Parse AT+CPIN?
+# -----------------------------------------------------------------------------
+parse_sim_status() {
+    local raw="$1"
+
+    case "$raw" in
+        *"READY"*)         t2_sim_status="ready" ;;
+        *"SIM PIN"*)       t2_sim_status="pin_required" ;;
+        *"SIM PUK"*)       t2_sim_status="puk_required" ;;
+        *"NOT INSERTED"*|*"NOT READY"*) t2_sim_status="not_inserted" ;;
+        *ERROR*)           t2_sim_status="error" ;;
+        *)                 t2_sim_status="unknown" ;;
+    esac
+}
+
+# -----------------------------------------------------------------------------
+# Parse AT+QUIMSLOT?
+# -----------------------------------------------------------------------------
+parse_sim_slot() {
+    local raw="$1"
+    local slot_line
+    slot_line=$(printf '%s\n' "$raw" | grep '+QUIMSLOT:' | head -1)
+
+    if [ -n "$slot_line" ]; then
+        t2_sim_slot=$(printf '%s' "$slot_line" | sed 's/+QUIMSLOT: //g' | tr -d ' \r')
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Parse AT+CVERSION (Boot-only)
+# -----------------------------------------------------------------------------
+parse_version() {
+    local raw="$1"
+
+    boot_firmware=$(printf '%s\n' "$raw" | grep '^VERSION:' | sed 's/VERSION: //g' | tr -d '\r')
+    boot_build_date=$(printf '%s\n' "$raw" | grep -E '^[A-Z][a-z]{2} [0-9]' | head -1 | awk '{print $1, $2, $3}' | tr -d '\r')
+    boot_manufacturer=$(printf '%s\n' "$raw" | grep '^Authors:' | sed 's/Authors: //g' | tr -d '\r')
+}
+
+# -----------------------------------------------------------------------------
+# Parse AT+QGETCAPABILITY (Boot-only)
+# -----------------------------------------------------------------------------
+parse_capability() {
+    local raw="$1"
+
+    local cat_line
+    cat_line=$(printf '%s\n' "$raw" | grep '+QGETCAPABILITY: LTE-CATEGORY:' | head -1)
+
+    if [ -n "$cat_line" ]; then
+        boot_lte_category=$(printf '%s' "$cat_line" | sed 's/+QGETCAPABILITY: LTE-CATEGORY://g' | tr -d ' \r')
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Parse AT+QNWCFG="lte_mimo_layers" (Boot-only)
+# -----------------------------------------------------------------------------
+parse_mimo() {
+    local raw="$1"
+
+    local mimo_line
+    mimo_line=$(printf '%s\n' "$raw" | grep '+QNWCFG: "lte_mimo_layers"' | head -1)
+
+    if [ -n "$mimo_line" ]; then
+        local csv
+        csv=$(printf '%s' "$mimo_line" | sed 's/+QNWCFG: "lte_mimo_layers",//g' | tr -d ' \r')
+
+        local ul_mimo dl_mimo
+        ul_mimo=$(printf '%s' "$csv" | cut -d',' -f1)
+        dl_mimo=$(printf '%s' "$csv" | cut -d',' -f2)
+
+        if [ -n "$ul_mimo" ] && [ -n "$dl_mimo" ]; then
+            boot_mimo="LTE ${ul_mimo}x${dl_mimo}"
+        fi
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Parse AT+QCAINFO (Tier 2) — Carrier Aggregation status
+# -----------------------------------------------------------------------------
+parse_ca_info() {
+    local raw="$1"
+
+    local scc_count
+    scc_count=$(printf '%s\n' "$raw" | grep -c '+QCAINFO: "SCC"')
+
+    if [ "$scc_count" -gt 0 ]; then
+        t2_ca_active=true
+        t2_ca_count=$scc_count
+    else
+        t2_ca_active=false
+        t2_ca_count=0
+    fi
+}
+
+# =============================================================================
+# SYSTEM METRICS (No modem lock needed)
+# =============================================================================
+
+update_proc_metrics() {
+    # --- CPU Load ---
+    local loadavg
+    loadavg=$(cat /proc/loadavg 2>/dev/null | cut -d' ' -f1)
+
+    # --- Memory ---
+    local mem_total mem_available
+    mem_total=$(grep '^MemTotal:' /proc/meminfo 2>/dev/null | awk '{print $2}')
+    mem_available=$(grep '^MemAvailable:' /proc/meminfo 2>/dev/null | awk '{print $2}')
+
+    if [ -n "$mem_total" ]; then
+        memory_total_mb=$((mem_total / 1024))
+    else
+        memory_total_mb=0
+    fi
+
+    if [ -n "$mem_available" ] && [ -n "$mem_total" ]; then
+        memory_used_mb=$(( (mem_total - mem_available) / 1024 ))
+    else
+        memory_used_mb=0
+    fi
+
+    # --- Uptime ---
+    uptime_seconds=$(cat /proc/uptime 2>/dev/null | cut -d' ' -f1 | cut -d'.' -f1)
+    uptime_seconds="${uptime_seconds:-0}"
+
+    # --- Traffic ---
+    local rx_bytes=0
+    local tx_bytes=0
+
+    if [ -f /proc/net/dev ]; then
+        local dev_line
+        dev_line=$(grep "${NETWORK_IFACE}:" /proc/net/dev 2>/dev/null)
+        if [ -n "$dev_line" ]; then
+            rx_bytes=$(echo "$dev_line" | awk '{print $2}')
+            tx_bytes=$(echo "$dev_line" | awk '{print $10}')
+        fi
+    fi
+
+    # Calculate bytes per second
+    if [ "$prev_rx_bytes" -gt 0 ] 2>/dev/null; then
+        rx_bytes_per_sec=$(( (rx_bytes - prev_rx_bytes) / POLL_INTERVAL ))
+        tx_bytes_per_sec=$(( (tx_bytes - prev_tx_bytes) / POLL_INTERVAL ))
+
+        [ "$rx_bytes_per_sec" -lt 0 ] 2>/dev/null && rx_bytes_per_sec=0
+        [ "$tx_bytes_per_sec" -lt 0 ] 2>/dev/null && tx_bytes_per_sec=0
+    fi
+
+    prev_rx_bytes=$rx_bytes
+    prev_tx_bytes=$tx_bytes
+    total_rx_bytes=$rx_bytes
+    total_tx_bytes=$tx_bytes
+
+    cpu_usage="${loadavg:-0}"
+}
+
+# --- Connection Uptime -------------------------------------------------------
+update_conn_uptime() {
+    if [ "$service_status" = "connected" ] || [ "$service_status" = "optimal" ]; then
+        if [ "$conn_start_time" -eq 0 ] 2>/dev/null; then
+            conn_start_time=$(date +%s)
+        fi
+        local now
+        now=$(date +%s)
+        conn_uptime_seconds=$((now - conn_start_time))
+    else
+        conn_start_time=0
+        conn_uptime_seconds=0
+    fi
+}
+
+# =============================================================================
+# BOOT DATA COLLECTION (runs once at startup)
+# =============================================================================
+
+collect_boot_data() {
+    log_info "Collecting boot-only data..."
+
+    local result
+
+    # Firmware version + build date + manufacturer — AT+CVERSION
+    result=$(qcmd_exec 'AT+CVERSION')
+    if [ $? -eq 0 ]; then
+        parse_version "$result"
+    fi
+    sleep "$SIP_DELAY"
+
+    # IMEI — AT+CGSN
+    result=$(qcmd_exec 'AT+CGSN')
+    if [ $? -eq 0 ]; then
+        boot_imei=$(printf '%s\n' "$result" | grep -v '^$' | head -1 | tr -d '\r')
+    fi
+    sleep "$SIP_DELAY"
+
+    # IMSI — AT+CIMI
+    result=$(qcmd_exec 'AT+CIMI')
+    if [ $? -eq 0 ]; then
+        boot_imsi=$(printf '%s\n' "$result" | grep -v '^$' | head -1 | tr -d '\r')
+    fi
+    sleep "$SIP_DELAY"
+
+    # ICCID — AT+QCCID
+    result=$(qcmd_exec 'AT+QCCID')
+    if [ $? -eq 0 ]; then
+        boot_iccid=$(printf '%s\n' "$result" | grep '+QCCID:' | sed 's/+QCCID: //g' | tr -d '\r ')
+    fi
+    sleep "$SIP_DELAY"
+
+    # Phone number — AT+CNUM
+    result=$(qcmd_exec 'AT+CNUM')
+    if [ $? -eq 0 ]; then
+        boot_phone_number=$(printf '%s\n' "$result" | grep '+CNUM:' | head -1 | cut -d',' -f2 | tr -d '"' | tr -d '\r')
+    fi
+    sleep "$SIP_DELAY"
+
+    # LTE Category — AT+QGETCAPABILITY
+    result=$(qcmd_exec 'AT+QGETCAPABILITY')
+    if [ $? -eq 0 ]; then
+        parse_capability "$result"
+    fi
+    sleep "$SIP_DELAY"
+
+    # MIMO layers — AT+QNWCFG="lte_mimo_layers"
+    result=$(qcmd_exec 'AT+QNWCFG="lte_mimo_layers"')
+    if [ $? -eq 0 ]; then
+        parse_mimo "$result"
+    fi
+
+    log_info "Boot data: FW=$boot_firmware BUILD=$boot_build_date MFG=$boot_manufacturer"
+    log_info "Boot data: IMEI=$boot_imei IMSI=$boot_imsi ICCID=$boot_iccid"
+    log_info "Boot data: PHONE=$boot_phone_number CAT=$boot_lte_category MIMO=$boot_mimo"
+}
+
+# =============================================================================
+# TIER 1: HOT DATA (every cycle)
+# =============================================================================
+
+poll_serving_cell() {
+    local result
+    result=$(qcmd_exec 'AT+QENG="servingcell"')
+    local rc=$?
+
+    if [ $rc -eq 0 ] || [ $rc -eq 2 ]; then
+        if [ "$modem_reachable" != "true" ]; then
+            qlog_state_change "modem_reachable" "false" "true"
+        fi
+        modem_reachable=true
+        local prev_network_type="$network_type"
+        local prev_lte_state="$lte_state"
+        local prev_nr_state="$nr_state"
+        parse_serving_cell "$result"
+        # Log state transitions
+        qlog_state_change "network_type" "$prev_network_type" "$network_type"
+        qlog_state_change "lte_state" "$prev_lte_state" "$lte_state"
+        qlog_state_change "nr_state" "$prev_nr_state" "$nr_state"
+    else
+        if [ "$modem_reachable" = "true" ]; then
+            qlog_state_change "modem_reachable" "true" "false"
+        fi
+        modem_reachable=false
+        system_state="degraded"
+        lte_state="unknown"
+        nr_state="unknown"
+        errors="modem_timeout"
+        log_warn "Modem unreachable during serving cell poll"
+    fi
+}
+
+# =============================================================================
+# TIER 2: WARM DATA (every N cycles)
+# =============================================================================
+
+poll_tier2() {
+    local result
+
+    # Temperature — AT+QTEMP
+    result=$(qcmd_exec 'AT+QTEMP')
+    [ $? -eq 0 ] && parse_temperature "$result"
+    sleep "$SIP_DELAY"
+
+    # Carrier — AT+COPS?
+    result=$(qcmd_exec 'AT+COPS?')
+    [ $? -eq 0 ] && parse_carrier "$result"
+    sleep "$SIP_DELAY"
+
+    # SIM status — AT+CPIN?
+    result=$(qcmd_exec 'AT+CPIN?')
+    if [ $? -eq 0 ]; then
+        parse_sim_status "$result"
+    elif [ $? -eq 2 ]; then
+        t2_sim_status="error"
+        errors="sim_not_inserted"
+    fi
+    sleep "$SIP_DELAY"
+
+    # SIM slot — AT+QUIMSLOT?
+    result=$(qcmd_exec 'AT+QUIMSLOT?')
+    [ $? -eq 0 ] && parse_sim_slot "$result"
+    sleep "$SIP_DELAY"
+
+    # Phone number refresh (may change on SIM swap)
+    result=$(qcmd_exec 'AT+CNUM')
+    if [ $? -eq 0 ]; then
+        local num
+        num=$(printf '%s\n' "$result" | grep '+CNUM:' | head -1 | cut -d',' -f2 | tr -d '"' | tr -d '\r')
+        [ -n "$num" ] && boot_phone_number="$num"
+    fi
+    sleep "$SIP_DELAY"
+
+    # Carrier Aggregation — AT+QCAINFO=1;+QCAINFO;+QCAINFO=0
+    result=$(qcmd_exec 'AT+QCAINFO=1;+QCAINFO;+QCAINFO=0')
+    if [ $? -eq 0 ]; then
+        parse_ca_info "$result"
+    else
+        t2_ca_active=false
+        t2_ca_count=0
+    fi
+}
+
+# =============================================================================
+# SERVICE QUALITY ASSESSMENT
+# =============================================================================
+
+determine_service_status() {
+    if [ "$modem_reachable" != "true" ]; then
+        service_status="unknown"
+        return
+    fi
+
+    if [ "$t2_sim_status" = "not_inserted" ] || [ "$t2_sim_status" = "error" ]; then
+        service_status="sim_error"
+        return
+    fi
+
+    if [ "$lte_state" = "disconnected" ] && [ "$nr_state" != "connected" ]; then
+        service_status="no_service"
+        return
+    fi
+
+    if [ "$lte_state" = "searching" ]; then
+        service_status="searching"
+        return
+    fi
+
+    local primary_rsrp=""
+    if [ "$nr_state" = "connected" ] && [ -n "$nr_rsrp" ]; then
+        primary_rsrp=$nr_rsrp
+    elif [ -n "$lte_rsrp" ]; then
+        primary_rsrp=$lte_rsrp
+    fi
+
+    if [ -n "$primary_rsrp" ] && [ "$primary_rsrp" -gt -100 ] 2>/dev/null; then
+        service_status="optimal"
+    elif [ -n "$primary_rsrp" ]; then
+        service_status="connected"
+    fi
+}
+
+# =============================================================================
+# JSON CACHE WRITER
+# =============================================================================
+
+write_cache() {
+    local timestamp
+    timestamp=$(date +%s)
+
+    # Null-safe JSON values
+    local json_lte_earfcn="${lte_earfcn:-null}"
+    local json_lte_pci="${lte_pci:-null}"
+    local json_lte_rsrp="${lte_rsrp:-null}"
+    local json_lte_rsrq="${lte_rsrq:-null}"
+    local json_lte_sinr="${lte_sinr:-null}"
+    local json_lte_rssi="${lte_rssi:-null}"
+    local json_lte_bandwidth="${lte_bandwidth:-null}"
+
+    local json_nr_arfcn="${nr_arfcn:-null}"
+    local json_nr_pci="${nr_pci:-null}"
+    local json_nr_rsrp="${nr_rsrp:-null}"
+    local json_nr_rsrq="${nr_rsrq:-null}"
+    local json_nr_sinr="${nr_sinr:-null}"
+    local json_nr_scs="${nr_scs:-null}"
+
+    local json_temperature="${t2_temperature:-null}"
+
+    local errors_json="[]"
+    if [ -n "$errors" ]; then
+        errors_json="[\"${errors}\"]"
+    fi
+
+    cat > "$CACHE_TMP" << JSONEOF
+{
+  "timestamp": ${timestamp},
+  "system_state": "${system_state}",
+  "modem_reachable": ${modem_reachable},
+  "last_successful_poll": ${timestamp},
+  "errors": ${errors_json},
+  "network": {
+    "type": "${network_type:-LTE}",
+    "sim_slot": ${t2_sim_slot:-1},
+    "carrier": "${t2_carrier}",
+    "service_status": "${service_status}",
+    "ca_active": ${t2_ca_active},
+    "ca_count": ${t2_ca_count}
+  },
+  "lte": {
+    "state": "${lte_state}",
+    "band": "${lte_band}",
+    "earfcn": ${json_lte_earfcn},
+    "bandwidth": ${json_lte_bandwidth},
+    "pci": ${json_lte_pci},
+    "rsrp": ${json_lte_rsrp},
+    "rsrq": ${json_lte_rsrq},
+    "sinr": ${json_lte_sinr},
+    "rssi": ${json_lte_rssi}
+  },
+  "nr": {
+    "state": "${nr_state}",
+    "band": "${nr_band}",
+    "arfcn": ${json_nr_arfcn},
+    "pci": ${json_nr_pci},
+    "rsrp": ${json_nr_rsrp},
+    "rsrq": ${json_nr_rsrq},
+    "sinr": ${json_nr_sinr},
+    "scs": ${json_nr_scs}
+  },
+  "device": {
+    "temperature": ${json_temperature},
+    "cpu_usage": ${cpu_usage:-0},
+    "memory_used_mb": ${memory_used_mb:-0},
+    "memory_total_mb": ${memory_total_mb:-0},
+    "uptime_seconds": ${uptime_seconds:-0},
+    "conn_uptime_seconds": ${conn_uptime_seconds:-0},
+    "firmware": "${boot_firmware}",
+    "build_date": "${boot_build_date}",
+    "manufacturer": "${boot_manufacturer}",
+    "imei": "${boot_imei}",
+    "imsi": "${boot_imsi}",
+    "iccid": "${boot_iccid}",
+    "phone_number": "${boot_phone_number}",
+    "lte_category": "${boot_lte_category}",
+    "mimo": "${boot_mimo}"
+  },
+  "traffic": {
+    "rx_bytes_per_sec": ${rx_bytes_per_sec:-0},
+    "tx_bytes_per_sec": ${tx_bytes_per_sec:-0},
+    "total_rx_bytes": ${total_rx_bytes:-0},
+    "total_tx_bytes": ${total_tx_bytes:-0}
+  }
+}
+JSONEOF
+
+    mv "$CACHE_TMP" "$CACHE_FILE"
+}
+
+# =============================================================================
+# POLL CYCLE
+# =============================================================================
+
+poll_cycle() {
+    if [ -f "$LONG_FLAG" ]; then
+        if [ "$system_state" != "scan_in_progress" ]; then
+            qlog_state_change "system_state" "$system_state" "scan_in_progress"
+        fi
+        system_state="scan_in_progress"
+        update_proc_metrics
+        write_cache
+        return
+    fi
+
+    errors=""
+    system_state="normal"
+
+    # Tier 1
+    poll_serving_cell
+    sleep "$SIP_DELAY"
+
+    # Tier 2
+    if [ $((cycle_count % TIER2_EVERY)) -eq 0 ]; then
+        poll_tier2
+    fi
+
+    update_proc_metrics
+    update_conn_uptime
+    determine_service_status
+    write_cache
+
+    cycle_count=$((cycle_count + 1))
+}
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+main() {
+    qlog_info "========================================"
+    qlog_info "QManager Poller starting"
+    qlog_info "Config: interval=${POLL_INTERVAL}s tier2_every=${TIER2_EVERY} iface=${NETWORK_IFACE}"
+    qlog_info "Log level: ${QLOG_LEVEL:-INFO}"
+    qlog_info "========================================"
+
+    collect_boot_data
+    update_proc_metrics
+    write_cache
+
+    qlog_info "Boot data collected, entering poll loop"
+
+    while true; do
+        poll_cycle
+        sleep "$POLL_INTERVAL"
+    done
+}
+
+main "$@"

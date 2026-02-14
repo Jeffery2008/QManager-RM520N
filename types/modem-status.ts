@@ -77,6 +77,10 @@ export interface NetworkStatus {
   carrier: string;
   /** Overall service quality assessment */
   service_status: ServiceStatus;
+  /** Whether carrier aggregation is active (SCC lines present in QCAINFO) */
+  ca_active: boolean;
+  /** Number of secondary carriers (SCC count) */
+  ca_count: number;
 }
 
 export interface LteStatus {
@@ -120,7 +124,7 @@ export interface NrStatus {
 }
 
 export interface DeviceStatus {
-  /** Modem temperature in °C (null if unavailable) */
+  /** Average modem temperature in °C across all available sensors (null if unavailable) */
   temperature: number | null;
   /** CPU load average (1-minute) */
   cpu_usage: number;
@@ -132,8 +136,12 @@ export interface DeviceStatus {
   uptime_seconds: number;
   /** Active connection uptime in seconds */
   conn_uptime_seconds: number;
-  /** Firmware version string */
+  /** Firmware version string (from AT+CVERSION) */
   firmware: string;
+  /** Firmware build date, e.g. "Jun 25 2025" (from AT+CVERSION) */
+  build_date: string;
+  /** Modem manufacturer, e.g. "Quectel" (from AT+CVERSION) */
+  manufacturer: string;
   /** Device IMEI (15-digit) */
   imei: string;
   /** SIM IMSI */
@@ -142,6 +150,10 @@ export interface DeviceStatus {
   iccid: string;
   /** Phone number (MSISDN) */
   phone_number: string;
+  /** LTE UE Category, e.g. "20" (from AT+QGETCAPABILITY) */
+  lte_category: string;
+  /** MIMO layers string, e.g. "LTE 1x4" (from AT+QNWCFG="lte_mimo_layers") */
+  mimo: string;
 }
 
 export interface TrafficStatus {

@@ -11,6 +11,16 @@
 # Install location: /www/cgi-bin/quecmanager/at_cmd/fetch_data.sh
 # =============================================================================
 
+# --- Logging -----------------------------------------------------------------
+. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+    qlog_init() { :; }
+    qlog_debug() { :; }
+    qlog_info() { :; }
+    qlog_warn() { :; }
+    qlog_error() { :; }
+}
+qlog_init "cgi_fetch"
+
 CACHE_FILE="/tmp/qmanager_status.json"
 
 # --- HTTP Headers ------------------------------------------------------------
@@ -23,6 +33,7 @@ echo ""
 if [ -f "$CACHE_FILE" ]; then
     cat "$CACHE_FILE"
 else
+    qlog_warn "Cache file not found, returning fallback JSON"
     # Cache doesn't exist yet (poller hasn't started or first boot)
     cat << 'FALLBACK'
 {
@@ -35,14 +46,18 @@ else
     "type": "",
     "sim_slot": 1,
     "carrier": "",
-    "service_status": "unknown"
+    "service_status": "unknown",
+    "ca_active": false,
+    "ca_count": 0
   },
   "lte": { "state": "unknown", "band": "", "earfcn": null, "bandwidth": null, "pci": null, "rsrp": null, "rsrq": null, "sinr": null, "rssi": null },
   "nr": { "state": "unknown", "band": "", "arfcn": null, "pci": null, "rsrp": null, "rsrq": null, "sinr": null, "scs": null },
   "device": {
     "temperature": null, "cpu_usage": 0, "memory_used_mb": 0, "memory_total_mb": 0,
     "uptime_seconds": 0, "conn_uptime_seconds": 0,
-    "firmware": "", "imei": "", "imsi": "", "iccid": "", "phone_number": ""
+    "firmware": "", "build_date": "", "manufacturer": "",
+    "imei": "", "imsi": "", "iccid": "", "phone_number": "",
+    "lte_category": "", "mimo": ""
   },
   "traffic": { "rx_bytes_per_sec": 0, "tx_bytes_per_sec": 0, "total_rx_bytes": 0, "total_tx_bytes": 0 }
 }

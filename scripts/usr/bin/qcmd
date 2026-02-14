@@ -10,20 +10,33 @@
 #   qcmd -j "AT+COMMAND"       → Execute AT command, return JSON-wrapped result
 #
 # Install location: /usr/bin/qcmd
-# Dependencies: sms_tool, flock, timeout (busybox)
+# Dependencies: sms_tool, flock (busybox), timeout (busybox)
 # =============================================================================
+
+# --- Logging -----------------------------------------------------------------
+. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+    qlog_init() { :; }
+    qlog_debug() { :; }
+    qlog_info() { :; }
+    qlog_warn() { :; }
+    qlog_error() { :; }
+    qlog_at_cmd() { :; }
+    qlog_lock() { :; }
+}
+qlog_init "qcmd"
 
 # --- Configuration -----------------------------------------------------------
 LOCK_FILE="/var/lock/qmanager.lock"
-LOCK_FD=9
 LONG_FLAG="/tmp/qmanager_long_running"
 PID_FILE="/var/lock/qmanager.pid"
-DEVICE="/dev/ttyUSB2"
 
 SHORT_TIMEOUT=3        # seconds for normal AT commands
 LONG_TIMEOUT=240       # seconds for AT+QSCAN and similar
 LOCK_WAIT_SHORT=5      # seconds to wait for lock (normal commands)
 LOCK_WAIT_LONG=10      # seconds to wait for lock (long commands)
+
+# Ensure lock directory exists
+mkdir -p /var/lock 2>/dev/null
 
 # --- Parse Arguments ---------------------------------------------------------
 JSON_MODE=0
@@ -35,13 +48,14 @@ fi
 COMMAND="$1"
 
 if [ -z "$COMMAND" ]; then
+    qlog_error "No command provided"
     echo '{"error":"no_command","detail":"Usage: qcmd [-j] \"AT+COMMAND\""}' >&2
     exit 1
 fi
 
+qlog_debug "Command received: ${COMMAND}"
+
 # --- Helper: JSON Output -----------------------------------------------------
-# Outputs result as JSON if -j flag was passed, raw otherwise.
-# Escapes special characters for valid JSON strings.
 json_escape() {
     printf '%s' "$1" | sed \
         -e 's/\\/\\\\/g' \
@@ -79,15 +93,11 @@ output_result() {
 }
 
 # --- Helper: Command Classification -----------------------------------------
-# Returns 0 (true) if the command is a long-running command.
-# Checked against a configurable list + hardcoded fallbacks.
 is_long_command() {
     local cmd="$1"
 
-    # Check configurable list first
     if [ -f /etc/qmanager/long_commands.list ]; then
         while IFS= read -r pattern; do
-            # Skip comments and empty lines
             case "$pattern" in
                 '#'*|'') continue ;;
             esac
@@ -97,7 +107,6 @@ is_long_command() {
         done < /etc/qmanager/long_commands.list
     fi
 
-    # Hardcoded fallbacks
     case "$cmd" in
         *QSCAN*|*QSCANFREQ*|*QFOTADL*) return 0 ;;
         *) return 1 ;;
@@ -105,99 +114,147 @@ is_long_command() {
 }
 
 # --- Helper: Stale Lock Recovery ---------------------------------------------
-# If the PID that held the lock is dead, the lock is stale. Clear and retry.
-recover_stale_lock() {
+check_stale_lock() {
     if [ -f "$PID_FILE" ]; then
-        OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
-        if [ -n "$OLD_PID" ] && ! kill -0 "$OLD_PID" 2>/dev/null; then
-            # Process is dead — stale lock
+        local old_pid
+        old_pid=$(cat "$PID_FILE" 2>/dev/null)
+        if [ -n "$old_pid" ] && ! kill -0 "$old_pid" 2>/dev/null; then
+            qlog_lock "stale_recovery" "$old_pid"
             rm -f "$PID_FILE"
-            # Try to acquire again with a short wait
-            if flock -w 2 $LOCK_FD; then
-                return 0  # Successfully recovered
-            fi
+            return 0
         fi
     fi
-    return 1  # Could not recover
+    return 1
 }
 
-# --- Main Execution ----------------------------------------------------------
+# --- Helper: flock with timeout ----------------------------------------------
+# BusyBox flock does NOT support -w (wait with timeout).
+# We implement it: try -n (non-blocking), retry with sleep until deadline.
+#
+# Usage: flock_wait <fd> <timeout_seconds>
+# Returns: 0 = lock acquired, 1 = timed out
+# -----------------------------------------------------------------------------
+flock_wait() {
+    local fd="$1"
+    local wait_secs="$2"
+    local elapsed=0
 
-# Open the lock file descriptor
-eval "exec ${LOCK_FD}>\"${LOCK_FILE}\""
+    while [ "$elapsed" -lt "$wait_secs" ]; do
+        if flock -x -n "$fd" 2>/dev/null; then
+            return 0
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+    done
+
+    # One final try
+    flock -x -n "$fd" 2>/dev/null
+    return $?
+}
+
+# =============================================================================
+# EXECUTION
+#
+# Uses subshell + FD 9 redirect: ( flock 9; ...; ) 9>"$LOCK_FILE"
+# Lock is auto-released when the subshell exits.
+# =============================================================================
 
 if is_long_command "$COMMAND"; then
     # =========================================================================
-    # LONG COMMAND PATH (AT+QSCAN, AT+QSCANFREQ, etc.)
+    # LONG COMMAND PATH
     # =========================================================================
-    # 1. Set the global flag BEFORE acquiring lock so the poller can yield
-    # 2. Acquire lock with generous timeout
-    # 3. Execute with long timeout
-    # 4. Clean up flag + lock
-    # =========================================================================
-
+    qlog_info "Long command started: ${COMMAND}"
     echo "$COMMAND" > "$LONG_FLAG"
 
-    if ! flock -w "$LOCK_WAIT_LONG" $LOCK_FD; then
-        rm -f "$LONG_FLAG"
+    result=$(
+        (
+            if ! flock_wait 9 "$LOCK_WAIT_LONG"; then
+                exit 2
+            fi
+            echo $$ > "$PID_FILE"
+            timeout "$LONG_TIMEOUT" sms_tool at "$COMMAND" 2>/dev/null
+            cmd_rc=$?
+            rm -f "$PID_FILE"
+            exit $cmd_rc
+        ) 9>"$LOCK_FILE"
+    )
+    exit_code=$?
+
+    rm -f "$LONG_FLAG"
+
+    if [ $exit_code -eq 2 ]; then
+        qlog_lock "timeout" "long command: ${COMMAND}"
         output_result "" "modem_busy"
         exit 1
     fi
 
-    echo $$ > "$PID_FILE"
-
-    result=$(timeout "$LONG_TIMEOUT" sms_tool -d "$DEVICE" at "$COMMAND" 2>/dev/null)
-    exit_code=$?
-
-    # Release lock and clean up
-    flock -u $LOCK_FD
-    rm -f "$LONG_FLAG" "$PID_FILE"
-
     if [ $exit_code -ne 0 ]; then
+        qlog_error "Long command timeout: ${COMMAND} (exit=${exit_code})"
         output_result "" "command_timeout"
         exit 1
     fi
 
+    qlog_info "Long command completed: ${COMMAND}"
+    qlog_at_cmd "$COMMAND" "$result" "$exit_code"
     output_result "$result" ""
 
 elif [ -f "$LONG_FLAG" ]; then
     # =========================================================================
     # LONG COMMAND IN PROGRESS — Reject immediately
     # =========================================================================
-    # Don't queue behind a 2-3 minute scan. Fail fast.
-    # =========================================================================
-
+    qlog_lock "blocked" "$(cat "$LONG_FLAG" 2>/dev/null)"
     output_result "" "scan_in_progress"
     exit 1
 
 else
     # =========================================================================
-    # SHORT COMMAND PATH (Normal AT commands)
+    # SHORT COMMAND PATH
     # =========================================================================
-    # 1. Try to acquire lock
-    # 2. On failure, attempt stale lock recovery
-    # 3. Execute with short timeout
-    # 4. Release lock
-    # =========================================================================
+    result=$(
+        (
+            if ! flock_wait 9 "$LOCK_WAIT_SHORT"; then
+                exit 2
+            fi
+            echo $$ > "$PID_FILE"
+            timeout "$SHORT_TIMEOUT" sms_tool at "$COMMAND" 2>/dev/null
+            cmd_rc=$?
+            rm -f "$PID_FILE"
+            exit $cmd_rc
+        ) 9>"$LOCK_FILE"
+    )
+    exit_code=$?
 
-    if ! flock -w "$LOCK_WAIT_SHORT" $LOCK_FD; then
-        # Lock acquisition failed — try stale lock recovery
-        if ! recover_stale_lock; then
+    # Lock failed — try stale recovery and retry once
+    if [ $exit_code -eq 2 ]; then
+        qlog_lock "timeout" "short command: ${COMMAND}"
+
+        if check_stale_lock; then
+            result=$(
+                (
+                    if ! flock_wait 9 2; then
+                        exit 2
+                    fi
+                    echo $$ > "$PID_FILE"
+                    timeout "$SHORT_TIMEOUT" sms_tool at "$COMMAND" 2>/dev/null
+                    cmd_rc=$?
+                    rm -f "$PID_FILE"
+                    exit $cmd_rc
+                ) 9>"$LOCK_FILE"
+            )
+            exit_code=$?
+        fi
+
+        if [ $exit_code -eq 2 ]; then
+            qlog_error "Lock acquisition failed for: ${COMMAND}"
             output_result "" "modem_busy"
             exit 1
         fi
     fi
 
-    echo $$ > "$PID_FILE"
-
-    result=$(timeout "$SHORT_TIMEOUT" sms_tool -d "$DEVICE" at "$COMMAND" 2>/dev/null)
-    exit_code=$?
-
-    # Release lock and clean up
-    flock -u $LOCK_FD
-    rm -f "$PID_FILE"
+    qlog_at_cmd "$COMMAND" "$result" "$exit_code"
 
     if [ $exit_code -ne 0 ]; then
+        qlog_error "Short command timeout: ${COMMAND} (exit=${exit_code})"
         output_result "" "command_timeout"
         exit 1
     fi
