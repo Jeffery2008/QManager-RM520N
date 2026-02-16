@@ -2,7 +2,7 @@
 
 **Project:** QManager — Custom GUI for Quectel RM551E-GL 5G Modem  
 **Platform:** OpenWRT (Embedded Linux)  
-**Last Updated:** February 16, 2026 (Phase 5: Speedtest Integration)
+**Last Updated:** February 16, 2026 (Home Page Complete — All Components Wired)
 
 ---
 
@@ -84,6 +84,7 @@
 | `scripts/cgi/quecmanager/at_cmd/fetch_data.sh` | `/www/cgi-bin/quecmanager/at_cmd/fetch_data.sh` | **Dashboard CGI** — serves cached JSON, zero modem contact |
 | `scripts/cgi/quecmanager/at_cmd/send_command.sh` | `/www/cgi-bin/quecmanager/at_cmd/send_command.sh` | **Terminal CGI** — POST endpoint for manual AT commands via qcmd |
 | `scripts/cgi/quecmanager/at_cmd/fetch_events.sh` | `/www/cgi-bin/quecmanager/at_cmd/fetch_events.sh` | **Events CGI** — serves `/tmp/qmanager_events.json` (NDJSON→JSON array conversion) for Recent Activities |
+| `scripts/cgi/quecmanager/at_cmd/fetch_signal_history.sh` | `/www/cgi-bin/quecmanager/at_cmd/fetch_signal_history.sh` | **Signal History CGI** — serves `/tmp/qmanager_signal_history.json` (NDJSON→JSON array conversion) for Signal History chart |
 | `scripts/cgi/quecmanager/at_cmd/speedtest_check.sh` | `/www/cgi-bin/quecmanager/at_cmd/speedtest_check.sh` | **Speedtest Check CGI** — GET endpoint, returns `{"available": true/false}` based on `command -v speedtest` |
 | `scripts/cgi/quecmanager/at_cmd/speedtest_start.sh` | `/www/cgi-bin/quecmanager/at_cmd/speedtest_start.sh` | **Speedtest Start CGI** — POST endpoint, spawns Ookla speedtest-cli in detached session via setsid + wrapper script. Singleton enforcement via PID file. |
 | `scripts/cgi/quecmanager/at_cmd/speedtest_status.sh` | `/www/cgi-bin/quecmanager/at_cmd/speedtest_status.sh` | **Speedtest Status CGI** — GET endpoint, returns idle/running/complete/error with progress data. Filters for JSON-only lines (grep `^{`) to skip ASCII art. |
@@ -149,6 +150,8 @@ echo "DEBUG" > /etc/qmanager/log_level
 | `types/speedtest.ts` | Speedtest data contract — Ookla CLI NDJSON types (progress + result), CGI response types, utility functions (`bytesToMbps`, `formatSpeed`, `formatBytes`) |
 | `hooks/use-speedtest.ts` | Speedtest lifecycle hook — availability check, start, 500ms progress polling, result caching, stale closure-safe via functional setState |
 | `components/dashboard/speedtest-dialog.tsx` | Speedtest modal dialog — 5 states (idle/initializing/ping/download+upload/complete/error), live speed display, result grid, blocks close while running |
+| `hooks/use-signal-history.ts` | Signal History hook — fetches `/cgi-bin/.../fetch_signal_history.sh` every 10s, picks best antenna per RAT, provides `chartData` (last 10 points), `raw`, `isLoading`, `error` |
+| `components/dashboard/signal-history.tsx` | **Wired** — Per-antenna signal chart. Metric toggle (RSRP/RSRQ/SINR), time range selector, LTE vs 5G dual area chart via Recharts |
 | `components/dashboard/live-latency.tsx` | **Updated** — Added speedtest play button that opens `SpeedtestDialog`, manages dialog open state |
 
 ---
@@ -472,7 +475,7 @@ The poller maps the AT+QENG `state` field to `service_status` as follows:
 | **Internet Badge** | `network-status.tsx` | ✅ **DONE** | `data.connectivity.internet_available` — three-state badge (green/red/gray for true/false/null). Replaced placeholder `hasInternet = isServiceActive`. |
 | **Live Latency** | `live-latency.tsx` | ✅ **DONE** | `data.connectivity` — Line chart of last 5 RTT values, stats row (current/avg/jitter/loss), Online/Offline badge, loading skeleton, "ping daemon not running" fallback |
 | **Recent Activities** | `recent-activities.tsx` | ✅ **DONE** | Self-contained: `useRecentActivities()` hook polls `/cgi-bin/.../fetch_events.sh` every 10s. Poller detects state changes and writes NDJSON to `/tmp/qmanager_events.json`. Displays max 5 most recent events. |
-| **Signal History** | `signal-history.tsx` | ❌ Mock data | `data.lte.rsrp/sinr` + `data.nr.rsrp/sinr` (accumulated client-side) |
+| **Signal History** | `signal-history.tsx` | ✅ **DONE** | Self-contained: `useSignalHistory()` hook polls `/cgi-bin/.../fetch_signal_history.sh` every 10s. Backend (Tier 1.5) writes per-antenna NDJSON to `/tmp/qmanager_signal_history.json`. Hook picks best antenna per RAT, displays last 10 points. Metric toggle (RSRP/RSRQ/SINR), time range selector, LTE vs 5G dual area chart. |
 | **Speedtest Dialog** | `speedtest-dialog.tsx` | ✅ **DONE** | On-demand via `speedtest_*.sh` CGI endpoints. Triggered from Live Latency play button. No modem serial interaction (IP-layer only). |
 
 ### Network Status Component Details
@@ -530,13 +533,15 @@ Events are categorized as **positive** (green check ✅) or **negative** (red X 
 
 ## 6. Deployment Notes
 
-### Current State (Feb 15, 2026)
+### Current State (Feb 16, 2026)
 
+- **Home page dashboard is fully complete** — all 10 components wired to live data.
 - Static export built with `async rewrites()` block **commented out** in `next.config.ts` (rewrites are server-side only, not compatible with `output: "export"`).
 - Init script deployed to `/etc/init.d/qmanager` with proper permissions.
 - Scripts deployed to their respective modem paths (see Section 2).
 - Poller running, JSON cache updating every ~2 seconds.
-- Network Status and LTE Status components wired and displaying live data.
+- Ping daemon running, latency data updating every ~2 seconds.
+- All dashboard components wired: Network Status, LTE/NR Status, Device Info, Device Metrics, Live Latency, Recent Activities, Signal History, Speedtest.
 
 ### Development Proxy
 
@@ -568,6 +573,7 @@ chmod +x /etc/init.d/qmanager
 chmod +x /www/cgi-bin/quecmanager/at_cmd/fetch_data.sh
 chmod +x /www/cgi-bin/quecmanager/at_cmd/send_command.sh
 chmod +x /www/cgi-bin/quecmanager/at_cmd/fetch_events.sh
+chmod +x /www/cgi-bin/quecmanager/at_cmd/fetch_signal_history.sh
 chmod +x /www/cgi-bin/quecmanager/at_cmd/speedtest_check.sh
 chmod +x /www/cgi-bin/quecmanager/at_cmd/speedtest_start.sh
 chmod +x /www/cgi-bin/quecmanager/at_cmd/speedtest_status.sh
@@ -730,12 +736,14 @@ This allows callers to distinguish lock contention from modem failures.
 
 ## 8. Remaining Work
 
-### Immediate Next Steps (Home Page)
+### Home Page Dashboard — ✅ COMPLETE
 
-1. ~~**Wire `NrStatusComponent`** — Accept `data.nr` props, same pattern as LTE status.~~ ✅ Done
-2. ~~**Wire `DeviceStatus`** — Accept `data.device` props for firmware, IMEI, IMSI, ICCID, phone, LTE category, MIMO, build date, manufacturer.~~ ✅ Done
-3. ~~**Wire `DeviceMetricsComponent`** — Accept `data.device` (temperature, CPU, memory, uptime) and `data.traffic` (live traffic, data usage). Implement warning badges for high temp/CPU.~~ ✅ Done
-4. **Wire `SignalHistoryComponent`** — Replace mock data generator with real-time accumulation of `data.lte.rsrp/sinr` and `data.nr.rsrp/sinr` values using a client-side ring buffer.
+All 10 home page components are wired to live data and functional:
+
+1. ~~**Wire `NrStatusComponent`**~~ ✅ Done
+2. ~~**Wire `DeviceStatus`**~~ ✅ Done
+3. ~~**Wire `DeviceMetricsComponent`**~~ ✅ Done
+4. ~~**Wire `SignalHistoryComponent`** — Self-contained with `useSignalHistory()` hook. Backend Tier 1.5 writes per-antenna NDJSON, CGI serves as JSON array, hook picks best antenna per RAT.~~ ✅ Done
 
 ### Subsequent Pages
 
@@ -852,6 +860,7 @@ Key design decisions summarized here for quick reference:
 | `/tmp/qmanager_ping.json` | Ping daemon | Poller, Watchcat | Raw ping results (RTT, reachable, streaks, history) |
 | `/tmp/qmanager_watchcat.json` | Watchcat | Poller | Watchcat state (current state, failure count, tier, cooldown) |
 | `/tmp/qmanager_ping_history` | Ping daemon | Ping daemon (self) | Flat-file ring buffer of RTT values (one per line) |
+| `/tmp/qmanager_signal_history.json` | Poller (Tier 1.5) | Signal History CGI (fetch_signal_history.sh) | NDJSON ring buffer of per-antenna signal data (RSRP/RSRQ/SINR × LTE+NR). Max 180 entries (~30 min at 10s intervals). |
 | `/tmp/qmanager_events.json` | Poller (detect_events) | Events CGI (fetch_events.sh) | NDJSON ring buffer of network events (band changes, handoffs, CA, connectivity). Max 50 entries. |
 | `/tmp/qmanager.log` | All daemons | `qmanager_logread` | Centralized log file |
 | `/tmp/qmanager_speedtest.pid` | speedtest_start.sh (wrapper) | speedtest_start.sh, speedtest_status.sh | Singleton enforcement + process tracking |
