@@ -867,4 +867,64 @@ Key design decisions summarized here for quick reference:
 
 ---
 
+## 11. Speedtest Architecture Reference
+
+On-demand network speed test using Ookla speedtest-cli. Operates entirely at the IP layer — **does not touch the modem serial port**, does not interact with `qcmd`, the long-command flag system, or any modem locks.
+
+### Design Decisions
+
+- **No modem interaction:** Speedtest uses the network stack directly. No `qcmd` wrapper, no flock, no impact on poller/terminal/watchdog.
+- **Singleton enforcement:** Only one speedtest can run at a time. PID file (`/tmp/qmanager_speedtest.pid`) tracks the active process. Second attempts get `already_running` and follow along via polling.
+- **Result persistence:** Cached in `/tmp/qmanager_speedtest_result.json` — survives page navigation (user can close dialog, reopen, see result). Cleared when a new test starts. Does NOT survive reboot (RAM disk).
+- **250ms progress interval:** `--progress-update-interval=250` balances smooth UI animation vs disk I/O. Frontend polls every 500ms.
+- **Dialog blocks close while running:** Prevents user from accidentally abandoning a running test.
+
+### CGI Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `speedtest_check.sh` | GET | Returns `{"available": true/false}` based on whether `speedtest` binary exists |
+| `speedtest_start.sh` | POST | Spawns detached speedtest process via setsid + wrapper script. Returns PID or error. |
+| `speedtest_status.sh` | GET | Returns current state: idle, running (with progress), complete (with result), or error |
+
+### Process Lifecycle
+
+```
+speedtest_start.sh (CGI)
+  │
+  ├─ Writes wrapper script to /tmp/qmanager_speedtest_run.sh
+  │     - Sources /etc/profile (full environment for C++ binary)
+  │     - Writes $ to PID file
+  │     - exec speedtest (replaces shell, keeps PID)
+  │
+  ├─ setsid wrapper.sh >/dev/null 2>&1 &
+  │     (new session, detached from uhttpd process group)
+  │
+  ├─ sleep 0.8 (wait for wrapper to write PID)
+  │
+  └─ Check PID file + kill -0 → return success/failure JSON
+
+speedtest_status.sh (polled every 500ms by frontend)
+  │
+  ├─ PID file exists + process alive → "running" + last JSON line
+  ├─ PID file exists + process dead → harvest result → "complete"
+  ├─ No PID + cached result exists  → "complete" (from previous run)
+  └─ No PID + no cache             → "idle"
+```
+
+### Bandwidth Values
+
+Ookla speedtest-cli reports bandwidth in **bytes per second**. Conversion: `Mbps = bandwidth × 8 / 1,000,000`.
+
+Example from actual hardware: `bandwidth: 60677864` B/s = 485.4 Mbps download.
+
+### Known Behaviors During Test
+
+- Ping daemon latency readings spike (network saturated) — this is accurate, not a bug
+- Traffic counters in `/proc/net/dev` show speedtest traffic as real usage
+- CPU usage spikes visible in poller's `/proc/stat` readings
+- No pause/yield for ping daemon during test (maintains continuous connectivity monitoring)
+
+---
+
 *End of Development Log*

@@ -148,43 +148,43 @@ function ResultDisplay({
       <div className="grid grid-cols-3 gap-3">
         {/* Download */}
         <div className="text-center space-y-1">
-          <div className="flex items-center justify-center gap-1 text-muted-foreground">
+          <div className="flex items-center justify-center gap-1 text-primary font-semibold">
             <ArrowDown className="h-3.5 w-3.5" />
-            <span className="text-xs font-medium">Download</span>
+            <span className="text-xs">Download</span>
           </div>
           <div className="flex items-baseline justify-center gap-0.5">
             <span className="text-2xl font-bold tabular-nums">
               {formatSpeed(result.download.bandwidth)}
             </span>
-            <span className="text-xs text-muted-foreground">Mbps</span>
+            <span className="text-xs font-semibold text-muted-foreground">Mbps</span>
           </div>
         </div>
 
         {/* Upload */}
         <div className="text-center space-y-1">
-          <div className="flex items-center justify-center gap-1 text-muted-foreground">
+          <div className="flex items-center justify-center gap-1 text-primary font-semibold">
             <ArrowUp className="h-3.5 w-3.5" />
-            <span className="text-xs font-medium">Upload</span>
+            <span className="text-xs">Upload</span>
           </div>
           <div className="flex items-baseline justify-center gap-0.5">
             <span className="text-2xl font-bold tabular-nums">
               {formatSpeed(result.upload.bandwidth)}
             </span>
-            <span className="text-xs text-muted-foreground">Mbps</span>
+            <span className="text-xs font-semibold text-muted-foreground">Mbps</span>
           </div>
         </div>
 
         {/* Ping */}
         <div className="text-center space-y-1">
-          <div className="flex items-center justify-center gap-1 text-muted-foreground">
+          <div className="flex items-center justify-center gap-1 text-primary font-semibold">
             <Activity className="h-3.5 w-3.5" />
-            <span className="text-xs font-medium">Ping</span>
+            <span className="text-xs">Ping</span>
           </div>
           <div className="flex items-baseline justify-center gap-0.5">
             <span className="text-2xl font-bold tabular-nums">
               {result.ping.latency.toFixed(1)}
             </span>
-            <span className="text-xs text-muted-foreground">ms</span>
+            <span className="text-xs font-semibold text-muted-foreground">ms</span>
           </div>
         </div>
       </div>
@@ -194,40 +194,40 @@ function ResultDisplay({
       {/* Secondary metrics */}
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Jitter</span>
-          <span className="font-medium tabular-nums">
+          <span className="text-muted-foreground font-medium">Jitter</span>
+          <span className="font-semibold tabular-nums">
             {result.ping.jitter.toFixed(1)} ms
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Packet Loss</span>
-          <span className="font-medium tabular-nums">
+          <span className="text-muted-foreground font-medium">Packet Loss</span>
+          <span className="font-semibold tabular-nums">
             {result.packetLoss !== undefined
               ? `${result.packetLoss.toFixed(2)}%`
               : "-"}
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">DL Latency</span>
-          <span className="font-medium tabular-nums">
+          <span className="text-muted-foreground font-medium">DL Latency</span>
+          <span className="font-semibold tabular-nums">
             {result.download.latency.iqm.toFixed(1)} ms
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">UL Latency</span>
-          <span className="font-medium tabular-nums">
+          <span className="text-muted-foreground font-medium">UL Latency</span>
+          <span className="font-semibold tabular-nums">
             {result.upload.latency.iqm.toFixed(1)} ms
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">DL Data</span>
-          <span className="font-medium tabular-nums">
+          <span className="text-muted-foreground font-medium">DL Data</span>
+          <span className="font-semibold tabular-nums">
             {formatBytes(result.download.bytes)}
           </span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">UL Data</span>
-          <span className="font-medium tabular-nums">
+          <span className="text-muted-foreground font-medium">UL Data</span>
+          <span className="font-semibold tabular-nums">
             {formatBytes(result.upload.bytes)}
           </span>
         </div>
@@ -237,23 +237,23 @@ function ResultDisplay({
 
       {/* Server info */}
       <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2">
-          <Server className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-muted-foreground">Server</span>
+        <div className="flex items-center gap-1.5">
+          <Server className="h-3.5 w-3.5 text-primary" />
+          <span className="text-primary font-semibold">Server</span>
           <span className="font-medium ml-auto">
             {result.server.name}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-muted-foreground">Location</span>
+        <div className="flex items-center gap-1.5">
+          <Globe className="h-3.5 w-3.5 text-primary" />
+          <span className="text-primary font-semibold">Location</span>
           <span className="font-medium ml-auto">
             {result.server.location}, {result.server.country}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-muted-foreground">ISP</span>
+        <div className="flex items-center gap-1.5">
+          <Activity className="h-3.5 w-3.5 text-primary" />
+          <span className="text-primary font-semibold">ISP</span>
           <span className="font-medium ml-auto">{result.isp}</span>
         </div>
       </div>
@@ -264,7 +264,7 @@ function ResultDisplay({
           href={result.result.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors pt-1"
+          className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors pt-1 underline underline-offset-4"
         >
           <ExternalLink className="h-3 w-3" />
           View on Speedtest.net
@@ -430,7 +430,7 @@ export function SpeedtestDialog({ open, onOpenChange }: SpeedtestDialogProps) {
             <div className="space-y-4">
               <ResultDisplay result={result} />
               <div className="flex justify-center pt-2">
-                <Button onClick={start} variant="outline" size="sm" className="gap-2">
+                <Button onClick={start}>
                   <Play className="h-3.5 w-3.5" />
                   Run Again
                 </Button>
