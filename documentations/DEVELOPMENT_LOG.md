@@ -2,7 +2,7 @@
 
 **Project:** QManager — Custom GUI for Quectel RM551E-GL 5G Modem  
 **Platform:** OpenWRT (Embedded Linux)  
-**Last Updated:** February 16, 2026 (Phase 4c: NSA SCS Parsing Fix + NR TA Command Correction)
+**Last Updated:** February 16, 2026 (Phase 5: Speedtest Integration)
 
 ---
 
@@ -18,6 +18,7 @@
 8. [Remaining Work](#8-remaining-work)
 9. [TA Debugging Notes (Resolved)](#9-ta-debugging-notes-resolved-)
 10. [Connectivity Architecture Reference](#10-connectivity-architecture-reference)
+11. [Speedtest Architecture Reference](#11-speedtest-architecture-reference)
 
 ---
 
@@ -83,6 +84,9 @@
 | `scripts/cgi/quecmanager/at_cmd/fetch_data.sh` | `/www/cgi-bin/quecmanager/at_cmd/fetch_data.sh` | **Dashboard CGI** — serves cached JSON, zero modem contact |
 | `scripts/cgi/quecmanager/at_cmd/send_command.sh` | `/www/cgi-bin/quecmanager/at_cmd/send_command.sh` | **Terminal CGI** — POST endpoint for manual AT commands via qcmd |
 | `scripts/cgi/quecmanager/at_cmd/fetch_events.sh` | `/www/cgi-bin/quecmanager/at_cmd/fetch_events.sh` | **Events CGI** — serves `/tmp/qmanager_events.json` (NDJSON→JSON array conversion) for Recent Activities |
+| `scripts/cgi/quecmanager/at_cmd/speedtest_check.sh` | `/www/cgi-bin/quecmanager/at_cmd/speedtest_check.sh` | **Speedtest Check CGI** — GET endpoint, returns `{"available": true/false}` based on `command -v speedtest` |
+| `scripts/cgi/quecmanager/at_cmd/speedtest_start.sh` | `/www/cgi-bin/quecmanager/at_cmd/speedtest_start.sh` | **Speedtest Start CGI** — POST endpoint, spawns Ookla speedtest-cli in detached session via setsid + wrapper script. Singleton enforcement via PID file. |
+| `scripts/cgi/quecmanager/at_cmd/speedtest_status.sh` | `/www/cgi-bin/quecmanager/at_cmd/speedtest_status.sh` | **Speedtest Status CGI** — GET endpoint, returns idle/running/complete/error with progress data. Filters for JSON-only lines (grep `^{`) to skip ASCII art. |
 
 **Note on file extensions:** Directly-executed scripts in `/usr/bin/` have **no** `.sh` extension (`qcmd`, `qmanager_poller`, `qmanager_logread`). The logging library keeps `.sh` because it's sourced (`. /usr/lib/qmanager/qlog.sh`), not executed directly. CGI scripts keep `.sh` because the extension is part of their URL path.
 
@@ -142,6 +146,10 @@ echo "DEBUG" > /etc/qmanager/log_level
 | `hooks/use-recent-activities.ts` | Events hook — fetches `/cgi-bin/quecmanager/at_cmd/fetch_events.sh` every 10s, provides `events` (newest first), `isLoading`, `error` |
 | `components/dashboard/home-component.tsx` | **Wired** — `"use client"`, calls `useModemStatus()`, passes data + `modemReachable` down to child components |
 | `components/dashboard/network-status.tsx` | **Wired** — Accepts `data`, `modemReachable`, `isLoading`, `isStale` props, renders dynamic network status |
+| `types/speedtest.ts` | Speedtest data contract — Ookla CLI NDJSON types (progress + result), CGI response types, utility functions (`bytesToMbps`, `formatSpeed`, `formatBytes`) |
+| `hooks/use-speedtest.ts` | Speedtest lifecycle hook — availability check, start, 500ms progress polling, result caching, stale closure-safe via functional setState |
+| `components/dashboard/speedtest-dialog.tsx` | Speedtest modal dialog — 5 states (idle/initializing/ping/download+upload/complete/error), live speed display, result grid, blocks close while running |
+| `components/dashboard/live-latency.tsx` | **Updated** — Added speedtest play button that opens `SpeedtestDialog`, manages dialog open state |
 
 ---
 
@@ -459,6 +467,7 @@ The poller maps the AT+QENG `state` field to `service_status` as follows:
 | **Live Latency** | `live-latency.tsx` | ✅ **DONE** | `data.connectivity` — Line chart of last 5 RTT values, stats row (current/avg/jitter/loss), Online/Offline badge, loading skeleton, "ping daemon not running" fallback |
 | **Recent Activities** | `recent-activities.tsx` | ✅ **DONE** | Self-contained: `useRecentActivities()` hook polls `/cgi-bin/.../fetch_events.sh` every 10s. Poller detects state changes and writes NDJSON to `/tmp/qmanager_events.json`. Displays max 5 most recent events. |
 | **Signal History** | `signal-history.tsx` | ❌ Mock data | `data.lte.rsrp/sinr` + `data.nr.rsrp/sinr` (accumulated client-side) |
+| **Speedtest Dialog** | `speedtest-dialog.tsx` | ✅ **DONE** | On-demand via `speedtest_*.sh` CGI endpoints. Triggered from Live Latency play button. No modem serial interaction (IP-layer only). |
 
 ### Network Status Component Details
 
@@ -553,6 +562,9 @@ chmod +x /etc/init.d/qmanager
 chmod +x /www/cgi-bin/quecmanager/at_cmd/fetch_data.sh
 chmod +x /www/cgi-bin/quecmanager/at_cmd/send_command.sh
 chmod +x /www/cgi-bin/quecmanager/at_cmd/fetch_events.sh
+chmod +x /www/cgi-bin/quecmanager/at_cmd/speedtest_check.sh
+chmod +x /www/cgi-bin/quecmanager/at_cmd/speedtest_start.sh
+chmod +x /www/cgi-bin/quecmanager/at_cmd/speedtest_status.sh
 ```
 
 ### Service Management
@@ -673,6 +685,26 @@ Parsers that grep for patterns like `"servingcell"` would match the echo line `A
 **Solution:** Always include `tr -d '\r'` in the CSV strip pipeline, especially when extracting the last field. This was already done in some parsers but was missing from the NSA NR line in `parse_serving_cell()`. The SA mode parser was unaffected because SCS is not the last field in SA responses.
 
 **General Rule:** Any `cut`/`awk` extraction of the last field from an AT command response needs `\r` stripping. Prefer stripping early in the pipeline (on the whole CSV line) rather than on individual field extractions.
+
+### uhttpd Kills CGI Process Group on Exit
+
+**Problem:** Spawning a background process from a CGI script with `nohup speedtest &` doesn't work. uhttpd sends SIGTERM to the entire CGI process group when the handler finishes. `nohup` prevents SIGHUP but the process stays in the same group and gets killed by SIGTERM. The speedtest process would die within 200ms of the CGI script exiting, producing "speedtest process exited immediately".
+
+**Solution:** Use `setsid` to create a new session (and thus a new process group) that is fully detached from uhttpd's lifecycle. We write a wrapper script to `/tmp/qmanager_speedtest_run.sh` and launch it via `setsid "$WRAPPER_SCRIPT" >/dev/null 2>&1 &`. The wrapper uses `exec` to replace itself with the speedtest binary, keeping the same PID.
+
+The `>/dev/null 2>&1` on the `setsid` line is critical — without it, the wrapper's inherited stdout is still connected to the CGI's stdout pipe, and any output from `. /etc/profile` or the speedtest binary's startup banner leaks into the HTTP response, corrupting the JSON.
+
+### Ookla speedtest-cli Requires Full Environment
+
+**Problem:** The Ookla speedtest binary (compiled C++) crashes with `terminate called after throwing an instance of 'std::logic_error' — basic_string::_M_construct null not valid` when launched from a CGI environment. uhttpd strips nearly all environment variables, and the binary calls `getenv()` for variables like `HOME`, `USER`, `HOSTNAME` etc., passing the result directly to `std::string` constructors which crash on NULL.
+
+**Solution:** The wrapper script sources `. /etc/profile` before `exec speedtest`, giving the binary the same environment an SSH session would have. A safety net of explicit `export` statements covers any vars the profile might miss. The wrapper is written as a single-quoted heredoc (`<< 'WEOF'`) so `$`, `${HOME:-/root}` etc. are preserved literally and expand when the wrapper runs, not when the CGI generates it. Dynamic values (speedtest binary path) are patched in via `sed` after writing.
+
+### Ookla speedtest-cli Outputs ASCII Art Mixed with JSON
+
+**Problem:** When using `-p yes` (progress output), the Ookla binary may interleave ASCII art progress bars (containing patterns like `:@@@@-`) between JSON lines in its stdout output. The status CGI was using `tail -1` to grab the latest line, which could return an ASCII art line instead of JSON, producing `Unexpected token ':' is not valid JSON` on the frontend.
+
+**Solution:** Replace `tail -1` with `grep '^{' output_file | tail -1` everywhere the output file is read. This filters for lines starting with `{` (valid JSON objects) before taking the last one. Applied to both the "running" progress read and the "complete" result harvest.
 
 ### Exit Code Convention in qcmd
 
@@ -816,6 +848,12 @@ Key design decisions summarized here for quick reference:
 | `/tmp/qmanager_ping_history` | Ping daemon | Ping daemon (self) | Flat-file ring buffer of RTT values (one per line) |
 | `/tmp/qmanager_events.json` | Poller (detect_events) | Events CGI (fetch_events.sh) | NDJSON ring buffer of network events (band changes, handoffs, CA, connectivity). Max 50 entries. |
 | `/tmp/qmanager.log` | All daemons | `qmanager_logread` | Centralized log file |
+| `/tmp/qmanager_speedtest.pid` | speedtest_start.sh (wrapper) | speedtest_start.sh, speedtest_status.sh | Singleton enforcement + process tracking |
+| `/tmp/qmanager_speedtest_output` | speedtest process | speedtest_status.sh | NDJSON progress lines (deleted on completion) |
+| `/tmp/qmanager_speedtest_result.json` | speedtest_status.sh | speedtest_status.sh, frontend | Cached final result (survives navigation, cleared on next test start) |
+| `/tmp/qmanager_speedtest_error` | speedtest process | speedtest_start.sh, speedtest_status.sh | stderr capture for diagnostics |
+| `/tmp/qmanager_speedtest_run.sh` | speedtest_start.sh | setsid (executed) | Generated wrapper script (sources /etc/profile, exec speedtest) |
+| `/tmp/qmanager_speedtest_env` | wrapper script | Debug only | Environment dump (remove once stable) |
 
 ### Flag Files Registry
 
