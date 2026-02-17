@@ -6,7 +6,7 @@ import type { CurrentModemSettings } from "@/types/sim-profile";
 // =============================================================================
 // useCurrentSettings — One-Shot Modem Settings Query Hook
 // =============================================================================
-// Fetches current modem settings (APN, IMEI, bands, etc.) for pre-filling
+// Fetches current modem settings (APN, IMEI, ICCID) for pre-filling
 // the profile creation form. Called once on demand, not on a timer.
 //
 // The CGI endpoint queries the modem via qcmd using sip-don't-gulp pattern,

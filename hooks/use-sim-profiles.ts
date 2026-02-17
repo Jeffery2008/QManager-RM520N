@@ -63,11 +63,6 @@ export interface ProfileFormData {
   imei: string;
   ttl: number;
   hl: number;
-  network_mode: string;
-  lte_bands: string;
-  nsa_nr_bands: string;
-  sa_nr_bands: string;
-  band_lock_enabled: boolean;
 }
 
 export function useSimProfiles(): UseSimProfilesReturn {

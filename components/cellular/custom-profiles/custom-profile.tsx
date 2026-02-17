@@ -158,8 +158,8 @@ const CustomProfileComponent = () => {
         <h1 className="text-3xl font-bold mb-2">Custom SIM Profile</h1>
         <p className="text-muted-foreground max-w-5xl">
           Create and manage custom SIM profiles for your cellular device. Each
-          profile bundles APN, IMEI, TTL, network mode, and band lock settings
-          for one-click application.
+          profile bundles APN, IMEI, and TTL/HL settings for one-click
+          application.
         </p>
       </div>
       <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-2 grid-flow-row gap-4 *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs">
@@ -192,8 +192,8 @@ const CustomProfileComponent = () => {
             <AlertDialogTitle>Activate Profile</AlertDialogTitle>
             <AlertDialogDescription>
               Apply &ldquo;{activateTarget?.name}&rdquo; to the modem? This will
-              update APN, network mode, band locks, TTL/HL, and IMEI settings as
-              configured in the profile. Unchanged settings will be skipped.
+              update APN, TTL/HL, and IMEI settings as configured in the
+              profile. Unchanged settings will be skipped.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

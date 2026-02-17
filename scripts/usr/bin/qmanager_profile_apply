@@ -12,6 +12,14 @@
 # State file: /tmp/qmanager_profile_state.json
 # PID file:   /tmp/qmanager_profile_apply.pid
 #
+# Apply steps (3 total):
+#   1. APN     — AT+CGDCONT (no modem reboot)
+#   2. TTL/HL  — iptables/ip6tables (no modem lock needed)
+#   3. IMEI    — AT+EGMR + AT+CFUN=1,1 reboot (most disruptive, last)
+#
+# NOTE: Band locking and network mode are NOT part of SIM Profiles.
+# They will be owned by the Connection Scenarios feature.
+#
 # Architecture: CUSTOM_SIM_PROFILE_ARCHITECTURE_v2.md §5.2, §7
 # Dependencies: qcmd, qlog.sh, profile_mgr.sh
 # Install location: /usr/bin/qmanager_profile_apply
@@ -96,28 +104,18 @@ run_at() {
 # =============================================================================
 # State File Management
 # =============================================================================
-# We build the state JSON manually (no jq on BusyBox).
-# Steps are defined in order and tracked via shell arrays (simulated).
 
-# Step names and display labels
-STEP_NAMES="apn network_mode lte_bands nsa_nr_bands sa_nr_bands ttl_hl imei"
-STEP_COUNT=7
+# Step names (3 steps after band/mode removal)
+STEP_NAMES="apn ttl_hl imei"
+STEP_COUNT=3
 
 # Step statuses (initialized to "pending")
 step_status_apn="pending"
-step_status_network_mode="pending"
-step_status_lte_bands="pending"
-step_status_nsa_nr_bands="pending"
-step_status_sa_nr_bands="pending"
 step_status_ttl_hl="pending"
 step_status_imei="pending"
 
 # Step details
 step_detail_apn=""
-step_detail_network_mode=""
-step_detail_lte_bands=""
-step_detail_nsa_nr_bands=""
-step_detail_sa_nr_bands=""
 step_detail_ttl_hl=""
 step_detail_imei=""
 
@@ -156,10 +154,6 @@ write_state() {
   "total_steps": ${STEP_COUNT},
   "steps": [
     {"name":"apn","status":"${step_status_apn}","detail":"$(_json_str_escape "$step_detail_apn")"},
-    {"name":"network_mode","status":"${step_status_network_mode}","detail":"$(_json_str_escape "$step_detail_network_mode")"},
-    {"name":"lte_bands","status":"${step_status_lte_bands}","detail":"$(_json_str_escape "$step_detail_lte_bands")"},
-    {"name":"nsa_nr_bands","status":"${step_status_nsa_nr_bands}","detail":"$(_json_str_escape "$step_detail_nsa_nr_bands")"},
-    {"name":"sa_nr_bands","status":"${step_status_sa_nr_bands}","detail":"$(_json_str_escape "$step_detail_sa_nr_bands")"},
     {"name":"ttl_hl","status":"${step_status_ttl_hl}","detail":"$(_json_str_escape "$step_detail_ttl_hl")"},
     {"name":"imei","status":"${step_status_imei}","detail":"$(_json_str_escape "$step_detail_imei")"}
   ],
@@ -240,20 +234,13 @@ p_pdp_type=$(_json_extract "$profile_json" "pdp_type")
 p_imei=$(_json_extract "$profile_json" "imei")
 p_ttl=$(_json_extract_raw "$profile_json" "ttl")
 p_hl=$(_json_extract_raw "$profile_json" "hl")
-p_network_mode=$(_json_extract "$profile_json" "network_mode")
-p_lte_bands=$(_json_extract "$profile_json" "lte_bands")
-p_nsa_nr_bands=$(_json_extract "$profile_json" "nsa_nr_bands")
-p_sa_nr_bands=$(_json_extract "$profile_json" "sa_nr_bands")
-p_band_lock=$(_json_extract_raw "$profile_json" "band_lock_enabled")
 
 # Defaults
 [ -z "$p_apn_cid" ] || [ "$p_apn_cid" = "null" ] && p_apn_cid=1
 [ -z "$p_ttl" ] || [ "$p_ttl" = "null" ] && p_ttl=0
 [ -z "$p_hl" ] || [ "$p_hl" = "null" ] && p_hl=0
-[ -z "$p_network_mode" ] && p_network_mode="AUTO"
-[ -z "$p_band_lock" ] && p_band_lock="false"
 
-qlog_info "Applying profile: $p_name (APN=$p_apn_name, mode=$p_network_mode, band_lock=$p_band_lock)"
+qlog_info "Applying profile: $p_name (APN=$p_apn_name, CID=$p_apn_cid)"
 
 # Write initial state
 write_state
@@ -302,188 +289,7 @@ apply_apn() {
 }
 
 # =============================================================================
-# Step 2: Network Mode
-# =============================================================================
-apply_network_mode() {
-    mark_step_running "network_mode" "Checking network mode..."
-
-    # Read current mode
-    local mode_resp
-    mode_resp=$(run_at 'AT+QNWPREFCFG="mode_pref"')
-    if [ $? -ne 0 ]; then
-        mark_step_failed "network_mode" "Failed to read current mode"
-        return
-    fi
-
-    # Parse: +QNWPREFCFG: "mode_pref",AUTO
-    local current_mode
-    current_mode=$(printf '%s' "$mode_resp" | sed -n 's/.*"mode_pref",\(.*\)/\1/p' | tr -d ' \r')
-
-    local target_mode
-    target_mode=$(mode_to_at "$p_network_mode")
-
-    if [ "$current_mode" = "$target_mode" ]; then
-        mark_step_skipped "network_mode" "Already set to $p_network_mode"
-        return
-    fi
-
-    mark_step_running "network_mode" "Setting mode to ${p_network_mode}..."
-
-    local resp
-    resp=$(run_at "AT+QNWPREFCFG=\"mode_pref\",${target_mode}")
-    if [ $? -ne 0 ]; then
-        mark_step_failed "network_mode" "Failed to set network mode"
-        return
-    fi
-
-    sleep "$CMD_GAP"
-    mark_step_done "network_mode" "Set mode to $p_network_mode"
-}
-
-# =============================================================================
-# Step 3: LTE Band Lock
-# =============================================================================
-apply_lte_bands() {
-    mark_step_running "lte_bands" "Checking LTE bands..."
-
-    local target_bands
-
-    if [ "$p_band_lock" = "true" ] && [ -n "$p_lte_bands" ]; then
-        target_bands="$p_lte_bands"
-    else
-        # Unlock all: use cached policy_band response
-        if [ -z "$cached_policy_band" ]; then
-            mark_step_failed "lte_bands" "No policy_band data available"
-            return
-        fi
-        target_bands=$(printf '%s' "$cached_policy_band" | grep '"lte_band"' | sed -n 's/.*"lte_band",\(.*\)/\1/p' | tr -d ' \r')
-    fi
-
-    if [ -z "$target_bands" ]; then
-        mark_step_skipped "lte_bands" "No target bands resolved"
-        return
-    fi
-
-    # Read current bands
-    local current_resp
-    current_resp=$(run_at 'AT+QNWPREFCFG="lte_band"')
-    local current_bands
-    current_bands=$(printf '%s' "$current_resp" | sed -n 's/.*"lte_band",\(.*\)/\1/p' | tr -d ' \r')
-
-    if [ "$current_bands" = "$target_bands" ]; then
-        mark_step_skipped "lte_bands" "LTE bands already correct"
-        return
-    fi
-
-    mark_step_running "lte_bands" "Setting LTE bands..."
-
-    local resp
-    resp=$(run_at "AT+QNWPREFCFG=\"lte_band\",${target_bands}")
-    if [ $? -ne 0 ]; then
-        mark_step_failed "lte_bands" "Failed to set LTE bands"
-        return
-    fi
-
-    sleep "$CMD_GAP"
-    mark_step_done "lte_bands" "Set LTE bands to ${target_bands}"
-}
-
-# =============================================================================
-# Step 4a: NSA NR Band Lock
-# =============================================================================
-apply_nsa_nr_bands() {
-    mark_step_running "nsa_nr_bands" "Checking NSA NR bands..."
-
-    local target_bands
-
-    if [ "$p_band_lock" = "true" ] && [ -n "$p_nsa_nr_bands" ]; then
-        target_bands="$p_nsa_nr_bands"
-    else
-        # Unlock all: use cached policy_band response
-        if [ -z "$cached_policy_band" ]; then
-            mark_step_failed "nsa_nr_bands" "No policy_band data available"
-            return
-        fi
-        target_bands=$(printf '%s' "$cached_policy_band" | grep '"nsa_nr5g_band"' | sed -n 's/.*"nsa_nr5g_band",\(.*\)/\1/p' | tr -d ' \r')
-    fi
-
-    if [ -z "$target_bands" ]; then
-        mark_step_skipped "nsa_nr_bands" "No NSA NR bands to set"
-        return
-    fi
-
-    local current_resp
-    current_resp=$(run_at 'AT+QNWPREFCFG="nsa_nr5g_band"')
-    local current_bands
-    current_bands=$(printf '%s' "$current_resp" | sed -n 's/.*"nsa_nr5g_band",\(.*\)/\1/p' | tr -d ' \r')
-
-    if [ "$current_bands" = "$target_bands" ]; then
-        mark_step_skipped "nsa_nr_bands" "NSA NR bands already correct"
-        return
-    fi
-
-    mark_step_running "nsa_nr_bands" "Setting NSA NR bands..."
-
-    local resp
-    resp=$(run_at "AT+QNWPREFCFG=\"nsa_nr5g_band\",${target_bands}")
-    if [ $? -ne 0 ]; then
-        mark_step_failed "nsa_nr_bands" "Failed to set NSA NR bands"
-        return
-    fi
-
-    sleep "$CMD_GAP"
-    mark_step_done "nsa_nr_bands" "Set NSA NR bands to ${target_bands}"
-}
-
-# =============================================================================
-# Step 4b: SA NR Band Lock
-# =============================================================================
-apply_sa_nr_bands() {
-    mark_step_running "sa_nr_bands" "Checking SA NR bands..."
-
-    local target_bands
-
-    if [ "$p_band_lock" = "true" ] && [ -n "$p_sa_nr_bands" ]; then
-        target_bands="$p_sa_nr_bands"
-    else
-        # Unlock all: use cached policy_band response
-        if [ -z "$cached_policy_band" ]; then
-            mark_step_failed "sa_nr_bands" "No policy_band data available"
-            return
-        fi
-        target_bands=$(printf '%s' "$cached_policy_band" | grep '"nr5g_band"' | sed -n 's/.*"nr5g_band",\(.*\)/\1/p' | tr -d ' \r')
-    fi
-
-    if [ -z "$target_bands" ]; then
-        mark_step_skipped "sa_nr_bands" "No SA NR bands to set"
-        return
-    fi
-
-    local current_resp
-    current_resp=$(run_at 'AT+QNWPREFCFG="nr5g_band"')
-    local current_bands
-    current_bands=$(printf '%s' "$current_resp" | sed -n 's/.*"nr5g_band",\(.*\)/\1/p' | tr -d ' \r')
-
-    if [ "$current_bands" = "$target_bands" ]; then
-        mark_step_skipped "sa_nr_bands" "SA NR bands already correct"
-        return
-    fi
-
-    mark_step_running "sa_nr_bands" "Setting SA NR bands..."
-
-    local resp
-    resp=$(run_at "AT+QNWPREFCFG=\"nr5g_band\",${target_bands}")
-    if [ $? -ne 0 ]; then
-        mark_step_failed "sa_nr_bands" "Failed to set SA NR bands"
-        return
-    fi
-
-    sleep "$CMD_GAP"
-    mark_step_done "sa_nr_bands" "Set SA NR bands to ${target_bands}"
-}
-
-# =============================================================================
-# Step 5: TTL / HL (system-level, no modem lock needed)
+# Step 2: TTL / HL (system-level, no modem lock needed)
 # =============================================================================
 apply_ttl_hl() {
     mark_step_running "ttl_hl" "Checking TTL/HL settings..."
@@ -559,7 +365,7 @@ INITEOF
 }
 
 # =============================================================================
-# Step 6: IMEI (most disruptive — last)
+# Step 3: IMEI (most disruptive — last)
 # =============================================================================
 apply_imei() {
     mark_step_running "imei" "Checking IMEI..."
@@ -644,28 +450,6 @@ apply_imei() {
 # EXECUTE ALL STEPS (ordered by impact: least disruptive first)
 # =============================================================================
 apply_apn
-sleep "$CMD_GAP"
-
-apply_network_mode
-sleep "$CMD_GAP"
-
-# --- Pre-fetch policy_band for band steps (avoids 3 redundant modem queries) ---
-cached_policy_band=""
-if [ "$p_band_lock" != "true" ]; then
-    cached_policy_band=$(run_at 'AT+QNWPREFCFG="policy_band"')
-    if [ $? -ne 0 ] || [ -z "$cached_policy_band" ]; then
-        qlog_warn "Failed to query policy_band — band unlock steps may fail"
-    fi
-    sleep "$CMD_GAP"
-fi
-
-apply_lte_bands
-sleep "$CMD_GAP"
-
-apply_nsa_nr_bands
-sleep "$CMD_GAP"
-
-apply_sa_nr_bands
 sleep "$CMD_GAP"
 
 apply_ttl_hl

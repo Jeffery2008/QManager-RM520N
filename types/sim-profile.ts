@@ -42,16 +42,6 @@ export interface ProfileSettings {
   ttl: number;
   /** IPv6 Hop Limit value (0-255). 0 = don't set. */
   hl: number;
-  /** Network mode preference */
-  network_mode: NetworkModePreference;
-  /** LTE bands, colon-delimited: "1:3:7:28". Empty = use all. */
-  lte_bands: string;
-  /** NSA NR5G bands, colon-delimited: "41:78". Empty = use all. */
-  nsa_nr_bands: string;
-  /** SA NR5G bands, colon-delimited: "41:78". Empty = use all. */
-  sa_nr_bands: string;
-  /** Whether band locking is enabled. false = unlock all bands. */
-  band_lock_enabled: boolean;
 }
 
 /** APN connection settings */
@@ -65,7 +55,6 @@ export interface ApnSettings {
 }
 
 export type PdpType = "IP" | "IPV6" | "IPV4V6";
-export type NetworkModePreference = "AUTO" | "LTE_ONLY" | "NR_ONLY" | "LTE_NR";
 
 // --- Profile List Response ---------------------------------------------------
 
@@ -135,20 +124,6 @@ export interface CurrentModemSettings {
   imei: string;
   /** Current SIM ICCID from AT+QCCID */
   iccid: string;
-  /** Current network mode from AT+QNWPREFCFG="mode_pref" */
-  network_mode: string;
-  /** Current LTE bands (colon-delimited) from AT+QNWPREFCFG="lte_band" */
-  lte_bands: string;
-  /** Current NSA NR bands (colon-delimited) */
-  nsa_nr_bands: string;
-  /** Current SA NR bands (colon-delimited) */
-  sa_nr_bands: string;
-  /** All hardware-supported LTE bands from policy_band (for band picker UI) */
-  supported_lte_bands: string;
-  /** All hardware-supported NSA NR bands */
-  supported_nsa_nr_bands: string;
-  /** All hardware-supported SA NR bands */
-  supported_sa_nr_bands: string;
 }
 
 /** A single APN/CID pair from AT+CGDCONT? */
@@ -176,14 +151,6 @@ export interface ProfileApiResponse {
 
 // --- Display Helpers ---------------------------------------------------------
 
-/** Human-readable labels for network mode preferences */
-export const NETWORK_MODE_LABELS: Record<NetworkModePreference, string> = {
-  AUTO: "Auto (LTE + NR)",
-  LTE_ONLY: "LTE Only",
-  NR_ONLY: "NR5G Only",
-  LTE_NR: "LTE + NR5G",
-};
-
 /** Human-readable labels for PDP types */
 export const PDP_TYPE_LABELS: Record<PdpType, string> = {
   IP: "IPv4 Only",
@@ -199,19 +166,6 @@ export const APPLY_STEP_STATUS_LABELS: Record<ApplyStepStatus, string> = {
   failed: "Failed",
   skipped: "Skipped",
 };
-
-/**
- * Formats a band string for display.
- * "1:3:7:28" → "B1, B3, B7, B28"
- * "" → "All Bands"
- */
-export function formatBandList(bands: string, prefix: string = "B"): string {
-  if (!bands || bands.trim() === "") return "All Bands";
-  return bands
-    .split(":")
-    .map((b) => `${prefix}${b}`)
-    .join(", ");
-}
 
 /**
  * Formats a Unix timestamp into a locale-appropriate date string.

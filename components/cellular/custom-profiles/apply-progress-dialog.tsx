@@ -41,10 +41,6 @@ const stepIcons: Record<ApplyStepStatus, React.ReactNode> = {
 
 const stepLabels: Record<string, string> = {
   apn: "APN Configuration",
-  network_mode: "Network Mode",
-  lte_bands: "LTE Bands",
-  nsa_nr_bands: "NSA NR5G Bands",
-  sa_nr_bands: "SA NR5G Bands",
   ttl_hl: "TTL / Hop Limit",
   imei: "IMEI",
 };

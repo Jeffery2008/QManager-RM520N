@@ -21,7 +21,6 @@
 #   get_active_profile  → Read active profile ID
 #   set_active_profile <id> → Write active profile ID
 #   clear_active_profile    → Clear active profile
-#   mode_to_at <mode>   → Convert mode name to AT command value
 # =============================================================================
 
 # --- Configuration -----------------------------------------------------------
@@ -112,13 +111,6 @@ _validate_imei() {
     esac
 }
 
-# Validate band string: colon-delimited positive integers (e.g., "1:3:7:28")
-# Empty string is valid (means "no bands" / "use all").
-_validate_bands() {
-    [ -z "$1" ] && return 0
-    echo "$1" | grep -qE '^[0-9]+(:[0-9]+)*$'
-}
-
 # Validate TTL/HL: integer 0-255
 _validate_ttl_hl() {
     case "$1" in
@@ -127,14 +119,6 @@ _validate_ttl_hl() {
             [ "$1" -ge 0 ] && [ "$1" -le 255 ] 2>/dev/null && return 0
             return 1
             ;;
-    esac
-}
-
-# Validate network mode
-_validate_network_mode() {
-    case "$1" in
-        AUTO|LTE_ONLY|NR_ONLY|LTE_NR) return 0 ;;
-        *) return 1 ;;
     esac
 }
 
@@ -258,9 +242,8 @@ profile_save() {
 
     # --- Extract all fields from input JSON ---
     local name mno sim_iccid
-    local apn_cid apn_name apn_pdp_type apn_auth_type apn_username apn_password
-    local imei ttl hl network_mode
-    local lte_bands nsa_nr_bands sa_nr_bands band_lock_enabled
+    local apn_cid apn_name apn_pdp_type
+    local imei ttl hl
     local existing_id
 
     name=$(_json_extract "$input" "name")
@@ -276,19 +259,11 @@ profile_save() {
     imei=$(_json_extract "$input" "imei")
     ttl=$(_json_extract_raw "$input" "ttl")
     hl=$(_json_extract_raw "$input" "hl")
-    network_mode=$(_json_extract "$input" "network_mode")
-    lte_bands=$(_json_extract "$input" "lte_bands")
-    nsa_nr_bands=$(_json_extract "$input" "nsa_nr_bands")
-    sa_nr_bands=$(_json_extract "$input" "sa_nr_bands")
-    band_lock_enabled=$(_json_extract_raw "$input" "band_lock_enabled")
-
     # --- Apply defaults for optional fields ---
     [ -z "$apn_cid" ] || [ "$apn_cid" = "null" ] && apn_cid=1
     [ -z "$apn_pdp_type" ] && apn_pdp_type="IPV4V6"
     [ -z "$ttl" ] || [ "$ttl" = "null" ] && ttl=0
     [ -z "$hl" ] || [ "$hl" = "null" ] && hl=0
-    [ -z "$network_mode" ] && network_mode="AUTO"
-    [ -z "$band_lock_enabled" ] && band_lock_enabled="false"
 
     # --- Validation ---
     local errors=""
@@ -315,22 +290,6 @@ profile_save() {
 
     if ! _validate_ttl_hl "$hl"; then
         errors="${errors}HL must be 0-255. "
-    fi
-
-    if ! _validate_network_mode "$network_mode"; then
-        errors="${errors}Invalid network mode. "
-    fi
-
-    if [ -n "$lte_bands" ] && ! _validate_bands "$lte_bands"; then
-        errors="${errors}Invalid LTE bands format (use colon-delimited numbers). "
-    fi
-
-    if [ -n "$nsa_nr_bands" ] && ! _validate_bands "$nsa_nr_bands"; then
-        errors="${errors}Invalid NSA NR bands format. "
-    fi
-
-    if [ -n "$sa_nr_bands" ] && ! _validate_bands "$sa_nr_bands"; then
-        errors="${errors}Invalid SA NR bands format. "
     fi
 
     if [ -n "$errors" ]; then
@@ -385,12 +344,7 @@ profile_save() {
     },
     "imei": "$(_json_str_escape "$imei")",
     "ttl": $ttl,
-    "hl": $hl,
-    "network_mode": "$network_mode",
-    "lte_bands": "$(_json_str_escape "$lte_bands")",
-    "nsa_nr_bands": "$(_json_str_escape "$nsa_nr_bands")",
-    "sa_nr_bands": "$(_json_str_escape "$sa_nr_bands")",
-    "band_lock_enabled": $band_lock_enabled
+    "hl": $hl
   }
 }
 PROFILE_EOF
@@ -489,28 +443,6 @@ clear_active_profile() {
 # AT Command Conversion Helpers
 # =============================================================================
 
-# Convert network mode name to AT command value for AT+QNWPREFCFG="mode_pref"
-# Args: $1=mode name (AUTO, LTE_ONLY, NR_ONLY, LTE_NR)
-# Output: AT command value on stdout
-mode_to_at() {
-    case "$1" in
-        AUTO)     echo "AUTO" ;;
-        LTE_ONLY) echo "LTE" ;;
-        NR_ONLY)  echo "NR5G" ;;
-        LTE_NR)   echo "LTE:NR5G" ;;
-        *)        echo "AUTO" ;; # safe default
-    esac
-}
-
-# Reverse: convert AT mode value to profile mode name
-# Args: $1=AT value (AUTO, LTE, NR5G, LTE:NR5G)
-# Output: profile mode name on stdout
-at_to_mode() {
-    case "$1" in
-        AUTO)     echo "AUTO" ;;
-        LTE)      echo "LTE_ONLY" ;;
-        NR5G)     echo "NR_ONLY" ;;
-        LTE:NR5G) echo "LTE_NR" ;;
-        *)        echo "AUTO" ;;
-    esac
-}
+# NOTE: mode_to_at() and at_to_mode() removed — band locking and network mode
+# are now owned by Connection Scenarios, not SIM Profiles. These helpers will
+# be reimplemented in the Connection Scenarios library when that feature is built.

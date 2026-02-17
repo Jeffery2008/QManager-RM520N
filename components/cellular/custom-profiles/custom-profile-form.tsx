@@ -4,19 +4,11 @@ import React, { useState, useMemo } from "react";
 
 import {
   Field,
-  FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldSet,
   FieldError,
 } from "@/components/ui/field";
-
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
-import { TbInfoCircleFilled } from "react-icons/tb";
 
 import {
   Select,
@@ -28,7 +20,6 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
@@ -43,9 +34,7 @@ import { toast } from "sonner";
 import type { SimProfile, CurrentModemSettings } from "@/types/sim-profile";
 import type { ProfileFormData } from "@/hooks/use-sim-profiles";
 import {
-  NETWORK_MODE_LABELS,
   PDP_TYPE_LABELS,
-  type NetworkModePreference,
   type PdpType,
 } from "@/types/sim-profile";
 import {
@@ -78,11 +67,6 @@ const DEFAULT_FORM_STATE: ProfileFormData = {
   imei: "",
   ttl: 64,
   hl: 64,
-  network_mode: "AUTO",
-  lte_bands: "",
-  nsa_nr_bands: "",
-  sa_nr_bands: "",
-  band_lock_enabled: false,
 };
 
 function profileToFormData(profile: SimProfile): ProfileFormData {
@@ -97,30 +81,7 @@ function profileToFormData(profile: SimProfile): ProfileFormData {
     imei: s.imei,
     ttl: s.ttl,
     hl: s.hl,
-    network_mode: s.network_mode,
-    lte_bands: s.lte_bands,
-    nsa_nr_bands: s.nsa_nr_bands,
-    sa_nr_bands: s.sa_nr_bands,
-    band_lock_enabled: s.band_lock_enabled,
   };
-}
-
-/**
- * Convert modem AT mode value to our NetworkModePreference enum.
- */
-function atModeToFormMode(atMode: string): string {
-  switch (atMode) {
-    case "AUTO":
-      return "AUTO";
-    case "LTE":
-      return "LTE_ONLY";
-    case "NR5G":
-      return "NR_ONLY";
-    case "LTE:NR5G":
-      return "LTE_NR";
-    default:
-      return "AUTO";
-  }
 }
 
 const CustomProfileFormComponent = ({
@@ -181,12 +142,6 @@ const CustomProfileFormComponent = ({
       ...prev,
       sim_iccid: currentSettings.iccid || prev.sim_iccid,
       imei: currentSettings.imei || prev.imei,
-      network_mode: currentSettings.network_mode
-        ? atModeToFormMode(currentSettings.network_mode)
-        : prev.network_mode,
-      lte_bands: currentSettings.lte_bands || prev.lte_bands,
-      nsa_nr_bands: currentSettings.nsa_nr_bands || prev.nsa_nr_bands,
-      sa_nr_bands: currentSettings.sa_nr_bands || prev.sa_nr_bands,
       ...apnPrefill,
     }));
   }
@@ -242,17 +197,6 @@ const CustomProfileFormComponent = ({
 
     if (form.hl < 0 || form.hl > 255) {
       newErrors.hl = "HL must be 0–255.";
-    }
-
-    const bandRegex = /^(\d+(:\d+)*)?$/;
-    if (form.lte_bands && !bandRegex.test(form.lte_bands)) {
-      newErrors.lte_bands = "Use colon-delimited numbers (e.g., 1:3:7:28).";
-    }
-    if (form.nsa_nr_bands && !bandRegex.test(form.nsa_nr_bands)) {
-      newErrors.nsa_nr_bands = "Use colon-delimited numbers (e.g., 41:78).";
-    }
-    if (form.sa_nr_bands && !bandRegex.test(form.sa_nr_bands)) {
-      newErrors.sa_nr_bands = "Use colon-delimited numbers (e.g., 41:78).";
     }
 
     setErrors(newErrors);
@@ -413,43 +357,18 @@ const CustomProfileFormComponent = ({
                 </Field>
               </div>
 
-              <div className="grid grid-cols-1 @md/card:grid-cols-2 gap-4">
-                <Field>
-                  <FieldLabel>Network Mode</FieldLabel>
-                  <Select
-                    value={form.network_mode}
-                    onValueChange={(v) => updateField("network_mode", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(
-                        Object.entries(NETWORK_MODE_LABELS) as [
-                          NetworkModePreference,
-                          string,
-                        ][]
-                      ).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="imei">Preferred IMEI</FieldLabel>
-                  <Input
-                    id="imei"
-                    type="text"
-                    placeholder="Leave blank to keep current IMEI"
-                    maxLength={15}
-                    value={form.imei}
-                    onChange={(e) => updateField("imei", e.target.value)}
-                  />
-                  {errors.imei && <FieldError>{errors.imei}</FieldError>}
-                </Field>
-              </div>
+              <Field>
+                <FieldLabel htmlFor="imei">Preferred IMEI</FieldLabel>
+                <Input
+                  id="imei"
+                  type="text"
+                  placeholder="Leave blank to keep current IMEI"
+                  maxLength={15}
+                  value={form.imei}
+                  onChange={(e) => updateField("imei", e.target.value)}
+                />
+                {errors.imei && <FieldError>{errors.imei}</FieldError>}
+              </Field>
 
               <div className="grid grid-cols-1 @md/card:grid-cols-2 gap-4">
                 <Field>
@@ -481,95 +400,6 @@ const CustomProfileFormComponent = ({
                   {errors.hl && <FieldError>{errors.hl}</FieldError>}
                 </Field>
               </div>
-
-              <Field orientation="horizontal" className="w-fit">
-                <FieldLabel htmlFor="backup-imei">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {/* Will show in Hexadecimal form */}
-                      <p>When disabled, the modem uses all available bands.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  Enable Band Locking
-                </FieldLabel>
-                <Switch
-                  id="bandLockEnabled"
-                  checked={form.band_lock_enabled}
-                  onCheckedChange={(checked) =>
-                    updateField("band_lock_enabled", checked)
-                  }
-                />
-              </Field>
-
-              {form.band_lock_enabled && (
-                <div className="grid grid-cols-1 gap-4">
-                  <Field>
-                    <FieldLabel htmlFor="lteBands">LTE Bands</FieldLabel>
-                    <Input
-                      id="lteBands"
-                      type="text"
-                      placeholder={
-                        currentSettings?.supported_lte_bands
-                          ? `Supported: ${currentSettings.supported_lte_bands}`
-                          : "e.g., 1:3:7:28:40"
-                      }
-                      value={form.lte_bands}
-                      onChange={(e) => updateField("lte_bands", e.target.value)}
-                    />
-                    {errors.lte_bands && (
-                      <FieldError>{errors.lte_bands}</FieldError>
-                    )}
-                    <FieldDescription>
-                      Colon-separated band numbers.
-                    </FieldDescription>
-                  </Field>
-                  <div className="grid grid-cols-1 @md/card:grid-cols-2 gap-4">
-                    <Field>
-                      <FieldLabel htmlFor="nsaNrBands">
-                        NSA NR5G Bands
-                      </FieldLabel>
-                      <Input
-                        id="nsaNrBands"
-                        type="text"
-                        placeholder={
-                          currentSettings?.supported_nsa_nr_bands
-                            ? `Supported: ${currentSettings.supported_nsa_nr_bands}`
-                            : "e.g., 41:78"
-                        }
-                        value={form.nsa_nr_bands}
-                        onChange={(e) =>
-                          updateField("nsa_nr_bands", e.target.value)
-                        }
-                      />
-                      {errors.nsa_nr_bands && (
-                        <FieldError>{errors.nsa_nr_bands}</FieldError>
-                      )}
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="saNrBands">SA NR5G Bands</FieldLabel>
-                      <Input
-                        id="saNrBands"
-                        type="text"
-                        placeholder={
-                          currentSettings?.supported_sa_nr_bands
-                            ? `Supported: ${currentSettings.supported_sa_nr_bands}`
-                            : "e.g., 41:78"
-                        }
-                        value={form.sa_nr_bands}
-                        onChange={(e) =>
-                          updateField("sa_nr_bands", e.target.value)
-                        }
-                      />
-                      {errors.sa_nr_bands && (
-                        <FieldError>{errors.sa_nr_bands}</FieldError>
-                      )}
-                    </Field>
-                  </div>
-                </div>
-              )}
 
               {/* --- Actions --- */}
               <div className="flex gap-3 pt-2">
