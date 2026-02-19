@@ -76,6 +76,14 @@ export interface FailoverToggleResponse {
   detail?: string;
 }
 
+/** Response from GET /cgi-bin/quecmanager/bands/failover_status.sh */
+export interface FailoverStatusResponse {
+  enabled: boolean;
+  activated: boolean;
+  /** True while the one-shot watcher process is still running (sleeping / checking) */
+  watcher_running: boolean;
+}
+
 // --- Utility Functions -------------------------------------------------------
 
 /**

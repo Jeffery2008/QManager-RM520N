@@ -8,6 +8,7 @@ import type {
   BandCurrentResponse,
   BandLockResponse,
   FailoverToggleResponse,
+  FailoverStatusResponse,
 } from "@/types/band-locking";
 import { bandArrayToString } from "@/types/band-locking";
 
@@ -18,16 +19,20 @@ import { bandArrayToString } from "@/types/band-locking";
 // applying per-category band locks, unlocking all bands, and toggling
 // the failover safety mechanism.
 //
-// Supported bands and active bands are NOT managed here — they come from
-// useModemStatus() (poller cache) and are passed in by the parent component.
+// After a successful band lock (when failover is enabled), the hook polls
+// the lightweight failover_status.sh endpoint every 3s until the watcher
+// process completes. This detects whether failover activated and updates
+// the UI accordingly — without touching the modem.
 //
 // Backend endpoints:
-//   GET  /cgi-bin/quecmanager/bands/current.sh         → locked bands + failover
-//   POST /cgi-bin/quecmanager/bands/lock.sh             → apply band lock
-//   POST /cgi-bin/quecmanager/bands/failover_toggle.sh  → enable/disable failover
+//   GET  /cgi-bin/quecmanager/bands/current.sh           → locked bands + failover
+//   GET  /cgi-bin/quecmanager/bands/failover_status.sh   → lightweight flag check
+//   POST /cgi-bin/quecmanager/bands/lock.sh              → apply band lock
+//   POST /cgi-bin/quecmanager/bands/failover_toggle.sh   → enable/disable failover
 // =============================================================================
 
 const CGI_BASE = "/cgi-bin/quecmanager/bands";
+const FAILOVER_POLL_INTERVAL = 3000; // 3s — watcher sleeps 15s then checks
 
 export interface UseBandLockingReturn {
   /** Currently locked/configured bands from ue_capability_band */
@@ -73,16 +78,22 @@ export function useBandLocking(): UseBandLockingReturn {
   const [error, setError] = useState<string | null>(null);
 
   const mountedRef = useRef(true);
+  const failoverPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      // Clean up any running failover poll on unmount
+      if (failoverPollRef.current) {
+        clearInterval(failoverPollRef.current);
+        failoverPollRef.current = null;
+      }
     };
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Fetch current locked bands + failover state
+  // Fetch current locked bands + failover state (full — touches modem)
   // ---------------------------------------------------------------------------
   const fetchCurrent = useCallback(async () => {
     try {
@@ -117,6 +128,59 @@ export function useBandLocking(): UseBandLockingReturn {
   // Initial fetch
   useEffect(() => {
     fetchCurrent();
+  }, [fetchCurrent]);
+
+  // ---------------------------------------------------------------------------
+  // Failover status polling (lightweight — no modem contact)
+  // ---------------------------------------------------------------------------
+  // Started after a successful band lock when failover is enabled.
+  // Polls failover_status.sh until the watcher process exits, then:
+  //   - Updates failover state from the response
+  //   - If activated → re-fetches current.sh to get the reset bands
+  //   - Stops polling
+  // ---------------------------------------------------------------------------
+  const startFailoverPolling = useCallback(() => {
+    // Clear any existing poll
+    if (failoverPollRef.current) {
+      clearInterval(failoverPollRef.current);
+      failoverPollRef.current = null;
+    }
+
+    failoverPollRef.current = setInterval(async () => {
+      if (!mountedRef.current) {
+        if (failoverPollRef.current) {
+          clearInterval(failoverPollRef.current);
+          failoverPollRef.current = null;
+        }
+        return;
+      }
+
+      try {
+        const resp = await fetch(`${CGI_BASE}/failover_status.sh`);
+        if (!resp.ok) return; // Silent fail — retry next interval
+
+        const data: FailoverStatusResponse = await resp.json();
+        if (!mountedRef.current) return;
+
+        // Watcher still running — keep polling
+        if (data.watcher_running) return;
+
+        // Watcher finished — stop polling and update state
+        if (failoverPollRef.current) {
+          clearInterval(failoverPollRef.current);
+          failoverPollRef.current = null;
+        }
+
+        setFailover({ enabled: data.enabled, activated: data.activated });
+
+        // If failover activated, bands were reset — re-fetch to get new values
+        if (data.activated) {
+          await fetchCurrent();
+        }
+      } catch {
+        // Network error — silent, retry next interval
+      }
+    }, FAILOVER_POLL_INTERVAL);
   }, [fetchCurrent]);
 
   // ---------------------------------------------------------------------------
@@ -156,6 +220,15 @@ export function useBandLocking(): UseBandLockingReturn {
 
         // Re-fetch current state to confirm the lock took effect
         await fetchCurrent();
+
+        // If failover is armed (enabled + watcher spawned), start polling
+        // for watcher completion so we detect activation in real-time
+        if (data.failover_armed) {
+          // Clear any previous activated flag from UI — watcher just started fresh
+          setFailover((prev) => ({ ...prev, activated: false }));
+          startFailoverPolling();
+        }
+
         return true;
       } catch (err) {
         if (!mountedRef.current) return false;
@@ -169,7 +242,7 @@ export function useBandLocking(): UseBandLockingReturn {
         }
       }
     },
-    [fetchCurrent],
+    [fetchCurrent, startFailoverPolling],
   );
 
   // ---------------------------------------------------------------------------

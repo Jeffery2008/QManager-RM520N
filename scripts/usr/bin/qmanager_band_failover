@@ -8,8 +8,8 @@
 # Lifecycle:
 #   1. Writes PID file for singleton tracking
 #   2. Sleeps 15 seconds (allows modem to settle after band change)
-#   3. Reads /tmp/qmanager_status.json to check connectivity
-#   4. If modem unreachable OR no service:
+#   3. Queries AT+QCAINFO via qcmd to check signal (lightweight, ~200ms)
+#   4. If response has no +QCAINFO: lines (no signal):
 #      a. Reads supported bands from status.json (cached at boot from policy_band)
 #      b. Resets all three band types to supported bands (unlock all)
 #      c. Writes activation flag for the UI
@@ -20,7 +20,7 @@
 #
 # PID file:  /tmp/qmanager_band_failover.pid
 # Flag file: /tmp/qmanager_band_failover (written on activation)
-# Cache:     /tmp/qmanager_status.json (read-only)
+# Cache:     /tmp/qmanager_status.json (read-only, for supported bands only)
 #
 # Dependencies: qcmd, qlog.sh
 # Install location: /usr/bin/qmanager_band_failover
@@ -55,41 +55,21 @@ qlog_info "Failover watcher started (PID=$$), waiting ${SETTLE_DELAY}s for modem
 # --- Wait for modem to settle ------------------------------------------------
 sleep "$SETTLE_DELAY"
 
-# --- Check connectivity from poller cache ------------------------------------
-# Read modem_reachable and service_status from the JSON cache.
-# Uses grep/sed since no jq available on BusyBox.
+# --- Check signal via AT+QCAINFO ---------------------------------------------
+# AT+QCAINFO is lightweight (~200ms) and gives a real-time signal check.
+# If the response contains no "+QCAINFO:" lines, the modem has no signal.
+# This is more reliable than reading status.json which may be stale.
 
-if [ ! -f "$STATUS_CACHE" ]; then
-    qlog_warn "Status cache not found, cannot assess connectivity — exiting"
+qcainfo_result=$(qcmd 'AT+QCAINFO' 2>/dev/null)
+qcainfo_rc=$?
+
+if [ $qcainfo_rc -ne 0 ]; then
+    qlog_warn "AT+QCAINFO failed (rc=$qcainfo_rc) — modem may be unreachable, triggering failover"
+elif printf '%s' "$qcainfo_result" | grep -q '+QCAINFO:'; then
+    qlog_info "Signal OK after band lock (QCAINFO has carrier data) — no failover needed"
     exit 0
-fi
-
-modem_reachable=$(grep '"modem_reachable"' "$STATUS_CACHE" 2>/dev/null | \
-    sed 's/.*: *//; s/,$//' | tr -d ' \r')
-
-service_status=$(grep '"service_status"' "$STATUS_CACHE" 2>/dev/null | \
-    sed 's/.*: *//; s/,$//' | tr -d ' "\r')
-
-qlog_debug "Post-lock check: modem_reachable=$modem_reachable service_status=$service_status"
-
-# --- Decide whether to failover ----------------------------------------------
-needs_failover=false
-
-if [ "$modem_reachable" = "false" ]; then
-    qlog_warn "Modem unreachable after band lock — triggering failover"
-    needs_failover=true
-fi
-
-case "$service_status" in
-    no_service|searching|unknown)
-        qlog_warn "Service status '$service_status' after band lock — triggering failover"
-        needs_failover=true
-        ;;
-esac
-
-if [ "$needs_failover" = "false" ]; then
-    qlog_info "Connectivity OK after band lock (status=$service_status) — no failover needed"
-    exit 0
+else
+    qlog_warn "AT+QCAINFO returned no carrier data — no signal, triggering failover"
 fi
 
 # --- Failover: Read supported bands from status.json cache -------------------
