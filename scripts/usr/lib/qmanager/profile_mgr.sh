@@ -32,60 +32,24 @@ MAX_PROFILES=10
 mkdir -p "$PROFILE_DIR" 2>/dev/null
 
 # --- JSON Utilities ----------------------------------------------------------
-# Escape a string for safe inclusion in JSON values.
-# Handles: backslash, double-quote, tab, newlines, carriage returns.
+# DEPRECATED: _json_str_escape, _json_extract, _json_extract_raw are kept for
+# backward compatibility with qmanager_profile_apply until it is migrated.
+
+# Escape a string for safe JSON inclusion (without surrounding quotes).
 _json_str_escape() {
-    printf '%s' "$1" | sed \
-        -e 's/\\/\\\\/g' \
-        -e 's/"/\\"/g' \
-        -e 's/	/\\t/g' \
-        -e ':a' -e 'N' -e '$!ba' \
-        -e 's/\n/\\n/g' \
-        -e 's/\r//g'
+    printf '%s' "$1" | jq -Rs '.' | sed 's/^"//;s/"$//'
 }
 
-# Output a JSON string field: "key": "value"
-# Args: $1=key, $2=value
-_json_field_str() {
-    local escaped
-    escaped=$(_json_str_escape "$2")
-    printf '"%s":"%s"' "$1" "$escaped"
-}
-
-# Output a JSON numeric field: "key": value
-# If value is empty or non-numeric, outputs null.
-# Args: $1=key, $2=value
-_json_field_num() {
-    case "$2" in
-        ''|*[!0-9-]*) printf '"%s":null' "$1" ;;
-        *) printf '"%s":%s' "$1" "$2" ;;
-    esac
-}
-
-# Output a JSON boolean field: "key": true/false
-# Args: $1=key, $2=value (true/false/1/0)
-_json_field_bool() {
-    case "$2" in
-        true|1) printf '"%s":true' "$1" ;;
-        *)      printf '"%s":false' "$1" ;;
-    esac
-}
-
-# Extract a string value from a JSON object by key.
-# Returns the FIRST match only (prevents nested key collisions,
-# e.g., top-level "name" vs "apn.name").
+# Extract a top-level string value from a JSON object by key.
 # Args: $1=json_string, $2=key
-# Output: value (unquoted) on stdout
 _json_extract() {
-    printf '%s' "$1" | sed -n 's/.*"'"$2"'"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1
+    printf '%s' "$1" | jq -r --arg k "$2" '.[$k] // empty' 2>/dev/null
 }
 
-# Extract a numeric or boolean value from a JSON object by key.
-# Returns the FIRST match only.
+# Extract a top-level numeric/boolean value from a JSON object by key.
 # Args: $1=json_string, $2=key
-# Output: value on stdout
 _json_extract_raw() {
-    printf '%s' "$1" | sed -n 's/.*"'"$2"'"[[:space:]]*:[[:space:]]*\([^,}]*\).*/\1/p' | head -1 | tr -d ' \r\n'
+    printf '%s' "$1" | jq -r --arg k "$2" '.[$k] // empty | tostring' 2>/dev/null
 }
 
 # --- Profile ID Generation ---------------------------------------------------
@@ -159,54 +123,31 @@ profile_count() {
 # Returns a JSON object with a profiles array (summaries) and active_profile_id.
 # Output: {"profiles":[...],"active_profile_id":"..."}
 profile_list() {
-    local active_id
+    local active_id profiles_json
     active_id=$(get_active_profile)
-    local first=1
 
-    printf '{"profiles":['
-
+    # Collect matching profile files
+    local files=""
     for f in "$PROFILE_DIR"/p_*.json; do
-        [ -f "$f" ] || continue
-        local id name mno iccid created updated
-
-        # Read file content once
-        local content
-        content=$(cat "$f" 2>/dev/null)
-        [ -z "$content" ] && continue
-
-        id=$(_json_extract "$content" "id")
-        name=$(_json_extract "$content" "name")
-        mno=$(_json_extract "$content" "mno")
-        iccid=$(_json_extract "$content" "sim_iccid")
-        created=$(_json_extract_raw "$content" "created_at")
-        updated=$(_json_extract_raw "$content" "updated_at")
-
-        [ -z "$id" ] && continue
-
-        [ "$first" -eq 1 ] && first=0 || printf ','
-
-        printf '{'
-        _json_field_str "id" "$id"
-        printf ','
-        _json_field_str "name" "$name"
-        printf ','
-        _json_field_str "mno" "$mno"
-        printf ','
-        _json_field_str "sim_iccid" "$iccid"
-        printf ','
-        _json_field_num "created_at" "$created"
-        printf ','
-        _json_field_num "updated_at" "$updated"
-        printf '}'
+        [ -f "$f" ] && files="$files $f"
     done
 
-    printf '],'
-    if [ -n "$active_id" ]; then
-        _json_field_str "active_profile_id" "$active_id"
+    # Build profiles array: extract summary fields from each file
+    if [ -n "$files" ]; then
+        profiles_json=$(jq -s '[.[] | {id, name, mno, sim_iccid, created_at, updated_at}]' $files 2>/dev/null)
+        [ -z "$profiles_json" ] && profiles_json="[]"
     else
-        printf '"active_profile_id":null'
+        profiles_json="[]"
     fi
-    printf '}\n'
+
+    # Build final response
+    if [ -n "$active_id" ]; then
+        jq -n --argjson profiles "$profiles_json" --arg active "$active_id" \
+            '{profiles: $profiles, active_profile_id: $active}'
+    else
+        jq -n --argjson profiles "$profiles_json" \
+            '{profiles: $profiles, active_profile_id: null}'
+    fi
 }
 
 # --- profile_get <id> --------------------------------------------------------
@@ -246,24 +187,24 @@ profile_save() {
     local imei ttl hl
     local existing_id
 
-    name=$(_json_extract "$input" "name")
-    mno=$(_json_extract "$input" "mno")
-    sim_iccid=$(_json_extract "$input" "sim_iccid")
-    existing_id=$(_json_extract "$input" "id")
+    name=$(printf '%s' "$input" | jq -r '.name // empty')
+    mno=$(printf '%s' "$input" | jq -r '.mno // empty')
+    sim_iccid=$(printf '%s' "$input" | jq -r '.sim_iccid // empty')
+    existing_id=$(printf '%s' "$input" | jq -r '.id // empty')
 
-    # APN settings — frontend sends these as flat keys for BusyBox-safe parsing
-    apn_cid=$(_json_extract_raw "$input" "cid")
-    apn_name=$(_json_extract "$input" "apn_name")
-    apn_pdp_type=$(_json_extract "$input" "pdp_type")
+    # APN settings — frontend sends these as flat keys
+    apn_cid=$(printf '%s' "$input" | jq -r '.cid // empty | tostring')
+    apn_name=$(printf '%s' "$input" | jq -r '.apn_name // empty')
+    apn_pdp_type=$(printf '%s' "$input" | jq -r '.pdp_type // empty')
 
-    imei=$(_json_extract "$input" "imei")
-    ttl=$(_json_extract_raw "$input" "ttl")
-    hl=$(_json_extract_raw "$input" "hl")
+    imei=$(printf '%s' "$input" | jq -r '.imei // empty')
+    ttl=$(printf '%s' "$input" | jq -r '.ttl // empty | tostring')
+    hl=$(printf '%s' "$input" | jq -r '.hl // empty | tostring')
     # --- Apply defaults for optional fields ---
-    [ -z "$apn_cid" ] || [ "$apn_cid" = "null" ] && apn_cid=1
+    [ -z "$apn_cid" ] && apn_cid=1
     [ -z "$apn_pdp_type" ] && apn_pdp_type="IPV4V6"
-    [ -z "$ttl" ] || [ "$ttl" = "null" ] && ttl=0
-    [ -z "$hl" ] || [ "$hl" = "null" ] && hl=0
+    [ -z "$ttl" ] && ttl=0
+    [ -z "$hl" ] && hl=0
 
     # --- Validation ---
     local errors=""
@@ -293,9 +234,8 @@ profile_save() {
     fi
 
     if [ -n "$errors" ]; then
-        local escaped_errors
-        escaped_errors=$(_json_str_escape "$errors")
-        printf '{"success":false,"error":"validation_failed","detail":"%s"}\n' "$escaped_errors"
+        jq -n --arg detail "$errors" \
+            '{success: false, error: "validation_failed", detail: $detail}'
         return 1
     fi
 
@@ -306,9 +246,7 @@ profile_save() {
     if [ -n "$existing_id" ] && [ -f "$PROFILE_DIR/${existing_id}.json" ]; then
         # UPDATE: preserve ID and created_at
         id="$existing_id"
-        local old_content
-        old_content=$(cat "$PROFILE_DIR/${id}.json" 2>/dev/null)
-        created_at=$(_json_extract_raw "$old_content" "created_at")
+        created_at=$(jq -r '.created_at // empty | tostring' "$PROFILE_DIR/${id}.json" 2>/dev/null)
         [ -z "$created_at" ] && created_at="$updated_at"
         qlog_info "Updating profile: $id ($name)" 2>/dev/null
     else
@@ -328,26 +266,37 @@ profile_save() {
     local tmp_file="$PROFILE_DIR/${id}.json.tmp"
     local final_file="$PROFILE_DIR/${id}.json"
 
-    cat > "$tmp_file" << PROFILE_EOF
-{
-  "id": "$(printf '%s' "$id")",
-  "name": "$(_json_str_escape "$name")",
-  "mno": "$(_json_str_escape "$mno")",
-  "sim_iccid": "$(_json_str_escape "$sim_iccid")",
-  "created_at": $created_at,
-  "updated_at": $updated_at,
-  "settings": {
-    "apn": {
-      "cid": $apn_cid,
-      "name": "$(_json_str_escape "$apn_name")",
-      "pdp_type": "$apn_pdp_type"
-    },
-    "imei": "$(_json_str_escape "$imei")",
-    "ttl": $ttl,
-    "hl": $hl
-  }
-}
-PROFILE_EOF
+    jq -n \
+        --arg id "$id" \
+        --arg name "$name" \
+        --arg mno "$mno" \
+        --arg sim_iccid "$sim_iccid" \
+        --argjson created_at "$created_at" \
+        --argjson updated_at "$updated_at" \
+        --argjson apn_cid "$apn_cid" \
+        --arg apn_name "$apn_name" \
+        --arg apn_pdp_type "$apn_pdp_type" \
+        --arg imei "$imei" \
+        --argjson ttl "$ttl" \
+        --argjson hl "$hl" \
+        '{
+            id: $id,
+            name: $name,
+            mno: $mno,
+            sim_iccid: $sim_iccid,
+            created_at: $created_at,
+            updated_at: $updated_at,
+            settings: {
+                apn: {
+                    cid: $apn_cid,
+                    name: $apn_name,
+                    pdp_type: $apn_pdp_type
+                },
+                imei: $imei,
+                ttl: $ttl,
+                hl: $hl
+            }
+        }' > "$tmp_file"
 
     # Atomic replace
     mv "$tmp_file" "$final_file"
@@ -359,7 +308,7 @@ PROFILE_EOF
         return 1
     fi
 
-    printf '{"success":true,"id":"%s"}\n' "$id"
+    jq -n --arg id "$id" '{success: true, id: $id}'
     return 0
 }
 
@@ -399,7 +348,7 @@ profile_delete() {
     fi
 
     qlog_info "Deleted profile: $id" 2>/dev/null
-    printf '{"success":true,"id":"%s"}\n' "$id"
+    jq -n --arg id "$id" '{success: true, id: $id}'
     return 0
 }
 

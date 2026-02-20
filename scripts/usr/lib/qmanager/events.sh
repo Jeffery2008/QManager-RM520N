@@ -23,8 +23,12 @@ append_event() {
     local ts
     ts=$(date +%s)
 
-    printf '{"timestamp":%d,"type":"%s","message":"%s","severity":"%s"}\n' \
-        "$ts" "$etype" "$message" "$severity" >> "$EVENTS_FILE"
+    jq -n -c \
+        --argjson ts "$ts" \
+        --arg type "$etype" \
+        --arg message "$message" \
+        --arg severity "$severity" \
+        '{timestamp: $ts, type: $type, message: $message, severity: $severity}' >> "$EVENTS_FILE"
 
     # Trim to max entries
     local count
