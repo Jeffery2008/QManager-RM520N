@@ -12,7 +12,11 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 
-const ScannerEmptyView = () => {
+interface ScannerEmptyViewProps {
+  onStartScan?: () => void;
+}
+
+const ScannerEmptyView = ({ onStartScan }: ScannerEmptyViewProps) => {
   return (
     <Empty className="from-muted/50 to-background h-full bg-linear-to-b from-30%">
       <EmptyHeader>
@@ -26,7 +30,7 @@ const ScannerEmptyView = () => {
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button>
+        <Button onClick={onStartScan}>
           <RefreshCcwIcon />
           Start New Scan
         </Button>
