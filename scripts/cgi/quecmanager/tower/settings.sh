@@ -129,6 +129,13 @@ fi
 # --- Update config file using jq (atomic, safe) -----------------------------
 tower_config_update_settings "$PERSIST" "$FO_ENABLED" "$FO_THRESHOLD"
 
+# --- Kill failover daemon if failover was just disabled ----------------------
+if [ "$FO_ENABLED" = "false" ] && [ "$current_fo_enabled" = "true" ]; then
+    tower_kill_failover_watcher
+    rm -f "$TOWER_FAILOVER_FLAG"
+    qlog_info "Failover disabled — killed daemon"
+fi
+
 # --- Response ----------------------------------------------------------------
 if [ "$persist_ok" = "true" ]; then
     jq -n \

@@ -47,12 +47,12 @@ const TowerLockingComponent = () => {
                 enabled,
               });
             }}
-            onThresholdChange={(threshold) => {
+            onThresholdChange={async (threshold) => {
               if (!tower.config) {
                 toast.error("Settings unavailable — try refreshing the page");
-                return;
+                return false;
               }
-              tower.updateSettings(tower.config.persist, {
+              return tower.updateSettings(tower.config.persist, {
                 ...tower.config.failover,
                 threshold,
               });

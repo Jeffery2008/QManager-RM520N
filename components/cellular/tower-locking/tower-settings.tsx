@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 import {
   Card,
@@ -44,7 +45,7 @@ interface TowerLockingSettingsProps {
   isLoading: boolean;
   onPersistChange: (persist: boolean) => void;
   onFailoverChange: (enabled: boolean) => void;
-  onThresholdChange: (threshold: number) => void;
+  onThresholdChange: (threshold: number) => Promise<boolean>;
 }
 
 const TowerLockingSettingsComponent = ({
@@ -56,8 +57,9 @@ const TowerLockingSettingsComponent = ({
   onFailoverChange,
   onThresholdChange,
 }: TowerLockingSettingsProps) => {
-  // Local state for threshold input (debounced save)
+  // Local state for threshold input
   const [thresholdInput, setThresholdInput] = useState<string>("");
+  const [isSavingThreshold, setIsSavingThreshold] = useState(false);
 
   // Sync threshold from config (adjust state during render)
   const [prevThreshold, setPrevThreshold] = useState<number | undefined>(
@@ -71,11 +73,22 @@ const TowerLockingSettingsComponent = ({
     setThresholdInput(String(config.failover.threshold));
   }
 
-  // Debounced threshold save
-  const handleThresholdBlur = useCallback(() => {
+  // Whether the input differs from the saved config value
+  const thresholdDirty =
+    thresholdInput !== String(config?.failover?.threshold ?? "");
+
+  // Save threshold via Update button
+  const handleThresholdSave = useCallback(async () => {
     const val = parseInt(thresholdInput, 10);
-    if (!isNaN(val) && val >= 0 && val <= 100) {
-      onThresholdChange(val);
+    if (isNaN(val) || val < 0 || val > 100) {
+      toast.error("Threshold must be a number between 0 and 100");
+      return;
+    }
+    setIsSavingThreshold(true);
+    const ok = await onThresholdChange(val);
+    setIsSavingThreshold(false);
+    if (ok) {
+      toast.success("Failover threshold updated");
     }
   }, [thresholdInput, onThresholdChange]);
 
@@ -408,11 +421,25 @@ const TowerLockingSettingsComponent = ({
                 className="w-16 h-8 text-center"
                 value={thresholdInput}
                 onChange={(e) => setThresholdInput(e.target.value)}
-                onBlur={handleThresholdBlur}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleThresholdBlur();
+                  if (e.key === "Enter") handleThresholdSave();
                 }}
               />
+              {thresholdDirty && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                  disabled={isSavingThreshold}
+                  onClick={handleThresholdSave}
+                >
+                  {isSavingThreshold ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    "Update"
+                  )}
+                </Button>
+              )}
             </div>
           </div>
           <Separator />

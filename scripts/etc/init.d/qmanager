@@ -84,6 +84,23 @@ EOF
     # procd_set_param stderr 1
     # procd_set_param respawn 3600 5 5
     # procd_close_instance
+
+    # -----------------------------------------------------------------
+    # Tower Failover Daemon (conditional — only if lock + failover active)
+    # -----------------------------------------------------------------
+    # Not a procd instance: the failover daemon is short-lived (exits after
+    # failover triggers) and is managed via PID file by lock.sh/settings.sh.
+    # We just need to spawn it on boot if a persisted lock + failover exists.
+    if [ -f /etc/qmanager/tower_lock.json ]; then
+        local _fo _lte _nr
+        _fo=$(jq -r '.failover.enabled // false' /etc/qmanager/tower_lock.json 2>/dev/null)
+        _lte=$(jq -r '.lte.enabled // false' /etc/qmanager/tower_lock.json 2>/dev/null)
+        _nr=$(jq -r '.nr_sa.enabled // false' /etc/qmanager/tower_lock.json 2>/dev/null)
+        if [ "$_fo" = "true" ] && { [ "$_lte" = "true" ] || [ "$_nr" = "true" ]; }; then
+            setsid /usr/bin/qmanager_tower_failover >/dev/null 2>&1 &
+            logger -t qmanager "Tower failover daemon spawned on boot (lock active + failover enabled)"
+        fi
+    fi
 }
 
 stop_service() {

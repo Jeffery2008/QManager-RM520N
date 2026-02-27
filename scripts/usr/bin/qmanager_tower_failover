@@ -1,22 +1,30 @@
 #!/bin/sh
 # =============================================================================
-# qmanager_tower_failover — One-Shot Tower Lock Failover Watcher
+# qmanager_tower_failover — Persistent Tower Lock Failover Daemon
 # =============================================================================
 # Spawned by lock.sh (detached) after a tower lock operation when failover
-# is enabled. NOT a persistent daemon — runs once and exits.
+# is enabled. Runs as a persistent daemon, continuously monitoring signal
+# quality and automatically clearing locks if the signal degrades.
 #
 # Lifecycle:
 #   1. Writes PID file for singleton tracking
-#   2. Sleeps 20 seconds (allows modem to settle — cell lock disconnects
-#      the modem for 3-5 seconds before reconnecting)
-#   3. Queries AT+QENG="servingcell" via qcmd for real-time signal check
-#   4. Parses RSRP, calculates signal quality percentage
-#   5. If quality < threshold (from config):
+#   2. Initial settle delay (allows modem to apply lock and reconnect)
+#   3. Polling loop: queries AT+QENG="servingcell" every POLL_INTERVAL seconds
+#   4. Tracks consecutive bad readings (signal below threshold)
+#   5. If BAD_CHECK_LIMIT consecutive bad readings occur:
 #      a. Clears both LTE and NR-SA tower locks
-#      b. Writes activation flag for the UI
-#   6. Exits
+#      b. Updates config to disabled (preserves cell targets for re-enable)
+#      c. Writes activation flag for the UI
+#      d. Exits
+#   6. Periodically validates locks are still active; exits if disabled externally
 #
-# The watcher is killed and respawned by lock.sh on each new lock,
+# Resilience:
+#   - AT command contention (modem_busy) does NOT count toward failover
+#   - Only verified bad signal readings increment the failure counter
+#   - Any good reading resets the counter to 0
+#   - Graceful SIGTERM handling (no false failover on kill)
+#
+# The daemon is killed and respawned by lock.sh on each new lock,
 # so only the most recent lock operation is monitored.
 #
 # PID file:  /tmp/qmanager_tower_failover.pid
@@ -43,38 +51,110 @@ qlog_init "tower_failover"
 # --- Configuration -----------------------------------------------------------
 PID_FILE="/tmp/qmanager_tower_failover.pid"
 ACTIVATED_FLAG="/tmp/qmanager_tower_failover"
-SETTLE_DELAY=20  # seconds — cell lock disconnects modem for 3-5s, then needs time to reconnect and measure
+SETTLE_DELAY=20       # seconds — cell lock disconnects modem for 3-5s, then reconnect
+POLL_INTERVAL=20      # seconds between signal checks
+BAD_CHECK_LIMIT=3     # consecutive bad readings before failover triggers
+CONFIG_CHECK_EVERY=6  # check config every N cycles (avoid excessive flash reads)
+
+# --- Graceful shutdown -------------------------------------------------------
+should_exit=0
+
+cleanup() {
+    should_exit=1
+    rm -f "$PID_FILE"
+}
+trap cleanup INT TERM
+
+# Also clean PID on normal exit
+trap 'rm -f "$PID_FILE"' EXIT
 
 # --- Write PID file ----------------------------------------------------------
 echo $$ > "$PID_FILE"
 
-cleanup() {
-    rm -f "$PID_FILE"
-}
-trap cleanup EXIT INT TERM
+qlog_info "Tower failover daemon started (PID=$$), settling for ${SETTLE_DELAY}s"
 
-qlog_info "Tower failover watcher started (PID=$$), waiting ${SETTLE_DELAY}s for modem to settle"
-
-# --- Wait for modem to settle ------------------------------------------------
-sleep "$SETTLE_DELAY"
+# --- Initial settle delay ----------------------------------------------------
+# Sleep in 1-second increments so SIGTERM is handled promptly
+settle_count=0
+while [ "$settle_count" -lt "$SETTLE_DELAY" ]; do
+    [ "$should_exit" -eq 1 ] && exit 0
+    sleep 1
+    settle_count=$((settle_count + 1))
+done
 
 # --- Read threshold from config ----------------------------------------------
 threshold=$(tower_config_get ".failover.threshold")
 [ -z "$threshold" ] && threshold=20
-qlog_debug "Failover threshold: ${threshold}%"
+qlog_info "Failover daemon active — polling every ${POLL_INTERVAL}s, threshold=${threshold}%, require ${BAD_CHECK_LIMIT} consecutive bad checks"
 
-# --- Check signal via AT+QENG="servingcell" ----------------------------------
-# Real-time query (not status.json) for accurate failover decision.
-# Parse RSRP based on network mode.
+# =============================================================================
+# MAIN POLLING LOOP
+# =============================================================================
+consecutive_bad=0
+cycle_count=0
 
-qeng_result=$(qcmd 'AT+QENG="servingcell"' 2>/dev/null)
-qeng_rc=$?
+while true; do
+    # --- Check for shutdown signal -------------------------------------------
+    [ "$should_exit" -eq 1 ] && {
+        qlog_info "Failover daemon received shutdown signal, exiting cleanly"
+        exit 0
+    }
 
-if [ $qeng_rc -ne 0 ] || [ -z "$qeng_result" ]; then
-    qlog_warn "AT+QENG failed (rc=$qeng_rc) — modem may be unreachable, triggering failover"
-    rsrp=""
-else
-    # Parse RSRP from the response
+    # --- Periodically validate lock is still active --------------------------
+    cycle_count=$((cycle_count + 1))
+    if [ $((cycle_count % CONFIG_CHECK_EVERY)) -eq 0 ]; then
+        lte_enabled=$(tower_config_get ".lte.enabled")
+        nr_enabled=$(tower_config_get ".nr_sa.enabled")
+
+        if [ "$lte_enabled" != "true" ] && [ "$nr_enabled" != "true" ]; then
+            qlog_info "No active tower locks in config — daemon exiting"
+            exit 0
+        fi
+
+        # Re-read threshold in case it was changed via settings
+        new_threshold=$(tower_config_get ".failover.threshold")
+        if [ -n "$new_threshold" ] && [ "$new_threshold" != "$threshold" ]; then
+            threshold="$new_threshold"
+            qlog_info "Threshold updated to ${threshold}%"
+        fi
+    fi
+
+    # --- Query signal via AT+QENG="servingcell" ------------------------------
+    qeng_result=$(qcmd 'AT+QENG="servingcell"' 2>/dev/null)
+    qeng_rc=$?
+
+    if [ $qeng_rc -ne 0 ] || [ -z "$qeng_result" ]; then
+        # AT command failed — modem busy or unreachable
+        # Do NOT count toward failover; just skip this cycle
+        qlog_debug "AT+QENG skipped (rc=$qeng_rc) — modem busy, will retry next cycle"
+
+        # Interruptible sleep
+        poll_count=0
+        while [ "$poll_count" -lt "$POLL_INTERVAL" ]; do
+            [ "$should_exit" -eq 1 ] && exit 0
+            sleep 1
+            poll_count=$((poll_count + 1))
+        done
+        continue
+    fi
+
+    # --- Check connection state ----------------------------------------------
+    # If modem reports SEARCH, LIMSRV, or NOCONN, treat as no signal
+    conn_state=""
+    state_line=$(printf '%s\n' "$qeng_result" | grep '+QENG: "servingcell"' | head -1)
+    if [ -n "$state_line" ]; then
+        conn_state=$(printf '%s' "$state_line" | awk -F',' '{print $2}' | tr -d '" \r')
+    fi
+
+    no_service=0
+    case "$conn_state" in
+        SEARCH|NOCONN|LIMSRV)
+            qlog_warn "Modem reports connection state: $conn_state"
+            no_service=1
+            ;;
+    esac
+
+    # --- Parse RSRP ----------------------------------------------------------
     # LTE line format: +QENG: "LTE",<is_tdd>,<MCC>,<MNC>,<cellID>,<PCID>,<earfcn>,<band>,<UL_bw>,<DL_bw>,<TAC>,<RSRP>,<RSRQ>,<RSSI>,<SINR>,...
     # RSRP is field 12 (0-indexed) in the LTE line
     # NR5G-SA line format: +QENG: "servingcell",<state>,"NR5G-SA",<duplex>,<MCC>,<MNC>,<cellID>,<PCID>,<TAC>,<ARFCN>,<band>,<NR_DL_bw>,<RSRP>,...
@@ -82,67 +162,104 @@ else
 
     rsrp=""
 
-    # Try LTE line first (primary in NSA mode)
-    lte_rsrp=$(printf '%s\n' "$qeng_result" | grep '+QENG:.*"LTE"' | head -1 | \
-        awk -F',' '{print $12}' | tr -d ' \r')
+    if [ "$no_service" -eq 0 ]; then
+        # Try LTE line first (primary in NSA mode)
+        lte_rsrp=$(printf '%s\n' "$qeng_result" | grep '+QENG:.*"LTE"' | head -1 | \
+            awk -F',' '{print $12}' | tr -d ' \r')
 
-    # Try NR5G-SA line
-    sa_rsrp=$(printf '%s\n' "$qeng_result" | grep '+QENG:.*"NR5G-SA"' | head -1 | \
-        awk -F',' '{print $13}' | tr -d ' \r')
+        # Try NR5G-SA line
+        sa_rsrp=$(printf '%s\n' "$qeng_result" | grep '+QENG:.*"NR5G-SA"' | head -1 | \
+            awk -F',' '{print $13}' | tr -d ' \r')
 
-    # Use LTE RSRP if available (primary cell in both LTE and NSA modes)
-    # Fall back to NR-SA RSRP for SA-only mode
-    if [ -n "$lte_rsrp" ] && [ "$lte_rsrp" != "-" ] && [ "$lte_rsrp" -lt 0 ] 2>/dev/null; then
-        rsrp="$lte_rsrp"
-        qlog_debug "Using LTE RSRP: ${rsrp} dBm"
-    elif [ -n "$sa_rsrp" ] && [ "$sa_rsrp" != "-" ] && [ "$sa_rsrp" -lt 0 ] 2>/dev/null; then
-        rsrp="$sa_rsrp"
-        qlog_debug "Using NR-SA RSRP: ${rsrp} dBm"
+        # Use LTE RSRP if available; fall back to NR-SA for SA-only mode
+        if [ -n "$lte_rsrp" ] && [ "$lte_rsrp" != "-" ] && [ "$lte_rsrp" -lt 0 ] 2>/dev/null; then
+            rsrp="$lte_rsrp"
+        elif [ -n "$sa_rsrp" ] && [ "$sa_rsrp" != "-" ] && [ "$sa_rsrp" -lt 0 ] 2>/dev/null; then
+            rsrp="$sa_rsrp"
+        fi
     fi
-fi
 
-# --- Calculate signal quality ------------------------------------------------
-if [ -z "$rsrp" ]; then
-    # No valid RSRP — treat as no signal
-    quality=0
-    qlog_warn "No valid RSRP obtained — signal quality = 0%"
-else
-    quality=$(calc_signal_quality "$rsrp")
-    qlog_info "Signal quality: ${quality}% (RSRP=${rsrp} dBm, threshold=${threshold}%)"
-fi
+    # --- Calculate signal quality --------------------------------------------
+    if [ -z "$rsrp" ]; then
+        quality=0
+        qlog_debug "No valid RSRP — signal quality = 0%"
+    else
+        quality=$(calc_signal_quality "$rsrp")
+    fi
 
-# --- Decision: failover or not -----------------------------------------------
-if [ "$quality" -lt "$threshold" ]; then
-    qlog_warn "TOWER FAILOVER: Signal quality ${quality}% below threshold ${threshold}%, clearing locks"
+    # --- Evaluate signal quality ---------------------------------------------
+    if [ "$quality" -lt "$threshold" ]; then
+        consecutive_bad=$((consecutive_bad + 1))
+        qlog_warn "Signal below threshold: quality=${quality}%, threshold=${threshold}%, consecutive_bad=${consecutive_bad}/${BAD_CHECK_LIMIT}"
 
-    # Clear LTE tower lock
-    lte_result=$(tower_unlock_lte 2>/dev/null)
-    case "$lte_result" in
-        *ERROR*) qlog_error "FAILOVER: Failed to clear LTE lock: $lte_result" ;;
-        *) qlog_info "FAILOVER: LTE tower lock cleared" ;;
-    esac
+        if [ "$consecutive_bad" -ge "$BAD_CHECK_LIMIT" ]; then
+            qlog_warn "TOWER FAILOVER: ${BAD_CHECK_LIMIT} consecutive bad readings — clearing locks"
 
-    sleep 0.2
+            # --- Execute failover -------------------------------------------
+            unlock_ok=0
 
-    # Clear NR-SA tower lock
-    nr_result=$(tower_unlock_nr 2>/dev/null)
-    case "$nr_result" in
-        *ERROR*) qlog_error "FAILOVER: Failed to clear NR lock: $nr_result" ;;
-        *) qlog_info "FAILOVER: NR-SA tower lock cleared" ;;
-    esac
+            # Clear LTE tower lock
+            lte_result=$(tower_unlock_lte 2>/dev/null)
+            case "$lte_result" in
+                *ERROR*) qlog_error "FAILOVER: Failed to clear LTE lock: $lte_result" ;;
+                *) unlock_ok=1; qlog_info "FAILOVER: LTE tower lock cleared" ;;
+            esac
 
-    # Update config to reflect disabled state — preserve cell targets!
-    # Only set enabled=false, do NOT clear EARFCN/PCI/ARFCN/Band/SCS.
-    # This matches the manual unlock behavior in lock.sh and lets the user
-    # re-enable the same lock without re-entering all the targets.
-    tower_config_update '.lte.enabled = false | .nr_sa.enabled = false'
+            sleep 0.2
 
-    # Write activation flag for UI
-    echo "activated" > "$ACTIVATED_FLAG"
+            # Clear NR-SA tower lock
+            nr_result=$(tower_unlock_nr 2>/dev/null)
+            case "$nr_result" in
+                *ERROR*) qlog_error "FAILOVER: Failed to clear NR lock: $nr_result" ;;
+                *) unlock_ok=1; qlog_info "FAILOVER: NR-SA tower lock cleared" ;;
+            esac
 
-    qlog_warn "TOWER FAILOVER COMPLETE: All tower locks cleared"
-else
-    qlog_info "Signal OK after tower lock (quality=${quality}%, threshold=${threshold}%) — no failover needed"
-fi
+            if [ "$unlock_ok" -eq 1 ]; then
+                # Update config — preserve cell targets, just disable locks
+                tower_config_update '.lte.enabled = false | .nr_sa.enabled = false'
 
-exit 0
+                # Write activation flag for UI
+                echo "activated" > "$ACTIVATED_FLAG"
+                qlog_warn "TOWER FAILOVER COMPLETE: Locks cleared, daemon exiting"
+            else
+                # Both unlock commands failed — retry once
+                qlog_error "FAILOVER: Both unlock commands failed, retrying in 5s..."
+                sleep 5
+
+                retry_ok=0
+                lte_retry=$(tower_unlock_lte 2>/dev/null)
+                case "$lte_retry" in *ERROR*) ;; *) retry_ok=1 ;; esac
+                sleep 0.2
+                nr_retry=$(tower_unlock_nr 2>/dev/null)
+                case "$nr_retry" in *ERROR*) ;; *) retry_ok=1 ;; esac
+
+                if [ "$retry_ok" -eq 1 ]; then
+                    tower_config_update '.lte.enabled = false | .nr_sa.enabled = false'
+                    echo "activated" > "$ACTIVATED_FLAG"
+                    qlog_warn "TOWER FAILOVER COMPLETE (retry succeeded): Locks cleared"
+                else
+                    qlog_error "TOWER FAILOVER FAILED: Could not clear locks after retry"
+                    # Still exit — continuing to poll won't help if modem is unresponsive
+                fi
+            fi
+
+            exit 0
+        fi
+    else
+        # Good signal — reset counter
+        if [ "$consecutive_bad" -gt 0 ]; then
+            qlog_info "Signal recovered: quality=${quality}%, resetting bad counter (was ${consecutive_bad})"
+        else
+            qlog_debug "Signal OK: quality=${quality}% (RSRP=${rsrp:-n/a} dBm)"
+        fi
+        consecutive_bad=0
+    fi
+
+    # --- Sleep until next check (interruptible) ------------------------------
+    poll_count=0
+    while [ "$poll_count" -lt "$POLL_INTERVAL" ]; do
+        [ "$should_exit" -eq 1 ] && exit 0
+        sleep 1
+        poll_count=$((poll_count + 1))
+    done
+done
