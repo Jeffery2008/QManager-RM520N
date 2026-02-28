@@ -99,7 +99,7 @@ const LteFreqLockingComponent = ({
     const raw = modemData?.device?.supported_lte_bands;
     if (!raw) return [];
     return raw
-      .split(",")
+      .split(":")
       .map((s) => parseInt(s.trim(), 10))
       .filter((n) => !isNaN(n));
   }, [modemData?.device?.supported_lte_bands]);
@@ -218,22 +218,21 @@ const LteFreqLockingComponent = ({
         </CardHeader>
         <CardContent>
           <div className="grid gap-2">
-            {/* Experimental warning */}
-            <div className="flex items-start gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-sm">
-              <TbAlertTriangleFilled className="w-5 h-5 mt-0.5 shrink-0" />
-              <div>
-                <p className="font-semibold">Experimental Feature</p>
-              </div>
-            </div>
-
             {/* Tower lock active warning */}
-            {towerLockActive && (
-              <div className="flex items-start gap-2 p-3 rounded-md bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-sm">
+            {towerLockActive ? (
+              <div className="flex items-start gap-2 p-2 rounded-md bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-sm">
                 <TbAlertTriangleFilled className="w-5 h-5 mt-0.5 shrink-0" />
                 <p className="font-semibold">
                   LTE Tower Lock is active. Disable it before using frequency
                   locking.
                 </p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-sm">
+                <TbAlertTriangleFilled className="w-5 h-5 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">Experimental Feature</p>
+                </div>
               </div>
             )}
 
