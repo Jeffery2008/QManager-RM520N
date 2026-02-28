@@ -16,6 +16,11 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -27,7 +32,7 @@ import {
 } from "react-icons/tb";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import { Loader2, PercentIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import type {
@@ -501,16 +506,21 @@ const TowerLockingSettingsComponent = ({
               </p>
             </div>
             <div className="flex items-center space-x-2">
-              <Input
-                type="text"
-                placeholder="20%"
-                className="w-16 h-8 text-center"
-                value={thresholdInput}
-                onChange={(e) => setThresholdInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleThresholdSave();
-                }}
-              />
+              <InputGroup>
+                <InputGroupInput
+                  type="text"
+                  placeholder="Enter threshold"
+                  className="w-10 h-6"
+                  value={thresholdInput}
+                  onChange={(e) => setThresholdInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleThresholdSave();
+                  }}
+                />
+                <InputGroupAddon align="inline-end">
+                  <PercentIcon />
+                </InputGroupAddon>
+              </InputGroup>
               {thresholdDirty && (
                 <Button
                   size="sm"
