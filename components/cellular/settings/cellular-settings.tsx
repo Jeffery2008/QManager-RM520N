@@ -1,8 +1,14 @@
+"use client";
+
 import React from "react";
 import CellularSettingsCard from "./cellular-settings-card";
 import CellularAMBRCard from "./cellular-ambr";
+import { useCellularSettings } from "@/hooks/use-cellular-settings";
 
 const CellularSettingsComponent = () => {
+  const { settings, ambr, isLoading, isSaving, error, saveSettings, refresh } =
+    useCellularSettings();
+
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
@@ -13,8 +19,13 @@ const CellularSettingsComponent = () => {
         </p>
       </div>
       <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-2 grid-flow-row gap-4 *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs">
-        <CellularSettingsCard />
-        <CellularAMBRCard />
+        <CellularSettingsCard
+          settings={settings}
+          isLoading={isLoading}
+          isSaving={isSaving}
+          onSave={saveSettings}
+        />
+        <CellularAMBRCard ambr={ambr} isLoading={isLoading} />
       </div>
     </div>
   );
