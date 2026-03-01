@@ -52,3 +52,40 @@ export function getMnoPreset(id: string): MnoPreset | undefined {
   if (id === MNO_CUSTOM_ID) return undefined;
   return MNO_PRESETS.find((p) => p.id === id);
 }
+
+// =============================================================================
+// Auto APN Presets — Predefined APN configurations for the APN Management page
+// =============================================================================
+// Selecting a preset auto-fills APN, CID, and optionally TTL/HL.
+// TTL/HL of 0 means "don't change".
+// =============================================================================
+
+/**
+ * Auto APN preset list for the APN Management page.
+ * Add new carriers here — the APN form will automatically pick them up.
+ */
+export const AUTO_APN_PRESETS: MnoPreset[] = [
+  {
+    id: "vzw",
+    label: "Verizon",
+    apn_name: "vzwinternet",
+    cid: 1,
+    ttl: 64,
+    hl: 64,
+  },
+  {
+    id: "att_5g_phone",
+    label: "AT&T 5G Phone",
+    apn_name: "enhancedphone",
+    cid: 1,
+    ttl: 0,
+    hl: 0,
+  },
+];
+
+/**
+ * Look up an Auto APN preset by ID. Returns undefined if not found.
+ */
+export function getAutoApnPreset(id: string): MnoPreset | undefined {
+  return AUTO_APN_PRESETS.find((p) => p.id === id);
+}
