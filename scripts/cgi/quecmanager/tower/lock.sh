@@ -35,7 +35,7 @@ cgi_handle_options
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -47,12 +47,12 @@ LOCK_TYPE=$(printf '%s' "$POST_DATA" | jq -r '.type // empty' 2>/dev/null)
 ACTION=$(printf '%s' "$POST_DATA" | jq -r '.action // empty' 2>/dev/null)
 
 if [ -z "$LOCK_TYPE" ]; then
-    echo '{"success":false,"error":"no_type","detail":"Missing type field (lte or nr_sa)"}'
+    cgi_error "no_type" "Missing type field (lte or nr_sa)"
     exit 0
 fi
 
 if [ -z "$ACTION" ]; then
-    echo '{"success":false,"error":"no_action","detail":"Missing action field (lock or unlock)"}'
+    cgi_error "no_action" "Missing action field (lock or unlock)"
     exit 0
 fi
 
@@ -90,7 +90,7 @@ if [ "$LOCK_TYPE" = "lte" ]; then
         fi
 
         if [ "$num_cells" -eq 0 ]; then
-            echo '{"success":false,"error":"no_cells","detail":"At least one EARFCN+PCI pair is required"}'
+            cgi_error "no_cells" "At least one EARFCN+PCI pair is required"
             exit 0
         fi
 
@@ -107,7 +107,7 @@ if [ "$LOCK_TYPE" = "lte" ]; then
                 *[!0-9]*) echo '{"success":false,"error":"invalid_pci","detail":"PCI must be numeric"}'; exit 0 ;;
             esac
             if [ "$val" -gt 503 ]; then
-                echo '{"success":false,"error":"invalid_pci","detail":"PCI must be 0-503"}'
+                cgi_error "invalid_pci" "PCI must be 0-503"
                 exit 0
             fi
         done
@@ -120,14 +120,14 @@ if [ "$LOCK_TYPE" = "lte" ]; then
 
         if [ $rc -ne 0 ] || [ -z "$result" ]; then
             qlog_error "LTE tower lock failed (rc=$rc)"
-            echo '{"success":false,"error":"modem_error","detail":"Failed to send tower lock command"}'
+            cgi_error "modem_error" "Failed to send tower lock command"
             exit 0
         fi
 
         case "$result" in
             *ERROR*)
                 qlog_error "LTE tower lock AT ERROR: $result"
-                echo '{"success":false,"error":"at_error","detail":"Modem rejected tower lock command"}'
+                cgi_error "at_error" "Modem rejected tower lock command"
                 exit 0
                 ;;
         esac
@@ -150,14 +150,14 @@ if [ "$LOCK_TYPE" = "lte" ]; then
 
         if [ $rc -ne 0 ] || [ -z "$result" ]; then
             qlog_error "LTE tower unlock failed (rc=$rc)"
-            echo '{"success":false,"error":"modem_error","detail":"Failed to clear tower lock"}'
+            cgi_error "modem_error" "Failed to clear tower lock"
             exit 0
         fi
 
         case "$result" in
             *ERROR*)
                 qlog_error "LTE tower unlock AT ERROR: $result"
-                echo '{"success":false,"error":"at_error","detail":"Modem rejected unlock command"}'
+                cgi_error "at_error" "Modem rejected unlock command"
                 exit 0
                 ;;
         esac
@@ -179,7 +179,7 @@ if [ "$LOCK_TYPE" = "lte" ]; then
 
         echo '{"success":true,"type":"lte","action":"unlock"}'
     else
-        echo '{"success":false,"error":"invalid_action","detail":"action must be lock or unlock"}'
+        cgi_error "invalid_action" "action must be lock or unlock"
     fi
 
 # =============================================================================
@@ -195,7 +195,7 @@ elif [ "$LOCK_TYPE" = "nr_sa" ]; then
 
         # Validate all fields present
         if [ -z "$nr_pci" ] || [ -z "$nr_arfcn" ] || [ -z "$nr_scs" ] || [ -z "$nr_band" ]; then
-            echo '{"success":false,"error":"missing_fields","detail":"NR-SA lock requires pci, arfcn, scs, and band"}'
+            cgi_error "missing_fields" "NR-SA lock requires pci, arfcn, scs, and band"
             exit 0
         fi
 
@@ -203,7 +203,7 @@ elif [ "$LOCK_TYPE" = "nr_sa" ]; then
         case "$nr_scs" in
             15|30|60|120|240) ;;  # Valid SCS kHz values
             *)
-                echo '{"success":false,"error":"invalid_scs","detail":"SCS must be 15, 30, 60, 120, or 240 kHz"}'
+                cgi_error "invalid_scs" "SCS must be 15, 30, 60, 120, or 240 kHz"
                 exit 0
                 ;;
         esac
@@ -215,14 +215,14 @@ elif [ "$LOCK_TYPE" = "nr_sa" ]; then
 
         if [ $rc -ne 0 ] || [ -z "$result" ]; then
             qlog_error "NR-SA tower lock failed (rc=$rc)"
-            echo '{"success":false,"error":"modem_error","detail":"Failed to send NR tower lock command"}'
+            cgi_error "modem_error" "Failed to send NR tower lock command"
             exit 0
         fi
 
         case "$result" in
             *ERROR*)
                 qlog_error "NR-SA tower lock AT ERROR: $result"
-                echo '{"success":false,"error":"at_error","detail":"Modem rejected NR tower lock command"}'
+                cgi_error "at_error" "Modem rejected NR tower lock command"
                 exit 0
                 ;;
         esac
@@ -245,14 +245,14 @@ elif [ "$LOCK_TYPE" = "nr_sa" ]; then
 
         if [ $rc -ne 0 ] || [ -z "$result" ]; then
             qlog_error "NR-SA tower unlock failed (rc=$rc)"
-            echo '{"success":false,"error":"modem_error","detail":"Failed to clear NR tower lock"}'
+            cgi_error "modem_error" "Failed to clear NR tower lock"
             exit 0
         fi
 
         case "$result" in
             *ERROR*)
                 qlog_error "NR-SA tower unlock AT ERROR: $result"
-                echo '{"success":false,"error":"at_error","detail":"Modem rejected NR unlock command"}'
+                cgi_error "at_error" "Modem rejected NR unlock command"
                 exit 0
                 ;;
         esac
@@ -274,9 +274,9 @@ elif [ "$LOCK_TYPE" = "nr_sa" ]; then
 
         echo '{"success":true,"type":"nr_sa","action":"unlock"}'
     else
-        echo '{"success":false,"error":"invalid_action","detail":"action must be lock or unlock"}'
+        cgi_error "invalid_action" "action must be lock or unlock"
     fi
 
 else
-    echo '{"success":false,"error":"invalid_type","detail":"type must be lte or nr_sa"}'
+    cgi_error "invalid_type" "type must be lte or nr_sa"
 fi

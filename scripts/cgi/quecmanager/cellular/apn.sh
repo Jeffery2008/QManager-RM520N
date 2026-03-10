@@ -68,13 +68,7 @@ fi
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
-    # --- Read POST body ---
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     # --- Extract fields ---
     CID=$(printf '%s' "$POST_DATA" | jq -r '.cid // empty | tostring')
@@ -90,19 +84,19 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
     # --- Validate ---
     if [ -z "$CID" ] || [ -z "$PDP_TYPE" ] || [ -z "$APN" ]; then
-        echo '{"success":false,"error":"missing_fields","detail":"cid, pdp_type, and apn are required"}'
+        cgi_error "missing_fields" "cid, pdp_type, and apn are required"
         exit 0
     fi
 
     # CID must be 1-15
     if [ "$CID" -lt 1 ] 2>/dev/null || [ "$CID" -gt 15 ] 2>/dev/null; then
-        echo '{"success":false,"error":"invalid_cid","detail":"CID must be 1-15"}'
+        cgi_error "invalid_cid" "CID must be 1-15"
         exit 0
     fi
     # Catch non-numeric CID
     case "$CID" in
         *[!0-9]*|"")
-            echo '{"success":false,"error":"invalid_cid","detail":"CID must be a number 1-15"}'
+            cgi_error "invalid_cid" "CID must be a number 1-15"
             exit 0
             ;;
     esac
@@ -110,7 +104,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     case "$PDP_TYPE" in
         IP|IPV6|IPV4V6) ;;
         *)
-            echo '{"success":false,"error":"invalid_pdp_type","detail":"PDP type must be IP, IPV6, or IPV4V6"}'
+            cgi_error "invalid_pdp_type" "PDP type must be IP, IPV6, or IPV4V6"
             exit 0
             ;;
     esac
@@ -119,11 +113,11 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     case "$TTL" in *[!0-9]*|"") TTL=0 ;; esac
     case "$HL" in *[!0-9]*|"") HL=0 ;; esac
     if [ "$TTL" -gt 255 ] 2>/dev/null; then
-        echo '{"success":false,"error":"invalid_ttl","detail":"TTL must be 0-255"}'
+        cgi_error "invalid_ttl" "TTL must be 0-255"
         exit 0
     fi
     if [ "$HL" -gt 255 ] 2>/dev/null; then
-        echo '{"success":false,"error":"invalid_hl","detail":"HL must be 0-255"}'
+        cgi_error "invalid_hl" "HL must be 0-255"
         exit 0
     fi
 
@@ -132,7 +126,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     case "$result" in
         *ERROR*)
             qlog_error "AT+CGDCONT failed: $result"
-            echo '{"success":false,"error":"cgdcont_failed","detail":"AT+CGDCONT returned ERROR"}'
+            cgi_error "cgdcont_failed" "AT+CGDCONT returned ERROR"
             exit 0
             ;;
         *)
@@ -181,7 +175,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         fi
     fi
 
-    jq -n '{"success":true}'
+    cgi_success
     exit 0
 fi
 

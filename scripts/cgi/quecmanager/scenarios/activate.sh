@@ -35,7 +35,7 @@ ACTIVE_SCENARIO_FILE="/etc/qmanager/active_scenario"
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -46,7 +46,7 @@ cgi_read_post
 SCENARIO_ID=$(printf '%s' "$POST_DATA" | jq -r '.id // empty')
 
 if [ -z "$SCENARIO_ID" ]; then
-    echo '{"success":false,"error":"no_id","detail":"Missing id field in request body"}'
+    cgi_error "no_id" "Missing id field in request body"
     exit 0
 fi
 
@@ -99,7 +99,7 @@ case "$SCENARIO_ID" in
         SA_NR_BANDS=$(printf '%s' "$POST_DATA" | jq -r '.sa_nr_bands // empty')
 
         if [ -z "$AT_MODE" ]; then
-            echo '{"success":false,"error":"no_mode","detail":"Custom scenario requires mode field"}'
+            cgi_error "no_mode" "Custom scenario requires mode field"
             exit 0
         fi
 
@@ -107,13 +107,13 @@ case "$SCENARIO_ID" in
         case "$AT_MODE" in
             AUTO|LTE|NR5G|LTE:NR5G) ;;
             *)
-                echo '{"success":false,"error":"invalid_mode","detail":"Invalid mode value"}'
+                cgi_error "invalid_mode" "Invalid mode value"
                 exit 0
                 ;;
         esac
         ;;
     *)
-        echo '{"success":false,"error":"invalid_id","detail":"Unknown scenario ID"}'
+        cgi_error "invalid_id" "Unknown scenario ID"
         exit 0
         ;;
 esac
@@ -124,7 +124,7 @@ qlog_info "Activating scenario: $SCENARIO_ID (mode=$AT_MODE, lte=$LTE_BANDS, nsa
 FAILED=""
 
 if ! send_at "AT+QNWPREFCFG=\"mode_pref\",${AT_MODE}" "mode_pref"; then
-    echo '{"success":false,"error":"modem_error","detail":"Failed to set network mode"}'
+    cgi_error "modem_error" "Failed to set network mode"
     exit 0
 fi
 

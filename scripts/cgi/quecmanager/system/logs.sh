@@ -273,12 +273,7 @@ fi
 # POST — Actions (clear, status)
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     action=$(printf '%s' "$POST_DATA" | jq -r '.action // empty')
 
@@ -292,14 +287,14 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
                 i=$((i + 1))
             done
             qlog_info "Log files cleared"
-            jq -n '{"success": true}'
+            cgi_success
             ;;
         status)
             stats=$(get_stats)
             printf '%s' "$stats" | jq '{success: true} + .'
             ;;
         *)
-            echo '{"success":false,"error":"invalid_action","detail":"Action must be: clear or status"}'
+            cgi_error "invalid_action" "Action must be: clear or status"
             ;;
     esac
     exit 0

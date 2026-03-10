@@ -25,7 +25,6 @@ cgi_handle_options
 . /usr/lib/qmanager/profile_mgr.sh
 
 # --- Configuration -----------------------------------------------------------
-PID_FILE="/tmp/qmanager_profile_apply.pid"
 STATE_FILE="/tmp/qmanager_profile_state.json"
 APPLY_BIN="/usr/bin/qmanager_profile_apply"
 
@@ -35,7 +34,7 @@ APPLY_BIN="/usr/bin/qmanager_profile_apply"
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -46,7 +45,7 @@ cgi_read_post
 PROFILE_ID=$(printf '%s' "$POST_DATA" | jq -r '.id // empty')
 
 if [ -z "$PROFILE_ID" ]; then
-    echo '{"success":false,"error":"no_id","detail":"Missing id field in request body"}'
+    cgi_error "no_id" "Missing id field in request body"
     exit 0
 fi
 
@@ -56,33 +55,28 @@ case "$PROFILE_ID" in
         # Valid format
         ;;
     *)
-        echo '{"success":false,"error":"invalid_id","detail":"Invalid profile ID format"}'
+        cgi_error "invalid_id" "Invalid profile ID format"
         exit 0
         ;;
 esac
 
 # --- Check: profile exists? --------------------------------------------------
 if [ ! -f "$PROFILE_DIR/${PROFILE_ID}.json" ]; then
-    echo '{"success":false,"error":"not_found","detail":"Profile not found"}'
+    cgi_error "not_found" "Profile not found"
     exit 0
 fi
 
 # --- Check: already applying? ------------------------------------------------
-if [ -f "$PID_FILE" ]; then
-    OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
-    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        qlog_warn "Apply already running (PID: $OLD_PID)"
-        echo '{"success":false,"error":"apply_in_progress","detail":"A profile is already being applied"}'
-        exit 0
-    fi
-    # Stale PID — clean up
-    rm -f "$PID_FILE"
+if ! profile_check_lock; then
+    qlog_warn "Apply already running (PID: $_profile_lock_pid)"
+    cgi_error "apply_in_progress" "A profile is already being applied"
+    exit 0
 fi
 
 # --- Check: apply binary exists? ---------------------------------------------
 if [ ! -x "$APPLY_BIN" ]; then
     qlog_error "Apply binary not found: $APPLY_BIN"
-    echo '{"success":false,"error":"not_installed","detail":"Profile apply script not found"}'
+    cgi_error "not_installed" "Profile apply script not found"
     exit 0
 fi
 
@@ -99,8 +93,8 @@ qlog_info "Spawning profile apply for: $PROFILE_ID"
 sleep 0.5
 
 # --- Verify it started -------------------------------------------------------
-if [ -f "$PID_FILE" ]; then
-    NEW_PID=$(cat "$PID_FILE" 2>/dev/null)
+if [ -f "$PROFILE_APPLY_PID_FILE" ]; then
+    NEW_PID=$(cat "$PROFILE_APPLY_PID_FILE" 2>/dev/null)
     if [ -n "$NEW_PID" ] && kill -0 "$NEW_PID" 2>/dev/null; then
         qlog_info "Profile apply started (PID: $NEW_PID)"
         jq -n --argjson pid "$NEW_PID" '{"success":true,"status":"applying","pid":$pid}'
@@ -110,10 +104,10 @@ if [ -f "$PID_FILE" ]; then
         if [ -f "$STATE_FILE" ]; then
             cat "$STATE_FILE"
         else
-            echo '{"success":false,"error":"start_failed","detail":"Apply process exited immediately"}'
+            cgi_error "start_failed" "Apply process exited immediately"
         fi
     fi
 else
     qlog_error "Apply process failed to write PID file"
-    echo '{"success":false,"error":"start_failed","detail":"Apply process failed to start"}'
+    cgi_error "start_failed" "Apply process failed to start"
 fi

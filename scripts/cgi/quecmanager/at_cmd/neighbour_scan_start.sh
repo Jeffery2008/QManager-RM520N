@@ -26,7 +26,7 @@ LONG_FLAG="/tmp/qmanager_long_running"
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -35,7 +35,7 @@ if [ -f "$PID_FILE" ]; then
     OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
     if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
         qlog_warn "Neighbour scan already running (PID: $OLD_PID)"
-        echo '{"success":false,"error":"already_running","detail":"A neighbour scan is already in progress"}'
+        cgi_error "already_running" "A neighbour scan is already in progress"
         exit 0
     fi
     # Stale PID file — clean up
@@ -47,7 +47,7 @@ fi
 if [ -f "$LONG_FLAG" ]; then
     CURRENT_CMD=$(cat "$LONG_FLAG" 2>/dev/null)
     qlog_warn "Modem busy with long command: $CURRENT_CMD"
-    echo '{"success":false,"error":"modem_busy","detail":"Modem is busy with another long command"}'
+    cgi_error "modem_busy" "Modem is busy with another long command"
     exit 0
 fi
 
@@ -66,5 +66,5 @@ if [ -f "$PID_FILE" ]; then
     jq -n --argjson pid "$NEW_PID" '{"success": true, "pid": $pid}'
 else
     qlog_error "Neighbour scanner failed to start"
-    echo '{"success":false,"error":"start_failed","detail":"Scanner process did not start"}'
+    cgi_error "start_failed" "Scanner process did not start"
 fi

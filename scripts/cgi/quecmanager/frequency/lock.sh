@@ -33,7 +33,7 @@ cgi_handle_options
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -45,12 +45,12 @@ LOCK_TYPE=$(printf '%s' "$POST_DATA" | jq -r '.type // empty' 2>/dev/null)
 ACTION=$(printf '%s' "$POST_DATA" | jq -r '.action // empty' 2>/dev/null)
 
 if [ -z "$LOCK_TYPE" ]; then
-    echo '{"success":false,"error":"no_type","detail":"Missing type field (lte or nr)"}'
+    cgi_error "no_type" "Missing type field (lte or nr)"
     exit 0
 fi
 
 if [ -z "$ACTION" ]; then
-    echo '{"success":false,"error":"no_action","detail":"Missing action field (lock or unlock)"}'
+    cgi_error "no_action" "Missing action field (lock or unlock)"
     exit 0
 fi
 
@@ -64,7 +64,7 @@ if [ "$LOCK_TYPE" = "lte" ]; then
         lte_tower_state=$(tower_read_lte_lock 2>/dev/null)
         case "$lte_tower_state" in
             locked*)
-                echo '{"success":false,"error":"tower_lock_active","detail":"Cannot use frequency lock while LTE tower lock is active. Disable tower lock first."}'
+                cgi_error "tower_lock_active" "Cannot use frequency lock while LTE tower lock is active. Disable tower lock first."
                 exit 0
                 ;;
         esac
@@ -73,7 +73,7 @@ if [ "$LOCK_TYPE" = "lte" ]; then
         earfcn_count=$(printf '%s' "$POST_DATA" | jq -r '.earfcns | length' 2>/dev/null)
 
         if [ -z "$earfcn_count" ] || [ "$earfcn_count" -lt 1 ] 2>/dev/null || [ "$earfcn_count" -gt 2 ] 2>/dev/null; then
-            echo '{"success":false,"error":"invalid_count","detail":"LTE frequency lock requires 1-2 EARFCNs"}'
+            cgi_error "invalid_count" "LTE frequency lock requires 1-2 EARFCNs"
             exit 0
         fi
 
@@ -86,7 +86,7 @@ if [ "$LOCK_TYPE" = "lte" ]; then
             # Validate numeric
             case "$val" in
                 ''|*[!0-9]*)
-                    echo '{"success":false,"error":"invalid_earfcn","detail":"EARFCN must be a positive integer"}'
+                    cgi_error "invalid_earfcn" "EARFCN must be a positive integer"
                     exit 0
                     ;;
             esac
@@ -107,14 +107,14 @@ if [ "$LOCK_TYPE" = "lte" ]; then
 
         if [ $rc -ne 0 ] || [ -z "$result" ]; then
             qlog_error "LTE freq lock failed (rc=$rc)"
-            echo '{"success":false,"error":"modem_error","detail":"Failed to send LTE frequency lock command"}'
+            cgi_error "modem_error" "Failed to send LTE frequency lock command"
             exit 0
         fi
 
         case "$result" in
             *ERROR*)
                 qlog_error "LTE freq lock AT ERROR: $result"
-                echo '{"success":false,"error":"at_error","detail":"Modem rejected LTE frequency lock command"}'
+                cgi_error "at_error" "Modem rejected LTE frequency lock command"
                 exit 0
                 ;;
         esac
@@ -129,14 +129,14 @@ if [ "$LOCK_TYPE" = "lte" ]; then
 
         if [ $rc -ne 0 ] || [ -z "$result" ]; then
             qlog_error "LTE freq unlock failed (rc=$rc)"
-            echo '{"success":false,"error":"modem_error","detail":"Failed to clear LTE frequency lock"}'
+            cgi_error "modem_error" "Failed to clear LTE frequency lock"
             exit 0
         fi
 
         case "$result" in
             *ERROR*)
                 qlog_error "LTE freq unlock AT ERROR: $result"
-                echo '{"success":false,"error":"at_error","detail":"Modem rejected LTE frequency unlock command"}'
+                cgi_error "at_error" "Modem rejected LTE frequency unlock command"
                 exit 0
                 ;;
         esac
@@ -144,7 +144,7 @@ if [ "$LOCK_TYPE" = "lte" ]; then
         qlog_info "LTE freq lock cleared"
         echo '{"success":true,"type":"lte","action":"unlock"}'
     else
-        echo '{"success":false,"error":"invalid_action","detail":"action must be lock or unlock"}'
+        cgi_error "invalid_action" "action must be lock or unlock"
     fi
 
 # =============================================================================
@@ -157,7 +157,7 @@ elif [ "$LOCK_TYPE" = "nr" ]; then
         nr_tower_state=$(tower_read_nr_lock 2>/dev/null)
         case "$nr_tower_state" in
             locked*)
-                echo '{"success":false,"error":"tower_lock_active","detail":"Cannot use frequency lock while NR tower lock is active. This command cannot be used together with AT+QNWLOCK common/5g."}'
+                cgi_error "tower_lock_active" "Cannot use frequency lock while NR tower lock is active. This command cannot be used together with AT+QNWLOCK common/5g."
                 exit 0
                 ;;
         esac
@@ -166,7 +166,7 @@ elif [ "$LOCK_TYPE" = "nr" ]; then
         nr_count=$(printf '%s' "$POST_DATA" | jq -r '.entries | length' 2>/dev/null)
 
         if [ -z "$nr_count" ] || [ "$nr_count" -lt 1 ] 2>/dev/null || [ "$nr_count" -gt 32 ] 2>/dev/null; then
-            echo '{"success":false,"error":"invalid_count","detail":"NR frequency lock requires 1-32 entries"}'
+            cgi_error "invalid_count" "NR frequency lock requires 1-32 entries"
             exit 0
         fi
 
@@ -180,7 +180,7 @@ elif [ "$LOCK_TYPE" = "nr" ]; then
             # Validate ARFCN is numeric
             case "$arfcn" in
                 ''|*[!0-9]*)
-                    echo '{"success":false,"error":"invalid_arfcn","detail":"NR-ARFCN must be a positive integer"}'
+                    cgi_error "invalid_arfcn" "NR-ARFCN must be a positive integer"
                     exit 0
                     ;;
             esac
@@ -189,7 +189,7 @@ elif [ "$LOCK_TYPE" = "nr" ]; then
             case "$scs" in
                 15|30|60|120|240) ;;
                 *)
-                    echo '{"success":false,"error":"invalid_scs","detail":"SCS must be 15, 30, 60, 120, or 240 kHz"}'
+                    cgi_error "invalid_scs" "SCS must be 15, 30, 60, 120, or 240 kHz"
                     exit 0
                     ;;
             esac
@@ -210,14 +210,14 @@ elif [ "$LOCK_TYPE" = "nr" ]; then
 
         if [ $rc -ne 0 ] || [ -z "$result" ]; then
             qlog_error "NR freq lock failed (rc=$rc)"
-            echo '{"success":false,"error":"modem_error","detail":"Failed to send NR frequency lock command"}'
+            cgi_error "modem_error" "Failed to send NR frequency lock command"
             exit 0
         fi
 
         case "$result" in
             *ERROR*)
                 qlog_error "NR freq lock AT ERROR: $result"
-                echo '{"success":false,"error":"at_error","detail":"Modem rejected NR frequency lock command"}'
+                cgi_error "at_error" "Modem rejected NR frequency lock command"
                 exit 0
                 ;;
         esac
@@ -232,14 +232,14 @@ elif [ "$LOCK_TYPE" = "nr" ]; then
 
         if [ $rc -ne 0 ] || [ -z "$result" ]; then
             qlog_error "NR freq unlock failed (rc=$rc)"
-            echo '{"success":false,"error":"modem_error","detail":"Failed to clear NR frequency lock"}'
+            cgi_error "modem_error" "Failed to clear NR frequency lock"
             exit 0
         fi
 
         case "$result" in
             *ERROR*)
                 qlog_error "NR freq unlock AT ERROR: $result"
-                echo '{"success":false,"error":"at_error","detail":"Modem rejected NR frequency unlock command"}'
+                cgi_error "at_error" "Modem rejected NR frequency unlock command"
                 exit 0
                 ;;
         esac
@@ -247,9 +247,9 @@ elif [ "$LOCK_TYPE" = "nr" ]; then
         qlog_info "NR freq lock cleared"
         echo '{"success":true,"type":"nr","action":"unlock"}'
     else
-        echo '{"success":false,"error":"invalid_action","detail":"action must be lock or unlock"}'
+        cgi_error "invalid_action" "action must be lock or unlock"
     fi
 
 else
-    echo '{"success":false,"error":"invalid_type","detail":"type must be lte or nr"}'
+    cgi_error "invalid_type" "type must be lte or nr"
 fi

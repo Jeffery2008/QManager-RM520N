@@ -33,7 +33,7 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
     resp=$(run_at 'AT+QNWPREFCFG="rat_acq_order"')
 
     if [ -z "$resp" ]; then
-        echo '{"success":false,"error":"at_failed","detail":"Failed to query rat_acq_order"}'
+        cgi_error "at_failed" "Failed to query rat_acq_order"
         exit 0
     fi
 
@@ -46,7 +46,7 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
     ')
 
     if [ -z "$order" ]; then
-        echo '{"success":false,"error":"parse_failed","detail":"Could not parse rat_acq_order response"}'
+        cgi_error "parse_failed" "Could not parse rat_acq_order response"
         exit 0
     fi
 
@@ -61,25 +61,19 @@ fi
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
-    # --- Read POST body ---
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     ORDER=$(printf '%s' "$POST_DATA" | jq -r '.order // empty')
 
     if [ -z "$ORDER" ]; then
-        echo '{"success":false,"error":"missing_order","detail":"order field is required"}'
+        cgi_error "missing_order" "order field is required"
         exit 0
     fi
 
     # Validate: only allow known RAT names separated by colons
     case "$ORDER" in
         *[!A-Z0-9:]*)
-            echo '{"success":false,"error":"invalid_order","detail":"order must contain only RAT names separated by colons"}'
+            cgi_error "invalid_order" "order must contain only RAT names separated by colons"
             exit 0
             ;;
     esac
@@ -90,13 +84,13 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     case "$result" in
         *ERROR*)
             qlog_error "Failed to set rat_acq_order: $result"
-            echo '{"success":false,"error":"at_failed","detail":"AT+QNWPREFCFG returned ERROR"}'
+            cgi_error "at_failed" "AT+QNWPREFCFG returned ERROR"
             exit 0
             ;;
     esac
 
     qlog_info "RAT acquisition order set to: $ORDER"
-    jq -n '{"success":true}'
+    cgi_success
     exit 0
 fi
 

@@ -39,7 +39,7 @@ MAX_SCENARIOS=20
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -52,7 +52,7 @@ SCENARIO_NAME=$(printf '%s' "$POST_DATA" | jq -r '.name // empty')
 
 # --- Validate name -----------------------------------------------------------
 if [ -z "$SCENARIO_NAME" ]; then
-    echo '{"success":false,"error":"no_name","detail":"Scenario name is required"}'
+    cgi_error "no_name" "Scenario name is required"
     exit 0
 fi
 
@@ -73,7 +73,7 @@ case "$SCENARIO_ID" in
         # Valid format
         ;;
     *)
-        echo '{"success":false,"error":"invalid_id","detail":"Invalid scenario ID format"}'
+        cgi_error "invalid_id" "Invalid scenario ID format"
         exit 0
         ;;
 esac
@@ -97,7 +97,7 @@ SCENARIO_FILE="$SCENARIOS_DIR/${SCENARIO_ID}.json"
 printf '%s' "$SAVE_DATA" > "$SCENARIO_FILE"
 
 if [ $? -ne 0 ]; then
-    echo '{"success":false,"error":"write_failed","detail":"Failed to write scenario file"}'
+    cgi_error "write_failed" "Failed to write scenario file"
     exit 0
 fi
 

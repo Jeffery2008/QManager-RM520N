@@ -26,6 +26,7 @@
 # --- Configuration -----------------------------------------------------------
 PROFILE_DIR="/etc/qmanager/profiles"
 ACTIVE_PROFILE_FILE="/etc/qmanager/active_profile"
+PROFILE_APPLY_PID_FILE="/tmp/qmanager_profile_apply.pid"
 MAX_PROFILES=10
 
 # Ensure profile directory exists
@@ -375,3 +376,31 @@ clear_active_profile() {
 # NOTE: mode_to_at() and at_to_mode() removed — band locking and network mode
 # are now owned by Connection Scenarios, not SIM Profiles. These helpers will
 # be reimplemented in the Connection Scenarios library when that feature is built.
+
+# =============================================================================
+# PID File Lock (Profile Apply Singleton)
+# =============================================================================
+
+# profile_check_lock
+# Check if a profile apply process is currently running.
+# Returns 0 if free (stale PID cleaned), 1 if locked.
+# On lock, sets global: _profile_lock_pid
+profile_check_lock() {
+    if [ -f "$PROFILE_APPLY_PID_FILE" ]; then
+        _profile_lock_pid=$(cat "$PROFILE_APPLY_PID_FILE" 2>/dev/null)
+        if [ -n "$_profile_lock_pid" ] && kill -0 "$_profile_lock_pid" 2>/dev/null; then
+            return 1
+        fi
+        rm -f "$PROFILE_APPLY_PID_FILE"
+    fi
+    _profile_lock_pid=""
+    return 0
+}
+
+# profile_acquire_lock
+# Check + acquire the profile apply lock (writes $$ to PID file).
+# Returns 0 on success, 1 if already locked.
+profile_acquire_lock() {
+    profile_check_lock || return 1
+    echo $$ > "$PROFILE_APPLY_PID_FILE"
+}

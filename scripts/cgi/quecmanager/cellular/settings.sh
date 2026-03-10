@@ -195,13 +195,7 @@ fi
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
-    # --- Read POST body ---
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     # --- Extract fields (use "unset" sentinel for missing keys) ---
     SIM_SLOT=$(printf '%s' "$POST_DATA" | jq -r 'if has("sim_slot") then (.sim_slot | tostring) else "unset" end')
@@ -217,7 +211,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$SIM_SLOT" in
             1|2) ;;
             *)
-                echo '{"success":false,"error":"invalid_sim_slot","detail":"SIM slot must be 1 or 2"}'
+                cgi_error "invalid_sim_slot" "SIM slot must be 1 or 2"
                 exit 0
                 ;;
         esac
@@ -227,7 +221,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$CFUN" in
             0|1|4) ;;
             *)
-                echo '{"success":false,"error":"invalid_cfun","detail":"CFUN must be 0, 1, or 4"}'
+                cgi_error "invalid_cfun" "CFUN must be 0, 1, or 4"
                 exit 0
                 ;;
         esac
@@ -237,7 +231,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$MODE_PREF" in
             AUTO|LTE|NR5G|WCDMA|LTE:NR5G|LTE:WCDMA|NR5G:LTE:WCDMA) ;;
             *)
-                echo '{"success":false,"error":"invalid_mode_pref","detail":"Invalid network mode"}'
+                cgi_error "invalid_mode_pref" "Invalid network mode"
                 exit 0
                 ;;
         esac
@@ -247,7 +241,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$NR5G_MODE" in
             0|1|2) ;;
             *)
-                echo '{"success":false,"error":"invalid_nr5g_mode","detail":"NR5G mode must be 0, 1, or 2"}'
+                cgi_error "invalid_nr5g_mode" "NR5G mode must be 0, 1, or 2"
                 exit 0
                 ;;
         esac
@@ -257,7 +251,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$ROAM_PREF" in
             1|3|255) ;;
             *)
-                echo '{"success":false,"error":"invalid_roam_pref","detail":"Roaming preference must be 1, 3, or 255"}'
+                cgi_error "invalid_roam_pref" "Roaming preference must be 1, 3, or 255"
                 exit 0
                 ;;
         esac
@@ -384,7 +378,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
     # --- Response ---
     if [ -z "$errors" ]; then
-        jq -n '{"success":true}'
+        cgi_success
     else
         jq -n --arg errors "$errors" --arg applied "$applied" \
             '{

@@ -96,13 +96,7 @@ fi
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
-    # --- Read POST body ---
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     new_ttl=$(printf '%s' "$POST_DATA" | jq -r '.ttl // "0"' | tr -d '"')
     new_hl=$(printf '%s' "$POST_DATA" | jq -r '.hl // "0"' | tr -d '"')
@@ -110,24 +104,24 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     # --- Validate TTL ---
     case "$new_ttl" in
         ''|*[!0-9]*)
-            echo '{"success":false,"error":"invalid_ttl","detail":"TTL must be a number between 0 and 255"}'
+            cgi_error "invalid_ttl" "TTL must be a number between 0 and 255"
             exit 0
             ;;
     esac
     if [ "$new_ttl" -gt 255 ] 2>/dev/null; then
-        echo '{"success":false,"error":"invalid_ttl","detail":"TTL must be between 0 and 255"}'
+        cgi_error "invalid_ttl" "TTL must be between 0 and 255"
         exit 0
     fi
 
     # --- Validate HL ---
     case "$new_hl" in
         ''|*[!0-9]*)
-            echo '{"success":false,"error":"invalid_hl","detail":"HL must be a number between 0 and 255"}'
+            cgi_error "invalid_hl" "HL must be a number between 0 and 255"
             exit 0
             ;;
     esac
     if [ "$new_hl" -gt 255 ] 2>/dev/null; then
-        echo '{"success":false,"error":"invalid_hl","detail":"HL must be between 0 and 255"}'
+        cgi_error "invalid_hl" "HL must be between 0 and 255"
         exit 0
     fi
 

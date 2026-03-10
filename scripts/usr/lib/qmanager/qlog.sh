@@ -25,6 +25,9 @@
 # Install location: /usr/lib/qmanager/qlog.sh
 # =============================================================================
 
+[ -n "$_QLOG_LOADED" ] && return 0
+_QLOG_LOADED=1
+
 # --- Configuration (defaults, overridable via environment) -------------------
 QLOG_LEVEL="${QLOG_LEVEL:-INFO}"
 QLOG_FILE="${QLOG_FILE:-/tmp/qmanager.log}"

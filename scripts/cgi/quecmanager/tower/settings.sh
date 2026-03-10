@@ -28,7 +28,7 @@ cgi_handle_options
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -45,7 +45,7 @@ FO_THRESHOLD=$(printf '%s' "$POST_DATA" | jq -r 'if has("failover_threshold") th
 
 # --- Validate ----------------------------------------------------------------
 if [ "$PERSIST" = "unset" ] && [ "$FO_ENABLED" = "unset" ] && [ "$FO_THRESHOLD" = "unset" ]; then
-    echo '{"success":false,"error":"no_fields","detail":"No settings fields provided"}'
+    cgi_error "no_fields" "No settings fields provided"
     exit 0
 fi
 
@@ -71,12 +71,12 @@ current_fo_threshold=$(tower_config_get ".failover.threshold")
 if [ -n "$FO_THRESHOLD" ]; then
     case "$FO_THRESHOLD" in
         *[!0-9]*)
-            echo '{"success":false,"error":"invalid_threshold","detail":"Threshold must be a number 0-100"}'
+            cgi_error "invalid_threshold" "Threshold must be a number 0-100"
             exit 0
             ;;
     esac
     if [ "$FO_THRESHOLD" -lt 0 ] 2>/dev/null || [ "$FO_THRESHOLD" -gt 100 ] 2>/dev/null; then
-        echo '{"success":false,"error":"invalid_threshold","detail":"Threshold must be 0-100"}'
+        cgi_error "invalid_threshold" "Threshold must be 0-100"
         exit 0
     fi
 fi

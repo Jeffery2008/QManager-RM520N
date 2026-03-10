@@ -37,14 +37,14 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
     resp=$(qcmd 'AT+CRSM=176,28539,0,0,12' 2>/dev/null)
     if [ -z "$resp" ]; then
         qlog_error "AT+CRSM read returned empty"
-        echo '{"success":false,"error":"crsm_failed","detail":"Failed to read FPLMN data from SIM"}'
+        cgi_error "crsm_failed" "Failed to read FPLMN data from SIM"
         exit 0
     fi
 
     case "$resp" in
         *ERROR*)
             qlog_error "AT+CRSM read failed: $resp"
-            echo '{"success":false,"error":"crsm_failed","detail":"Failed to read FPLMN data from SIM"}'
+            cgi_error "crsm_failed" "Failed to read FPLMN data from SIM"
             exit 0
             ;;
     esac
@@ -54,7 +54,7 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
 
     if [ -z "$fplmn_data" ]; then
         qlog_warn "Could not parse FPLMN data from response"
-        echo '{"success":false,"error":"parse_failed","detail":"Could not parse FPLMN response"}'
+        cgi_error "parse_failed" "Could not parse FPLMN response"
         exit 0
     fi
 
@@ -88,20 +88,20 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     resp=$(qcmd 'AT+CRSM=214,28539,0,0,12,"FFFFFFFFFFFFFFFFFFFFFFFF"' 2>/dev/null)
     if [ -z "$resp" ]; then
         qlog_error "AT+CRSM write returned empty"
-        echo '{"success":false,"error":"crsm_failed","detail":"Failed to clear FPLMN data"}'
+        cgi_error "crsm_failed" "Failed to clear FPLMN data"
         exit 0
     fi
 
     case "$resp" in
         *ERROR*)
             qlog_error "AT+CRSM write failed: $resp"
-            echo '{"success":false,"error":"crsm_failed","detail":"Failed to clear FPLMN data"}'
+            cgi_error "crsm_failed" "Failed to clear FPLMN data"
             exit 0
             ;;
     esac
 
     qlog_info "FPLMN list cleared"
-    jq -n '{"success":true}'
+    cgi_success
     exit 0
 fi
 

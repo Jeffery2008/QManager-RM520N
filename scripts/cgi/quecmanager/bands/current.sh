@@ -47,7 +47,7 @@ rc=$?
 
 if [ $rc -ne 0 ] || [ -z "$result" ]; then
     qlog_error "Failed to query ue_capability_band (rc=$rc)"
-    echo '{"success":false,"error":"modem_error","detail":"Failed to query current band configuration"}'
+    cgi_error "modem_error" "Failed to query current band configuration"
     exit 0
 fi
 
@@ -55,7 +55,7 @@ fi
 case "$result" in
     *ERROR*)
         qlog_error "ue_capability_band returned ERROR: $result"
-        echo '{"success":false,"error":"at_error","detail":"Modem returned error for band query"}'
+        cgi_error "at_error" "Modem returned error for band query"
         exit 0
         ;;
 esac

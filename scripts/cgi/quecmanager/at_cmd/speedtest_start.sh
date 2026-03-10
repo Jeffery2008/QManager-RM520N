@@ -36,14 +36,14 @@ WRAPPER_SCRIPT="/tmp/qmanager_speedtest_run.sh"
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
 # --- Check: speedtest-cli installed? -----------------------------------------
 if ! command -v speedtest >/dev/null 2>&1; then
     qlog_error "Speedtest binary not found"
-    echo '{"success":false,"error":"not_installed","detail":"speedtest-cli is not installed"}'
+    cgi_error "not_installed" "speedtest-cli is not installed"
     exit 0
 fi
 
@@ -52,7 +52,7 @@ if [ -f "$PID_FILE" ]; then
     OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
     if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
         qlog_warn "Speedtest already running (PID: $OLD_PID)"
-        echo '{"success":false,"error":"already_running","detail":"A speedtest is already in progress"}'
+        cgi_error "already_running" "A speedtest is already in progress"
         exit 0
     fi
     # Stale PID file — process is dead, clean up

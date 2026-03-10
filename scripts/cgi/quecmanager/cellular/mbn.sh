@@ -112,19 +112,13 @@ fi
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
-    # --- Read POST body ---
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     # --- Extract action ---
     ACTION=$(printf '%s' "$POST_DATA" | jq -r '.action // empty')
 
     if [ -z "$ACTION" ]; then
-        echo '{"success":false,"error":"missing_action","detail":"action field is required"}'
+        cgi_error "missing_action" "action field is required"
         exit 0
     fi
 
@@ -135,7 +129,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         PROFILE_NAME=$(printf '%s' "$POST_DATA" | jq -r '.profile_name // empty')
 
         if [ -z "$PROFILE_NAME" ]; then
-            echo '{"success":false,"error":"missing_profile","detail":"profile_name is required"}'
+            cgi_error "missing_profile" "profile_name is required"
             exit 0
         fi
 
@@ -146,7 +140,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$result" in
             *ERROR*)
                 qlog_error "Failed to disable auto-select: $result"
-                echo '{"success":false,"error":"autosel_failed","detail":"Failed to disable auto-select"}'
+                cgi_error "autosel_failed" "Failed to disable auto-select"
                 exit 0
                 ;;
         esac
@@ -157,7 +151,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$result" in
             *ERROR*)
                 qlog_error "Failed to deactivate profile: $result"
-                echo '{"success":false,"error":"deactivate_failed","detail":"Failed to deactivate current profile"}'
+                cgi_error "deactivate_failed" "Failed to deactivate current profile"
                 exit 0
                 ;;
         esac
@@ -168,7 +162,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$result" in
             *ERROR*)
                 qlog_error "Failed to select profile '$PROFILE_NAME': $result"
-                echo '{"success":false,"error":"select_failed","detail":"Failed to select MBN profile"}'
+                cgi_error "select_failed" "Failed to select MBN profile"
                 exit 0
                 ;;
         esac
@@ -187,7 +181,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$AUTO_SEL_VAL" in
             0|1) ;;
             *)
-                echo '{"success":false,"error":"invalid_auto_sel","detail":"auto_sel must be 0 or 1"}'
+                cgi_error "invalid_auto_sel" "auto_sel must be 0 or 1"
                 exit 0
                 ;;
         esac
@@ -198,7 +192,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$result" in
             *ERROR*)
                 qlog_error "Failed to set auto-select: $result"
-                echo '{"success":false,"error":"autosel_failed","detail":"Failed to set auto-select"}'
+                cgi_error "autosel_failed" "Failed to set auto-select"
                 exit 0
                 ;;
         esac
@@ -218,7 +212,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     fi
 
     # --- Unknown action ---
-    echo '{"success":false,"error":"invalid_action","detail":"action must be apply_profile, auto_sel, or reboot"}'
+    cgi_error "invalid_action" "action must be apply_profile, auto_sel, or reboot"
     exit 0
 fi
 

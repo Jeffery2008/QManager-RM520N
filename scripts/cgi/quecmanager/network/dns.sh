@@ -80,13 +80,7 @@ fi
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
-    # --- Read POST body ---
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     mode=$(printf '%s' "$POST_DATA" | jq -r '.mode // empty')
     nic=$(printf '%s' "$POST_DATA" | jq -r '.nic // empty')
@@ -98,7 +92,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     case "$mode" in
         enabled|disabled) ;;
         *)
-            echo '{"success":false,"error":"invalid_value","detail":"mode must be: enabled or disabled"}'
+            cgi_error "invalid_value" "mode must be: enabled or disabled"
             exit 0
             ;;
     esac
@@ -107,7 +101,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     case "$nic" in
         lan|lan_bind4) ;;
         *)
-            echo '{"success":false,"error":"invalid_value","detail":"nic must be: lan or lan_bind4"}'
+            cgi_error "invalid_value" "nic must be: lan or lan_bind4"
             exit 0
             ;;
     esac
@@ -115,7 +109,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     # --- Validate DNS servers when enabling ---
     if [ "$mode" = "enabled" ]; then
         if [ -z "$dns1" ] && [ -z "$dns2" ] && [ -z "$dns3" ]; then
-            echo '{"success":false,"error":"missing_field","detail":"At least one DNS server (dns1, dns2, or dns3) is required when enabling"}'
+            cgi_error "missing_field" "At least one DNS server (dns1, dns2, or dns3) is required when enabling"
             exit 0
         fi
     fi

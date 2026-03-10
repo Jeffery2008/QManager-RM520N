@@ -28,7 +28,7 @@ cgi_headers
 PROFILE_ID=$(echo "$QUERY_STRING" | sed -n 's/.*id=\([^&]*\).*/\1/p')
 
 if [ -z "$PROFILE_ID" ]; then
-    echo '{"success":false,"error":"no_id","detail":"Missing id parameter"}'
+    cgi_error "no_id" "Missing id parameter"
     exit 0
 fi
 
@@ -39,12 +39,12 @@ case "$PROFILE_ID" in
         # Valid format — continue
         ;;
     *)
-        echo '{"success":false,"error":"invalid_id","detail":"Invalid profile ID format"}'
+        cgi_error "invalid_id" "Invalid profile ID format"
         exit 0
         ;;
 esac
 
 # --- Serve profile -----------------------------------------------------------
 if ! profile_get "$PROFILE_ID"; then
-    echo '{"success":false,"error":"not_found","detail":"Profile not found"}'
+    cgi_error "not_found" "Profile not found"
 fi

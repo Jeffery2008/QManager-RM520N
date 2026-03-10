@@ -111,19 +111,13 @@ fi
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
-    # --- Read POST body ---
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     # --- Extract action ---
     ACTION=$(printf '%s' "$POST_DATA" | jq -r '.action // empty')
 
     if [ -z "$ACTION" ]; then
-        echo '{"success":false,"error":"missing_action","detail":"action field is required"}'
+        cgi_error "missing_action" "action field is required"
         exit 0
     fi
 
@@ -143,7 +137,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$PASSTHROUGH_MODE" in
             disabled|eth|usb) ;;
             *)
-                echo '{"success":false,"error":"invalid_passthrough_mode","detail":"passthrough_mode must be disabled, eth, or usb"}'
+                cgi_error "invalid_passthrough_mode" "passthrough_mode must be disabled, eth, or usb"
                 exit 0
                 ;;
         esac
@@ -151,11 +145,11 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         # --- Validate MAC (required for eth/usb) ---
         if [ "$PASSTHROUGH_MODE" != "disabled" ]; then
             if [ -z "$TARGET_MAC" ]; then
-                echo '{"success":false,"error":"missing_target_mac","detail":"target_mac is required when passthrough_mode is eth or usb"}'
+                cgi_error "missing_target_mac" "target_mac is required when passthrough_mode is eth or usb"
                 exit 0
             fi
             if ! validate_mac "$TARGET_MAC"; then
-                echo '{"success":false,"error":"invalid_target_mac","detail":"target_mac must be in XX:XX:XX:XX:XX:XX format"}'
+                cgi_error "invalid_target_mac" "target_mac must be in XX:XX:XX:XX:XX:XX format"
                 exit 0
             fi
         fi
@@ -164,7 +158,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$IPPT_NAT" in
             0|1) ;;
             *)
-                echo '{"success":false,"error":"invalid_ippt_nat","detail":"ippt_nat must be 0 (WithoutNAT) or 1 (WithNAT)"}'
+                cgi_error "invalid_ippt_nat" "ippt_nat must be 0 (WithoutNAT) or 1 (WithNAT)"
                 exit 0
                 ;;
         esac
@@ -173,7 +167,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$USB_MODE" in
             0|1|2|3) ;;
             *)
-                echo '{"success":false,"error":"invalid_usb_mode","detail":"usb_mode must be 0, 1, 2, or 3"}'
+                cgi_error "invalid_usb_mode" "usb_mode must be 0, 1, 2, or 3"
                 exit 0
                 ;;
         esac
@@ -182,7 +176,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$DNS_PROXY" in
             enabled|disabled) ;;
             *)
-                echo '{"success":false,"error":"invalid_dns_proxy","detail":"dns_proxy must be enabled or disabled"}'
+                cgi_error "invalid_dns_proxy" "dns_proxy must be enabled or disabled"
                 exit 0
                 ;;
         esac
@@ -194,7 +188,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
                 case "$result" in
                     *ERROR*)
                         qlog_error "MPDN_rule disable failed: $result"
-                        echo '{"success":false,"error":"mpdn_rule_failed","detail":"Failed to reset MPDN_rule"}'
+                        cgi_error "mpdn_rule_failed" "Failed to reset MPDN_rule"
                         exit 0
                         ;;
                 esac
@@ -212,7 +206,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
                 case "$result" in
                     *ERROR*)
                         qlog_error "MPDN_rule ETH failed: $result"
-                        echo '{"success":false,"error":"mpdn_rule_failed","detail":"Failed to set ETH passthrough rule"}'
+                        cgi_error "mpdn_rule_failed" "Failed to set ETH passthrough rule"
                         exit 0
                         ;;
                 esac
@@ -222,7 +216,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
                 case "$result" in
                     *ERROR*)
                         qlog_error "MPDN_rule USB failed: $result"
-                        echo '{"success":false,"error":"mpdn_rule_failed","detail":"Failed to set USB passthrough rule"}'
+                        cgi_error "mpdn_rule_failed" "Failed to set USB passthrough rule"
                         exit 0
                         ;;
                 esac
@@ -236,7 +230,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$result" in
             *ERROR*)
                 qlog_error "IPPT_NAT failed: $result"
-                echo '{"success":false,"error":"ippt_nat_failed","detail":"Failed to set IPPT NAT mode"}'
+                cgi_error "ippt_nat_failed" "Failed to set IPPT NAT mode"
                 exit 0
                 ;;
         esac
@@ -248,7 +242,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$result" in
             *ERROR*)
                 qlog_error "QCFG usbnet failed: $result"
-                echo '{"success":false,"error":"usbnet_failed","detail":"Failed to set USB modem protocol"}'
+                cgi_error "usbnet_failed" "Failed to set USB modem protocol"
                 exit 0
                 ;;
         esac
@@ -265,7 +259,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$result" in
             *ERROR*)
                 qlog_error "DHCPV4DNS failed: $result"
-                echo '{"success":false,"error":"dhcpv4dns_failed","detail":"Failed to set DNS offloading"}'
+                cgi_error "dhcpv4dns_failed" "Failed to set DNS offloading"
                 exit 0
                 ;;
         esac
@@ -285,7 +279,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             > "$IPPT_CONFIG" 2>/dev/null || qlog_warn "Failed to write ippt_config.json (non-fatal)"
 
         # Return response BEFORE rebooting so HTTP is flushed
-        jq -n '{"success":true}'
+        cgi_success
 
         # Reboot with short delay to ensure response is sent
         ( sleep 2 && reboot ) &
@@ -293,7 +287,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     fi
 
     # --- Unknown action ---
-    echo '{"success":false,"error":"invalid_action","detail":"action must be apply"}'
+    cgi_error "invalid_action" "action must be apply"
     exit 0
 fi
 

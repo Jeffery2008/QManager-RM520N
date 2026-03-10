@@ -174,18 +174,12 @@ fi
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
-    # --- Read POST body ---
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     speed_limit=$(printf '%s' "$POST_DATA" | jq -r '.speed_limit // empty')
 
     if [ -z "$speed_limit" ]; then
-        echo '{"success":false,"error":"missing_field","detail":"speed_limit field is required"}'
+        cgi_error "missing_field" "speed_limit field is required"
         exit 0
     fi
 
@@ -193,7 +187,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     case "$speed_limit" in
         auto|10|100|1000) ;;
         *)
-            echo '{"success":false,"error":"invalid_value","detail":"speed_limit must be: auto, 10, 100, or 1000"}'
+            cgi_error "invalid_value" "speed_limit must be: auto, 10, 100, or 1000"
             exit 0
             ;;
     esac
@@ -203,14 +197,14 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     # Check if ethtool is available
     if ! command -v ethtool >/dev/null 2>&1; then
         qlog_error "ethtool not installed"
-        echo '{"success":false,"error":"ethtool_missing","detail":"ethtool is not installed on this device"}'
+        cgi_error "ethtool_missing" "ethtool is not installed on this device"
         exit 0
     fi
 
     # Check if interface exists
     if ! ip link show "$ETH_INTERFACE" >/dev/null 2>&1; then
         qlog_error "Interface $ETH_INTERFACE not found"
-        echo '{"success":false,"error":"interface_not_found","detail":"Ethernet interface not found"}'
+        cgi_error "interface_not_found" "Ethernet interface not found"
         exit 0
     fi
 
@@ -218,7 +212,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     apply_speed_limit "$speed_limit"
     if [ $? -ne 0 ]; then
         qlog_error "Failed to apply speed limit: $speed_limit"
-        echo '{"success":false,"error":"ethtool_failed","detail":"Failed to set link speed limit"}'
+        cgi_error "ethtool_failed" "Failed to set link speed limit"
         exit 0
     fi
 

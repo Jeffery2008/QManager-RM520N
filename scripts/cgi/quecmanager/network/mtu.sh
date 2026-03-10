@@ -70,18 +70,12 @@ fi
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
-    # --- Read POST body ---
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     mtu_value=$(printf '%s' "$POST_DATA" | jq -r '.mtu // empty')
 
     if [ -z "$mtu_value" ]; then
-        echo '{"success":false,"error":"missing_field","detail":"mtu field is required"}'
+        cgi_error "missing_field" "mtu field is required"
         exit 0
     fi
 
@@ -109,12 +103,12 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     # --- Validate MTU (numeric, reasonable range) ---
     case "$mtu_value" in
         ''|*[!0-9]*)
-            echo '{"success":false,"error":"invalid_mtu","detail":"MTU must be a number"}'
+            cgi_error "invalid_mtu" "MTU must be a number"
             exit 0
             ;;
     esac
     if [ "$mtu_value" -lt 576 ] 2>/dev/null || [ "$mtu_value" -gt 9000 ] 2>/dev/null; then
-        echo '{"success":false,"error":"invalid_mtu","detail":"MTU must be between 576 and 9000"}'
+        cgi_error "invalid_mtu" "MTU must be between 576 and 9000"
         exit 0
     fi
 

@@ -29,7 +29,7 @@ cgi_handle_options
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -40,7 +40,7 @@ cgi_read_post
 PROFILE_ID=$(printf '%s' "$POST_DATA" | jq -r '.id // empty')
 
 if [ -z "$PROFILE_ID" ]; then
-    echo '{"success":false,"error":"no_id","detail":"Missing id field in request body"}'
+    cgi_error "no_id" "Missing id field in request body"
     exit 0
 fi
 
@@ -50,7 +50,7 @@ case "$PROFILE_ID" in
         # Valid format
         ;;
     *)
-        echo '{"success":false,"error":"invalid_id","detail":"Invalid profile ID format"}'
+        cgi_error "invalid_id" "Invalid profile ID format"
         exit 0
         ;;
 esac

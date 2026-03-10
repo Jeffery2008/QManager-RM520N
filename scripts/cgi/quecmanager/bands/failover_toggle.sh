@@ -33,7 +33,7 @@ FAILOVER_PID_FILE="/tmp/qmanager_band_failover.pid"
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -45,7 +45,7 @@ cgi_read_post
 ENABLED_VAL=$(printf '%s' "$POST_DATA" | jq -r 'if has("enabled") then (.enabled | tostring) else empty end')
 
 if [ -z "$ENABLED_VAL" ]; then
-    echo '{"success":false,"error":"no_enabled","detail":"Missing or invalid enabled field (expected true or false)"}'
+    cgi_error "no_enabled" "Missing or invalid enabled field (expected true or false)"
     exit 0
 fi
 

@@ -41,7 +41,6 @@ qlog_init "profile_apply"
 
 # --- Configuration -----------------------------------------------------------
 STATE_FILE="/tmp/qmanager_profile_state.json"
-PID_FILE="/tmp/qmanager_profile_apply.pid"
 TTL_FILE="/etc/firewall.user.ttl"
 
 # Sip-don't-gulp gap between AT commands (seconds)
@@ -58,19 +57,14 @@ if [ -z "$PROFILE_ID" ]; then
 fi
 
 # --- Singleton enforcement via PID file --------------------------------------
-if [ -f "$PID_FILE" ]; then
-    OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
-    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        qlog_warn "Apply already running (PID: $OLD_PID)"
-        exit 1
-    fi
-    rm -f "$PID_FILE"
+if ! profile_acquire_lock; then
+    qlog_warn "Apply already running (PID: $_profile_lock_pid)"
+    exit 1
 fi
-echo $$ > "$PID_FILE"
 
 # --- Cleanup trap: always remove PID file on exit ----------------------------
 cleanup() {
-    rm -f "$PID_FILE"
+    rm -f "$PROFILE_APPLY_PID_FILE"
 }
 trap cleanup EXIT INT TERM
 

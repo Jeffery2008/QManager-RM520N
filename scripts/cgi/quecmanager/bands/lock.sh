@@ -35,7 +35,7 @@ FAILOVER_SCRIPT="/usr/bin/qmanager_band_failover"
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -48,12 +48,12 @@ BANDS=$(printf '%s' "$POST_DATA" | jq -r '.bands // empty')
 
 # --- Validate inputs ---------------------------------------------------------
 if [ -z "$BAND_TYPE" ]; then
-    echo '{"success":false,"error":"no_band_type","detail":"Missing band_type field"}'
+    cgi_error "no_band_type" "Missing band_type field"
     exit 0
 fi
 
 if [ -z "$BANDS" ]; then
-    echo '{"success":false,"error":"no_bands","detail":"Missing bands field"}'
+    cgi_error "no_bands" "Missing bands field"
     exit 0
 fi
 
@@ -64,7 +64,7 @@ case "$BAND_TYPE" in
     nsa_nr5g)   AT_PARAM="nsa_nr5g_band" ;;
     sa_nr5g)    AT_PARAM="nr5g_band" ;;
     *)
-        echo '{"success":false,"error":"invalid_band_type","detail":"band_type must be lte, nsa_nr5g, or sa_nr5g"}'
+        cgi_error "invalid_band_type" "band_type must be lte, nsa_nr5g, or sa_nr5g"
         exit 0
         ;;
 esac
@@ -72,7 +72,7 @@ esac
 # Validate bands format: must be colon-delimited numbers only
 cleaned=$(echo "$BANDS" | tr -d '0-9:')
 if [ -n "$cleaned" ]; then
-    echo '{"success":false,"error":"invalid_bands","detail":"bands must be colon-delimited numbers (e.g. 1:3:7:28)"}'
+    cgi_error "invalid_bands" "bands must be colon-delimited numbers (e.g. 1:3:7:28)"
     exit 0
 fi
 
@@ -86,14 +86,14 @@ rc=$?
 
 if [ $rc -ne 0 ] || [ -z "$result" ]; then
     qlog_error "Band lock failed (rc=$rc): $AT_CMD"
-    echo '{"success":false,"error":"modem_error","detail":"Failed to send band lock command"}'
+    cgi_error "modem_error" "Failed to send band lock command"
     exit 0
 fi
 
 case "$result" in
     *ERROR*)
         qlog_error "Band lock AT ERROR: $AT_CMD -> $result"
-        echo '{"success":false,"error":"at_error","detail":"Modem rejected band lock command"}'
+        cgi_error "at_error" "Modem rejected band lock command"
         exit 0
         ;;
 esac

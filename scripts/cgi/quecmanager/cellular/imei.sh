@@ -76,19 +76,13 @@ fi
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
-    # --- Read POST body ---
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     # --- Extract action ---
     ACTION=$(printf '%s' "$POST_DATA" | jq -r '.action // empty')
 
     if [ -z "$ACTION" ]; then
-        echo '{"success":false,"error":"missing_action","detail":"action field is required"}'
+        cgi_error "missing_action" "action field is required"
         exit 0
     fi
 
@@ -99,12 +93,12 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         NEW_IMEI=$(printf '%s' "$POST_DATA" | jq -r '.imei // empty')
 
         if [ -z "$NEW_IMEI" ]; then
-            echo '{"success":false,"error":"missing_imei","detail":"imei field is required"}'
+            cgi_error "missing_imei" "imei field is required"
             exit 0
         fi
 
         if ! validate_imei "$NEW_IMEI"; then
-            echo '{"success":false,"error":"invalid_imei","detail":"IMEI must be exactly 15 digits"}'
+            cgi_error "invalid_imei" "IMEI must be exactly 15 digits"
             exit 0
         fi
 
@@ -126,7 +120,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$result" in
             *ERROR*)
                 qlog_error "Failed to write IMEI: $result"
-                echo '{"success":false,"error":"egmr_failed","detail":"Failed to write IMEI to modem"}'
+                cgi_error "egmr_failed" "Failed to write IMEI to modem"
                 exit 0
                 ;;
         esac
@@ -153,14 +147,14 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         BACKUP_IMEI=$(printf '%s' "$POST_DATA" | jq -r '.backup_imei // ""')
 
         if [ -z "$ENABLED" ]; then
-            echo '{"success":false,"error":"missing_enabled","detail":"enabled field is required"}'
+            cgi_error "missing_enabled" "enabled field is required"
             exit 0
         fi
 
         case "$ENABLED" in
             true|false) ;;
             *)
-                echo '{"success":false,"error":"invalid_enabled","detail":"enabled must be true or false"}'
+                cgi_error "invalid_enabled" "enabled must be true or false"
                 exit 0
                 ;;
         esac
@@ -168,7 +162,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         # When enabling, backup IMEI must be valid
         if [ "$ENABLED" = "true" ]; then
             if ! validate_imei "$BACKUP_IMEI"; then
-                echo '{"success":false,"error":"invalid_backup_imei","detail":"Backup IMEI must be exactly 15 digits"}'
+                cgi_error "invalid_backup_imei" "Backup IMEI must be exactly 15 digits"
                 exit 0
             fi
         fi
@@ -187,7 +181,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
         if [ $? -ne 0 ]; then
             qlog_error "Failed to write backup config"
-            echo '{"success":false,"error":"write_failed","detail":"Failed to save backup configuration"}'
+            cgi_error "write_failed" "Failed to save backup configuration"
             exit 0
         fi
 
@@ -197,7 +191,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         fi
 
         qlog_info "Backup config saved"
-        jq -n '{"success":true}'
+        cgi_success
         exit 0
     fi
 
@@ -211,7 +205,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     fi
 
     # --- Unknown action ---
-    echo '{"success":false,"error":"invalid_action","detail":"action must be set_imei, save_backup, or reboot"}'
+    cgi_error "invalid_action" "action must be set_imei, save_backup, or reboot"
     exit 0
 fi
 

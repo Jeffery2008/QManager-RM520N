@@ -342,18 +342,12 @@ fi
 # POST — Send / Delete / Delete All
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
-    # --- Read POST body ------------------------------------------------------
-    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
-        POST_DATA=$(dd bs=1 count="$CONTENT_LENGTH" 2>/dev/null)
-    else
-        echo '{"success":false,"error":"no_body","detail":"POST body is empty"}'
-        exit 0
-    fi
+    cgi_read_post
 
     ACTION=$(printf '%s' "$POST_DATA" | jq -r '.action // empty')
 
     if [ -z "$ACTION" ]; then
-        echo '{"success":false,"error":"missing_action","detail":"action field is required"}'
+        cgi_error "missing_action" "action field is required"
         exit 0
     fi
 
@@ -363,11 +357,11 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         MESSAGE=$(printf '%s' "$POST_DATA" | jq -r '.message // empty')
 
         if [ -z "$RAW_PHONE" ]; then
-            echo '{"success":false,"error":"missing_phone","detail":"phone number is required"}'
+            cgi_error "missing_phone" "phone number is required"
             exit 0
         fi
         if [ -z "$MESSAGE" ]; then
-            echo '{"success":false,"error":"missing_message","detail":"message text is required"}'
+            cgi_error "missing_message" "message text is required"
             exit 0
         fi
 
@@ -386,7 +380,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         fi
 
         qlog_info "SMS sent successfully to $PHONE"
-        jq -n '{"success":true}'
+        cgi_success
         exit 0
     fi
 
@@ -397,7 +391,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         INDEXES_JSON=$(printf '%s' "$POST_DATA" | jq -c '.indexes // empty' 2>/dev/null)
 
         if [ -z "$INDEXES_JSON" ] || [ "$INDEXES_JSON" = "null" ]; then
-            echo '{"success":false,"error":"missing_indexes","detail":"indexes array is required"}'
+            cgi_error "missing_indexes" "indexes array is required"
             exit 0
         fi
 
@@ -413,7 +407,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         done
 
         qlog_info "SMS delete complete"
-        jq -n '{"success":true}'
+        cgi_success
         exit 0
     fi
 
@@ -431,12 +425,12 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         fi
 
         qlog_info "All SMS messages deleted"
-        jq -n '{"success":true}'
+        cgi_success
         exit 0
     fi
 
     # --- Unknown action ------------------------------------------------------
-    echo '{"success":false,"error":"invalid_action","detail":"action must be send, delete, or delete_all"}'
+    cgi_error "invalid_action" "action must be send, delete, or delete_all"
     exit 0
 fi
 

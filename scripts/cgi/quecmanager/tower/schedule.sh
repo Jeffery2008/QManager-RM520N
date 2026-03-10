@@ -30,7 +30,7 @@ cgi_handle_options
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -50,7 +50,7 @@ DAYS_JSON=$(printf '%s' "$POST_DATA" | jq -c '.days // [1,2,3,4,5]' 2>/dev/null)
 
 # --- Validate ----------------------------------------------------------------
 if [ -z "$ENABLED" ]; then
-    echo '{"success":false,"error":"no_enabled","detail":"Missing enabled field"}'
+    cgi_error "no_enabled" "Missing enabled field"
     exit 0
 fi
 
@@ -59,21 +59,21 @@ if [ "$ENABLED" = "true" ]; then
     case "$START_TIME" in
         [0-2][0-9]:[0-5][0-9]) ;;
         *)
-            echo '{"success":false,"error":"invalid_start_time","detail":"start_time must be HH:MM format"}'
+            cgi_error "invalid_start_time" "start_time must be HH:MM format"
             exit 0
             ;;
     esac
     case "$END_TIME" in
         [0-2][0-9]:[0-5][0-9]) ;;
         *)
-            echo '{"success":false,"error":"invalid_end_time","detail":"end_time must be HH:MM format"}'
+            cgi_error "invalid_end_time" "end_time must be HH:MM format"
             exit 0
             ;;
     esac
 
     # Validate days
     if [ -z "$DAYS_RAW" ]; then
-        echo '{"success":false,"error":"no_days","detail":"At least one day must be selected"}'
+        cgi_error "no_days" "At least one day must be selected"
         exit 0
     fi
 
@@ -86,7 +86,7 @@ if [ "$ENABLED" = "true" ]; then
         esac
     done
     if [ -n "$invalid_day" ]; then
-        echo '{"success":false,"error":"invalid_day","detail":"Days must be 0-6 (0=Sun, 6=Sat)"}'
+        cgi_error "invalid_day" "Days must be 0-6 (0=Sun, 6=Sat)"
         exit 0
     fi
 fi
@@ -110,7 +110,7 @@ if [ "$ENABLED" = "true" ]; then
     fi
 
     if [ "$has_lte" = "0" ] && [ "$has_nr" = "false" ]; then
-        echo '{"success":false,"error":"no_lock_targets","detail":"Configure LTE or NR-SA lock targets before enabling schedule"}'
+        cgi_error "no_lock_targets" "Configure LTE or NR-SA lock targets before enabling schedule"
         exit 0
     fi
 fi

@@ -23,7 +23,7 @@ ACTIVE_SCENARIO_FILE="/etc/qmanager/active_scenario"
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -34,7 +34,7 @@ cgi_read_post
 SCENARIO_ID=$(printf '%s' "$POST_DATA" | jq -r '.id // empty')
 
 if [ -z "$SCENARIO_ID" ]; then
-    echo '{"success":false,"error":"no_id","detail":"Missing id field in request body"}'
+    cgi_error "no_id" "Missing id field in request body"
     exit 0
 fi
 
@@ -44,7 +44,7 @@ case "$SCENARIO_ID" in
         # Valid format
         ;;
     *)
-        echo '{"success":false,"error":"invalid_id","detail":"Only custom scenarios can be deleted"}'
+        cgi_error "invalid_id" "Only custom scenarios can be deleted"
         exit 0
         ;;
 esac
@@ -53,7 +53,7 @@ esac
 SCENARIO_FILE="$SCENARIOS_DIR/${SCENARIO_ID}.json"
 
 if [ ! -f "$SCENARIO_FILE" ]; then
-    echo '{"success":false,"error":"not_found","detail":"Scenario not found"}'
+    cgi_error "not_found" "Scenario not found"
     exit 0
 fi
 

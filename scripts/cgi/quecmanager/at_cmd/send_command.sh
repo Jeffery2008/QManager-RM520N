@@ -24,7 +24,7 @@ cgi_handle_options
 
 # --- Validate method ---------------------------------------------------------
 if [ "$REQUEST_METHOD" != "POST" ]; then
-    echo '{"success":false,"error":"method_not_allowed","detail":"Use POST"}'
+    cgi_error "method_not_allowed" "Use POST"
     exit 0
 fi
 
@@ -36,7 +36,7 @@ COMMAND=$(printf '%s' "$POST_DATA" | jq -r '.command // empty')
 
 if [ -z "$COMMAND" ]; then
     qlog_warn "Terminal request with missing command field"
-    echo '{"success":false,"error":"no_command","detail":"Missing command field in JSON body"}'
+    cgi_error "no_command" "Missing command field in JSON body"
     exit 0
 fi
 
@@ -46,7 +46,7 @@ qlog_info "Terminal command: ${COMMAND}"
 case "$COMMAND" in
     *QSCAN*|*QSCANFREQ*)
         qlog_warn "Terminal blocked long command: ${COMMAND}"
-        echo '{"success":false,"error":"blocked","detail":"Use the Cell Scanner page for this command."}'
+        cgi_error "blocked" "Use the Cell Scanner page for this command."
         exit 0
         ;;
 esac
