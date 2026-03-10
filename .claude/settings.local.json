@@ -4,7 +4,8 @@
       "Bash(ls:*)",
       "Bash(bun run build:*)",
       "Bash(bun tsc:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(find:*)"
     ]
   }
 }

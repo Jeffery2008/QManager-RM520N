@@ -179,7 +179,7 @@ conn_jitter="null"
 conn_packet_loss=0
 conn_ping_target=""
 conn_history="[]"
-conn_history_interval=2
+conn_history_interval=3
 conn_history_size=60
 conn_during_recovery="false"
 
@@ -764,6 +764,7 @@ determine_service_status() {
 # =============================================================================
 
 PING_CACHE="/tmp/qmanager_ping.json"
+PING_HISTORY_RAW="/tmp/qmanager_ping_history"   # flat-file ring buffer from ping daemon
 PING_STALE_THRESHOLD=10  # seconds before ping data is considered stale
 
 read_ping_data() {
@@ -806,35 +807,68 @@ read_ping_data() {
         fi
     fi
 
-    # Extract all scalar fields from ping JSON in one jq call
+    # Step A: Extract slim scalar fields from ping JSON (single jq call)
+    # ping.json no longer carries stats/history — those are computed here from raw file.
     local _pdata
     _pdata=$(jq -r '[
         (.reachable // "null" | tostring),
         (.last_rtt_ms // "null" | tostring),
-        (.avg_rtt_ms // "null" | tostring),
-        (.min_rtt_ms // "null" | tostring),
-        (.max_rtt_ms // "null" | tostring),
-        (.jitter_ms // "null" | tostring),
-        (.packet_loss_pct // 0 | tostring),
         (.during_recovery // false | tostring),
-        (.interval_sec // 2 | tostring),
+        (.interval_sec // 3 | tostring),
         (.targets[0] // "")
     ] | @tsv' "$PING_CACHE" 2>/dev/null)
 
     conn_internet_available=$(printf '%s' "$_pdata" | cut -f1)
     conn_latency=$(printf '%s' "$_pdata" | cut -f2)
-    conn_avg_latency=$(printf '%s' "$_pdata" | cut -f3)
-    conn_min_latency=$(printf '%s' "$_pdata" | cut -f4)
-    conn_max_latency=$(printf '%s' "$_pdata" | cut -f5)
-    conn_jitter=$(printf '%s' "$_pdata" | cut -f6)
-    conn_packet_loss=$(printf '%s' "$_pdata" | cut -f7)
-    conn_during_recovery=$(printf '%s' "$_pdata" | cut -f8)
-    conn_history_interval=$(printf '%s' "$_pdata" | cut -f9)
-    conn_ping_target=$(printf '%s' "$_pdata" | cut -f10)
+    conn_during_recovery=$(printf '%s' "$_pdata" | cut -f3)
+    conn_history_interval=$(printf '%s' "$_pdata" | cut -f4)
+    conn_ping_target=$(printf '%s' "$_pdata" | cut -f5)
 
-    # Extract history array separately (it's a JSON array)
-    conn_history=$(jq -c '.history // []' "$PING_CACHE" 2>/dev/null)
-    [ -z "$conn_history" ] && conn_history="[]"
+    # Step B: Single awk pass over raw history file → stats + JSON array
+    # Output format: "min|avg|max|jitter|loss_pct|[json_array]"
+    local _ha=""
+    if [ -s "$PING_HISTORY_RAW" ]; then
+        _ha=$(awk '
+        BEGIN { n=0; lost=0; nv=0; have=0; sum=0; jsum=0 }
+        {
+            n++; arr[n]=$0
+            if ($0=="null") { lost++ }
+            else {
+                val=$0+0; sum+=val; nv++
+                if (!have||val<min) min=val
+                if (!have||val>max) max=val
+                have=1
+                if (nv>1) { d=val-prev; if(d<0)d=-d; jsum+=d }
+                prev=val
+            }
+        }
+        END {
+            if (nv>0)
+                printf "%.1f|%.1f|%.1f|%.1f|%d|", min,sum/nv,max,(nv>1?jsum/(nv-1):0),int(lost*100/n)
+            else
+                printf "null|null|null|null|%d|", (n>0?100:0)
+            printf "["
+            for(i=1;i<=n;i++) { if(i>1) printf ","; printf "%s",arr[i] }
+            printf "]\n"
+        }' "$PING_HISTORY_RAW")
+    fi
+
+    if [ -n "$_ha" ]; then
+        local _rest="$_ha"
+        conn_min_latency="${_rest%%|*}";  _rest="${_rest#*|}"
+        conn_avg_latency="${_rest%%|*}";  _rest="${_rest#*|}"
+        conn_max_latency="${_rest%%|*}";  _rest="${_rest#*|}"
+        conn_jitter="${_rest%%|*}";       _rest="${_rest#*|}"
+        conn_packet_loss="${_rest%%|*}";  _rest="${_rest#*|}"
+        conn_history="${_rest}"           # remaining is "[json_array]"
+    else
+        conn_min_latency="null"
+        conn_avg_latency="null"
+        conn_max_latency="null"
+        conn_jitter="null"
+        conn_packet_loss=0
+        conn_history="[]"
+    fi
 
     # Derive connectivity status from ping data + modem state
     if [ "$conn_during_recovery" = "true" ]; then
@@ -857,7 +891,7 @@ read_ping_data() {
         *[!0-9]*|'') conn_packet_loss=0 ;;
     esac
     case "$conn_history_interval" in
-        *[!0-9]*|'') conn_history_interval=2 ;;
+        *[!0-9]*|'') conn_history_interval=3 ;;
     esac
 }
 
