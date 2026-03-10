@@ -67,7 +67,7 @@ const chartConfig = {
 
 const VIEW_INFO: Record<ViewMode, string> = {
   realtime:
-    "Real-time ping results from the last 2 minutes. Each bar represents a single ping.",
+    "Real-time ping results from the last 50 seconds. Each bar represents a single ping.",
   hourly: "Hourly averages of latency and packet loss over the last 24 hours.",
   twelvehour: "12-hour period averages of latency and packet loss.",
   daily: "Daily averages of latency and packet loss.",
@@ -181,7 +181,7 @@ export interface LatencyMonitoringData {
 export function useLatencyMonitoring() {
   const [viewMode, setViewMode] = useState<ViewMode>("realtime");
 
-  const { data: modemStatus } = useModemStatus();
+  const { data: modemStatus } = useModemStatus({ pollInterval: 5000 });
   const { data: pingHistory } = useLatencyHistory({
     enabled: viewMode !== "realtime",
   });

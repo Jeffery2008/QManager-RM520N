@@ -179,9 +179,10 @@ conn_jitter="null"
 conn_packet_loss=0
 conn_ping_target=""
 conn_history="[]"
-conn_history_interval=3
+conn_history_interval=5
 conn_history_size=60
 conn_during_recovery="false"
+_last_ping_ts=0          # tracks last processed ping.json timestamp (awk gate)
 
 # History size constant (must match ping daemon)
 CONN_HISTORY_SIZE=60
@@ -814,7 +815,7 @@ read_ping_data() {
         (.reachable // "null" | tostring),
         (.last_rtt_ms // "null" | tostring),
         (.during_recovery // false | tostring),
-        (.interval_sec // 3 | tostring),
+        (.interval_sec // 5 | tostring),
         (.targets[0] // "")
     ] | @tsv' "$PING_CACHE" 2>/dev/null)
 
@@ -824,51 +825,56 @@ read_ping_data() {
     conn_history_interval=$(printf '%s' "$_pdata" | cut -f4)
     conn_ping_target=$(printf '%s' "$_pdata" | cut -f5)
 
-    # Step B: Single awk pass over raw history file → stats + JSON array
-    # Output format: "min|avg|max|jitter|loss_pct|[json_array]"
-    local _ha=""
-    if [ -s "$PING_HISTORY_RAW" ]; then
-        _ha=$(awk '
-        BEGIN { n=0; lost=0; nv=0; have=0; sum=0; jsum=0 }
-        {
-            n++; arr[n]=$0
-            if ($0=="null") { lost++ }
-            else {
-                val=$0+0; sum+=val; nv++
-                if (!have||val<min) min=val
-                if (!have||val>max) max=val
-                have=1
-                if (nv>1) { d=val-prev; if(d<0)d=-d; jsum+=d }
-                prev=val
-            }
-        }
-        END {
-            if (nv>0)
-                printf "%.1f|%.1f|%.1f|%.1f|%d|", min,sum/nv,max,(nv>1?jsum/(nv-1):0),int(lost*100/n)
-            else
-                printf "null|null|null|null|%d|", (n>0?100:0)
-            printf "["
-            for(i=1;i<=n;i++) { if(i>1) printf ","; printf "%s",arr[i] }
-            printf "]\n"
-        }' "$PING_HISTORY_RAW")
-    fi
+    # Step B: Single awk pass — only when ping timestamp changed (saves awk fork every 2s)
+    # With ping daemon at 5s, awk runs ~every 5s instead of every cycle.
+    if [ "$ping_ts" != "$_last_ping_ts" ]; then
+        _last_ping_ts="$ping_ts"
 
-    if [ -n "$_ha" ]; then
-        local _rest="$_ha"
-        conn_min_latency="${_rest%%|*}";  _rest="${_rest#*|}"
-        conn_avg_latency="${_rest%%|*}";  _rest="${_rest#*|}"
-        conn_max_latency="${_rest%%|*}";  _rest="${_rest#*|}"
-        conn_jitter="${_rest%%|*}";       _rest="${_rest#*|}"
-        conn_packet_loss="${_rest%%|*}";  _rest="${_rest#*|}"
-        conn_history="${_rest}"           # remaining is "[json_array]"
-    else
-        conn_min_latency="null"
-        conn_avg_latency="null"
-        conn_max_latency="null"
-        conn_jitter="null"
-        conn_packet_loss=0
-        conn_history="[]"
+        local _ha=""
+        if [ -s "$PING_HISTORY_RAW" ]; then
+            _ha=$(awk '
+            BEGIN { n=0; lost=0; nv=0; have=0; sum=0; jsum=0 }
+            {
+                n++; arr[n]=$0
+                if ($0=="null") { lost++ }
+                else {
+                    val=$0+0; sum+=val; nv++
+                    if (!have||val<min) min=val
+                    if (!have||val>max) max=val
+                    have=1
+                    if (nv>1) { d=val-prev; if(d<0)d=-d; jsum+=d }
+                    prev=val
+                }
+            }
+            END {
+                if (nv>0)
+                    printf "%.1f|%.1f|%.1f|%.1f|%d|", min,sum/nv,max,(nv>1?jsum/(nv-1):0),int(lost*100/n)
+                else
+                    printf "null|null|null|null|%d|", (n>0?100:0)
+                printf "["
+                for(i=1;i<=n;i++) { if(i>1) printf ","; printf "%s",arr[i] }
+                printf "]\n"
+            }' "$PING_HISTORY_RAW")
+        fi
+
+        if [ -n "$_ha" ]; then
+            local _rest="$_ha"
+            conn_min_latency="${_rest%%|*}";  _rest="${_rest#*|}"
+            conn_avg_latency="${_rest%%|*}";  _rest="${_rest#*|}"
+            conn_max_latency="${_rest%%|*}";  _rest="${_rest#*|}"
+            conn_jitter="${_rest%%|*}";       _rest="${_rest#*|}"
+            conn_packet_loss="${_rest%%|*}";  _rest="${_rest#*|}"
+            conn_history="${_rest}"           # remaining is "[json_array]"
+        else
+            conn_min_latency="null"
+            conn_avg_latency="null"
+            conn_max_latency="null"
+            conn_jitter="null"
+            conn_packet_loss=0
+            conn_history="[]"
+        fi
     fi
+    # (if ts unchanged: cached conn_* stats remain valid)
 
     # Derive connectivity status from ping data + modem state
     if [ "$conn_during_recovery" = "true" ]; then
@@ -891,7 +897,7 @@ read_ping_data() {
         *[!0-9]*|'') conn_packet_loss=0 ;;
     esac
     case "$conn_history_interval" in
-        *[!0-9]*|'') conn_history_interval=3 ;;
+        *[!0-9]*|'') conn_history_interval=5 ;;
     esac
 }
 
