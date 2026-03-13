@@ -20,7 +20,7 @@ const CellularInformationComponent = () => {
           status.
         </p>
       </div>
-      <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-2 grid-flow-row gap-4">
+      <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4">
         <CellDataComponent
           network={data?.network ?? null}
           lte={data?.lte ?? null}

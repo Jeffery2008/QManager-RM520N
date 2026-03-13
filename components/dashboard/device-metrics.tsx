@@ -160,7 +160,7 @@ const DeviceMetricsComponent = ({
             </p>
             <div className="flex items-center gap-x-2">
               <div className="flex items-center gap-1">
-                <TbCircleArrowDownFilled className="text-blue-500 w-5 h-5" />
+                <TbCircleArrowDownFilled className="text-info w-5 h-5" />
                 <p className="font-semibold text-sm tabular-nums">
                   {formatBytesPerSec(rxSpeed)}
                 </p>
@@ -182,7 +182,7 @@ const DeviceMetricsComponent = ({
             </p>
             <div className="flex items-center gap-x-2">
               <div className="flex items-center gap-1">
-                <TbCircleArrowDownFilled className="text-blue-500 w-5 h-5" />
+                <TbCircleArrowDownFilled className="text-info w-5 h-5" />
                 <p className="font-semibold text-sm tabular-nums">
                   {formatBytes(totalRx)}
                 </p>
@@ -206,7 +206,7 @@ const DeviceMetricsComponent = ({
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
+                  <TbInfoCircleFilled className="w-5 h-5 text-info" />
                 </TooltipTrigger>
                 <TooltipContent>
                   {/* Will show in Hexadecimal form */}
@@ -236,7 +236,7 @@ const DeviceMetricsComponent = ({
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
+                  <TbInfoCircleFilled className="w-5 h-5 text-info" />
                 </TooltipTrigger>
                 <TooltipContent>
                   {/* Will show in Hexadecimal form */}

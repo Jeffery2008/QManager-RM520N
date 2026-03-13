@@ -215,7 +215,7 @@ const CellDataComponent = ({
               {cellId != null && enodebId != null ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
+                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <div className="grid">
@@ -252,7 +252,7 @@ const CellDataComponent = ({
               {tac != null ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
+                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
@@ -276,7 +276,7 @@ const CellDataComponent = ({
               {network?.bandwidth_details ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
+                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{network.bandwidth_details}</p>
@@ -332,7 +332,7 @@ const CellDataComponent = ({
               {network?.wan_ipv6 && network.wan_ipv6.length > 20 ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
+                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>{network.wan_ipv6}</p>

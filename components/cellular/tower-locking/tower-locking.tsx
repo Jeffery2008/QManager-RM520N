@@ -22,7 +22,7 @@ const TowerLockingComponent = () => {
         </p>
       </div>
       <div className="grid grid-cols-1 gap-4">
-        <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-2 grid-flow-row gap-4">
+        <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4">
           <TowerLockingSettingsComponent
             config={tower.config}
             failoverState={tower.failoverState}
@@ -68,7 +68,7 @@ const TowerLockingComponent = () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-2 grid-flow-row gap-4">
+        <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4">
           <ScheduleTowerLockingComponent
             config={tower.config}
             onScheduleChange={(schedule) => tower.updateSchedule(schedule)}

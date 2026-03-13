@@ -74,7 +74,7 @@ const CellularAMBRCard = ({ ambr, isLoading }: CellularAMBRCardProps) => {
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
+                  <TbInfoCircleFilled className="w-5 h-5 text-info" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
@@ -100,13 +100,13 @@ const CellularAMBRCard = ({ ambr, isLoading }: CellularAMBRCardProps) => {
                     </p>
                     <div className="flex items-center gap-x-4">
                       <div className="flex items-center gap-x-1">
-                        <CircleArrowDownIcon className="h-4 w-4 text-blue-500" />
+                        <CircleArrowDownIcon className="h-4 w-4 text-info" />
                         <p className="font-semibold text-sm">
                           {formatBitrate(entry.dl_kbps)}
                         </p>
                       </div>
                       <div className="flex items-center gap-x-1">
-                        <CircleArrowUpIcon className="h-4 w-4 text-blue-500" />
+                        <CircleArrowUpIcon className="h-4 w-4 text-info" />
                         <p className="font-semibold text-sm">
                           {formatBitrate(entry.ul_kbps)}
                         </p>
@@ -131,7 +131,7 @@ const CellularAMBRCard = ({ ambr, isLoading }: CellularAMBRCardProps) => {
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
+                  <TbInfoCircleFilled className="w-5 h-5 text-info" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
@@ -156,13 +156,13 @@ const CellularAMBRCard = ({ ambr, isLoading }: CellularAMBRCardProps) => {
                     </p>
                     <div className="flex items-center gap-x-4">
                       <div className="flex items-center gap-x-1">
-                        <CircleArrowDownIcon className="h-4 w-4 text-blue-500" />
+                        <CircleArrowDownIcon className="h-4 w-4 text-info" />
                         <p className="font-semibold text-sm">
                           {formatBitrate(entry.dl_kbps)}
                         </p>
                       </div>
                       <div className="flex items-center gap-x-1">
-                        <CircleArrowUpIcon className="h-4 w-4 text-blue-500" />
+                        <CircleArrowUpIcon className="h-4 w-4 text-info" />
                         <p className="font-semibold text-sm">
                           {formatBitrate(entry.ul_kbps)}
                         </p>

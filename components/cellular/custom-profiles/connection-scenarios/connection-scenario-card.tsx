@@ -357,7 +357,7 @@ const ConnectionScenariosCard = () => {
       </div>
 
       {/* Row 2: Selected Scenario Configuration */}
-      <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-2 grid-flow-row">
+      <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row">
         {isLoading ? (
           <Card className="@container/card">
             <CardContent className="px-6">

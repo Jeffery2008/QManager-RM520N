@@ -297,7 +297,7 @@ const NetworkStatusComponent = ({
                 </div>
               </div>
               <div className="grid gap-0.5 text-center">
-                <h3 className="text-md font-semibold leading-none">
+                <h3 className="text-base font-semibold leading-none">
                   {networkDisplay.label}
                 </h3>
                 <p className="text-muted-foreground text-sm">
@@ -333,7 +333,7 @@ const NetworkStatusComponent = ({
                 </div>
               </div>
               <div className="grid gap-0.5 text-center">
-                <h3 className="text-md font-semibold leading-none">
+                <h3 className="text-base font-semibold leading-none">
                   SIM {simSlot}
                 </h3>
                 <p className="text-muted-foreground text-sm">
@@ -385,7 +385,7 @@ const NetworkStatusComponent = ({
                 />
               </div>
               <div className="grid gap-0.5 text-center">
-                <h3 className="text-md font-semibold leading-none">Service</h3>
+                <h3 className="text-base font-semibold leading-none">Service</h3>
                 <p className="text-muted-foreground text-sm">{serviceLabel}</p>
               </div>
             </div>

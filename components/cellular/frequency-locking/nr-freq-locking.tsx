@@ -363,7 +363,7 @@ const NrFreqLockingComponent = ({
               <div className="flex items-center gap-1.5">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
+                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>

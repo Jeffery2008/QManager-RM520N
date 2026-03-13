@@ -203,7 +203,7 @@ const BandCardsComponent = ({
           {disabled ? (
             <Badge
               variant="outline"
-              className="bg-blue-500/20 text-blue-500 border-blue-300/50"
+              className="bg-info/20 text-info border-info/50"
             >
               <ShieldIcon className="h-3 w-3" />
               Scenario Controlled

@@ -177,7 +177,7 @@ const LiveLatencyComponent = ({ connectivity }: LiveLatencyComponentProps) => {
           Speedtest result:
         </p>
         <div className="flex items-center gap-x-0.5">
-          <TbCircleArrowDownFilled className="text-blue-500 w-5 h-5" />
+          <TbCircleArrowDownFilled className="text-info w-5 h-5" />
           <p>{dl} Mbps</p>
         </div>
         <div className="flex items-center gap-x-0.5">

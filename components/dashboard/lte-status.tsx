@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { FaCircle } from "react-icons/fa6";
@@ -85,9 +85,11 @@ const LTEStatusComponent = ({ data, isLoading }: LTEStatusComponentProps) => {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold tabular-nums">
+          <CardTitle className="text-lg font-semibold">
             4G Primary Status
           </CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="grid gap-4">
             <div className="flex items-center justify-between">
               <div className="grid gap-1.5">
@@ -108,7 +110,7 @@ const LTEStatusComponent = ({ data, isLoading }: LTEStatusComponentProps) => {
               ))}
             </div>
           </div>
-        </CardHeader>
+        </CardContent>
       </Card>
     );
   }
@@ -119,6 +121,8 @@ const LTEStatusComponent = ({ data, isLoading }: LTEStatusComponentProps) => {
         <CardTitle className="text-lg font-semibold">
           4G Primary Status
         </CardTitle>
+      </CardHeader>
+      <CardContent>
         <div className="grid gap-4">
           <div className="flex items-center justify-between">
             <div className="grid gap-0.5">
@@ -151,7 +155,7 @@ const LTEStatusComponent = ({ data, isLoading }: LTEStatusComponentProps) => {
             <Separator />
           </div>
         </div>
-      </CardHeader>
+      </CardContent>
     </Card>
   );
 };

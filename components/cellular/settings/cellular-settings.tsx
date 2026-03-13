@@ -17,7 +17,7 @@ const CellularSettingsComponent = () => {
           SIM slot, radio state, and network mode preferences.
         </p>
       </div>
-      <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-2 grid-flow-row gap-4">
+      <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4">
         <CellularSettingsCard
           settings={settings}
           isLoading={isLoading}

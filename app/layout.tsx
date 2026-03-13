@@ -3,6 +3,7 @@ import "./globals.css";
 
 import Euclid from "next/font/local";
 import { Manrope } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 
 import { Toaster } from "@/components/ui/sonner";
 
@@ -13,6 +14,7 @@ export const manrope = Manrope({
 
 // Font files can be colocated inside of `app`
 const euclid = Euclid({
+  variable: "--font-euclid",
   src: [
     {
       path: "./fonts/EuclidCircularB-Light.woff2",
@@ -59,10 +61,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${euclid.className} antialiased`}>
-        {children}
-        <Toaster />
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${euclid.variable} ${euclid.className} antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

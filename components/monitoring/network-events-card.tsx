@@ -377,93 +377,74 @@ const NetworkEventsCard = () => {
                 )}
 
                 <TabsContent value="all">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Network Insights</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <EventsTable
-                        events={displayedEvents}
-                        isLoading={isLoading}
-                        emptyIcon={
-                          <Activity className="h-8 w-8 text-muted-foreground" />
-                        }
-                        emptyMessage="No network events found"
-                        totalCount={filteredEvents.length}
-                        lastUpdate={lastUpdate}
-                      />
-                    </CardContent>
-                  </Card>
+                  <EventsTable
+                    events={displayedEvents}
+                    isLoading={isLoading}
+                    emptyIcon={
+                      <Activity className="h-8 w-8 text-muted-foreground" />
+                    }
+                    emptyMessage="No network events found"
+                    totalCount={filteredEvents.length}
+                    lastUpdate={lastUpdate}
+                  />
                 </TabsContent>
 
                 <TabsContent value="bandChanges">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Band Changes</CardTitle>
-                      <CardDescription>
-                        Band changes, cell handoffs, 5G anchor transitions, and
-                        carrier aggregation events.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <EventsTable
-                        events={displayedEvents}
-                        isLoading={isLoading}
-                        emptyIcon={
-                          <Radio className="h-8 w-8 text-muted-foreground" />
-                        }
-                        emptyMessage="No band change events found"
-                        totalCount={filteredEvents.length}
-                        lastUpdate={lastUpdate}
-                      />
-                    </CardContent>
-                  </Card>
+                  <div className="grid gap-1.5 mb-4">
+                    <h3 className="text-sm font-medium">Band Changes</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Band changes, cell handoffs, 5G anchor transitions, and
+                      carrier aggregation events.
+                    </p>
+                  </div>
+                  <EventsTable
+                    events={displayedEvents}
+                    isLoading={isLoading}
+                    emptyIcon={
+                      <Radio className="h-8 w-8 text-muted-foreground" />
+                    }
+                    emptyMessage="No band change events found"
+                    totalCount={filteredEvents.length}
+                    lastUpdate={lastUpdate}
+                  />
                 </TabsContent>
 
                 <TabsContent value="networkMode">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Network Mode</CardTitle>
-                      <CardDescription>
-                        Signal quality changes and network mode transitions.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <EventsTable
-                        events={displayedEvents}
-                        isLoading={isLoading}
-                        emptyIcon={
-                          <Signal className="h-8 w-8 text-muted-foreground" />
-                        }
-                        emptyMessage="No network mode events found"
-                        totalCount={filteredEvents.length}
-                        lastUpdate={lastUpdate}
-                      />
-                    </CardContent>
-                  </Card>
+                  <div className="grid gap-1.5 mb-4">
+                    <h3 className="text-sm font-medium">Network Mode</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Signal quality changes and network mode transitions.
+                    </p>
+                  </div>
+                  <EventsTable
+                    events={displayedEvents}
+                    isLoading={isLoading}
+                    emptyIcon={
+                      <Signal className="h-8 w-8 text-muted-foreground" />
+                    }
+                    emptyMessage="No network mode events found"
+                    totalCount={filteredEvents.length}
+                    lastUpdate={lastUpdate}
+                  />
                 </TabsContent>
 
                 <TabsContent value="dataConnection">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Data Connection</CardTitle>
-                      <CardDescription>
-                        Internet connectivity, latency, and packet loss events.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <EventsTable
-                        events={displayedEvents}
-                        isLoading={isLoading}
-                        emptyIcon={
-                          <Wifi className="h-8 w-8 text-muted-foreground" />
-                        }
-                        emptyMessage="No data connection events found"
-                        totalCount={filteredEvents.length}
-                        lastUpdate={lastUpdate}
-                      />
-                    </CardContent>
-                  </Card>
+                  <div className="grid gap-1.5 mb-4">
+                    <h3 className="text-sm font-medium">Data Connection</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Internet connectivity, latency, and packet loss events.
+                    </p>
+                  </div>
+                  <EventsTable
+                    events={displayedEvents}
+                    isLoading={isLoading}
+                    emptyIcon={
+                      <Wifi className="h-8 w-8 text-muted-foreground" />
+                    }
+                    emptyMessage="No data connection events found"
+                    totalCount={filteredEvents.length}
+                    lastUpdate={lastUpdate}
+                  />
                 </TabsContent>
               </Tabs>
             </div>

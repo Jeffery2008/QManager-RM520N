@@ -118,11 +118,11 @@ const DeviceStatusComponent = ({
               <React.Fragment key={row.label}>
                 <Separator />
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold text-muted-foreground xl:text-md text-sm">
+                  <p className="font-semibold text-muted-foreground xl:text-base text-sm">
                     {row.label}
                   </p>
                   <p
-                    className={`font-semibold xl:text-md text-sm ${
+                    className={`font-semibold xl:text-base text-sm ${
                       row.mono ? "tabular-nums" : ""
                     }`}
                   >

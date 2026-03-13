@@ -312,7 +312,7 @@ const LatencyMonitoringCard = ({
               <span className="text-muted-foreground text-xs">
                 {chartConfig[key].label}
               </span>
-              <span className="text-md leading-none font-bold sm:text-3xl">
+              <span className="text-base leading-none font-bold sm:text-3xl">
                 {total[key].toLocaleString()}
                 {key === "latency" ? "ms" : "%"}
               </span>

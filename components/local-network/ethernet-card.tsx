@@ -325,7 +325,7 @@ const EthernetStatusCard = () => {
           <div className="grid gap-2 w-full">
             <Separator />
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-muted-foreground xl:text-md text-sm">
+              <p className="font-semibold text-muted-foreground xl:text-base text-sm">
                 Link Status
               </p>
               <Badge
@@ -337,34 +337,34 @@ const EthernetStatusCard = () => {
             </div>
             <Separator />
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-muted-foreground xl:text-md text-sm">
+              <p className="font-semibold text-muted-foreground xl:text-base text-sm">
                 Auto-negotiation
               </p>
-              <p className="font-semibold xl:text-md text-sm">
+              <p className="font-semibold xl:text-base text-sm">
                 {formatAutoNeg(status?.auto_negotiation ?? "")}
               </p>
             </div>
             <Separator />
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-muted-foreground xl:text-md text-sm">
+              <p className="font-semibold text-muted-foreground xl:text-base text-sm">
                 Active Link Speed
               </p>
-              <p className="font-semibold xl:text-md text-sm">
+              <p className="font-semibold xl:text-base text-sm">
                 {isConnected ? formatSpeed(status?.speed ?? "") : "N/A"}
               </p>
             </div>
             <Separator />
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-muted-foreground xl:text-md text-sm">
+              <p className="font-semibold text-muted-foreground xl:text-base text-sm">
                 Duplex
               </p>
-              <p className="font-semibold xl:text-md text-sm">
+              <p className="font-semibold xl:text-base text-sm">
                 {isConnected ? formatDuplex(status?.duplex ?? "") : "N/A"}
               </p>
             </div>
             <Separator />
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-muted-foreground xl:text-md text-sm">
+              <p className="font-semibold text-muted-foreground xl:text-base text-sm">
                 Set Link Speed
               </p>
               <Select
@@ -372,7 +372,7 @@ const EthernetStatusCard = () => {
                 onValueChange={handleSpeedChange}
                 disabled={isSaving}
               >
-                <SelectTrigger aria-label="Set Link Speed" className="w-full max-w-46 font-semibold text-muted-foreground xl:text-md text-sm">
+                <SelectTrigger aria-label="Set Link Speed" className="w-full max-w-46 font-semibold text-muted-foreground xl:text-base text-sm">
                   {isSaving ? (
                     <span className="flex items-center gap-2">
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -383,7 +383,7 @@ const EthernetStatusCard = () => {
                   )}
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectGroup className="font-semibold text-muted-foreground xl:text-md text-sm">
+                  <SelectGroup className="font-semibold text-muted-foreground xl:text-base text-sm">
                     <SelectLabel>Link Speed Limit</SelectLabel>
                     <SelectItem value="auto">Auto (Max Speed)</SelectItem>
                     <SelectItem value="10">10 Mbps</SelectItem>

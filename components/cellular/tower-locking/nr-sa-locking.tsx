@@ -251,7 +251,7 @@ const NRSALockingComponent = ({
             <Separator />
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <TbInfoCircleFilled className="w-5 h-5 text-blue-500" />
+                <TbInfoCircleFilled className="w-5 h-5 text-info" />
                 <p className="font-semibold text-muted-foreground text-sm">
                   NR Tower Locking Enabled
                 </p>

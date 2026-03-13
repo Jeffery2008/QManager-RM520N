@@ -68,25 +68,25 @@ const statusBadge = (status: string) => {
   switch (status) {
     case "applying":
       return (
-        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800">
+        <Badge className="bg-info/10 text-info border-info/20">
           Applying…
         </Badge>
       );
     case "complete":
       return (
-        <Badge className="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-200 dark:border-green-800">
+        <Badge className="bg-success/10 text-success border-success/20">
           Complete
         </Badge>
       );
     case "partial":
       return (
-        <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800">
+        <Badge className="bg-warning/10 text-warning border-warning/20">
           Partial
         </Badge>
       );
     case "failed":
       return (
-        <Badge className="bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 border-red-200 dark:border-red-800">
+        <Badge className="bg-destructive/10 text-destructive border-destructive/20">
           Failed
         </Badge>
       );
@@ -135,7 +135,7 @@ export function ApplyProgressDialog({
                 key={step.name}
                 className={`flex items-start gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
                   step.status === "running"
-                    ? "bg-blue-50 dark:bg-blue-950/50"
+                    ? "bg-info/5"
                     : ""
                 }`}
               >
@@ -159,7 +159,7 @@ export function ApplyProgressDialog({
 
         {/* Reboot notice */}
         {applyState?.requires_reboot && (
-          <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-sm text-blue-700 dark:text-blue-300">
+          <div className="rounded-md bg-info/10 p-3 text-sm text-info">
             Modem is restarting to apply IMEI change. Dashboard will reconnect
             automatically.
           </div>
@@ -167,19 +167,19 @@ export function ApplyProgressDialog({
 
         {/* Error from the start request (not step-level) */}
         {error && !applyState && (
-          <div className="rounded-md bg-red-50 dark:bg-red-950 p-3 text-sm text-red-700 dark:text-red-300">
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
             {error}
           </div>
         )}
 
         {/* Partial/failed summary */}
         {applyState?.status === "partial" && applyState.error && (
-          <div className="rounded-md bg-yellow-50 dark:bg-yellow-950 p-3 text-sm text-yellow-700 dark:text-yellow-300">
+          <div className="rounded-md bg-warning/10 p-3 text-sm text-warning">
             {applyState.error}
           </div>
         )}
         {applyState?.status === "failed" && applyState.error && (
-          <div className="rounded-md bg-red-50 dark:bg-red-950 p-3 text-sm text-red-700 dark:text-red-300">
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
             {applyState.error}
           </div>
         )}

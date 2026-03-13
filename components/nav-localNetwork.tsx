@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { ChevronRight, type LucideIcon } from "lucide-react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import {
@@ -66,10 +67,10 @@ export function NavLocalNetwork({
           >
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip={item.title} isActive={isParentOrChildActive}>
-                <a href={item.url}>
+                <Link href={item.url}>
                   <item.icon />
                   <span>{item.title}</span>
-                </a>
+                </Link>
               </SidebarMenuButton>
               {item.items?.length ? (
                 <>
@@ -86,9 +87,9 @@ export function NavLocalNetwork({
                         return (
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton asChild isActive={isSubItemActive}>
-                            <a href={subItem.url}>
+                            <Link href={subItem.url}>
                               <span>{subItem.title}</span>
-                            </a>
+                            </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       )})}

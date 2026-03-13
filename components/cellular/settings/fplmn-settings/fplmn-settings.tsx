@@ -10,7 +10,7 @@ const FPLMNSettingsComponent = () => {
           Check and clear the forbidden network list on your SIM.
         </p>
       </div>
-      <div className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-2 grid-flow-row gap-4">
+      <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4">
         <FPLMNCard />
       </div>
     </div>

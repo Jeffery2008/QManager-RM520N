@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { FaCircle } from "react-icons/fa6";
@@ -88,6 +88,8 @@ const NrStatusComponent = ({ data, isLoading }: NrStatusComponentProps) => {
           <CardTitle className="text-lg font-semibold">
             5G Primary Status
           </CardTitle>
+        </CardHeader>
+        <CardContent>
           <div className="grid gap-4">
             <div className="flex items-center justify-between">
               <div className="grid gap-1.5">
@@ -108,7 +110,7 @@ const NrStatusComponent = ({ data, isLoading }: NrStatusComponentProps) => {
               ))}
             </div>
           </div>
-        </CardHeader>
+        </CardContent>
       </Card>
     );
   }
@@ -116,9 +118,11 @@ const NrStatusComponent = ({ data, isLoading }: NrStatusComponentProps) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold tabular-nums">
+        <CardTitle className="text-lg font-semibold">
           5G Primary Status
         </CardTitle>
+      </CardHeader>
+      <CardContent>
         <div className="grid gap-4">
           <div className="flex items-center justify-between">
             <div className="grid gap-0.5">
@@ -151,7 +155,7 @@ const NrStatusComponent = ({ data, isLoading }: NrStatusComponentProps) => {
             <Separator />
           </div>
         </div>
-      </CardHeader>
+      </CardContent>
     </Card>
   );
 };
