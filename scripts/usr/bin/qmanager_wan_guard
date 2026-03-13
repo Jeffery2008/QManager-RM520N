@@ -4,19 +4,20 @@
 # =============================================================================
 # Spawned by /etc/init.d/qmanager_wan_guard at boot.
 # Waits for modem readiness, queries AT+CGDCONT? for defined CIDs, then
-# checks each rmnet WAN interface's profile number. If the profile maps to
-# a CID that doesn't exist on the modem, the interface is disabled (bind=0)
-# and brought down to prevent netifd's retry loop (~1s cycle, 15%+ CPU).
+# checks each rmnet WAN interface's profile number. Disables interfaces
+# whose CID either doesn't exist or maps to a non-data APN (ims, sos),
+# preventing netifd's retry loop (~1s cycle, 15%+ CPU).
 #
 # Also disables the corresponding _v6 interface when a WAN is disabled.
 #
 # Flow:
 #   1. Sleep 10s for modem AT interface readiness
-#   2. Query AT+CGDCONT? once → extract list of defined CID numbers
-#   3. For each wan interface: read UCI profile, check CID exists
-#   4. If no matching CID → set bind=0 + ifdown
-#   5. UCI commit if any changes made
-#   6. Exit
+#   2. Query AT+CGDCONT? once → extract CID→APN mapping
+#   3. Filter out non-data APNs (ims, sos) → data-capable CID list
+#   4. For each wan interface: read UCI profile, check CID is data-capable
+#   5. If no matching data CID → set bind=0 + ifdown
+#   6. UCI commit if any changes made
+#   7. Exit
 #
 # Dependencies: qcmd, qlog.sh
 # Install location: /usr/bin/qmanager_wan_guard
@@ -50,25 +51,42 @@ if [ -z "$cgdcont_resp" ]; then
     exit 1
 fi
 
-# Extract CID numbers from +CGDCONT: <cid>,"<pdp_type>","<apn>",...
-# Result: newline-separated list of CID numbers (e.g., "1\n2\n3")
-defined_cids=$(printf '%s' "$cgdcont_resp" | awk -F',' '
+# Parse CGDCONT response: extract CID→APN mapping
+# Format: +CGDCONT: <cid>,"<pdp_type>","<apn>",...
+# Non-data APNs (ims, sos) are excluded — binding to these causes netifd
+# retry loops because the modem refuses data bearer setup on them.
+
+# Log full CID→APN map for diagnostics
+cid_apn_map=$(printf '%s' "$cgdcont_resp" | awk -F',' '
     /\+CGDCONT:/ {
-        gsub(/[^0-9]/, "", $1)
-        if ($1 != "") print $1
+        cid = $1; gsub(/[^0-9]/, "", cid)
+        apn = $3; gsub(/"/, "", apn)
+        if (cid != "") printf "%s=%s ", cid, apn
+    }
+')
+qlog_info "CID map: $cid_apn_map"
+
+# Extract only data-capable CIDs (exclude ims, sos)
+data_cids=$(printf '%s' "$cgdcont_resp" | awk -F',' '
+    /\+CGDCONT:/ {
+        cid = $1; gsub(/[^0-9]/, "", cid)
+        apn = $3; gsub(/"/, "", apn)
+        if (apn ~ /^[Ii][Mm][Ss]$/) next
+        if (apn ~ /^[Ss][Oo][Ss]$/) next
+        if (cid != "") print cid
     }
 ')
 
-if [ -z "$defined_cids" ]; then
-    qlog_warn "No CIDs found in CGDCONT response — exiting (fail-safe: no changes)"
+if [ -z "$data_cids" ]; then
+    qlog_warn "No data-capable CIDs found — exiting (fail-safe: no changes)"
     exit 0
 fi
 
-qlog_info "Defined CIDs: $(printf '%s' "$defined_cids" | tr '\n' ' ')"
+qlog_info "Data-capable CIDs: $(printf '%s' "$data_cids" | tr '\n' ' ')"
 
-# --- Helper: Check if a CID exists in the defined list ----------------------
-cid_exists() {
-    printf '%s\n' "$defined_cids" | grep -qx "$1"
+# --- Helper: Check if a CID is data-capable ---------------------------------
+cid_is_data() {
+    printf '%s\n' "$data_cids" | grep -qx "$1"
 }
 
 # --- Check each WAN interface -----------------------------------------------
@@ -89,10 +107,10 @@ for iface in $WAN_INTERFACES; do
         continue
     fi
 
-    if cid_exists "$profile"; then
-        qlog_debug "Interface $iface: profile=$profile has matching CID — OK"
+    if cid_is_data "$profile"; then
+        qlog_debug "Interface $iface: profile=$profile has matching data CID — OK"
     else
-        qlog_warn "Interface $iface: profile=$profile has NO matching CID — disabling"
+        qlog_warn "Interface $iface: profile=$profile has no data-capable CID — disabling"
 
         # Only modify if currently bound (avoid unnecessary UCI writes)
         current_bind=$(uci get "network.${iface}.bind" 2>/dev/null)
@@ -127,7 +145,7 @@ if [ "$changes_made" -gt 0 ]; then
     uci commit network
     qlog_info "UCI committed — $changes_made interface(s) disabled"
 else
-    qlog_info "All WAN interfaces have valid CIDs — no changes needed"
+    qlog_info "All WAN interfaces have valid data CIDs — no changes needed"
 fi
 
 exit 0
