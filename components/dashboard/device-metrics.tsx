@@ -111,8 +111,8 @@ const DeviceMetricsComponent = ({
             </p>
             <div className="flex items-center gap-1.5">
               {isTempHigh && (
-                <Badge className="bg-orange-500/20 text-orange-500 hover:bg-orange-500/30 border border-orange-300/50 backdrop-blur-sm">
-                  <TbAlertTriangleFilled className="text-orange-500" />
+                <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
+                  <TbAlertTriangleFilled className="text-warning" />
                   High Temp
                 </Badge>
               )}
@@ -130,8 +130,8 @@ const DeviceMetricsComponent = ({
             </p>
             <div className="flex items-center gap-1.5">
               {isCpuHigh && (
-                <Badge className="bg-orange-500/20 text-orange-500 hover:bg-orange-500/30 border border-orange-300/50 backdrop-blur-sm">
-                  <TbAlertTriangleFilled className="text-orange-500" />
+                <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
+                  <TbAlertTriangleFilled className="text-warning" />
                   High CPU
                 </Badge>
               )}

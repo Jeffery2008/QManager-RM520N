@@ -46,9 +46,9 @@ const RAT_DISPLAY: Record<string, string> = {
 };
 
 const RAT_COLORS: Record<string, string> = {
-  NR5G: "bg-[#1E86FF]",
-  LTE: "bg-[#00C9A7]",
-  WCDMA: "bg-[#FF3D71]",
+  NR5G: "bg-info",
+  LTE: "bg-success",
+  WCDMA: "bg-destructive",
 };
 
 interface NetworkItem {

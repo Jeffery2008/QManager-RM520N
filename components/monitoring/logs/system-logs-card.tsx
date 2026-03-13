@@ -100,9 +100,9 @@ const getLevelBadgeVariant = (
 const getLevelBadgeClass = (level: string) => {
   switch (level) {
     case "WARN":
-      return "border-amber-500 text-amber-600 dark:text-amber-400";
+      return "border-warning text-warning";
     case "INFO":
-      return "bg-blue-500 text-white border-blue-500";
+      return "bg-info text-info-foreground border-info";
     default:
       return "";
   }

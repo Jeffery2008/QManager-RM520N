@@ -71,18 +71,18 @@ interface ScanResultViewProps {
 const getSignalBadge = (strength: number) => {
   if (strength >= -85)
     return (
-      <Badge className="bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-300/50 backdrop-blur-sm">
+      <Badge className="bg-success/15 text-success hover:bg-success/20 border-success/30">
         Good
       </Badge>
     );
   if (strength >= -100)
     return (
-      <Badge className="bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30 border border-yellow-300/50 backdrop-blur-sm">
+      <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
         Fair
       </Badge>
     );
   return (
-    <Badge className="bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-300/50 backdrop-blur-sm">
+    <Badge className="bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30">
       Bad
     </Badge>
   );

@@ -121,12 +121,12 @@ const TowerLockingSettingsComponent = ({
 
   // --- Signal quality badge styling ---
   const qualityBadgeStyles: Record<string, string> = {
-    good: "bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-300/50 backdrop-blur-sm",
-    fair: "bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30 border border-yellow-300/50 backdrop-blur-sm",
-    poor: "bg-orange-500/20 text-orange-500 hover:bg-orange-500/30 border border-orange-300/50 backdrop-blur-sm",
+    good: "bg-success/15 text-success hover:bg-success/20 border-success/30",
+    fair: "bg-warning/15 text-warning hover:bg-warning/20 border-warning/30",
+    poor: "bg-warning/15 text-warning hover:bg-warning/20 border-warning/30",
     critical:
-      "bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-300/50 backdrop-blur-sm",
-    none: "bg-muted text-muted-foreground border border-border backdrop-blur-sm",
+      "bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30",
+    none: "bg-muted text-muted-foreground border-border",
   };
 
   const qualityIcons: Record<string, React.ReactNode> = {
@@ -144,7 +144,7 @@ const TowerLockingSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-muted text-muted-foreground border border-border backdrop-blur-sm"
+          className="bg-muted text-muted-foreground border-border"
         >
           <Loader2 className="w-3 h-3 animate-spin" />
           Loading
@@ -156,7 +156,7 @@ const TowerLockingSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-muted text-muted-foreground border border-border backdrop-blur-sm"
+          className="bg-muted text-muted-foreground border-border"
         >
           Unknown
         </Badge>
@@ -167,7 +167,7 @@ const TowerLockingSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-300/50 backdrop-blur-sm"
+          className="bg-success/15 text-success hover:bg-success/20 border-success/30"
         >
           <TbSquareRoundedCheckFilled />
           Monitoring
@@ -179,7 +179,7 @@ const TowerLockingSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-orange-500/20 text-orange-500 hover:bg-orange-500/30 border border-orange-300/50 backdrop-blur-sm"
+          className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
         >
           <TbAlertTriangleFilled />
           Unlocked due to Poor Signal
@@ -191,7 +191,7 @@ const TowerLockingSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-muted text-muted-foreground border border-border backdrop-blur-sm"
+          className="bg-muted text-muted-foreground border-border"
         >
           Disabled
         </Badge>
@@ -201,7 +201,7 @@ const TowerLockingSettingsComponent = ({
     return (
       <Badge
         variant="outline"
-        className="bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-300/50 backdrop-blur-sm"
+        className="bg-success/15 text-success hover:bg-success/20 border-success/30"
       >
         <TbSquareRoundedCheckFilled />
         Ready
@@ -216,7 +216,7 @@ const TowerLockingSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-muted text-muted-foreground border border-border backdrop-blur-sm"
+          className="bg-muted text-muted-foreground border-border"
         >
           <Loader2 className="w-3 h-3 animate-spin" />
           Loading
@@ -228,7 +228,7 @@ const TowerLockingSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-muted text-muted-foreground border border-border backdrop-blur-sm"
+          className="bg-muted text-muted-foreground border-border"
         >
           Unknown
         </Badge>
@@ -239,7 +239,7 @@ const TowerLockingSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-300/50 backdrop-blur-sm"
+          className="bg-success/15 text-success hover:bg-success/20 border-success/30"
         >
           <TbSquareRoundedCheckFilled />
           Active
@@ -250,7 +250,7 @@ const TowerLockingSettingsComponent = ({
     return (
       <Badge
         variant="outline"
-        className="bg-muted text-muted-foreground border border-border backdrop-blur-sm"
+        className="bg-muted text-muted-foreground border-border"
       >
         Inactive
       </Badge>
@@ -265,7 +265,7 @@ const TowerLockingSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-muted text-muted-foreground border border-border backdrop-blur-sm"
+          className="bg-muted text-muted-foreground border-border"
         >
           <Loader2 className="w-3 h-3 animate-spin" />
           Loading
@@ -277,7 +277,7 @@ const TowerLockingSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-muted text-muted-foreground border border-border backdrop-blur-sm"
+          className="bg-muted text-muted-foreground border-border"
         >
           Unknown
         </Badge>
@@ -290,7 +290,7 @@ const TowerLockingSettingsComponent = ({
         return (
           <Badge
             variant="outline"
-            className="bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-300/50 backdrop-blur-sm"
+            className="bg-success/15 text-success hover:bg-success/20 border-success/30"
           >
             <TbSquareRoundedCheckFilled />
             Connected
@@ -300,7 +300,7 @@ const TowerLockingSettingsComponent = ({
         return (
           <Badge
             variant="outline"
-            className="bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30 border border-yellow-300/50 backdrop-blur-sm"
+            className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
           >
             <TbAlertTriangleFilled />
             Limited Service
@@ -310,7 +310,7 @@ const TowerLockingSettingsComponent = ({
         return (
           <Badge
             variant="outline"
-            className="bg-orange-500/20 text-orange-500 hover:bg-orange-500/30 border border-orange-300/50 backdrop-blur-sm"
+            className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
           >
             <TbAlertTriangleFilled />
             Searching
@@ -320,7 +320,7 @@ const TowerLockingSettingsComponent = ({
         return (
           <Badge
             variant="outline"
-            className="bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-300/50 backdrop-blur-sm"
+            className="bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30"
           >
             <TbCircleXFilled />
             No Service
@@ -330,7 +330,7 @@ const TowerLockingSettingsComponent = ({
         return (
           <Badge
             variant="outline"
-            className="bg-muted text-muted-foreground border border-border backdrop-blur-sm"
+            className="bg-muted text-muted-foreground border-border"
           >
             {serviceStatus}
           </Badge>

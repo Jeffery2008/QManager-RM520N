@@ -24,9 +24,9 @@ import { CalendarX2Icon } from "lucide-react";
 function SeverityIcon({ severity }: { severity: EventSeverity }) {
   // Two categories: positive (info → check) and negative (warning/error → X)
   if (severity === "warning" || severity === "error") {
-    return <TbCircleXFilled className="h-5 w-5 shrink-0 text-red-500" />;
+    return <TbCircleXFilled className="h-5 w-5 shrink-0 text-destructive" />;
   }
-  return <TbCircleCheckFilled className="h-5 w-5 shrink-0 text-green-500" />;
+  return <TbCircleCheckFilled className="h-5 w-5 shrink-0 text-success" />;
 }
 
 // --- Single event row ---

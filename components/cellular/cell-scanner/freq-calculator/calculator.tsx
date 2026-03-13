@@ -315,7 +315,7 @@ const FrequencyCalculator = () => {
           </div>
 
           {error && (
-            <div className="p-3 bg-red-500/20 text-red-500 border border-red-300/50 rounded-md text-sm">
+            <div className="p-3 bg-destructive/15 text-destructive border border-destructive/30 rounded-md text-sm">
               {error}
             </div>
           )}

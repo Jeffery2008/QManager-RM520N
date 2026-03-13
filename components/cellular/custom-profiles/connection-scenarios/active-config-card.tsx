@@ -47,7 +47,7 @@ export const ActiveConfigCard = ({
               {isActivating ? (
                 <Badge
                   variant="outline"
-                  className="bg-blue-500/20 text-blue-500 hover:bg-blue-500/30 border border-blue-300/50 backdrop-blur-sm"
+                  className="bg-info/15 text-info hover:bg-info/20 border-info/30"
                 >
                   <Spinner className="h-2 w-2" />
                   Applying…
@@ -55,15 +55,15 @@ export const ActiveConfigCard = ({
               ) : isActive ? (
                 <Badge
                   variant="outline"
-                  className="bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-300/50 backdrop-blur-sm"
+                  className="bg-success/15 text-success hover:bg-success/20 border-success/30"
                 >
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <div className="w-2 h-2 rounded-full bg-success" />
                   Active
                 </Badge>
               ) : (
                 <Badge
                   variant="outline"
-                  className="bg-muted text-muted-foreground hover:bg-muted border border-border backdrop-blur-sm"
+                  className="bg-muted text-muted-foreground hover:bg-muted border-border"
                 >
                   <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
                   Not Active

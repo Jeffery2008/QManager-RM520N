@@ -149,16 +149,16 @@ const EthernetStatusCard = () => {
   // Colors based on connection state
   const ringColors = isConnected
     ? {
-        outer: "bg-green-200",
-        mid: "bg-green-300",
-        inner: "bg-green-400",
-        center: "bg-green-600",
+        outer: "bg-success/15",
+        mid: "bg-success/25",
+        inner: "bg-success/40",
+        center: "bg-success",
       }
     : {
-        outer: "bg-gray-200",
-        mid: "bg-gray-300",
-        inner: "bg-gray-400",
-        center: "bg-gray-500",
+        outer: "bg-muted-foreground/10",
+        mid: "bg-muted-foreground/15",
+        inner: "bg-muted-foreground/25",
+        center: "bg-muted-foreground/50",
       };
 
   const beamStartColor = isConnected ? "#3b82f6" : "#9ca3af";
@@ -332,7 +332,7 @@ const EthernetStatusCard = () => {
               </p>
               <Badge
                 variant={isConnected ? "default" : "destructive"}
-                className={isConnected ? "bg-green-600 hover:bg-green-600" : ""}
+                className={isConnected ? "bg-success hover:bg-success text-success-foreground" : ""}
               >
                 {isConnected ? "Connected" : "Disconnected"}
               </Badge>

@@ -45,13 +45,13 @@ function getSignalBarIcon(quality: string) {
 function getStateDisplay(state: string) {
   switch (state) {
     case "connected":
-      return { color: "text-green-500", label: "Connected" };
+      return { color: "text-success", label: "Connected" };
     case "disconnected":
-      return { color: "text-red-500", label: "Disconnected" };
+      return { color: "text-destructive", label: "Disconnected" };
     case "searching":
-      return { color: "text-yellow-500", label: "Searching" };
+      return { color: "text-warning", label: "Searching" };
     case "limited":
-      return { color: "text-yellow-500", label: "Limited Service" };
+      return { color: "text-warning", label: "Limited Service" };
     case "inactive":
       return { color: "text-muted-foreground", label: "Inactive" };
     default:

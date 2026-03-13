@@ -342,7 +342,7 @@ const NrFreqLockingComponent = ({
           <div className="grid gap-2">
             {/* Tower lock active warning */}
             {towerLockActive ? (
-              <div className="flex items-start gap-2 p-2 rounded-md bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-sm">
+              <div className="flex items-start gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/30 text-destructive text-sm">
                 <TbAlertTriangleFilled className="w-5 h-5 mt-0.5 shrink-0" />
                 <p className="font-semibold">
                   NR Tower Lock is active. Disable it before using frequency

@@ -139,22 +139,22 @@ const serviceColorMap: Record<
   { ring1: string; ring2: string; ring3: string; center: string }
 > = {
   green: {
-    ring1: "bg-green-200",
-    ring2: "bg-green-300",
-    ring3: "bg-green-400",
-    center: "bg-green-600",
+    ring1: "bg-success/15",
+    ring2: "bg-success/25",
+    ring3: "bg-success/40",
+    center: "bg-success",
   },
   yellow: {
-    ring1: "bg-yellow-200",
-    ring2: "bg-yellow-300",
-    ring3: "bg-yellow-400",
-    center: "bg-yellow-600",
+    ring1: "bg-warning/15",
+    ring2: "bg-warning/25",
+    ring3: "bg-warning/40",
+    center: "bg-warning",
   },
   red: {
-    ring1: "bg-red-200",
-    ring2: "bg-red-300",
-    ring3: "bg-red-400",
-    center: "bg-red-600",
+    ring1: "bg-destructive/15",
+    ring2: "bg-destructive/25",
+    ring3: "bg-destructive/40",
+    center: "bg-destructive",
   },
 };
 
@@ -212,9 +212,9 @@ const NetworkStatusComponent = ({
               {isStale && (
                 <Badge
                   variant="outline"
-                  className="bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30 border border-yellow-300/50 backdrop-blur-sm"
+                  className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
                 >
-                  <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                  <div className="w-2 h-2 rounded-full bg-warning" />
                   Stale Data
                 </Badge>
               )}
@@ -224,12 +224,12 @@ const NetworkStatusComponent = ({
                 variant="outline"
                 className={
                   radioOn
-                    ? "bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-300/50 backdrop-blur-sm"
-                    : "bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-300/50 backdrop-blur-sm"
+                    ? "bg-success/15 text-success hover:bg-success/20 border-success/30"
+                    : "bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30"
                 }
               >
                 <div
-                  className={`w-2 h-2 rounded-full ${radioOn ? "bg-green-500" : "bg-red-500"}`}
+                  className={`w-2 h-2 rounded-full ${radioOn ? "bg-success" : "bg-destructive"}`}
                 />
                 {radioOn ? "Radio On" : "Radio Off"}
               </Badge>
@@ -239,18 +239,18 @@ const NetworkStatusComponent = ({
                 variant="outline"
                 className={
                   internetAvailable === true
-                    ? "bg-green-500/20 text-green-500 hover:bg-green-500/30 border border-green-300/50 backdrop-blur-sm"
+                    ? "bg-success/15 text-success hover:bg-success/20 border-success/30"
                     : internetAvailable === false
-                      ? "bg-red-500/20 text-red-500 hover:bg-red-500/30 border border-red-300/50 backdrop-blur-sm"
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted/70 border border-muted-foreground/30 backdrop-blur-sm"
+                      ? "bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted/70 border-muted-foreground/30"
                 }
               >
                 <TbCloudFilled
                   className={
                     internetAvailable === true
-                      ? "text-green-500"
+                      ? "text-success"
                       : internetAvailable === false
-                        ? "text-red-500"
+                        ? "text-destructive"
                         : "text-muted-foreground"
                   }
                 />
@@ -282,13 +282,13 @@ const NetworkStatusComponent = ({
                 {/* Status badge overlay — check when 4G/5G, X when 3G fallback */}
                 <div
                   className={`absolute top-1 right-4 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${
-                    hasNetwork ? "bg-green-500" : "bg-red-500"
+                    hasNetwork ? "bg-success" : "bg-destructive"
                   }`}
                 >
                   {hasNetwork ? (
-                    <FaCheck className="w-4 h-4 text-white" />
+                    <FaCheck className="w-4 h-4 text-success-foreground" />
                   ) : (
-                    <FaXmark className="w-4 h-4 text-white" />
+                    <FaXmark className="w-4 h-4 text-destructive-foreground" />
                   )}
                 </div>
               </div>
@@ -318,13 +318,13 @@ const NetworkStatusComponent = ({
                 </div>
                 <div
                   className={`absolute top-1 right-4 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${
-                    isServiceActive ? "bg-green-500" : "bg-red-500"
+                    isServiceActive ? "bg-success" : "bg-destructive"
                   }`}
                 >
                   {isServiceActive ? (
-                    <FaCheck className="w-4 h-4 text-white" />
+                    <FaCheck className="w-4 h-4 text-success-foreground" />
                   ) : (
-                    <FaXmark className="w-4 h-4 text-white" />
+                    <FaXmark className="w-4 h-4 text-destructive-foreground" />
                   )}
                 </div>
               </div>

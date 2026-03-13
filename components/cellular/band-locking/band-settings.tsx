@@ -139,7 +139,7 @@ const BandSettingsComponent = ({
       return (
         <Badge
           variant="outline"
-          className="bg-orange-500/20 text-orange-500 hover:bg-orange-500/30 border border-orange-300/50 backdrop-blur-sm"
+          className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
         >
           <TriangleAlertIcon className="h-3 w-3" />
           Using Default Bands
@@ -150,7 +150,7 @@ const BandSettingsComponent = ({
     return (
       <Badge
         variant="outline"
-        className="bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30 border border-emerald-300/50 backdrop-blur-sm"
+        className="bg-success/15 text-success hover:bg-success/20 border-success/30"
       >
         <CheckCircle2Icon className="h-3 w-3" />
         Ready

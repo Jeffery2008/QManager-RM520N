@@ -112,7 +112,7 @@ export const ScenarioItem = ({
             {isCustom && (
               <button
                 onClick={handleDeleteClick}
-                className="p-2 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-red-500/80 transition-all opacity-0 group-hover:opacity-100"
+                className="p-2 bg-white/20 backdrop-blur-sm rounded-lg hover:bg-destructive/80 transition-all opacity-0 group-hover:opacity-100"
               >
                 <Trash2 size={16} />
               </button>

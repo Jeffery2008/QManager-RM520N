@@ -66,12 +66,12 @@ const LIMIT_OPTIONS = [
 
 function SeverityIcon({ severity }: { severity: EventSeverity }) {
   if (severity === "error") {
-    return <TbCircleXFilled className="w-6 h-6 text-red-500" />;
+    return <TbCircleXFilled className="w-6 h-6 text-destructive" />;
   }
   if (severity === "warning") {
-    return <TbCircleXFilled className="w-6 h-6 text-orange-500" />;
+    return <TbCircleXFilled className="w-6 h-6 text-warning" />;
   }
-  return <TbCircleCheckFilled className="w-6 h-6 text-green-500" />;
+  return <TbCircleCheckFilled className="w-6 h-6 text-success" />;
 }
 
 function formatEventDateTime(timestamp: number) {
