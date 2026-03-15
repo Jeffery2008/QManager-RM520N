@@ -742,7 +742,7 @@ determine_service_status() {
         return
     fi
 
-    if [ "$lte_state" = "disconnected" ] && [ "$nr_state" != "connected" ]; then
+    if { [ "$lte_state" = "disconnected" ] || [ "$lte_state" = "unknown" ]; } && [ "$nr_state" != "connected" ]; then
         service_status="no_service"
         return
     fi

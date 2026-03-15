@@ -33,7 +33,8 @@
       "Bash(for f in scripts/usr/lib/qmanager/cgi_base.sh scripts/cgi/quecmanager/network/ttl.sh scripts/cgi/quecmanager/cellular/apn.sh scripts/cgi/quecmanager/network/mtu.sh scripts/cgi/quecmanager/scenarios/activate.sh scripts/cgi/quecmanager/network/dns.sh scripts/cgi/quecmanager/network/ethernet.sh scripts/usr/lib/qmanager/tower_lock_mgr.sh scripts/cgi/quecmanager/scenarios/delete.sh)",
       "Bash(printf:*)",
       "Bash(do grep -H \"aria-label\" \"$file\")",
-      "Bash(bun next build:*)"
+      "Bash(bun next build:*)",
+      "Bash(bash \"d:/Projects/QM PROJECT/QManager/.claude/check-crlf.sh\" \"d:/Projects/QM PROJECT/QManager/scripts/usr/lib/qmanager/parse_at.sh\" \"d:/Projects/QM PROJECT/QManager/scripts/usr/bin/qmanager_poller\")"
     ]
   }
 }

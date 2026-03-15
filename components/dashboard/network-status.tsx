@@ -114,6 +114,7 @@ function getServiceColor(
   if (
     serviceStatus === "no_service" ||
     serviceStatus === "sim_error" ||
+    serviceStatus === "unknown" ||
     !type
   ) {
     return "red";

@@ -300,7 +300,19 @@ parse_carrier() {
         return
     fi
 
-    t2_carrier=$(printf '%s' "$cops_line" | sed 's/+COPS: //g' | cut -d',' -f3 | tr -d '"')
+    # Strip prefix and CR: "0,0,"Smart",7" or just "2" when deregistered
+    local fields
+    fields=$(printf '%s' "$cops_line" | sed 's/+COPS: //g' | tr -d '\r')
+
+    # Need at least 3 comma-separated fields for operator name
+    local comma_count
+    comma_count=$(printf '%s' "$fields" | tr -cd ',' | wc -c)
+    if [ "$comma_count" -lt 2 ]; then
+        t2_carrier=""
+        return
+    fi
+
+    t2_carrier=$(printf '%s' "$fields" | cut -d',' -f3 | tr -d '"')
 }
 
 # -----------------------------------------------------------------------------
