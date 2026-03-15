@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -112,10 +112,7 @@ const TTLSettingsCard = () => {
     const hl = isEnabled ? parseInt(hlValue || "0", 10) : 0;
 
     // Validate
-    if (isEnabled && ttl === 0 && hl === 0) {
-      toast.error("Please enter at least a TTL or HL value");
-      return;
-    }
+    if (isEnabled && ttl === 0 && hl === 0) return;
 
     const success = await saveTtlHl(ttl, hl);
     if (success) {
@@ -145,7 +142,7 @@ const TTLSettingsCard = () => {
         {/* SIM Profile Override Banner */}
         {isProfileControlled && !pageLoading && (
           <Alert className="mb-4">
-            <InfoIcon className="h-4 w-4" />
+            <InfoIcon className="size-4" />
             <AlertDescription>
               <p>
                 TTL/HL configuration is managed by the{" "}
@@ -218,6 +215,12 @@ const TTLSettingsCard = () => {
                   />
                 </Field>
 
+                {isEnabled && !ttlValue && !hlValue && (
+                  <FieldError id="ttl-hl-error">
+                    Enter at least a TTL or Hop Limit value
+                  </FieldError>
+                )}
+
                 <Button
                   type="submit"
                   className="w-fit"
@@ -225,7 +228,7 @@ const TTLSettingsCard = () => {
                 >
                   {isSaving ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="size-4 animate-spin" />
                       Applying…
                     </>
                   ) : (

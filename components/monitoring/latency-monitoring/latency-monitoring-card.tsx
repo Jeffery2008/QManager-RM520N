@@ -305,6 +305,8 @@ const LatencyMonitoringCard = ({
           {(["latency", "packet_loss"] as const).map((key) => (
             <button
               key={key}
+              type="button"
+              aria-pressed={activeChart === key}
               data-active={activeChart === key}
               className="data-[active=true]:bg-muted/50 relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 text-left even:border-l sm:border-t-0 sm:border-l sm:px-8 sm:py-6"
               onClick={() => setActiveChart(key)}
@@ -351,16 +353,16 @@ const LatencyMonitoringCard = ({
               tickFormatter={(value) => {
                 const date = new Date(value);
                 if (viewMode === "realtime") {
-                  return date.toLocaleTimeString("en-US", {
+                  return date.toLocaleTimeString(undefined, {
                     hour: "2-digit",
                     minute: "2-digit",
                   });
                 } else if (viewMode === "hourly" || viewMode === "twelvehour") {
-                  return date.toLocaleTimeString("en-US", {
+                  return date.toLocaleTimeString(undefined, {
                     hour: "2-digit",
                   });
                 } else {
-                  return date.toLocaleDateString("en-US", {
+                  return date.toLocaleDateString(undefined, {
                     month: "short",
                     day: "numeric",
                   });
@@ -375,13 +377,13 @@ const LatencyMonitoringCard = ({
                     const ts = payload?.[0]?.payload?.timestamp;
                     if (!ts) return "";
                     if (viewMode === "daily") {
-                      return new Date(ts).toLocaleDateString("en-US", {
+                      return new Date(ts).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
                         year: "numeric",
                       });
                     }
-                    return new Date(ts).toLocaleString("en-US", {
+                    return new Date(ts).toLocaleString(undefined, {
                       month: "short",
                       day: "numeric",
                       hour: "2-digit",

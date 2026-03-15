@@ -24,9 +24,9 @@ import { CalendarX2Icon } from "lucide-react";
 function SeverityIcon({ severity }: { severity: EventSeverity }) {
   // Two categories: positive (info → check) and negative (warning/error → X)
   if (severity === "warning" || severity === "error") {
-    return <TbCircleXFilled className="h-5 w-5 shrink-0 text-destructive" />;
+    return <TbCircleXFilled className="size-5 shrink-0 text-destructive" />;
   }
-  return <TbCircleCheckFilled className="h-5 w-5 shrink-0 text-success" />;
+  return <TbCircleCheckFilled className="size-5 shrink-0 text-success" />;
 }
 
 // --- Single event row ---
@@ -56,7 +56,7 @@ function EventSkeleton() {
     <>
       <Separator />
       <div className="flex items-start gap-2">
-        <Skeleton className="h-5 w-5 rounded-full shrink-0" />
+        <Skeleton className="size-5 rounded-full shrink-0" />
         <div className="flex flex-1 flex-col gap-y-1">
           <Skeleton className="h-3 w-32" />
           <Skeleton className="h-4 w-full" />
@@ -80,8 +80,10 @@ const RecentActivitiesComponent = () => {
       <CardContent>
         <div className="grid gap-3">
           {isLoading ? (
-            // Loading state: show 3 skeleton rows
+            // Loading state: show 5 skeleton rows (matches max visible)
             <>
+              <EventSkeleton />
+              <EventSkeleton />
               <EventSkeleton />
               <EventSkeleton />
               <EventSkeleton />

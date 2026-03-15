@@ -153,20 +153,20 @@ export function ProfileTable({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem onClick={() => onEdit(row.original.id)}>
-                <TbEdit className="mr-2 h-4 w-4" />
+                <TbEdit className="mr-2 size-4" />
                 Edit
               </DropdownMenuItem>
               {onActivate && row.original.id !== activeProfileId && (
                 <DropdownMenuItem
                   onClick={() => onActivate(row.original.id)}
                 >
-                  <TbPlayerPlay className="mr-2 h-4 w-4" />
+                  <TbPlayerPlay className="mr-2 size-4" />
                   Activate
                 </DropdownMenuItem>
               )}
               {onDeactivate && row.original.id === activeProfileId && (
                 <DropdownMenuItem onClick={onDeactivate}>
-                  <TbPlayerStop className="mr-2 h-4 w-4" />
+                  <TbPlayerStop className="mr-2 size-4" />
                   Deactivate
                 </DropdownMenuItem>
               )}
@@ -175,7 +175,7 @@ export function ProfileTable({
                 variant="destructive"
                 onClick={() => setDeleteTarget(row.original)}
               >
-                <TbTrash className="mr-2 h-4 w-4" />
+                <TbTrash className="mr-2 size-4" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>

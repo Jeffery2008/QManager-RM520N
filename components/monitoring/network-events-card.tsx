@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TbCircleCheckFilled, TbCircleXFilled } from "react-icons/tb";
+import { TbAlertTriangleFilled, TbCircleCheckFilled, TbCircleXFilled } from "react-icons/tb";
 
 import {
   DropdownMenu,
@@ -66,12 +66,12 @@ const LIMIT_OPTIONS = [
 
 function SeverityIcon({ severity }: { severity: EventSeverity }) {
   if (severity === "error") {
-    return <TbCircleXFilled className="w-6 h-6 text-destructive" />;
+    return <TbCircleXFilled className="size-6 text-destructive" />;
   }
   if (severity === "warning") {
-    return <TbCircleXFilled className="w-6 h-6 text-warning" />;
+    return <TbAlertTriangleFilled className="size-6 text-warning" />;
   }
-  return <TbCircleCheckFilled className="w-6 h-6 text-success" />;
+  return <TbCircleCheckFilled className="size-6 text-success" />;
 }
 
 function formatEventDateTime(timestamp: number) {

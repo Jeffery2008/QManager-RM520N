@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -76,10 +76,7 @@ const MTUSettingsCard = () => {
     }
 
     const mtu = parseInt(mtuValue, 10);
-    if (isNaN(mtu) || mtu < 576 || mtu > 9000) {
-      toast.error("MTU must be between 576 and 9000");
-      return;
-    }
+    if (isNaN(mtu) || mtu < 576 || mtu > 9000) return;
 
     const success = await saveMtu(mtu);
     if (success) {
@@ -139,7 +136,14 @@ const MTUSettingsCard = () => {
                     value={mtuValue}
                     onChange={(e) => setMtuValue(e.target.value)}
                     disabled={!isEnabled}
+                    aria-invalid={isEnabled && mtuValue !== "" && (isNaN(Number(mtuValue)) || Number(mtuValue) < 576 || Number(mtuValue) > 9000)}
+                    aria-describedby={isEnabled && mtuValue !== "" && (isNaN(Number(mtuValue)) || Number(mtuValue) < 576 || Number(mtuValue) > 9000) ? "mtu-error" : undefined}
                   />
+                  {isEnabled && mtuValue !== "" && (isNaN(Number(mtuValue)) || Number(mtuValue) < 576 || Number(mtuValue) > 9000) && (
+                    <FieldError id="mtu-error">
+                      MTU must be between 576 and 9000
+                    </FieldError>
+                  )}
                 </Field>
 
                 <Button
@@ -149,7 +153,7 @@ const MTUSettingsCard = () => {
                 >
                   {isSaving ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="size-4 animate-spin" />
                       Applying…
                     </>
                   ) : (

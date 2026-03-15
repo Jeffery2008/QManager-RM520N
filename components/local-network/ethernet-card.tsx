@@ -239,7 +239,7 @@ const EthernetStatusCard = () => {
             onClick={() => fetchStatus()}
             disabled={isSaving}
           >
-            <RefreshCcwIcon className="h-4 w-4" />
+            <RefreshCcwIcon className="size-4" />
           </Button>
         </div>
       </CardHeader>

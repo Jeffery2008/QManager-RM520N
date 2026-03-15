@@ -326,7 +326,7 @@ const SystemLogsCard = () => {
               <label htmlFor="log-search" className="sr-only">
                 Search logs
               </label>
-              <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <SearchIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
                 id="log-search"
                 placeholder="Search logs..."
@@ -371,7 +371,7 @@ const SystemLogsCard = () => {
               aria-label="Refresh system logs"
               onClick={() => fetchLogs()}
             >
-              <RefreshCcwIcon className="h-4 w-4" />
+              <RefreshCcwIcon className="size-4" />
             </Button>
 
             {/* Clear button */}
@@ -380,7 +380,7 @@ const SystemLogsCard = () => {
               size="sm"
               onClick={() => setShowClearDialog(true)}
             >
-              <Trash2Icon className="h-4 w-4 mr-1" />
+              <Trash2Icon className="size-4 mr-1" />
               Clear
             </Button>
           </div>
@@ -412,7 +412,7 @@ const SystemLogsCard = () => {
                   </TableRow>
                 ) : (
                   entries.map((entry, index) => (
-                    <TableRow key={index}>
+                    <TableRow key={`${entry.timestamp}-${index}`}>
                       <TableCell className="font-mono text-xs whitespace-nowrap">
                         {entry.timestamp}
                       </TableCell>
@@ -478,7 +478,7 @@ const SystemLogsCard = () => {
             >
               {isClearing ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  <Loader2 className="size-4 animate-spin mr-1" />
                   Clearing...
                 </>
               ) : (

@@ -113,8 +113,8 @@ const PingEntriesCard = ({
           </TableHeader>
           <TableBody>
             {sortedEntries.length > 0 ? (
-              sortedEntries.map((ping, index) => (
-                <TableRow key={index}>
+              sortedEntries.map((ping) => (
+                <TableRow key={ping.timestamp}>
                   <TableCell>
                     {isRealtime && !ping.ok
                       ? "Timeout"
@@ -122,14 +122,14 @@ const PingEntriesCard = ({
                   </TableCell>
                   <TableCell>{ping.packet_loss}%</TableCell>
                   <TableCell>
-                    {new Date(ping.timestamp).toLocaleDateString("en-US", {
+                    {new Date(ping.timestamp).toLocaleDateString(undefined, {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
                     })}
                   </TableCell>
                   <TableCell>
-                    {new Date(ping.timestamp).toLocaleTimeString("en-US", {
+                    {new Date(ping.timestamp).toLocaleTimeString(undefined, {
                       hour: "2-digit",
                       minute: "2-digit",
                       second: "2-digit",

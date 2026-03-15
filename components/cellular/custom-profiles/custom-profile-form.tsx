@@ -255,7 +255,7 @@ const CustomProfileFormComponent = ({
         <div className="flex w-full justify-end">
           {!isEditing && onLoadCurrentSettings && (
             <Button type="button" size="sm" onClick={onLoadCurrentSettings}>
-              <DownloadIcon className="w-4 h-4" />
+              <DownloadIcon className="size-4" />
               Load Current SIM
             </Button>
           )}
@@ -409,7 +409,7 @@ const CustomProfileFormComponent = ({
               {/* --- Actions --- */}
               <div className="flex gap-3 pt-2">
                 <Button type="submit" disabled={isSaving}>
-                  {isSaving && <Spinner className="h-4 w-4" />}
+                  {isSaving && <Spinner className="size-4" />}
                   {isEditing ? "Update Profile" : "Create Profile"}
                 </Button>
                 <Button

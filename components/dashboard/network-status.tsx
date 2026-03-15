@@ -285,14 +285,14 @@ const NetworkStatusComponent = ({
                 </div>
                 {/* Status badge overlay — check when 4G/5G, X when 3G fallback */}
                 <div
-                  className={`absolute top-1 right-4 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${
+                  className={`absolute top-1 right-4 size-6 rounded-full flex items-center justify-center shadow-md ${
                     hasNetwork ? "bg-success" : "bg-destructive"
                   }`}
                 >
                   {hasNetwork ? (
-                    <FaCheck className="w-4 h-4 text-success-foreground" />
+                    <FaCheck className="size-4 text-success-foreground" />
                   ) : (
-                    <FaXmark className="w-4 h-4 text-destructive-foreground" />
+                    <FaXmark className="size-4 text-destructive-foreground" />
                   )}
                 </div>
               </div>
@@ -321,14 +321,14 @@ const NetworkStatusComponent = ({
                   <CardSimIcon className="size-full text-primary" />
                 </div>
                 <div
-                  className={`absolute top-1 right-4 w-6 h-6 rounded-full flex items-center justify-center shadow-md ${
+                  className={`absolute top-1 right-4 size-6 rounded-full flex items-center justify-center shadow-md ${
                     isServiceActive ? "bg-success" : "bg-destructive"
                   }`}
                 >
                   {isServiceActive ? (
-                    <FaCheck className="w-4 h-4 text-success-foreground" />
+                    <FaCheck className="size-4 text-success-foreground" />
                   ) : (
-                    <FaXmark className="w-4 h-4 text-destructive-foreground" />
+                    <FaXmark className="size-4 text-destructive-foreground" />
                   )}
                 </div>
               </div>

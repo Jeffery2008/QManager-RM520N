@@ -154,7 +154,7 @@ const FPLMNCard = () => {
           <Empty className="bg-destructive/5 h-full">
             <EmptyHeader>
               <EmptyMedia variant="icon" className="bg-destructive rounded-xl">
-                <AlertTriangleIcon className="text-destructive-foreground w-6 h-6" />
+                <AlertTriangleIcon className="text-destructive-foreground size-6" />
               </EmptyMedia>
               <EmptyTitle>Unable to Check</EmptyTitle>
               <EmptyDescription className="max-w-xs text-pretty">
@@ -181,7 +181,7 @@ const FPLMNCard = () => {
           <Empty className="bg-destructive/5 h-full">
             <EmptyHeader>
               <EmptyMedia variant="icon" className="bg-destructive rounded-xl">
-                <AlertTriangleIcon className="text-destructive-foreground w-6 h-6" />
+                <AlertTriangleIcon className="text-destructive-foreground size-6" />
               </EmptyMedia>
               <EmptyTitle>Blocked Networks Found</EmptyTitle>
               <EmptyDescription className="max-w-xs text-pretty">
@@ -197,7 +197,7 @@ const FPLMNCard = () => {
               >
                 {isClearing ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" />
                     Clearing...
                   </>
                 ) : (
@@ -210,7 +210,7 @@ const FPLMNCard = () => {
           <Empty className="bg-muted/30 h-full">
             <EmptyHeader>
               <EmptyMedia variant="icon" className="bg-primary rounded-xl">
-                <CircleCheckIcon className="text-primary-foreground w-6 h-6" />
+                <CircleCheckIcon className="text-primary-foreground size-6" />
               </EmptyMedia>
               <EmptyTitle>No Blocked Networks</EmptyTitle>
               <EmptyDescription className="max-w-xs text-pretty">

@@ -40,7 +40,7 @@ export const ActiveConfigCard = ({
                 scenario.gradient,
               )}
             >
-              <Icon className="w-6 h-6" />
+              <Icon className="size-6" />
             </div>
             <div className="grid">
               <h4 className="font-semibold">{scenario.name} Configuration</h4>
@@ -74,7 +74,7 @@ export const ActiveConfigCard = ({
           <div className="flex items-center gap-1">
             {isCustom && (
               <Button variant="ghost" size="icon" aria-label="Edit scenario settings" onClick={onEdit}>
-                <Settings className="h-4 w-4" />
+                <Settings className="size-4" />
               </Button>
             )}
             {!isActive && !isActivating && (

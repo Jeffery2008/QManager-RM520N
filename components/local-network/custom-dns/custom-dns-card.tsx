@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -67,10 +67,7 @@ const CustomDNSCard = () => {
     if (!data) return;
 
     // Guard: when enabling, require at least one DNS server
-    if (isEnabled && !dns1 && !dns2 && !dns3) {
-      toast.error("Enter at least one DNS server address");
-      return;
-    }
+    if (isEnabled && !dns1 && !dns2 && !dns3) return;
 
     const success = await saveDns({
       mode: isEnabled ? "enabled" : "disabled",
@@ -173,6 +170,12 @@ const CustomDNSCard = () => {
                   </Field>
                 </div>
 
+                {isEnabled && !dns1 && !dns2 && !dns3 && (
+                  <FieldError id="dns-error">
+                    Enter at least one DNS server address
+                  </FieldError>
+                )}
+
                 <Button
                   type="submit"
                   className="w-fit"
@@ -184,7 +187,7 @@ const CustomDNSCard = () => {
                 >
                   {isSaving ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="size-4 animate-spin" />
                       Applying…
                     </>
                   ) : (

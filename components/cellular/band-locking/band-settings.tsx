@@ -176,7 +176,7 @@ const BandSettingsComponent = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button type="button" className="inline-flex" aria-label="More info">
-                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
+                    <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>

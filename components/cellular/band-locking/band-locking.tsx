@@ -114,7 +114,7 @@ const BandLockingComponent = () => {
       {/* Scenario override banner */}
       {isScenarioControlled && !isPageLoading && (
         <Alert className="mb-4 max-w-xl">
-          <InfoIcon className="h-4 w-4" />
+          <InfoIcon className="size-4" />
           <AlertDescription>
             <p>
               Band configuration is managed by the{" "}

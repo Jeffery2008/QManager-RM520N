@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import {
@@ -60,8 +60,11 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function SignalHistoryComponent() {
+  const gradientId = useId();
   const [signalType, setSignalType] = useState("rsrp");
   const { chartData, isLoading } = useSignalHistory();
+  const id4G = `${gradientId}-fill4G`;
+  const id5G = `${gradientId}-fill5G`;
 
   const getDataKeys = () => {
     switch (signalType) {
@@ -155,7 +158,7 @@ export function SignalHistoryComponent() {
           >
             <AreaChart data={chartData}>
               <defs>
-                <linearGradient id="fill4G" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={id4G} x1="0" y1="0" x2="0" y2="1">
                   <stop
                     offset="5%"
                     stopColor={`var(--color-${key4G})`}
@@ -167,7 +170,7 @@ export function SignalHistoryComponent() {
                     stopOpacity={0.1}
                   />
                 </linearGradient>
-                <linearGradient id="fill5G" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={id5G} x1="0" y1="0" x2="0" y2="1">
                   <stop
                     offset="5%"
                     stopColor={`var(--color-${key5G})`}
@@ -207,7 +210,7 @@ export function SignalHistoryComponent() {
               <Area
                 dataKey={key4G}
                 type="monotone"
-                fill="url(#fill4G)"
+                fill={`url(#${id4G})`}
                 stroke={`var(--color-${key4G})`}
                 baseValue={baseValue}
                 connectNulls={false}
@@ -215,7 +218,7 @@ export function SignalHistoryComponent() {
               <Area
                 dataKey={key5G}
                 type="monotone"
-                fill="url(#fill5G)"
+                fill={`url(#${id5G})`}
                 stroke={`var(--color-${key5G})`}
                 baseValue={baseValue}
                 connectNulls={false}

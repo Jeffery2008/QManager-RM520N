@@ -221,7 +221,7 @@ const LteFreqLockingComponent = ({
             {/* Tower lock active warning */}
             {towerLockActive ? (
               <div className="flex items-start gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/30 text-destructive text-sm">
-                <TbAlertTriangleFilled className="w-5 h-5 mt-0.5 shrink-0" />
+                <TbAlertTriangleFilled className="size-5 mt-0.5 shrink-0" />
                 <p className="font-semibold">
                   LTE Tower Lock is active. Disable it before using frequency
                   locking.
@@ -229,7 +229,7 @@ const LteFreqLockingComponent = ({
               </div>
             ) : (
               <div className="flex items-start gap-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-sm">
-                <TbAlertTriangleFilled className="w-5 h-5 mt-0.5 shrink-0" />
+                <TbAlertTriangleFilled className="size-5 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-semibold">Experimental Feature</p>
                 </div>
@@ -242,7 +242,7 @@ const LteFreqLockingComponent = ({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button type="button" className="inline-flex" aria-label="More info">
-                      <TbInfoCircleFilled className="w-5 h-5 text-info" />
+                      <TbInfoCircleFilled className="size-5 text-info" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -259,7 +259,7 @@ const LteFreqLockingComponent = ({
               </div>
               <div className="flex items-center space-x-2">
                 {isLocking ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 ) : null}
                 <Switch
                   id="lte-freq-locking"

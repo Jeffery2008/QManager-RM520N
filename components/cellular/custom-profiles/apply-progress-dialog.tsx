@@ -43,17 +43,17 @@ const DEFAULT_STEPS: ApplyStep[] = [
 ];
 
 const stepIcons: Record<ApplyStepStatus, React.ReactNode> = {
-  pending: <TbClock className="h-4 w-4 text-muted-foreground" />,
-  running: <TbLoader2 className="h-4 w-4 text-info animate-spin" />,
-  done: <TbCircleCheck className="h-4 w-4 text-success" />,
-  failed: <TbCircleX className="h-4 w-4 text-destructive" />,
-  skipped: <TbCircleMinus className="h-4 w-4 text-muted-foreground" />,
+  pending: <TbClock className="size-4 text-muted-foreground" />,
+  running: <TbLoader2 className="size-4 text-info animate-spin" />,
+  done: <TbCircleCheck className="size-4 text-success" />,
+  failed: <TbCircleX className="size-4 text-destructive" />,
+  skipped: <TbCircleMinus className="size-4 text-muted-foreground" />,
 };
 
 /** When the overall apply is complete, "skipped" means "already correct" — show a check */
 const getStepIcon = (stepStatus: ApplyStepStatus, overallStatus?: string) => {
   if (stepStatus === "skipped" && overallStatus === "complete") {
-    return <TbCircleCheck className="h-4 w-4 text-success" />;
+    return <TbCircleCheck className="size-4 text-success" />;
   }
   return stepIcons[stepStatus];
 };

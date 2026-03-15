@@ -48,7 +48,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     {index > 0 && (
                       <BreadcrumbSeparator className="hidden md:block" />
                     )}
-                    <BreadcrumbItem className="hidden md:block">
+                    <BreadcrumbItem
+                      className={
+                        breadcrumb.isCurrentPage ? "" : "hidden md:block"
+                      }
+                    >
                       {breadcrumb.isCurrentPage ? (
                         <BreadcrumbPage>{breadcrumb.label}</BreadcrumbPage>
                       ) : (

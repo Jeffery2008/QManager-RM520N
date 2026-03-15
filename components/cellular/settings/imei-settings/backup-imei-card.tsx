@@ -146,7 +146,7 @@ const BackupIMEICard = ({
         <CardContent>
           <div className="grid gap-4">
             <div className="flex items-center gap-2">
-              <Skeleton className="h-5 w-5 rounded-full" />
+              <Skeleton className="size-5 rounded-full" />
               <Skeleton className="h-4 w-36" />
               <Skeleton className="h-5 w-9 rounded-full" />
             </div>
@@ -184,7 +184,7 @@ const BackupIMEICard = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button type="button" className="inline-flex" aria-label="More info">
-                          <TbInfoCircleFilled className="w-5 h-5 text-info" />
+                          <TbInfoCircleFilled className="size-5 text-info" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -253,7 +253,7 @@ const BackupIMEICard = ({
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                   Saving...
                 </>
               ) : (

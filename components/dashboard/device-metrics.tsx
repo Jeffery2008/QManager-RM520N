@@ -160,13 +160,13 @@ const DeviceMetricsComponent = ({
             </p>
             <div className="flex items-center gap-x-2">
               <div className="flex items-center gap-1">
-                <TbCircleArrowDownFilled className="text-info w-5 h-5" />
+                <TbCircleArrowDownFilled className="text-info size-5" />
                 <p className="font-semibold text-sm tabular-nums">
                   {formatBytesPerSec(rxSpeed)}
                 </p>
               </div>
               <div className="flex items-center gap-1">
-                <TbCircleArrowUpFilled className="text-purple-500 w-5 h-5" />
+                <TbCircleArrowUpFilled className="text-purple-500 size-5" />
                 <p className="font-semibold text-sm tabular-nums">
                   {formatBytesPerSec(txSpeed)}
                 </p>
@@ -182,13 +182,13 @@ const DeviceMetricsComponent = ({
             </p>
             <div className="flex items-center gap-x-2">
               <div className="flex items-center gap-1">
-                <TbCircleArrowDownFilled className="text-info w-5 h-5" />
+                <TbCircleArrowDownFilled className="text-info size-5" />
                 <p className="font-semibold text-sm tabular-nums">
                   {formatBytes(totalRx)}
                 </p>
               </div>
               <div className="flex items-center gap-1">
-                <TbCircleArrowUpFilled className="text-purple-500 w-5 h-5" />
+                <TbCircleArrowUpFilled className="text-purple-500 size-5" />
                 <p className="font-semibold text-sm tabular-nums">
                   {formatBytes(totalTx)}
                 </p>
@@ -207,7 +207,7 @@ const DeviceMetricsComponent = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button type="button" className="inline-flex" aria-label="More info">
-                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
+                    <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -239,7 +239,7 @@ const DeviceMetricsComponent = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button type="button" className="inline-flex" aria-label="More info">
-                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
+                    <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>

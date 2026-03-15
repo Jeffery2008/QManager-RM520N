@@ -61,16 +61,19 @@ const data = {
       title: "About Device",
       url: "#",
       icon: RouterIcon,
+      disabled: true,
     },
     {
       title: "Support",
       url: "#",
       icon: LifeBuoy,
+      disabled: true,
     },
     {
       title: "Donate to the Project",
       url: "#",
       icon: HeartIcon,
+      disabled: true,
     },
   ],
   cellular: [
@@ -187,16 +190,19 @@ const data = {
       title: "Email Alerts",
       url: "#",
       icon: MailIcon,
+      disabled: true,
     },
     {
       title: "Tailscale",
       url: "#",
       icon: MonitorCloudIcon,
+      disabled: true,
     },
     {
       title: "Watchdog",
       url: "#",
       icon: DogIcon,
+      disabled: true,
     },
     {
       title: "Logs",

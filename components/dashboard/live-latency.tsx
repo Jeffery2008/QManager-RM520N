@@ -90,24 +90,8 @@ const LiveLatencyComponent = ({ connectivity }: LiveLatencyComponentProps) => {
 
   // Fetch cached result on mount
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const resp = await fetch(`${CGI_BASE}/speedtest_status.sh`);
-        if (!resp.ok || cancelled) return;
-        const data: SpeedtestStatusResponse = await resp.json();
-        if (!cancelled && data.status === "complete" && data.result) {
-          setCachedResult(data.result);
-        }
-      } catch {
-        // Silent — no cached result is fine
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    fetchCachedResult();
+  }, [fetchCachedResult]);
 
   const handleSpeedtestOpen = useCallback(() => {
     setSpeedtestOpen(true);
@@ -177,11 +161,11 @@ const LiveLatencyComponent = ({ connectivity }: LiveLatencyComponentProps) => {
           Speedtest result:
         </p>
         <div className="flex items-center gap-x-0.5">
-          <TbCircleArrowDownFilled className="text-info w-5 h-5" />
+          <TbCircleArrowDownFilled className="text-info size-5" />
           <p>{dl} Mbps</p>
         </div>
         <div className="flex items-center gap-x-0.5">
-          <TbCircleArrowUpFilled className="text-purple-500 w-5 h-5" />
+          <TbCircleArrowUpFilled className="text-purple-500 size-5" />
           <p>{ul} Mbps</p>
         </div>
       </div>
@@ -271,17 +255,11 @@ const LiveLatencyComponent = ({ connectivity }: LiveLatencyComponentProps) => {
                   aria-label="Start speed test"
                   onClick={handleSpeedtestOpen}
                 >
-                  <TbPlayerPlayFilled className="w-4 h-4" />
+                  <TbPlayerPlayFilled className="size-4" />
                 </Button>
-                {cachedResult ? (
-                  <span className="font-medium text-sm">
-                    {footerDescription}
-                  </span>
-                ) : (
-                  <span className="font-medium text-sm">
-                    {footerDescription}
-                  </span>
-                )}
+                <span className="font-medium text-sm">
+                  {footerDescription}
+                </span>
               </div>
             </div>
           </div>

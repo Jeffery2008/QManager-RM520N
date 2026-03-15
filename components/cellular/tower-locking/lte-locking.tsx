@@ -240,14 +240,14 @@ const LTELockingComponent = ({
             <Separator />
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <TbInfoCircleFilled className="w-5 h-5 text-info" />
+                <TbInfoCircleFilled className="size-5 text-info" />
                 <p className="font-semibold text-muted-foreground text-sm">
                   LTE Tower Locking Enabled
                 </p>
               </div>
               <div className="flex items-center space-x-2">
                 {isLocking ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 ) : null}
                 <Switch
                   id="lte-tower-locking"

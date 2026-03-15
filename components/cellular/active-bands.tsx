@@ -79,13 +79,13 @@ function SignalRow({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <p className="text-sm font-semibold text-muted-foreground">{label}</p>
-      <div className="flex items-center">
-        <Progress className="w-24 mr-2" value={progress} />
-        <p className="text-sm ml-2 font-bold w-20 text-right">
+      <dt className="text-sm font-semibold text-muted-foreground">{label}</dt>
+      <dd className="flex items-center gap-2">
+        <Progress className="w-20 @[350px]/card:w-28" value={progress} />
+        <span className="text-sm font-bold w-20 text-right tabular-nums">
           {fmtSignal(value, unit)}
-        </p>
-      </div>
+        </span>
+      </dd>
     </div>
   );
 }
@@ -94,8 +94,8 @@ function SignalRow({
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between">
-      <p className="text-sm font-semibold text-muted-foreground">{label}</p>
-      <p className="text-sm font-bold">{value}</p>
+      <dt className="text-sm font-semibold text-muted-foreground">{label}</dt>
+      <dd className="text-sm font-bold">{value}</dd>
     </div>
   );
 }
@@ -194,7 +194,8 @@ const ActiveBandsComponent = ({
                     </div>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="grid gap-1.5 text-base">
+                <AccordionContent>
+                  <dl className="grid gap-1.5 text-base">
                   {/* Signal metrics with progress bars */}
                   <SignalRow
                     label="RSRP"
@@ -255,6 +256,7 @@ const ActiveBandsComponent = ({
                     label="PCI"
                     value={cc.pci !== null ? String(cc.pci) : "-"}
                   />
+                  </dl>
                 </AccordionContent>
               </AccordionItem>
             );

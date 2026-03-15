@@ -106,7 +106,7 @@ function LiveSpeed({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-primary" />
+          <Icon className="size-4 text-primary" />
           <span className="text-sm font-medium capitalize">{phase}</span>
         </div>
         <span className="text-xs text-muted-foreground">
@@ -343,7 +343,7 @@ export function SpeedtestDialog({ open, onOpenChange }: SpeedtestDialogProps) {
                 Measure your current download speed, upload speed, and latency.
               </p>
               <Button onClick={start} disabled={!isAvailable} className="gap-2">
-                <Play className="h-4 w-4" />
+                <Play className="size-4" />
                 Run Speed Test
               </Button>
               {isAvailable === false && (
@@ -379,7 +379,7 @@ export function SpeedtestDialog({ open, onOpenChange }: SpeedtestDialogProps) {
             <div className="space-y-3 py-2">
               <PhaseIndicator phase="ping" />
               <div className="flex flex-col items-center gap-2 py-4">
-                <Activity className="h-6 w-6 text-primary animate-pulse" />
+                <Activity className="size-6 text-primary animate-pulse" />
                 <span className="text-sm font-medium">Testing latency...</span>
                 {currentProgress?.type === "ping" && (
                   <span className="text-2xl font-bold tabular-nums">

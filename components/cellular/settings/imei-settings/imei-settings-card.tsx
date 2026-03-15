@@ -12,6 +12,7 @@ import {
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSet,
@@ -68,14 +69,12 @@ const IMEISettingsCard = ({
 
   const isValidImei = /^\d{15}$/.test(imei);
   const hasChanged = imei !== (currentImei ?? "");
+  const showImeiError = imei.length > 0 && !isValidImei;
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isValidImei) {
-      toast.error("IMEI must be exactly 15 digits");
-      return;
-    }
+    if (!isValidImei) return;
 
     if (!hasChanged) {
       toast.info("No changes to save");
@@ -168,6 +167,8 @@ const IMEISettingsCard = ({
                       maxLength={15}
                       inputMode="numeric"
                       disabled={isSaving}
+                      aria-invalid={showImeiError}
+                      aria-describedby={showImeiError ? "imei-error" : undefined}
                     />
                     <InputGroupAddon align="inline-start">
                       <Tooltip>
@@ -190,6 +191,11 @@ const IMEISettingsCard = ({
                       </Tooltip>
                     </InputGroupAddon>
                   </InputGroup>
+                  {showImeiError && (
+                    <FieldError id="imei-error">
+                      IMEI must be exactly 15 digits ({imei.length}/15)
+                    </FieldError>
+                  )}
                   <FieldDescription>
                     Changing the IMEI will require a device reboot to take
                     effect.
@@ -205,7 +211,7 @@ const IMEISettingsCard = ({
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                   Saving...
                 </>
               ) : (
@@ -244,7 +250,7 @@ const IMEISettingsCard = ({
               >
                 {isRebooting ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" />
                     Rebooting...
                   </>
                 ) : (

@@ -221,7 +221,7 @@ export default function SmsInboxCard({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
                 <DropdownMenuItem onClick={() => setViewMessage(row.original)}>
-                  <TbEye className="h-4 w-4" />
+                  <TbEye className="size-4" />
                   View
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -229,7 +229,7 @@ export default function SmsInboxCard({
                   variant="destructive"
                   onClick={() => setDeleteTarget(row.original)}
                 >
-                  <TbTrash className="h-4 w-4" />
+                  <TbTrash className="size-4" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -300,7 +300,7 @@ export default function SmsInboxCard({
                 onClick={onRefresh}
                 disabled={isSaving}
               >
-                <TbRefresh className="h-4 w-4" />
+                <TbRefresh className="size-4" />
               </Button>
               {selectedCount > 0 && (
                 <Button
@@ -309,7 +309,7 @@ export default function SmsInboxCard({
                   onClick={() => setShowDeleteSelected(true)}
                   disabled={isSaving}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="size-4" />
                   Delete ({selectedCount})
                 </Button>
               )}
@@ -320,7 +320,7 @@ export default function SmsInboxCard({
                   onClick={() => setShowDeleteAll(true)}
                   disabled={isSaving}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="size-4" />
                   Delete All
                 </Button>
               )}
@@ -329,7 +329,7 @@ export default function SmsInboxCard({
                 onClick={() => setShowCompose(true)}
                 disabled={isSaving}
               >
-                <TbPlus className="h-4 w-4" />
+                <TbPlus className="size-4" />
                 New Message
               </Button>
             </div>
@@ -360,7 +360,15 @@ export default function SmsInboxCard({
                     <TableRow
                       key={row.id}
                       className="cursor-pointer"
+                      tabIndex={0}
+                      role="button"
                       onClick={() => setViewMessage(row.original)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setViewMessage(row.original);
+                        }
+                      }}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
@@ -484,7 +492,7 @@ export default function SmsInboxCard({
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                   Deleting&hellip;
                 </>
               ) : (
@@ -517,7 +525,7 @@ export default function SmsInboxCard({
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                   Deleting&hellip;
                 </>
               ) : (

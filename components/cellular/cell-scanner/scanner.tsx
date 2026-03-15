@@ -204,7 +204,7 @@ const FullScannerComponent = () => {
                   {error || "Scan failed"}
                 </p>
                 <Button onClick={startScan} variant="outline" size="sm">
-                  <RefreshCcwIcon className="mr-1 h-4 w-4" />
+                  <RefreshCcwIcon className="mr-1 size-4" />
                   Retry
                 </Button>
               </div>
@@ -217,7 +217,7 @@ const FullScannerComponent = () => {
               <Button onClick={startScan} disabled={isScanning}>
                 {isScanning ? (
                   <>
-                    <LoaderCircleIcon className="h-4 w-4 animate-spin" />
+                    <LoaderCircleIcon className="size-4 animate-spin" />
                     Scanning...
                   </>
                 ) : (
@@ -263,7 +263,7 @@ const FullScannerComponent = () => {
             <AlertDialogAction onClick={confirmLockCell} disabled={isLocking}>
               {isLocking ? (
                 <>
-                  <LoaderCircleIcon className="mr-1 h-4 w-4 animate-spin" />
+                  <LoaderCircleIcon className="mr-1 size-4 animate-spin" />
                   Locking...
                 </>
               ) : (

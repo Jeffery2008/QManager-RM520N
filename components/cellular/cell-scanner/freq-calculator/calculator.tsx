@@ -280,7 +280,6 @@ const FrequencyCalculator = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs
-            defaultValue="auto"
             value={activeTab}
             onValueChange={(value) =>
               setActiveTab(value as "auto" | "lte" | "nr")
@@ -459,7 +458,7 @@ const FrequencyCalculator = () => {
             </div>
             {history.length > 0 && (
               <Button variant="destructive" size="sm" onClick={clearHistory}>
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="size-4" />
                 Clear
               </Button>
             )}
@@ -510,7 +509,7 @@ const FrequencyCalculator = () => {
                     aria-label="Delete history entry"
                     className="h-8 w-8 text-muted-foreground hover:text-foreground"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="size-4" />
                   </Button>
                 </div>
               ))}

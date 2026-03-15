@@ -159,7 +159,7 @@ const ScheduleTowerLockingComponent = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button type="button" className="inline-flex" aria-label="More info">
-                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
+                    <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -210,14 +210,14 @@ const ScheduleTowerLockingComponent = ({
             </div>
           </div>
           <Separator />
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
-            <Label className="font-semibold text-muted-foreground text-sm">
+          <fieldset className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
+            <legend className="font-semibold text-muted-foreground text-sm">
               Repeat On
-            </Label>
-            <div className="flex flex-wrap gap-2">
+            </legend>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Days of the week">
               {DAY_LABELS.map((day, index) => (
                 <Toggle
-                  aria-label={`toggle-repeat-${day.toLowerCase()}`}
+                  aria-label={day}
                   key={day}
                   size="sm"
                   className="data-[state=on]:bg-transparent data-[state=on]:*:[svg]:fill-blue-500 data-[state=on]:*:[svg]:stroke-blue-500"
@@ -230,7 +230,7 @@ const ScheduleTowerLockingComponent = ({
                 </Toggle>
               ))}
             </div>
-          </div>
+          </fieldset>
         </div>
       </CardContent>
     </Card>

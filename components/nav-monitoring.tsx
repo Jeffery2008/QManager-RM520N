@@ -31,6 +31,7 @@ export function NavMonitoring({
     url: string
     icon: LucideIcon
     isActive?: boolean
+    disabled?: boolean
     items?: {
       title: string
       url: string
@@ -66,12 +67,19 @@ export function NavMonitoring({
             onOpenChange={(isOpen) => setOpenItems((prev) => ({ ...prev, [item.title]: isOpen }))}
           >
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip={item.title} isActive={isParentOrChildActive}>
-                <Link href={item.url}>
+              {item.disabled ? (
+                <SidebarMenuButton tooltip={item.title} disabled className="opacity-50 pointer-events-none">
                   <item.icon />
                   <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
+                </SidebarMenuButton>
+              ) : (
+                <SidebarMenuButton asChild tooltip={item.title} isActive={isParentOrChildActive}>
+                  <Link href={item.url}>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              )}
               {item.items?.length ? (
                 <>
                   <CollapsibleTrigger asChild>

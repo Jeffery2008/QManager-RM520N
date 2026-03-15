@@ -160,7 +160,7 @@ const BandCardsComponent = ({
         <CardContent className="grid lg:grid-cols-8 md:grid-cols-6 sm:grid-cols-4 grid-cols-3 grid-flow-row gap-4">
           {Array.from({ length: 12 }).map((_, i) => (
             <div className="flex items-center space-x-2" key={i}>
-              <Skeleton className="h-4 w-4 rounded" />
+              <Skeleton className="size-4 rounded" />
               <Skeleton className="h-4 w-8" />
             </div>
           ))}

@@ -110,7 +110,7 @@ function DraggableNetworkItem({
             RAT_COLORS[network.id] || "bg-gray-600"
           } flex justify-center items-center`}
         >
-          <AiFillSignal className="h-4 w-4 text-white" />
+          <AiFillSignal className="size-4 text-white" />
         </div>
         <span className="font-medium text-sm">{network.name}</span>
       </div>
@@ -324,7 +324,7 @@ const NetworkPriorityCard = () => {
           >
             {isSaving ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
                 Saving...
               </>
             ) : (

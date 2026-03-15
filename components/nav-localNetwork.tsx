@@ -50,7 +50,7 @@ export function NavLocalNetwork({
   }, [pathname, localNetwork])
 
   return (
-    <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+    <SidebarGroup>
       <SidebarGroupLabel>
         Local Network
       </SidebarGroupLabel>

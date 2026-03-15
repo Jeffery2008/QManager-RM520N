@@ -22,10 +22,8 @@ const DeviceStatusComponent = ({
 
   const rows = [
     { label: "Manufacturer", value: data?.manufacturer || "-" },
-    { label: "Model", value: "RM551E-GL" },
     { label: "Firmware Version", value: data?.firmware || "-" },
     { label: "Build Date", value: data?.build_date || "-" },
-    { label: "QManager Version", value: "0.0.1" },
     {
       label: "Phone Number",
       value: data?.phone_number || "-",
@@ -62,7 +60,7 @@ const DeviceStatusComponent = ({
               <Skeleton className="size-44 rounded-full" />
             </div>
             <div className="grid gap-2">
-              {Array.from({ length: 11 }).map((_, i) => (
+              {Array.from({ length: 9 }).map((_, i) => (
                 <div key={i}>
                   <Separator />
                   <div className="flex items-center justify-between py-1">
@@ -114,24 +112,22 @@ const DeviceStatusComponent = ({
                 )}
               </Button>
             </div>
-            {rows.map((row) => (
-              <React.Fragment key={row.label}>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-muted-foreground xl:text-base text-sm">
+            <dl className="grid divide-y divide-border border-y border-border">
+              {rows.map((row) => (
+                <div key={row.label} className="flex items-center justify-between py-2">
+                  <dt className="font-semibold text-muted-foreground xl:text-base text-sm">
                     {row.label}
-                  </p>
-                  <p
+                  </dt>
+                  <dd
                     className={`font-semibold xl:text-base text-sm ${
                       row.mono ? "tabular-nums" : ""
                     }`}
                   >
                     {hidePrivate && row.private ? "••••••••••••" : row.value}
-                  </p>
+                  </dd>
                 </div>
-              </React.Fragment>
-            ))}
-            <Separator />
+              ))}
+            </dl>
           </div>
         </div>
       </CardContent>

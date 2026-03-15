@@ -87,10 +87,7 @@ const TowerLockingSettingsComponent = ({
   // Save threshold via Update button
   const handleThresholdSave = useCallback(async () => {
     const val = parseInt(thresholdInput, 10);
-    if (isNaN(val) || val < 0 || val > 100) {
-      toast.error("Threshold must be a number between 0 and 100");
-      return;
-    }
+    if (isNaN(val) || val < 0 || val > 100) return;
     setIsSavingThreshold(true);
     const ok = await onThresholdChange(val);
     setIsSavingThreshold(false);
@@ -426,7 +423,7 @@ const TowerLockingSettingsComponent = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button type="button" className="inline-flex" aria-label="Keep Lock After Reboot info">
-                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
+                    <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -458,7 +455,7 @@ const TowerLockingSettingsComponent = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button type="button" className="inline-flex" aria-label="Signal Failover info">
-                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
+                    <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -501,7 +498,7 @@ const TowerLockingSettingsComponent = ({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button type="button" className="inline-flex" aria-label="Failover Threshold info">
-                    <TbInfoCircleFilled className="w-5 h-5 text-info" />
+                    <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -541,7 +538,7 @@ const TowerLockingSettingsComponent = ({
                 <Button
                   size="sm"
                   className="h-8"
-                  disabled={isSavingThreshold}
+                  disabled={isSavingThreshold || (thresholdInput !== "" && (isNaN(Number(thresholdInput)) || Number(thresholdInput) < 0 || Number(thresholdInput) > 100))}
                   onClick={handleThresholdSave}
                 >
                   {isSavingThreshold ? (
@@ -552,6 +549,11 @@ const TowerLockingSettingsComponent = ({
                 </Button>
               )}
             </div>
+            {thresholdInput !== "" && (isNaN(Number(thresholdInput)) || Number(thresholdInput) < 0 || Number(thresholdInput) > 100) && (
+              <p className="text-sm text-destructive" role="alert">
+                Threshold must be between 0 and 100
+              </p>
+            )}
           </div>
           <Separator />
           <div className="flex items-center justify-between">

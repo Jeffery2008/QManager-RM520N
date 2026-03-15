@@ -110,7 +110,7 @@ const createColumns = (
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Provider
-        <ArrowUpDown className="h-4 w-4" />
+        <ArrowUpDown className="size-4" />
       </Button>
     ),
     cell: ({ row }) => {
@@ -188,7 +188,7 @@ const createColumns = (
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Signal
-        <ArrowUpDown className="h-4 w-4" />
+        <ArrowUpDown className="size-4" />
       </Button>
     ),
     cell: ({ row }) => {
@@ -215,13 +215,13 @@ const createColumns = (
               className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
               size="icon"
             >
-              <MoreVertical className="h-4 w-4" />
+              <MoreVertical className="size-4" />
               <span className="sr-only">Open menu</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">
             <DropdownMenuItem onClick={() => onLockCell?.(cellData)}>
-              <LockIcon className="h-4 w-4" />
+              <LockIcon className="size-4" />
               Lock Cell
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -276,7 +276,7 @@ const ScanResultView = ({ data, onLockCell }: ScanResultViewProps) => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="sm:ml-auto">
-              Columns <ChevronDown className="h-4 w-4" />
+              Columns <ChevronDown className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
