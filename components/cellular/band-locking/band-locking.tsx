@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import BandCardsComponent from "./band-cards";
 import BandSettingsComponent from "./band-settings";
 import { useBandLocking } from "@/hooks/use-band-locking";
@@ -113,7 +113,7 @@ const BandLockingComponent = () => {
 
       {/* Scenario override banner */}
       {isScenarioControlled && !isPageLoading && (
-        <Alert className="mb-4 max-w-xl">
+        <Alert className="mb-4">
           <InfoIcon className="size-4" />
           <AlertDescription>
             <p>

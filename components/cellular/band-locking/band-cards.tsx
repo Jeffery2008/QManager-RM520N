@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertCircleIcon,
   LockIcon,
   LockOpenIcon,
   RotateCcwIcon,
@@ -157,7 +158,7 @@ const BandCardsComponent = ({
           <CardTitle>{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
         </CardHeader>
-        <CardContent className="grid lg:grid-cols-8 md:grid-cols-6 sm:grid-cols-4 grid-cols-3 grid-flow-row gap-4">
+        <CardContent className="grid @lg/card:grid-cols-8 @md/card:grid-cols-6 @sm/card:grid-cols-4 grid-cols-3 grid-flow-row gap-4">
           {Array.from({ length: 12 }).map((_, i) => (
             <div className="flex items-center space-x-2" key={i}>
               <Skeleton className="size-4 rounded" />
@@ -193,17 +194,17 @@ const BandCardsComponent = ({
   const isDisabled = disabled || isLocking;
 
   return (
-    <Card className={`@container/card${disabled ? " opacity-60" : ""}`}>
+    <Card className="@container/card" aria-disabled={disabled || undefined}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div>
+          <div className={disabled ? "text-muted-foreground" : undefined}>
             <CardTitle>{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
           {disabled ? (
             <Badge
               variant="outline"
-              className="bg-info/20 text-info border-info/50"
+              className="bg-info/15 text-info hover:bg-info/20 border-info/30"
             >
               <ShieldIcon className="h-3 w-3" />
               Scenario Controlled
@@ -211,7 +212,7 @@ const BandCardsComponent = ({
           ) : isAllUnlocked ? (
             <Badge
               variant="outline"
-              className="bg-emerald-500/20 text-emerald-500 border-emerald-300/50"
+              className="bg-success/15 text-success hover:bg-success/20 border-success/30"
             >
               <LockOpenIcon className="h-3 w-3" />
               All Unlocked
@@ -219,7 +220,7 @@ const BandCardsComponent = ({
           ) : (
             <Badge
               variant="outline"
-              className="bg-amber-500/20 text-amber-500 border-amber-300/50"
+              className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
             >
               <LockIcon className="h-3 w-3" />
               {currentLockedBands.length} / {supportedBands.length} Bands
@@ -230,7 +231,7 @@ const BandCardsComponent = ({
 
       <CardContent>
         {/* Band checkbox grid */}
-        <div className="grid lg:grid-cols-8 md:grid-cols-6 sm:grid-cols-4 grid-cols-3 grid-flow-row gap-4 mt-2">
+        <div className="grid @lg/card:grid-cols-8 @md/card:grid-cols-6 @sm/card:grid-cols-4 grid-cols-3 grid-flow-row gap-4 mt-2">
           {supportedBands.map((band) => (
             <div className="flex items-center space-x-2" key={band}>
               <Checkbox
@@ -238,7 +239,6 @@ const BandCardsComponent = ({
                 checked={checkedBands.has(band)}
                 onCheckedChange={() => handleCheckboxChange(band)}
                 disabled={isDisabled}
-                className="hover:cursor-pointer"
               />
               <Label
                 htmlFor={`${bandCategory}-${band}`}
@@ -251,8 +251,26 @@ const BandCardsComponent = ({
         </div>
       </CardContent>
 
-      <CardFooter className="flex flex-row items-center justify-between mt-4">
-        <div className="flex items-center gap-x-2">
+      {/* Inline error — persistent until next operation */}
+      {error && !isLocking && (
+        <div className="px-6 pb-2">
+          <div
+            role="alert"
+            className="flex items-center gap-2 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive"
+          >
+            <AlertCircleIcon className="size-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Screen reader live region for operation results */}
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {isLocking ? `Applying ${title.replace(" Locking", "")} band lock…` : ""}
+      </div>
+
+      <CardFooter className="flex flex-wrap items-center justify-between gap-2 mt-4">
+        <div className="flex items-center gap-2">
           <Button
             onClick={handleLock}
             disabled={isDisabled || noneSelected || !hasChanges}
@@ -271,7 +289,7 @@ const BandCardsComponent = ({
           </Button>
         </div>
         {/* Quick actions row */}
-        <div className="flex items-center gap-x-2">
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             onClick={handleSelectAll}
