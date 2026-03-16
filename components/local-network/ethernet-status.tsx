@@ -1,4 +1,3 @@
-import React from "react";
 import EthernetStatusCard from "./ethernet-card";
 
 const EthernetStatusComponent = () => {
