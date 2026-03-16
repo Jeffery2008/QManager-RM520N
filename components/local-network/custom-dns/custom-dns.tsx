@@ -1,4 +1,3 @@
-import React from "react";
 import CustomDNSCard from "./custom-dns-card";
 
 const CustomDNSComponent = () => {
@@ -7,8 +6,8 @@ const CustomDNSComponent = () => {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Custom DNS Settings</h1>
         <p className="text-muted-foreground">
-          Configure and manage custom DNS settings for your network devices,
-          enhancing security and performance.
+          Override carrier-assigned DNS servers with your preferred resolvers
+          for all devices on the local network.
         </p>
       </div>
       <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4">

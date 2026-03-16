@@ -28,7 +28,7 @@ import { useDnsSettings } from "@/hooks/use-dns-settings";
 // =============================================================================
 
 const CustomDNSCard = () => {
-  const { data, isLoading, isSaving, error, saveDns } = useDnsSettings();
+  const { data, isLoading, isSaving, error, saveDns, refresh } = useDnsSettings();
 
   // --- Local form state -------------------------------------------------------
   const [isEnabled, setIsEnabled] = useState(false);
@@ -98,14 +98,28 @@ const CustomDNSCard = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {error && !isLoading && (
+          <div className="flex items-center justify-between gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 mb-4">
+            <p className="text-sm text-destructive">{error}</p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="shrink-0 text-destructive hover:text-destructive"
+              onClick={refresh}
+            >
+              Retry
+            </Button>
+          </div>
+        )}
         {isLoading ? (
           <div className="grid gap-4">
             <Skeleton className="h-8 w-48" />
-            <div className="grid xl:grid-cols-2 grid-cols-1 gap-4">
+            <div className="grid @md/card:grid-cols-2 grid-cols-1 gap-4">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
-            <Skeleton className="h-10 w-full max-w-sm" />
+            <Skeleton className="h-10 w-full" />
           </div>
         ) : (
           <form
@@ -126,7 +140,7 @@ const CustomDNSCard = () => {
                   />
                 </Field>
 
-                <div className="grid xl:grid-cols-2 grid-cols-1 grid-flow-row gap-4">
+                <div className="grid @md/card:grid-cols-2 grid-cols-1 grid-flow-row gap-4">
                   <Field>
                     <FieldLabel htmlFor="primary-dns">
                       Primary DNS Server

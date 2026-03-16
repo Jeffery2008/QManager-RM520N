@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 
 import {
   Card,
@@ -118,8 +118,8 @@ const TTLSettingsCard = () => {
     if (success) {
       toast.success(
         ttl > 0 || hl > 0
-          ? `TTL/HL applied (TTL=${ttl}, HL=${hl})`
-          : "TTL/Hop Limit disabled",
+          ? `Applied — TTL: ${ttl}, Hop Limit: ${hl}`
+          : "Custom TTL/Hop Limit disabled",
       );
     } else {
       toast.error(error || "Failed to apply TTL/Hop Limit settings");
@@ -132,10 +132,10 @@ const TTLSettingsCard = () => {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Time To Live (TTL) Configuration</CardTitle>
+        <CardTitle>TTL &amp; Hop Limit Configuration</CardTitle>
         <CardDescription>
-          Manage Time To Live (TTL) and Hop Limit (HL) settings for your network
-          devices.
+          Set custom TTL (IPv4) and Hop Limit (IPv6) values applied to outbound
+          packets on the cellular interface.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -156,8 +156,8 @@ const TTLSettingsCard = () => {
         {pageLoading ? (
           <div className="grid gap-4">
             <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-10 w-full max-w-sm" />
-            <Skeleton className="h-10 w-full max-w-sm" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
           </div>
         ) : (
           <form
@@ -191,7 +191,7 @@ const TTLSettingsCard = () => {
                     min="1"
                     max="255"
                     placeholder="e.g. 64"
-                    className="max-w-sm"
+                    className="w-full"
                     value={ttlValue}
                     onChange={(e) => setTtlValue(e.target.value)}
                     disabled={!isEnabled || isProfileControlled}
@@ -208,7 +208,7 @@ const TTLSettingsCard = () => {
                     min="1"
                     max="255"
                     placeholder="e.g. 64"
-                    className="max-w-sm"
+                    className="w-full"
                     value={hlValue}
                     onChange={(e) => setHlValue(e.target.value)}
                     disabled={!isEnabled || isProfileControlled}

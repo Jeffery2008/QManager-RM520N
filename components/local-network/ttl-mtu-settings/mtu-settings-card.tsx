@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 
 import {
   Card,
@@ -50,6 +50,10 @@ const MTUSettingsCard = () => {
     );
   }, [data, mtuValue, isEnabled]);
 
+  // --- MTU validation ----------------------------------------------------------
+  const mtuNum = Number(mtuValue);
+  const isMtuInvalid = isEnabled && mtuValue !== "" && (isNaN(mtuNum) || mtuNum < 576 || mtuNum > 9000);
+
   // --- Handle toggle ---------------------------------------------------------
   const handleToggle = useCallback(
     (checked: boolean) => {
@@ -91,15 +95,15 @@ const MTUSettingsCard = () => {
       <CardHeader>
         <CardTitle>Maximum Transmission Unit (MTU) Configuration</CardTitle>
         <CardDescription>
-          Set the packet size (MTU) on the cellular data interface to match
-          your network requirements.
+          Set the maximum packet size on the cellular data interface. Lower
+          values can help with fragmentation issues.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="grid gap-4">
             <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-10 w-full max-w-sm" />
+            <Skeleton className="h-10 w-full" />
           </div>
         ) : (
           <form
@@ -132,14 +136,14 @@ const MTUSettingsCard = () => {
                     min="576"
                     max="9000"
                     placeholder="e.g. 1500"
-                    className="max-w-sm"
+                    className="w-full"
                     value={mtuValue}
                     onChange={(e) => setMtuValue(e.target.value)}
                     disabled={!isEnabled}
-                    aria-invalid={isEnabled && mtuValue !== "" && (isNaN(Number(mtuValue)) || Number(mtuValue) < 576 || Number(mtuValue) > 9000)}
-                    aria-describedby={isEnabled && mtuValue !== "" && (isNaN(Number(mtuValue)) || Number(mtuValue) < 576 || Number(mtuValue) > 9000) ? "mtu-error" : undefined}
+                    aria-invalid={isMtuInvalid}
+                    aria-describedby={isMtuInvalid ? "mtu-error" : undefined}
                   />
-                  {isEnabled && mtuValue !== "" && (isNaN(Number(mtuValue)) || Number(mtuValue) < 576 || Number(mtuValue) > 9000) && (
+                  {isMtuInvalid && (
                     <FieldError id="mtu-error">
                       MTU must be between 576 and 9000
                     </FieldError>
