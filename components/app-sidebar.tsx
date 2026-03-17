@@ -31,6 +31,7 @@ import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { NavMonitoring } from "@/components/nav-monitoring";
 import { NavCellular } from "@/components/nav-cellular";
+import DonateDialog from "@/components/donate-dialog";
 import {
   Sidebar,
   SidebarContent,
@@ -71,7 +72,6 @@ const data = {
       title: "Donate to the Project",
       url: "#",
       icon: HeartIcon,
-      disabled: true,
     },
   ],
   cellular: [
@@ -208,6 +208,14 @@ const data = {
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [donateOpen, setDonateOpen] = React.useState(false);
+
+  const navSecondaryItems = data.navSecondary.map((item) =>
+    item.title === "Donate to the Project"
+      ? { ...item, onClick: () => setDonateOpen(true) }
+      : item,
+  );
+
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -237,11 +245,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavCellular cellular={data.cellular} />
         <NavLocalNetwork localNetwork={data.localNetwork} />
         <NavMonitoring monitoring={data.monitoring} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavSecondary items={navSecondaryItems} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
       </SidebarFooter>
+      <DonateDialog open={donateOpen} onOpenChange={setDonateOpen} />
     </Sidebar>
   );
 }

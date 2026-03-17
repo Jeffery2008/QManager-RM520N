@@ -19,6 +19,7 @@ export function NavSecondary({
     url: string
     icon: LucideIcon
     disabled?: boolean
+    onClick?: () => void
   }[]
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
@@ -29,6 +30,11 @@ export function NavSecondary({
             <SidebarMenuItem key={item.title}>
               {item.disabled ? (
                 <SidebarMenuButton size="sm" disabled className="opacity-50 pointer-events-none">
+                  <item.icon />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              ) : item.onClick ? (
+                <SidebarMenuButton size="sm" onClick={item.onClick}>
                   <item.icon />
                   <span>{item.title}</span>
                 </SidebarMenuButton>
