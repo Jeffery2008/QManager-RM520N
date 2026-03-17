@@ -4,6 +4,41 @@ This document covers building, installing, and deploying QManager to an OpenWRT 
 
 ---
 
+## Quick Install (Recommended)
+
+QManager includes an automated installation script. Build the archive on your dev machine, transfer it, and run the installer:
+
+```bash
+# 1. Build the frontend
+bun run build
+
+# 2. Create the archive (from the project root)
+mkdir -p /tmp/qmanager_install
+cp -r out /tmp/qmanager_install/
+cp -r scripts /tmp/qmanager_install/
+cp scripts/install.sh /tmp/qmanager_install/
+tar czf qmanager.tar.gz -C /tmp qmanager_install
+
+# 3. Transfer to device
+scp qmanager.tar.gz root@192.168.224.1:/tmp/
+
+# 4. Install on device
+ssh root@192.168.224.1
+cd /tmp && tar xzf qmanager.tar.gz
+cd qmanager_install && sh install.sh
+```
+
+The installer will:
+- Install required packages (`jq`) and optional packages (`msmtp`, `tailscale`, `ethtool`)
+- Backup the original `index.html` before replacing it
+- Deploy frontend, backend scripts, CGI endpoints, and init.d services
+- Fix any CRLF line endings
+- Enable and start all services
+
+See `sh install.sh --help` for all options (`--frontend-only`, `--backend-only`, `--skip-packages`, `--uninstall`, etc.)
+
+---
+
 ## Prerequisites
 
 ### Development Machine
