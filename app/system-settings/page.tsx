@@ -1,9 +1,7 @@
-import React from 'react'
+import SystemSettings from "@/components/system-settings/system-settings";
 
 const SystemSettingsPage = () => {
-  return (
-    <div>SystemSettingsPage</div>
-  )
-}
+  return <SystemSettings />;
+};
 
-export default SystemSettingsPage
+export default SystemSettingsPage;

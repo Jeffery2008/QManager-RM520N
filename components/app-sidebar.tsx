@@ -32,6 +32,7 @@ import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { NavMonitoring } from "@/components/nav-monitoring";
 import { NavCellular } from "@/components/nav-cellular";
+import { NavSystem } from "@/components/nav-system";
 import DonateDialog from "@/components/donate-dialog";
 import {
   Sidebar,
@@ -58,12 +59,14 @@ const data = {
       isActive: true,
     },
   ],
-  navSecondary: [
+  system: [
     {
       title: "System Settings",
       url: "/system-settings",
       icon: SettingsIcon,
     },
+  ],
+  navSecondary: [
     {
       title: "About Device",
       url: "/about-device",
@@ -251,6 +254,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavCellular cellular={data.cellular} />
         <NavLocalNetwork localNetwork={data.localNetwork} />
         <NavMonitoring monitoring={data.monitoring} />
+        <NavSystem system={data.system} />
         <NavSecondary items={navSecondaryItems} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

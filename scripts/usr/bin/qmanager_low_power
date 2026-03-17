@@ -1,0 +1,63 @@
+#!/bin/sh
+# =============================================================================
+# qmanager_low_power — Low Power Mode Toggle
+# =============================================================================
+# Called by cron to enter or exit low power mode. Disables or re-enables the
+# modem radio via AT+CFUN and manages state flags for the poller and watchdog.
+#
+# Usage: /usr/bin/qmanager_low_power enter|exit
+#
+# Install location: /usr/bin/qmanager_low_power
+# =============================================================================
+
+case "$1" in
+    enter|exit) ;;
+    *) echo "Usage: $0 enter|exit" >&2; exit 1 ;;
+esac
+
+. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+    qlog_init() { :; }
+    qlog_info() { logger -t low_power "$1"; }
+}
+
+qlog_init "low_power"
+
+STATE_FILE="/tmp/qmanager_low_power_active"
+WATCHCAT_LOCK="/tmp/qmanager_watchcat.lock"
+
+if [ "$1" = "enter" ]; then
+    qlog_info "Entering low power mode"
+
+    # Write timestamp so poller/UI know when low power started
+    date +%s > "$STATE_FILE"
+
+    # Prevent watchdog from interfering during low power
+    touch "$WATCHCAT_LOCK"
+
+    # Disable modem radio
+    qcmd 'AT+CFUN=0'
+
+    qlog_info "Low power mode active — modem radio disabled"
+
+elif [ "$1" = "exit" ]; then
+    # No-op if not currently in low power mode (handles spurious cron fires)
+    if [ ! -f "$STATE_FILE" ]; then
+        exit 0
+    fi
+
+    qlog_info "Exiting low power mode"
+
+    # Re-enable modem radio
+    qcmd 'AT+CFUN=1'
+
+    # Allow modem to settle
+    sleep 3
+
+    # Clean up state flags
+    rm -f "$STATE_FILE"
+    rm -f "$WATCHCAT_LOCK"
+
+    qlog_info "Low power mode ended — modem radio restored"
+fi
+
+exit 0

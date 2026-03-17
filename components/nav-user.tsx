@@ -178,7 +178,7 @@ export function NavUser({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={rebooting}>
-              Cancel
+              Not Now
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"

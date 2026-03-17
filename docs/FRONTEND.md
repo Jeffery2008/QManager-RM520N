@@ -122,6 +122,7 @@ constants/                      # Static configuration data
 | `/monitoring/watchdog` | Watchdog | Connection health |
 | `/monitoring/logs` | SystemLogs | Log viewer |
 | `/monitoring/tailscale` | Tailscale | VPN status |
+| `/system-settings` | SystemSettings | System preferences, scheduled ops |
 | `/about-device` | AboutDevice | Device info |
 | `/support` | Support | Project info & links |
 
@@ -206,6 +207,7 @@ if (result.success) { /* toast success */ }
 | `useIPPassthrough` | `/network/ip_passthrough.sh` | `ip-passthrough.ts` |
 | `useEmailAlerts` | `/monitoring/email_alerts.sh` | In hook file |
 | `useWatchdogSettings` | `/monitoring/watchdog.sh` | In hook file |
+| `useSystemSettings` | `/system/settings.sh` | `system-settings.ts` |
 | `useTailscale` | `/vpn/tailscale.sh` | — |
 
 ### Async Process Hooks
@@ -226,6 +228,7 @@ For long-running operations that run in the background:
 | `useLogin` | Login page (setup detection + login/setup actions) |
 | `useAuth` | Sidebar auth (change password, logout) |
 | `useBreadcrumbs` | Auto-generates breadcrumb trail from current route |
+| `useUnitPreferences` | Cached unit preferences (temp/distance) for dashboard display |
 | `useMobile` | Responsive breakpoint detection |
 | `useRecentActivities` | Fetches network events for the dashboard |
 | `useCurrentSettings` | Fetches current modem settings for profile creation |
@@ -257,6 +260,7 @@ All TypeScript interfaces are in `types/`. The main data contract is `modem-stat
 | `ip-passthrough.ts` | `IPPassthroughSettings` | IP passthrough |
 | `about-device.ts` | `AboutDeviceInfo` | About device page |
 | `sms.ts` | `SMSMessage`, `SMSSendPayload` | SMS feature |
+| `system-settings.ts` | `SystemSettings`, `ScheduleConfig`, `LowPowerConfig`, `SystemSettingsResponse`, `TimezoneEntry`, `DAY_LABELS`, `TIMEZONES` | System settings page |
 | `speedtest.ts` | `SpeedtestResult`, `SpeedtestStatus` | Speed test |
 
 ### Utility Types & Functions (modem-status.ts)
@@ -282,7 +286,8 @@ formatJitter(ms)           → "4.8ms"
 formatUptime(seconds)      → "1d 12h 45m"
 formatTimeAgo(timestamp)   → "2m ago"
 formatNumericField(value)  → "12345" or "-"
-formatDistance(km)          → "156 m" or "1.23 km"
+formatDistance(km, unit?)   → "156 m" or "1.23 km" (or "512 ft" / "1.23 mi" when unit="miles")
+formatTemperature(c, unit?) → "45°C" (or "113°F" when unit="fahrenheit")
 
 // Cell distance calculations (3GPP)
 calculateLteDistance(ta)   → km (from LTE Timing Advance)
@@ -421,8 +426,9 @@ The sidebar (`app-sidebar.tsx`) defines the full navigation structure:
 | **Cellular** | Cellular Info, SMS, Custom Profiles (+ Connection Scenarios), Band Locking (+ Tower, Frequency), Cell Scanner (+ Neighbor, Calculator), Settings (+ APN, Network Priority, IMEI, FPLMN) |
 | **Local Network** | Ethernet Status, IP Passthrough, Custom DNS, TTL & MTU Settings |
 | **Monitoring** | Network Events (+ Latency), Email Alerts, Tailscale, Watchdog, Logs |
+| **System** | System Settings |
 | **Secondary** | About Device, Support, Donate |
-| **Footer** | User menu (Change Password, Logout) |
+| **Footer** | User menu (Change Password, Toggle Theme, Reboot Device, Logout) |
 
 ---
 

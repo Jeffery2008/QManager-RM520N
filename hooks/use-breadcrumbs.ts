@@ -38,6 +38,7 @@ const routeNameMap: Record<string, string> = {
   'email-alerts': 'Email Alerts',
   watchdog: 'Watchdog',
   tailscale: 'Tailscale',
+  'system-settings': 'System Settings',
   'about-device': 'About Device',
   support: 'Support',
 };

@@ -572,12 +572,37 @@ export function calculateNrDistance(nta: number | null): number | null {
 /**
  * Formats a distance in km to a human-readable string.
  * e.g., 0.156 → "156 m", 1.234 → "1.23 km"
+ * When unit is "miles", converts to imperial (feet/miles).
  */
-export function formatDistance(km: number | null): string {
+export function formatDistance(
+  km: number | null,
+  unit?: "km" | "miles",
+): string {
   if (km === null) return "-";
+  if (unit === "miles") {
+    const miles = km * 0.621371;
+    if (miles < 0.01) return "< 50 ft";
+    if (miles < 1) return `${Math.round(miles * 5280)} ft`;
+    return `${miles.toFixed(2)} mi`;
+  }
   if (km < 0.01) return "< 10 m";
   if (km < 1) return `${Math.round(km * 1000)} m`;
   return `${km.toFixed(2)} km`;
+}
+
+/**
+ * Formats a temperature for display.
+ * Backend always returns Celsius; converts to Fahrenheit when requested.
+ */
+export function formatTemperature(
+  celsius: number | null,
+  unit?: "celsius" | "fahrenheit",
+): string {
+  if (celsius === null) return "-";
+  if (unit === "fahrenheit") {
+    return `${Math.round((celsius * 9) / 5 + 32)}°F`;
+  }
+  return `${celsius}°C`;
 }
 
 /**

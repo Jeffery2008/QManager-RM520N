@@ -1,0 +1,111 @@
+#!/bin/sh
+# =============================================================================
+# qmanager_low_power_check — Boot-Time Low Power Window Check
+# =============================================================================
+# One-shot daemon that runs at boot. Checks if the device booted during a
+# scheduled low power window and re-enters CFUN=0 if so, ensuring the modem
+# stays off during configured quiet hours even after an unexpected reboot.
+#
+# Install location: /usr/bin/qmanager_low_power_check
+# =============================================================================
+
+. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+    qlog_init() { :; }
+    qlog_info() { logger -t low_power_check "$1"; }
+}
+
+qlog_init "low_power_check"
+
+STATE_FILE="/tmp/qmanager_low_power_active"
+WATCHCAT_LOCK="/tmp/qmanager_watchcat.lock"
+
+# ---------------------------------------------------------------------------
+# Read UCI configuration
+# ---------------------------------------------------------------------------
+enabled=$(uci -q get quecmanager.settings.low_power_enabled 2>/dev/null)
+if [ "$enabled" != "1" ]; then
+    exit 0
+fi
+
+start_time=$(uci -q get quecmanager.settings.low_power_start 2>/dev/null)
+end_time=$(uci -q get quecmanager.settings.low_power_end 2>/dev/null)
+days=$(uci -q get quecmanager.settings.low_power_days 2>/dev/null)
+
+# Defaults
+[ -z "$start_time" ] && start_time="23:00"
+[ -z "$end_time" ] && end_time="06:00"
+[ -z "$days" ] && days="0,1,2,3,4,5,6"
+
+# ---------------------------------------------------------------------------
+# Check if today is an active day
+# ---------------------------------------------------------------------------
+current_dow=$(date +%w)
+
+day_match=false
+for d in $(printf '%s' "$days" | tr ',' ' '); do
+    [ "$d" = "$current_dow" ] && day_match=true
+done
+
+if [ "$day_match" = "false" ]; then
+    exit 0
+fi
+
+# ---------------------------------------------------------------------------
+# Convert HH:MM to minutes since midnight for comparison
+# ---------------------------------------------------------------------------
+time_to_minutes() {
+    h=$(printf '%s' "$1" | cut -d: -f1 | sed 's/^0//')
+    m=$(printf '%s' "$1" | cut -d: -f2 | sed 's/^0//')
+    [ -z "$h" ] && h=0
+    [ -z "$m" ] && m=0
+    echo $(( h * 60 + m ))
+}
+
+current_time=$(date +%H:%M)
+
+start_min=$(time_to_minutes "$start_time")
+end_min=$(time_to_minutes "$end_time")
+cur_min=$(time_to_minutes "$current_time")
+
+# ---------------------------------------------------------------------------
+# Determine if current time falls within the low power window
+# ---------------------------------------------------------------------------
+inside=false
+
+if [ "$start_min" -lt "$end_min" ]; then
+    # Normal window (e.g., 08:00-17:00)
+    if [ "$cur_min" -ge "$start_min" ] && [ "$cur_min" -lt "$end_min" ]; then
+        inside=true
+    fi
+else
+    # Overnight window (e.g., 23:00-06:00)
+    if [ "$cur_min" -ge "$start_min" ] || [ "$cur_min" -lt "$end_min" ]; then
+        inside=true
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Act on result
+# ---------------------------------------------------------------------------
+if [ "$inside" = "true" ]; then
+    qlog_info "Boot during low-power window ($start_time-$end_time), re-entering CFUN=0"
+
+    # Set state flags immediately so poller sees them
+    date +%s > "$STATE_FILE"
+    touch "$WATCHCAT_LOCK"
+
+    # Wait for modem to fully initialize after boot
+    sleep 30
+
+    # Disable modem radio
+    qcmd 'AT+CFUN=0'
+
+    qlog_info "Low power mode re-established after boot"
+else
+    qlog_info "Boot outside low-power window, ensuring normal mode"
+
+    # Clean up any stale flags from before reboot
+    rm -f "$STATE_FILE" "$WATCHCAT_LOCK"
+fi
+
+exit 0

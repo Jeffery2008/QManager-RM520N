@@ -1,0 +1,16 @@
+#!/bin/sh
+# =============================================================================
+# qmanager_scheduled_reboot — Scheduled System Reboot
+# =============================================================================
+# Called by cron at the configured time. Logs the event and reboots.
+# Install location: /usr/bin/qmanager_scheduled_reboot
+# =============================================================================
+
+. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+    qlog_init() { :; }
+    qlog_info() { logger -t scheduled_reboot "$1"; }
+}
+
+qlog_init "scheduled_reboot"
+qlog_info "Scheduled system reboot triggered"
+reboot

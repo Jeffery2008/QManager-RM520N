@@ -149,6 +149,8 @@ Auth endpoints use `_SKIP_AUTH=1` to bypass the automatic auth check in `cgi_bas
 | `/tmp/qmanager_profile_state.json` | profile_apply | JSON | Profile apply progress |
 | `/tmp/qmanager_pci_state.json` | poller (events) | JSON | SCC PCI tracking |
 | `/tmp/qmanager_email_log.json` | poller (email) | NDJSON | Email alert log (max 100) |
+| `/tmp/qmanager_low_power_active` | low_power | Timestamp | Low power mode flag (suppresses events + alerts) |
+| `/tmp/qmanager_watchcat.lock` | low_power | Empty | Watchdog pause lock (forces LOCKED state) |
 | `/etc/qmanager/` | CGI scripts | Various | Persistent configuration |
 
 ---
@@ -183,6 +185,13 @@ init.d/qmanager_wan_guard (non-procd, one-shot)
 
 init.d/qmanager_tower_failover (non-procd)
   └── qmanager_tower_failover (tower failover watchdog)
+
+init.d/qmanager_low_power_check (non-procd, one-shot)
+  └── qmanager_low_power_check (boot-time low power window check)
+
+cron (managed by system/settings.sh CGI)
+  ├── qmanager_scheduled_reboot (reboot at configured time)
+  └── qmanager_low_power enter|exit (CFUN=0/1 at configured times)
 ```
 
 ### Daemon Communication
@@ -216,7 +225,7 @@ The poller's `events.sh` library detects state changes and emits events to an ND
 | `sim_failover` | SIM slot switched by watchdog | warning |
 | `sim_swap_detected` | Physical SIM card changed at boot | info |
 
-Events are suppressed during active watchcat recovery to prevent noise.
+Events are suppressed during active watchcat recovery to prevent noise. All events are also suppressed during scheduled low power mode (when `/tmp/qmanager_low_power_active` exists).
 
 ---
 
@@ -279,5 +288,7 @@ The apply process runs asynchronously via `qmanager_profile_apply` daemon. The f
 | MTU rules | `/etc/firewall.user.mtu` | Shell commands (ip link) |
 | Watchdog config | UCI `quecmanager.watchcat.*` | UCI |
 | Ethernet link speed | UCI `quecmanager.eth_link.speed_limit` | UCI |
+| System settings | UCI `quecmanager.settings.*` | UCI |
+| Timezone | UCI `system.@system[0].timezone/zonename` | UCI |
 | Auth password | `/etc/qmanager/shadow` | SHA-256 hash |
 | Sessions | `/tmp/qmanager_sessions/<token>` | One file per session |

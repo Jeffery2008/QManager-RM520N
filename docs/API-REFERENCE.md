@@ -779,6 +779,96 @@ Device hardware and firmware information.
 
 System log output.
 
+### GET/POST `/system/settings.sh`
+
+System preferences, scheduled reboot, and low power mode.
+
+**GET Response:**
+```json
+{
+  "success": true,
+  "settings": {
+    "wan_guard_enabled": true,
+    "temp_unit": "celsius",
+    "distance_unit": "km",
+    "timezone": "UTC0",
+    "zonename": "UTC"
+  },
+  "scheduled_reboot": {
+    "enabled": false,
+    "time": "04:00",
+    "days": [0, 1, 2, 3, 4, 5, 6]
+  },
+  "low_power": {
+    "enabled": false,
+    "start_time": "23:00",
+    "end_time": "06:00",
+    "days": [0, 1, 2, 3, 4, 5, 6]
+  }
+}
+```
+
+**POST (save_settings):**
+```json
+{
+  "action": "save_settings",
+  "wan_guard_enabled": true,
+  "temp_unit": "celsius",
+  "distance_unit": "km",
+  "timezone": "EST5EDT,M3.2.0,M11.1.0",
+  "zonename": "America/New_York"
+}
+```
+
+- `temp_unit`: `"celsius"` or `"fahrenheit"`
+- `distance_unit`: `"km"` or `"miles"`
+- `wan_guard_enabled`: toggles init.d symlink (enable/disable)
+- `timezone`/`zonename`: written to UCI `system.@system[0]`
+
+**POST (save_scheduled_reboot):**
+
+```json
+{
+  "action": "save_scheduled_reboot",
+  "enabled": true,
+  "time": "04:00",
+  "days": [0, 1, 2, 3, 4, 5, 6]
+}
+```
+
+- `days`: array of integers 0-6 (0=Sunday, 6=Saturday)
+- Manages cron entries for `/usr/bin/qmanager_scheduled_reboot`
+- Config persisted in UCI `quecmanager.settings.sched_reboot_*`
+
+**POST (save_low_power):**
+
+```json
+{
+  "action": "save_low_power",
+  "enabled": true,
+  "start_time": "23:00",
+  "end_time": "06:00",
+  "days": [0, 1, 2, 3, 4, 5, 6]
+}
+```
+
+- Creates two cron entries: `enter` at start_time on selected days, `exit` at end_time on all 7 days
+- Exit cron fires on all days to handle overnight windows (e.g., 23:00-06:00) — no-ops if flag absent
+- Enables/disables `qmanager_low_power_check` init.d (boot-time window check)
+- Disabling while active immediately triggers `qmanager_low_power exit` (restores CFUN=1)
+
+### POST `/system/reboot.sh`
+
+Triggers a device reboot. POST-only, no request body required.
+
+**Response:**
+
+```json
+{ "success": true }
+```
+
+The HTTP response is flushed before the device reboots asynchronously. The connection will drop shortly after.
+
 ---
 
 ## VPN

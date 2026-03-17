@@ -293,6 +293,52 @@ Boot-time one-shot: checks if IMEI was rejected (cause 5 from `AT+QNETRC?`), res
 
 Boot-time one-shot: validates WAN profiles against active CIDs, disables orphaned profiles to prevent netifd retry loops.
 
+### qmanager_scheduled_reboot
+
+Cron-called script that logs the event and reboots the device.
+
+**Location:** `scripts/usr/bin/qmanager_scheduled_reboot`
+**Triggered by:** Cron entry managed by `system/settings.sh`
+
+Minimal script: logs via qlog, then calls `reboot`.
+
+### qmanager_low_power
+
+Cron-called script to enter or exit low power mode (modem airplane mode).
+
+**Location:** `scripts/usr/bin/qmanager_low_power`
+**Usage:** `qmanager_low_power enter|exit`
+
+**Enter mode:**
+
+1. Writes timestamp to `/tmp/qmanager_low_power_active`
+2. Creates `/tmp/qmanager_watchcat.lock` (pauses watchdog into LOCKED state)
+3. Sends `AT+CFUN=0` (disables modem radio)
+
+**Exit mode:**
+
+1. No-ops if flag file absent (handles spurious cron fires on non-active days)
+2. Sends `AT+CFUN=1` (re-enables modem radio)
+3. Sleeps 3 seconds for modem settling
+4. Removes both flag files
+
+**Cron pattern:** Two entries — `enter` fires on selected days, `exit` fires on all 7 days (no-ops if not in low power). This handles overnight windows like 23:00-06:00 where exit day differs from enter day.
+
+### qmanager_low_power_check
+
+Boot-time one-shot: checks if the device rebooted during a scheduled low power window and re-enters CFUN=0 if so. Ensures modem stays off during configured quiet hours even after an unexpected reboot.
+
+**Location:** `scripts/usr/bin/qmanager_low_power_check`
+
+**Flow:**
+
+1. Exit immediately if low power not enabled in UCI
+2. Check if current day of week matches configured days
+3. Convert start/end times to minutes-since-midnight
+4. Handle both normal (08:00-17:00) and overnight (23:00-06:00) windows
+5. If inside window: set state flags immediately, sleep 30s (modem init), send `AT+CFUN=0`
+6. If outside window: clean up any stale flags from before reboot
+
 ### qcmd
 
 AT command wrapper — handles modem device path, locking, and response parsing.
@@ -314,6 +360,7 @@ result=$(qcmd 'AT+QENG="servingcell"')
 | `qmanager_imei_check` | non-procd | 99 | `qmanager_imei_check` | Boot-time IMEI check (one-shot, double-fork) |
 | `qmanager_wan_guard` | non-procd | 99 | `qmanager_wan_guard` | WAN profile validation (one-shot) |
 | `qmanager_tower_failover` | non-procd | 99 | `qmanager_tower_failover` | Tower failover watchdog |
+| `qmanager_low_power_check` | non-procd | 99 | `qmanager_low_power_check` | Boot-time low power window check (one-shot, double-fork) |
 
 Non-procd services use the double-fork pattern for daemonization:
 ```sh
@@ -474,6 +521,8 @@ All auth endpoints set `_SKIP_AUTH=1`.
 
 | Script | Method | Description |
 |--------|--------|-------------|
+| `settings.sh` | GET/POST | System preferences, scheduled reboot, low power mode |
+| `reboot.sh` | POST | Trigger device reboot (uses `cgi_reboot_response`) |
 | `logs.sh` | GET | System log output |
 
 #### VPN (`vpn/`)

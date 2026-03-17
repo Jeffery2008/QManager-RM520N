@@ -1,0 +1,35 @@
+#!/bin/sh /etc/rc.common
+# =============================================================================
+# qmanager_low_power_check — Init Script for Low Power Boot Check
+# =============================================================================
+# Launches the one-shot low power check daemon at boot. Determines if the
+# device booted during a scheduled low power window and re-enters CFUN=0
+# if so.
+#
+# Non-procd: runs once and exits. No automatic respawn needed.
+# Only enabled when low power schedule is active.
+#
+# Usage:
+#   /etc/init.d/qmanager_low_power_check start|enable|disable
+#
+# Install location: /etc/init.d/qmanager_low_power_check
+# =============================================================================
+
+START=99
+STOP=10
+
+DAEMON="/usr/bin/qmanager_low_power_check"
+
+start() {
+    # Guard: daemon script exists and is executable
+    [ -x "$DAEMON" ] || return 1
+
+    # Spawn daemon (double-fork to detach from init process group)
+    ( "$DAEMON" </dev/null >/dev/null 2>&1 & )
+    logger -t qmanager_low_power_check "Low power boot check started"
+}
+
+stop() {
+    # One-shot daemon — no persistent process to stop
+    :
+}

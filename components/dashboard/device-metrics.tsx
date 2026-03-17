@@ -30,7 +30,9 @@ import {
   calculateLteDistance,
   calculateNrDistance,
   formatDistance,
+  formatTemperature,
 } from "@/types/modem-status";
+import { useUnitPreferences } from "@/hooks/use-system-settings";
 
 interface DeviceMetricsComponentProps {
   deviceData: DeviceStatus | null;
@@ -51,6 +53,7 @@ const DeviceMetricsComponent = ({
   nrData,
   isLoading,
 }: DeviceMetricsComponentProps) => {
+  const unitPrefs = useUnitPreferences();
   const temp = deviceData?.temperature ?? null;
   const cpu = deviceData?.cpu_usage ?? null;
   const memUsed = deviceData?.memory_used_mb ?? 0;
@@ -117,7 +120,7 @@ const DeviceMetricsComponent = ({
                 </Badge>
               )}
               <p className="font-semibold text-sm tabular-nums">
-                {temp !== null ? `${temp}°C` : "-"}
+                {formatTemperature(temp, unitPrefs?.tempUnit)}
               </p>
             </div>
           </div>
@@ -224,7 +227,7 @@ const DeviceMetricsComponent = ({
                 </TooltipContent>
               </Tooltip>
               <p className="font-semibold text-sm tabular-nums">
-                {formatDistance(calculateLteDistance(lteData?.ta ?? null))}
+                {formatDistance(calculateLteDistance(lteData?.ta ?? null), unitPrefs?.distanceUnit)}
               </p>
             </div>
           </div>
@@ -256,7 +259,7 @@ const DeviceMetricsComponent = ({
                 </TooltipContent>
               </Tooltip>
               <p className="font-semibold text-sm tabular-nums">
-                {formatDistance(calculateNrDistance(nrData?.ta ?? null))}
+                {formatDistance(calculateNrDistance(nrData?.ta ?? null), unitPrefs?.distanceUnit)}
               </p>
             </div>
           </div>

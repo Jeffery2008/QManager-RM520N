@@ -170,7 +170,8 @@ stop_services() {
 
     # Stop auxiliary services
     for svc in qmanager_eth_link qmanager_mtu qmanager_imei_check \
-               qmanager_wan_guard qmanager_tower_failover qmanager_ttl; do
+               qmanager_wan_guard qmanager_tower_failover qmanager_ttl \
+               qmanager_low_power_check; do
         if [ -x "$INITD_DIR/$svc" ]; then
             "$INITD_DIR/$svc" stop 2>/dev/null || true
         fi
@@ -182,7 +183,8 @@ stop_services() {
                 qmanager_tower_schedule qmanager_cell_scanner \
                 qmanager_neighbour_scanner qmanager_mtu_apply \
                 qmanager_profile_apply qmanager_imei_check \
-                qmanager_wan_guard; do
+                qmanager_wan_guard qmanager_low_power \
+                qmanager_low_power_check qmanager_scheduled_reboot; do
         killall "$proc" 2>/dev/null || true
     done
 
@@ -241,7 +243,7 @@ install_frontend() {
 
     # Remove old QManager frontend directories (keep cgi-bin/ and non-QM files)
     for dir in _next dashboard cellular monitoring local-network \
-               login about-device support; do
+               login about-device support system-settings; do
         rm -rf "$WWW_ROOT/$dir"
     done
 
@@ -441,7 +443,8 @@ uninstall() {
     stop_services
 
     for svc in qmanager qmanager_eth_link qmanager_ttl qmanager_mtu \
-               qmanager_wan_guard qmanager_imei_check qmanager_tower_failover; do
+               qmanager_wan_guard qmanager_imei_check qmanager_tower_failover \
+               qmanager_low_power_check; do
         if [ -x "$INITD_DIR/$svc" ]; then
             "$INITD_DIR/$svc" disable 2>/dev/null || true
             rm -f "$INITD_DIR/$svc"
@@ -464,7 +467,7 @@ uninstall() {
 
     # Remove frontend and restore original index.html
     for dir in _next dashboard cellular monitoring local-network \
-               login about-device support; do
+               login about-device support system-settings; do
         rm -rf "$WWW_ROOT/$dir"
     done
     rm -f "$WWW_ROOT/index.html" "$WWW_ROOT/404.html" "$WWW_ROOT/favicon.ico"
