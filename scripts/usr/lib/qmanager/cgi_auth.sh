@@ -14,9 +14,9 @@ AUTH_CONFIG="/etc/qmanager/auth.json"
 SESSION_FILE="/tmp/qmanager_session.json"
 ATTEMPTS_FILE="/tmp/qmanager_auth_attempts.json"
 
-# Session timeouts (seconds)
-SESSION_IDLE_TIMEOUT=3600       # 1 hour idle
-SESSION_ABSOLUTE_TIMEOUT=86400  # 24 hours absolute
+# Session timeout (seconds) — single absolute timeout from login time.
+# No idle timeout: avoids race conditions from concurrent last_seen writes.
+SESSION_ABSOLUTE_TIMEOUT=28800  # 8 hours
 
 # Rate limiting
 MAX_ATTEMPTS=5
@@ -110,8 +110,8 @@ qm_create_session() {
     _token=$(qm_generate_token)
     _now=$(date +%s)
 
-    jq -n --arg token "$_token" --argjson created "$_now" --argjson last_seen "$_now" \
-        '{"token":$token,"created":$created,"last_seen":$last_seen}' > "$SESSION_FILE"
+    jq -n --arg token "$_token" --argjson created "$_now" \
+        '{"token":$token,"created":$created}' > "$SESSION_FILE"
     chmod 600 "$SESSION_FILE"
 
     printf '%s' "$_token"
@@ -119,44 +119,29 @@ qm_create_session() {
 
 # Validate a token and check expiry
 # Returns 0 if valid, 1 if invalid/expired
-# Updates last_seen on success
+# Read-only — no writes to avoid race conditions from concurrent CGI requests
 qm_validate_token() {
     _check_token="$1"
     [ -z "$_check_token" ] && return 1
     [ ! -f "$SESSION_FILE" ] && return 1
 
-    # Single jq call to read all session fields (tab-separated)
-    _session_fields=$(jq -r '[.token // "", (.created // 0 | tostring), (.last_seen // 0 | tostring)] | @tsv' "$SESSION_FILE" 2>/dev/null)
+    # Single jq call to read token and created timestamp (tab-separated)
+    _session_fields=$(jq -r '[.token // "", (.created // 0 | tostring)] | @tsv' "$SESSION_FILE" 2>/dev/null)
     _session_token=$(printf '%s' "$_session_fields" | cut -f1)
     _created=$(printf '%s' "$_session_fields" | cut -f2)
-    _last_seen=$(printf '%s' "$_session_fields" | cut -f3)
 
     [ -z "$_session_token" ] && return 1
 
     # Compare tokens (timing-safe)
     qm_timing_safe_compare "$_check_token" "$_session_token" || return 1
 
-    # Check timeouts
+    # Absolute timeout from login time
     _now=$(date +%s)
-
-    # Absolute timeout
     _age=$(( _now - _created ))
     [ "$_age" -gt "$SESSION_ABSOLUTE_TIMEOUT" ] && {
         rm -f "$SESSION_FILE"
         return 1
     }
-
-    # Idle timeout
-    _idle=$(( _now - _last_seen ))
-    [ "$_idle" -gt "$SESSION_IDLE_TIMEOUT" ] && {
-        rm -f "$SESSION_FILE"
-        return 1
-    }
-
-    # Update last_seen
-    jq --argjson now "$_now" '.last_seen = $now' "$SESSION_FILE" > "${SESSION_FILE}.tmp" \
-        && mv "${SESSION_FILE}.tmp" "$SESSION_FILE"
-    chmod 600 "$SESSION_FILE"
 
     return 0
 }
