@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -44,16 +44,17 @@ export function OnboardingShell({
   continueDisabled = false,
   children,
 }: OnboardingShellProps) {
-  const prevStepRef = useRef(currentStep);
+  const [prevStep, setPrevStep] = useState(currentStep);
   const [direction, setDirection] = useState(1);
   const liveRef = useRef<HTMLParagraphElement>(null);
 
-  useEffect(() => {
-    if (currentStep !== prevStepRef.current) {
-      setDirection(currentStep > prevStepRef.current ? 1 : -1);
-      prevStepRef.current = currentStep;
-    }
-  }, [currentStep]);
+  // Derived state: update direction when step prop changes.
+  // Calling setState during render (not in an effect) is the React-recommended
+  // pattern for derived state — React re-renders immediately without cascading.
+  if (prevStep !== currentStep) {
+    setDirection(currentStep > prevStep ? 1 : -1);
+    setPrevStep(currentStep);
+  }
 
   const isFirstStep = currentStep === 1;
   const isLastStep = currentStep === TOTAL_STEPS;
