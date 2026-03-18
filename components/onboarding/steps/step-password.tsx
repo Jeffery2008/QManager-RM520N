@@ -52,6 +52,7 @@ interface StepPasswordProps {
 }
 
 export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPasswordProps) {
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -78,6 +79,8 @@ export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPa
     try {
       const result = await setupPassword(password, confirm);
       if (result.success) {
+        const name = displayName.trim();
+        if (name) localStorage.setItem("qm_display_name", name);
         onSuccess();
       } else {
         setError(result.error || "Setup failed. Please try again.");
@@ -86,7 +89,7 @@ export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPa
       setIsSubmitting(false);
       onLoadingChange(false);
     }
-  }, [password, confirm, onSuccess, onLoadingChange]);
+  }, [displayName, password, confirm, onSuccess, onLoadingChange]);
 
   useEffect(() => {
     onSubmitRef(handleSubmit);
@@ -104,7 +107,21 @@ export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPa
       <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="onboard-password">New Password</FieldLabel>
+            <FieldLabel htmlFor="onboard-name">Your name <span className="text-muted-foreground font-normal">(optional)</span></FieldLabel>
+            <Input
+              id="onboard-name"
+              type="text"
+              placeholder="e.g. Alex"
+              autoComplete="name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              disabled={isSubmitting}
+            />
+            <FieldDescription>Shown in the sidebar. You can change this anytime.</FieldDescription>
+          </Field>
+
+          <Field>
+            <FieldLabel htmlFor="onboard-password">Password</FieldLabel>
             <div className="relative">
               <Input
                 id="onboard-password"

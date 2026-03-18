@@ -45,7 +45,6 @@ import Link from "next/link";
 
 const data = {
   user: {
-    name: "user-test",
     avatar: QManagerLogo.src,
   },
   navMain: [
@@ -215,6 +214,12 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [donateOpen, setDonateOpen] = React.useState(false);
+  const [displayName, setDisplayName] = React.useState("Admin");
+
+  React.useEffect(() => {
+    const stored = localStorage.getItem("qm_display_name");
+    if (stored) setDisplayName(stored);
+  }, []);
 
   const navSecondaryItems = data.navSecondary.map((item) =>
     item.title === "Donate to the Project"
@@ -255,7 +260,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={navSecondaryItems} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={{ ...data.user, name: displayName }} />
       </SidebarFooter>
       <DonateDialog open={donateOpen} onOpenChange={setDonateOpen} />
     </Sidebar>
