@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion } from "motion/react";
 import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AbstractPattern } from "./abstract-pattern";
@@ -73,15 +74,19 @@ export const ScenarioItem = ({
 
   return (
     <>
-      <div
+      <motion.div
         className={cn(
-          "relative overflow-hidden rounded-xl cursor-pointer transition-all duration-300",
+          "relative overflow-hidden rounded-xl cursor-pointer",
           isActive
-            ? `ring-2 ${getRingColor(scenario.gradient)} ring-offset-3 ring-offset-background scale-[1.01]`
+            ? `ring-2 ${getRingColor(scenario.gradient)} ring-offset-3 ring-offset-background`
             : isSelected
-              ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background scale-[1.01]"
-              : "hover:scale-[1.01] hover:shadow-lg",
+              ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background"
+              : "",
         )}
+        animate={{ scale: isActive || isSelected ? 1.01 : 1 }}
+        whileHover={!isActive && !isSelected ? { scale: 1.02, y: -2 } : {}}
+        whileTap={{ scale: 0.97 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
         onClick={() => onSelect(scenario.id)}
       >
         {/* Background gradient */}
@@ -125,7 +130,7 @@ export const ScenarioItem = ({
             <p className="text-white/80 text-xs">{scenario.description}</p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { motion } from "motion/react";
 import { useLogin } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -73,7 +74,12 @@ export default function LoginComponent() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <motion.div
+      className="flex flex-col gap-6"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+    >
       <form onSubmit={handleSubmit}>
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">
@@ -133,6 +139,6 @@ export default function LoginComponent() {
       <FieldDescription className="px-6 text-center">
         QManager — Quectel Modem Management
       </FieldDescription>
-    </div>
+    </motion.div>
   );
 }

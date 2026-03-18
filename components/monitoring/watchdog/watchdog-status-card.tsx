@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import {
   Card,
@@ -226,23 +227,44 @@ export function WatchdogStatusCard({
       </CardHeader>
       <CardContent>
         <div className="grid gap-2">
-          {/* State badge */}
+          {/* State badge — animates when state changes */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-muted-foreground">State</p>
-            <Badge className={badge.className}>{badge.label}</Badge>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={stateKey}
+                initial={{ opacity: 0, scale: 0.88 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.88 }}
+                transition={{ duration: 0.18, type: "spring", stiffness: 400, damping: 24 }}
+              >
+                <Badge className={badge.className}>{badge.label}</Badge>
+              </motion.div>
+            </AnimatePresence>
           </div>
-          {/* Status rows — matching Cellular Information card pattern */}
-          {statusRows.map((row) => (
-            <React.Fragment key={row.label}>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-muted-foreground">
-                  {row.label}
-                </p>
-                <p className="text-sm font-semibold">{row.value}</p>
-              </div>
-            </React.Fragment>
-          ))}
+          {/* Status rows — stagger in on mount */}
+          <motion.div
+            className="grid gap-2"
+            initial="hidden"
+            animate="visible"
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } } }}
+          >
+            {statusRows.map((row) => (
+              <motion.div
+                key={row.label}
+                variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <Separator />
+                <div className="flex items-center justify-between pt-2">
+                  <p className="text-sm font-semibold text-muted-foreground">
+                    {row.label}
+                  </p>
+                  <p className="text-sm font-semibold">{row.value}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
           <Separator />
 
           {/* SIM Failover section */}

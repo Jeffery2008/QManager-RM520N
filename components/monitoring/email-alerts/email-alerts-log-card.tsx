@@ -22,6 +22,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { motion } from "motion/react";
+
+const MotionTableRow = motion.create(TableRow);
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -231,7 +235,12 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
                 </TableRow>
               ) : (
                 entries.map((entry, index) => (
-                  <TableRow key={`${entry.timestamp}-${index}`}>
+                  <MotionTableRow
+                    key={`${entry.timestamp}-${index}`}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.4), ease: "easeOut" }}
+                  >
                     <TableCell className="font-mono text-xs whitespace-nowrap">
                       {entry.timestamp}
                     </TableCell>
@@ -258,7 +267,7 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
                     <TableCell className="hidden @md/card:table-cell text-sm text-muted-foreground">
                       {entry.recipient}
                     </TableCell>
-                  </TableRow>
+                  </MotionTableRow>
                 ))
               )}
             </TableBody>

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { motion } from "motion/react";
 import {
   flexRender,
   getCoreRowModel,
@@ -43,6 +44,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+const MotionTableRow = motion.create(TableRow);
 import {
   Dialog,
   DialogContent,
@@ -403,8 +406,8 @@ export default function SmsInboxCard({
               </TableHeader>
               <TableBody>
                 {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
+                  table.getRowModel().rows.map((row, index) => (
+                    <MotionTableRow
                       key={row.id}
                       className="cursor-pointer"
                       tabIndex={0}
@@ -416,6 +419,9 @@ export default function SmsInboxCard({
                           setViewMessage(row.original);
                         }
                       }}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.4), ease: "easeOut" }}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
@@ -425,7 +431,7 @@ export default function SmsInboxCard({
                           )}
                         </TableCell>
                       ))}
-                    </TableRow>
+                    </MotionTableRow>
                   ))
                 ) : (
                   <TableRow>
@@ -484,7 +490,7 @@ export default function SmsInboxCard({
             <DialogTitle>Message from {viewMessage?.sender}</DialogTitle>
             <DialogDescription>{viewMessage?.timestamp}</DialogDescription>
           </DialogHeader>
-          <div className="whitespace-pre-wrap break-words text-sm">
+          <div className="whitespace-pre-wrap wrap-break-word text-sm">
             {viewMessage?.content}
           </div>
         </DialogContent>

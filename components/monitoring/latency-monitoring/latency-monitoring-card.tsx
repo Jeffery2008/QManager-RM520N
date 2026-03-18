@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { BarChart, CartesianGrid, XAxis, Bar } from "recharts";
 import { useModemStatus } from "@/hooks/use-modem-status";
 import { useLatencyHistory } from "@/hooks/use-latency-history";
@@ -315,10 +316,19 @@ const LatencyMonitoringCard = ({
               <span className="text-muted-foreground text-xs">
                 {chartConfig[key].label}
               </span>
-              <span className="text-base leading-none font-bold sm:text-3xl">
-                {total[key].toLocaleString()}
-                {key === "latency" ? "ms" : "%"}
-              </span>
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={Math.round(total[key])}
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 5 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  className="text-base leading-none font-bold sm:text-3xl tabular-nums"
+                >
+                  {total[key].toLocaleString()}
+                  {key === "latency" ? "ms" : "%"}
+                </motion.span>
+              </AnimatePresence>
             </button>
           ))}
         </div>

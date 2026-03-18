@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion } from "motion/react";
 import Link from "next/link";
 
 import {
@@ -167,17 +168,30 @@ const CellDataComponent = ({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-2">
+        <motion.div
+          className="grid gap-2"
+          initial="hidden"
+          animate="visible"
+          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.04 } } }}
+        >
           {/* ISP */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">ISP</p>
             <p className="text-sm font-semibold">{network?.carrier || "-"}</p>
-          </div>
+          </motion.div>
 
           {/* APN */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               Access Point Name (APN)
             </p>
@@ -192,22 +206,30 @@ const CellDataComponent = ({
                 <Link href="/cellular/settings/apn-management">Edit</Link>
               </Button>
             </div>
-          </div>
+          </motion.div>
 
           {/* Network Type */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               Network Type
             </p>
             <p className="text-sm font-semibold">
               {network ? formatNetworkType(network.type) : "-"}
             </p>
-          </div>
+          </motion.div>
 
           {/* Cell ID */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               Cell ID
             </p>
@@ -242,11 +264,15 @@ const CellDataComponent = ({
                 {formatNumericField(cellId)}
               </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* TAC */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               Tracking Area Code
             </p>
@@ -268,11 +294,15 @@ const CellDataComponent = ({
               ) : null}
               <p className="text-sm font-semibold">{formatNumericField(tac)}</p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Total Bandwidth */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               Total Bandwidth in Use
             </p>
@@ -295,42 +325,58 @@ const CellDataComponent = ({
                   : "-"}
               </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Carrier Aggregation */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               Carrier Aggregation
             </p>
             <p className="text-sm font-semibold">
               {network ? formatCarrierAggregation(network) : "-"}
             </p>
-          </div>
+          </motion.div>
 
           {/* Active MIMO */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               Active MIMO
             </p>
             <p className="text-sm font-semibold">{device?.mimo || "-"}</p>
-          </div>
+          </motion.div>
 
           {/* WAN IPv4 */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               WAN IPv4
             </p>
             <p className="text-sm font-semibold font-mono">
               {network?.wan_ipv4 || "-"}
             </p>
-          </div>
+          </motion.div>
 
           {/* WAN IPv6 */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               WAN IPv6
             </p>
@@ -351,31 +397,39 @@ const CellDataComponent = ({
                 {network?.wan_ipv6 ? truncateIpv6(network.wan_ipv6) : "-"}
               </p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Primary DNS */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               Primary DNS
             </p>
             <p className="text-sm font-semibold font-mono">
               {network?.primary_dns || "-"}
             </p>
-          </div>
+          </motion.div>
 
           {/* Secondary DNS */}
           <Separator />
-          <div className="flex items-center justify-between">
+          <motion.div
+            className="flex items-center justify-between"
+            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
             <p className="text-sm font-semibold text-muted-foreground">
               Secondary DNS
             </p>
             <p className="text-sm font-semibold font-mono">
               {network?.secondary_dns || "-"}
             </p>
-          </div>
+          </motion.div>
           <Separator />
-        </div>
+        </motion.div>
       </CardContent>
     </Card>
   );

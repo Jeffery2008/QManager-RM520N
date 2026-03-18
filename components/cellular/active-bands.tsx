@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion } from "motion/react";
 import {
   Card,
   CardContent,
@@ -15,7 +16,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import type { CarrierComponent } from "@/types/modem-status";
@@ -64,6 +64,21 @@ function fmtSignal(value: number | null, unit: string): string {
 // Sub-components
 // =============================================================================
 
+/** Animated progress bar (spring scaleX) */
+function AnimatedProgress({ value }: { value: number }) {
+  return (
+    <div className="w-20 @[350px]/card:w-28 h-2 overflow-hidden rounded-full bg-secondary">
+      <motion.div
+        className="h-full rounded-full bg-primary"
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: value / 100 }}
+        style={{ originX: 0 }}
+        transition={{ type: "spring", stiffness: 180, damping: 24 }}
+      />
+    </div>
+  );
+}
+
 /** A single signal metric row with label, progress bar, and value */
 function SignalRow({
   label,
@@ -81,7 +96,7 @@ function SignalRow({
     <div className="flex items-center justify-between">
       <dt className="text-sm font-semibold text-muted-foreground">{label}</dt>
       <dd className="flex items-center gap-2">
-        <Progress className="w-20 @[350px]/card:w-28" value={progress} />
+        <AnimatedProgress value={progress} />
         <span className="text-sm font-bold w-20 text-right tabular-nums">
           {fmtSignal(value, unit)}
         </span>
@@ -165,102 +180,134 @@ const ActiveBandsComponent = ({
           className="w-full"
           defaultValue="item-0"
         >
-          {components.map((cc, idx) => {
-            const rsrpQuality = getSignalQuality(cc.rsrp, RSRP_THRESHOLDS);
-            const rsrqQuality = getSignalQuality(cc.rsrq, RSRQ_THRESHOLDS);
-            const sinrQuality = getSignalQuality(cc.sinr, SINR_THRESHOLDS);
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
+          >
+            {components.map((cc, idx) => {
+              const rsrpQuality = getSignalQuality(cc.rsrp, RSRP_THRESHOLDS);
+              const rsrqQuality = getSignalQuality(cc.rsrq, RSRQ_THRESHOLDS);
+              const sinrQuality = getSignalQuality(cc.sinr, SINR_THRESHOLDS);
 
-            return (
-              <AccordionItem
-                key={`${cc.band}-${cc.pci}-${idx}`}
-                value={`item-${idx}`}
-              >
-                <AccordionTrigger className="font-bold">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge
-                      className={`text-xs rounded-full ${techBadgeClass(cc.technology)}`}
-                    >
-                      {cc.type} {getDuplexMode(cc.band, cc.technology)}
-                    </Badge>
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-bold">
-                        {cc.technology} {cc.band}
-                      </p>
-                      <span className="text-sm text-muted-foreground">–</span>
-                      <p className="text-sm">
-                        {/* Show E/U/FRCN */}
-                        {cc.earfcn}
-                      </p>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <dl className="grid gap-1.5 text-base">
-                  {/* Signal metrics with progress bars */}
-                  <SignalRow
-                    label="RSRP"
-                    value={cc.rsrp}
-                    unit="dBm"
-                    progress={signalToProgress(cc.rsrp, RSRP_THRESHOLDS)}
-                    quality={rsrpQuality}
-                  />
-                  <SignalRow
-                    label="RSRQ"
-                    value={cc.rsrq}
-                    unit="dB"
-                    progress={signalToProgress(cc.rsrq, RSRQ_THRESHOLDS)}
-                    quality={rsrqQuality}
-                  />
-                  <SignalRow
-                    label={cc.technology === "NR" ? "SNR" : "SINR"}
-                    value={cc.sinr}
-                    unit="dB"
-                    progress={signalToProgress(cc.sinr, SINR_THRESHOLDS)}
-                    quality={sinrQuality}
-                  />
-                  {cc.technology === "LTE" && cc.rssi !== null && (
-                    <InfoRow label="RSSI" value={`${cc.rssi} dBm`} />
-                  )}
-                  {/* Static info */}
-                  <InfoRow
-                    label="Band Name"
-                    value={getBandName(cc.band, cc.technology)}
-                  />
-                  <InfoRow
-                    label="UL Frequency"
-                    value={
-                      cc.earfcn !== null
-                        ? formatFrequency(
-                            getULFrequency(cc.earfcn, cc.technology, cc.band),
-                          )
-                        : "-"
-                    }
-                  />
-                  <InfoRow
-                    label="DL Frequency"
-                    value={
-                      cc.earfcn !== null
-                        ? formatFrequency(
-                            getDLFrequency(cc.earfcn, cc.technology),
-                          )
-                        : "-"
-                    }
-                  />
-                  <InfoRow
-                    label="Bandwidth"
-                    value={
-                      cc.bandwidth_mhz > 0 ? `${cc.bandwidth_mhz} MHz` : "-"
-                    }
-                  />
-                  <InfoRow
-                    label="PCI"
-                    value={cc.pci !== null ? String(cc.pci) : "-"}
-                  />
-                  </dl>
-                </AccordionContent>
-              </AccordionItem>
-            );
-          })}
+              return (
+                <motion.div
+                  key={`${cc.band}-${cc.pci}-${idx}`}
+                  variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                >
+                  <AccordionItem value={`item-${idx}`}>
+                    <AccordionTrigger className="font-bold">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge
+                          className={`text-xs rounded-full ${techBadgeClass(cc.technology)}`}
+                        >
+                          {cc.type} {getDuplexMode(cc.band, cc.technology)}
+                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-bold">
+                            {cc.technology} {cc.band}
+                          </p>
+                          <span className="text-sm text-muted-foreground">–</span>
+                          <p className="text-sm">
+                            {/* Show E/U/FRCN */}
+                            {cc.earfcn}
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <motion.dl
+                        className="grid gap-1.5 text-base"
+                        initial="hidden"
+                        animate="visible"
+                        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
+                      >
+                        {/* Signal metrics with progress bars */}
+                        <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
+                          <SignalRow
+                            label="RSRP"
+                            value={cc.rsrp}
+                            unit="dBm"
+                            progress={signalToProgress(cc.rsrp, RSRP_THRESHOLDS)}
+                            quality={rsrpQuality}
+                          />
+                        </motion.div>
+                        <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
+                          <SignalRow
+                            label="RSRQ"
+                            value={cc.rsrq}
+                            unit="dB"
+                            progress={signalToProgress(cc.rsrq, RSRQ_THRESHOLDS)}
+                            quality={rsrqQuality}
+                          />
+                        </motion.div>
+                        <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
+                          <SignalRow
+                            label={cc.technology === "NR" ? "SNR" : "SINR"}
+                            value={cc.sinr}
+                            unit="dB"
+                            progress={signalToProgress(cc.sinr, SINR_THRESHOLDS)}
+                            quality={sinrQuality}
+                          />
+                        </motion.div>
+                        {cc.technology === "LTE" && cc.rssi !== null && (
+                          <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
+                            <InfoRow label="RSSI" value={`${cc.rssi} dBm`} />
+                          </motion.div>
+                        )}
+                        {/* Static info */}
+                        <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
+                          <InfoRow
+                            label="Band Name"
+                            value={getBandName(cc.band, cc.technology)}
+                          />
+                        </motion.div>
+                        <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
+                          <InfoRow
+                            label="UL Frequency"
+                            value={
+                              cc.earfcn !== null
+                                ? formatFrequency(
+                                    getULFrequency(cc.earfcn, cc.technology, cc.band),
+                                  )
+                                : "-"
+                            }
+                          />
+                        </motion.div>
+                        <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
+                          <InfoRow
+                            label="DL Frequency"
+                            value={
+                              cc.earfcn !== null
+                                ? formatFrequency(
+                                    getDLFrequency(cc.earfcn, cc.technology),
+                                  )
+                                : "-"
+                            }
+                          />
+                        </motion.div>
+                        <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
+                          <InfoRow
+                            label="Bandwidth"
+                            value={
+                              cc.bandwidth_mhz > 0 ? `${cc.bandwidth_mhz} MHz` : "-"
+                            }
+                          />
+                        </motion.div>
+                        <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
+                          <InfoRow
+                            label="PCI"
+                            value={cc.pci !== null ? String(cc.pci) : "-"}
+                          />
+                        </motion.div>
+                      </motion.dl>
+                    </AccordionContent>
+                  </AccordionItem>
+                </motion.div>
+              );
+            })}
+          </motion.div>
         </Accordion>
       </CardContent>
     </Card>

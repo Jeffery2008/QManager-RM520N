@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-
+import { motion } from "motion/react";
 import {
   Card,
   CardContent,
@@ -18,6 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+const MotionTableRow = motion.create(TableRow);
 
 import {
   DropdownMenu,
@@ -113,8 +115,13 @@ const PingEntriesCard = ({
           </TableHeader>
           <TableBody>
             {sortedEntries.length > 0 ? (
-              sortedEntries.map((ping) => (
-                <TableRow key={ping.timestamp}>
+              sortedEntries.map((ping, index) => (
+                <MotionTableRow
+                  key={ping.timestamp}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.4), ease: "easeOut" }}
+                >
                   <TableCell>
                     {isRealtime && !ping.ok
                       ? "Timeout"
@@ -136,7 +143,7 @@ const PingEntriesCard = ({
                       hour12: false,
                     })}
                   </TableCell>
-                </TableRow>
+                </MotionTableRow>
               ))
             ) : (
               <TableRow>

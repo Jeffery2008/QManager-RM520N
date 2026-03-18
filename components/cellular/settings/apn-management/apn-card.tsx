@@ -20,7 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, RotateCcwIcon } from "lucide-react";
+import { RotateCcwIcon } from "lucide-react";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import {
   MNO_PRESETS,
   getMnoPreset,
@@ -44,6 +45,7 @@ const APNSettingsCard = ({
   onSave,
 }: APNSettingsCardProps) => {
   // Form state
+  const { saved, markSaved } = useSaveFlash();
   const [selectedCid, setSelectedCid] = useState<string>("");
   const [activeApn, setActiveApn] = useState<string>("");
   const [pdpType, setPdpType] = useState<string>("");
@@ -118,6 +120,7 @@ const APNSettingsCard = ({
 
     const success = await onSave(request);
     if (success) {
+      markSaved();
       toast.success("APN settings applied successfully");
     } else {
       toast.error("Failed to apply APN settings");
@@ -286,16 +289,7 @@ const APNSettingsCard = ({
             </FieldSet>
           </div>
           <div className="flex items-center gap-x-2">
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Settings"
-              )}
-            </Button>
+            <SaveButton type="submit" isSaving={isSaving} saved={saved} />
             <Button
               type="button"
               variant="outline"

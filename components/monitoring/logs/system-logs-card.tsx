@@ -30,6 +30,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { motion } from "motion/react";
+
+const MotionTableRow = motion.create(TableRow);
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -418,7 +422,12 @@ const SystemLogsCard = () => {
                   </TableRow>
                 ) : (
                   entries.map((entry, index) => (
-                    <TableRow key={`${entry.timestamp}-${index}`}>
+                    <MotionTableRow
+                      key={`${entry.timestamp}-${index}`}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.4), ease: "easeOut" }}
+                    >
                       <TableCell className="font-mono text-xs whitespace-nowrap">
                         {entry.timestamp}
                       </TableCell>
@@ -438,7 +447,7 @@ const SystemLogsCard = () => {
                       <TableCell className="wrap-break-word text-sm">
                         {entry.message}
                       </TableCell>
-                    </TableRow>
+                    </MotionTableRow>
                   ))
                 )}
               </TableBody>

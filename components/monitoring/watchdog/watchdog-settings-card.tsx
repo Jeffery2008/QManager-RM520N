@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import {
   Card,
   CardContent,
@@ -19,7 +20,6 @@ import {
 } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertTriangleIcon } from "lucide-react";
+import { AlertTriangleIcon } from "lucide-react";
 import type {
   WatchdogSavePayload,
   UseWatchdogSettingsReturn,
@@ -60,6 +60,7 @@ export function WatchdogSettingsCard({
   error,
   saveSettings,
 }: WatchdogSettingsCardProps) {
+
   // Loading skeleton
   if (isLoading) {
     return (
@@ -114,6 +115,8 @@ function WatchdogSettingsForm({
   error,
   saveSettings,
 }: Omit<WatchdogSettingsCardProps, "isLoading">) {
+  const { saved, markSaved } = useSaveFlash();
+
   // --- Local form state (initialized from settings prop) ---
   const [isEnabled, setIsEnabled] = useState(settings?.enabled ?? false);
   const [maxFailures, setMaxFailures] = useState(
@@ -227,6 +230,7 @@ function WatchdogSettingsForm({
 
       const success = await saveSettings(payload);
       if (success) {
+        markSaved();
         toast.success("Watchdog settings saved");
       } else {
         toast.error(error || "Failed to save watchdog settings");
@@ -246,6 +250,7 @@ function WatchdogSettingsForm({
       maxRebootsPerHour,
       saveSettings,
       error,
+      markSaved,
     ],
   );
 
@@ -517,16 +522,13 @@ function WatchdogSettingsForm({
 
               {/* Save Button */}
               <div className="flex items-center gap-2 pt-2">
-                <Button type="submit" className="w-fit" disabled={!canSave}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Saving…
-                    </>
-                  ) : (
-                    "Save Settings"
-                  )}
-                </Button>
+                <SaveButton
+                  type="submit"
+                  isSaving={isSaving}
+                  saved={saved}
+                  className="w-fit"
+                  disabled={!isDirty || hasValidationErrors}
+                />
               </div>
             </FieldGroup>
           </FieldSet>

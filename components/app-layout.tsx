@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
 
 import {
   SidebarInset,
@@ -25,6 +27,7 @@ import { isLoggedIn } from "@/hooks/use-auth";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const breadcrumbs = useBreadcrumbs();
+  const pathname = usePathname();
 
   // Sync cookie check — no API call, no loading state
   if (typeof document !== "undefined" && !isLoggedIn()) {
@@ -76,7 +79,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <SimSwapBanner />
-        <div id="main-content" className="px-2 lg:px-6 py-4">{children}</div>
+        <motion.div
+          id="main-content"
+          key={pathname}
+          className="px-2 lg:px-6 py-4"
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          {children}
+        </motion.div>
       </SidebarInset>
     </SidebarProvider>
   );

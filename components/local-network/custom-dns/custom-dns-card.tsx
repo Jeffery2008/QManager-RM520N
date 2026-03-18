@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -13,9 +15,7 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useDnsSettings } from "@/hooks/use-dns-settings";
 
@@ -29,6 +29,7 @@ import { useDnsSettings } from "@/hooks/use-dns-settings";
 
 const CustomDNSCard = () => {
   const { data, isLoading, isSaving, error, saveDns, refresh } = useDnsSettings();
+  const { saved, markSaved } = useSaveFlash();
 
   // --- Local form state -------------------------------------------------------
   const [isEnabled, setIsEnabled] = useState(false);
@@ -78,6 +79,7 @@ const CustomDNSCard = () => {
     });
 
     if (success) {
+      markSaved();
       toast.success(
         isEnabled
           ? "Custom DNS applied successfully"
@@ -86,7 +88,7 @@ const CustomDNSCard = () => {
     } else {
       toast.error(error || "Failed to apply DNS settings — check connection");
     }
-  }, [data, isEnabled, dns1, dns2, dns3, saveDns, error]);
+  }, [data, isEnabled, dns1, dns2, dns3, saveDns, error, markSaved]);
 
   // --- Render ----------------------------------------------------------------
   return (
@@ -190,24 +192,14 @@ const CustomDNSCard = () => {
                   </FieldError>
                 )}
 
-                <Button
+                <SaveButton
                   type="submit"
+                  isSaving={isSaving}
+                  saved={saved}
+                  label="Apply"
                   className="w-fit"
-                  disabled={
-                    isSaving ||
-                    !isDirty ||
-                    (isEnabled && !dns1 && !dns2 && !dns3)
-                  }
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Applying…
-                    </>
-                  ) : (
-                    "Apply"
-                  )}
-                </Button>
+                  disabled={!isDirty || (isEnabled && !dns1 && !dns2 && !dns3)}
+                />
               </FieldGroup>
             </FieldSet>
           </form>

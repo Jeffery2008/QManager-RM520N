@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, type ReactNode } from "react";
+import { motion } from "motion/react";
 
 import {
   Card,
@@ -43,6 +44,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+const MotionTableRow = motion.create(TableRow);
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
@@ -142,7 +145,12 @@ function EventsTable({
               const { date, time } = formatEventDateTime(event.timestamp);
               const label = EVENT_LABELS[event.type] ?? event.type;
               return (
-                <TableRow key={`${event.timestamp}-${event.type}-${index}`}>
+                <MotionTableRow
+                  key={`${event.timestamp}-${event.type}-${index}`}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(index * 0.04, 0.4), ease: "easeOut" }}
+                >
                   <TableCell className="font-medium hidden @md/card:table-cell">
                     <div className="flex items-center gap-2">
                       <SeverityIcon severity={event.severity} />
@@ -160,7 +168,7 @@ function EventsTable({
                       </span>
                     </div>
                   </TableCell>
-                </TableRow>
+                </MotionTableRow>
               );
             })
           )}

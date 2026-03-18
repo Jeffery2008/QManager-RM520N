@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2 } from "lucide-react";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { toast } from "sonner";
 import { useMtuSettings } from "@/hooks/use-mtu-settings";
 
@@ -29,6 +29,8 @@ import { useMtuSettings } from "@/hooks/use-mtu-settings";
 const MTUSettingsCard = () => {
   const { data, isLoading, isSaving, error, saveMtu, disableMtu } =
     useMtuSettings();
+
+  const { saved, markSaved } = useSaveFlash();
 
   // --- Local form state -------------------------------------------------------
   const [isEnabled, setIsEnabled] = useState(false);
@@ -72,6 +74,7 @@ const MTUSettingsCard = () => {
       // Disable custom MTU
       const success = await disableMtu();
       if (success) {
+        markSaved();
         toast.success("Custom MTU disabled");
       } else {
         toast.error(error || "Failed to disable MTU settings");
@@ -84,6 +87,7 @@ const MTUSettingsCard = () => {
 
     const success = await saveMtu(mtu);
     if (success) {
+      markSaved();
       toast.success(`MTU set to ${mtu}`);
     } else {
       toast.error(error || "Failed to apply MTU settings");
@@ -150,20 +154,13 @@ const MTUSettingsCard = () => {
                   )}
                 </Field>
 
-                <Button
+                <SaveButton
                   type="submit"
-                  className="w-fit"
-                  disabled={isSaving || !isDirty}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Applying…
-                    </>
-                  ) : (
-                    "Apply"
-                  )}
-                </Button>
+                  isSaving={isSaving}
+                  saved={saved}
+                  label="Apply"
+                  disabled={!isDirty}
+                />
               </FieldGroup>
             </FieldSet>
           </form>

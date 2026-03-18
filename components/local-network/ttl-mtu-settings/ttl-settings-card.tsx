@@ -16,7 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoIcon, Loader2 } from "lucide-react";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
+import { InfoIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useTtlSettings } from "@/hooks/use-ttl-settings";
 import { useSimProfiles } from "@/hooks/use-sim-profiles";
@@ -36,6 +37,8 @@ const TTLSettingsCard = () => {
     getProfile,
     isLoading: profilesLoading,
   } = useSimProfiles();
+
+  const { saved, markSaved } = useSaveFlash();
 
   // --- Local form state -------------------------------------------------------
   const [isEnabled, setIsEnabled] = useState(false);
@@ -116,6 +119,7 @@ const TTLSettingsCard = () => {
 
     const success = await saveTtlHl(ttl, hl);
     if (success) {
+      markSaved();
       toast.success(
         ttl > 0 || hl > 0
           ? `Applied — TTL: ${ttl}, Hop Limit: ${hl}`
@@ -221,20 +225,13 @@ const TTLSettingsCard = () => {
                   </FieldError>
                 )}
 
-                <Button
+                <SaveButton
                   type="submit"
-                  className="w-fit"
-                  disabled={isSaving || isProfileControlled || !isDirty}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Applying…
-                    </>
-                  ) : (
-                    "Apply"
-                  )}
-                </Button>
+                  isSaving={isSaving}
+                  saved={saved}
+                  label="Apply"
+                  disabled={isProfileControlled || !isDirty}
+                />
               </FieldGroup>
             </FieldSet>
           </form>

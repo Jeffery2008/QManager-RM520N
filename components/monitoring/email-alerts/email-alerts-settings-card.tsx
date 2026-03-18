@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, EyeIcon, EyeOffIcon, SendIcon, AlertCircle, RefreshCcwIcon } from "lucide-react";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
   useEmailAlerts,
@@ -55,6 +56,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
   } = useEmailAlerts();
 
   // --- Local form state (synced from server data during render) --------------
+  const { saved, markSaved } = useSaveFlash();
   const [prevSettings, setPrevSettings] = useState<EmailAlertsSettings | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
   const [senderEmail, setSenderEmail] = useState("");
@@ -133,6 +135,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
 
     const success = await saveSettings(payload);
     if (success) {
+      markSaved();
       toast.success("Email alert settings saved");
     } else {
       toast.error(error || "Failed to save email alert settings");
@@ -383,16 +386,12 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
               {/* Action buttons */}
               <div className="grid gap-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Button type="submit" className="w-fit" disabled={!canSave}>
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin" />
-                        Saving…
-                      </>
-                    ) : (
-                      "Save Settings"
-                    )}
-                  </Button>
+                  <SaveButton
+                    type="submit"
+                    isSaving={isSaving}
+                    saved={saved}
+                    disabled={!canSave}
+                  />
                   <Button
                     type="button"
                     variant="outline"

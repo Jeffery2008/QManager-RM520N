@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { motion } from "motion/react";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import {
   Card,
   CardContent,
@@ -70,6 +72,8 @@ const BandCardsComponent = ({
   error,
   disabled = false,
 }: BandCardsProps) => {
+  const { saved, markSaved } = useSaveFlash();
+
   // --- Local checkbox state (number set for O(1) lookup) --------------------
   const [checkedBands, setCheckedBands] = useState<Set<number>>(
     () => new Set(currentLockedBands),
@@ -133,6 +137,7 @@ const BandCardsComponent = ({
 
     const success = await onLock(bands);
     if (success) {
+      markSaved();
       toast.success(
         `${title.replace(" Locking", "")} bands locked successfully`,
       );
@@ -231,9 +236,19 @@ const BandCardsComponent = ({
 
       <CardContent>
         {/* Band checkbox grid */}
-        <div className="grid @lg/card:grid-cols-8 @md/card:grid-cols-6 @sm/card:grid-cols-4 grid-cols-3 grid-flow-row gap-4 mt-2">
+        <motion.div
+          className="grid @lg/card:grid-cols-8 @md/card:grid-cols-6 @sm/card:grid-cols-4 grid-cols-3 grid-flow-row gap-4 mt-2"
+          initial="hidden"
+          animate="visible"
+          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.025 } } }}
+        >
           {supportedBands.map((band) => (
-            <div className="flex items-center space-x-2" key={band}>
+            <motion.div
+              key={band}
+              className="flex items-center space-x-2"
+              variants={{ hidden: { opacity: 0, scale: 0.88 }, visible: { opacity: 1, scale: 1 } }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
               <Checkbox
                 id={`${bandCategory}-${band}`}
                 checked={checkedBands.has(band)}
@@ -246,9 +261,9 @@ const BandCardsComponent = ({
               >
                 {formatBandName(bandCategory, band)}
               </Label>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </CardContent>
 
       {/* Inline error — persistent until next operation */}
@@ -271,12 +286,13 @@ const BandCardsComponent = ({
 
       <CardFooter className="flex flex-wrap items-center justify-between gap-2 mt-4">
         <div className="flex items-center gap-2">
-          <Button
+          <SaveButton
             onClick={handleLock}
+            isSaving={isLocking}
+            saved={saved}
+            label="Lock Selected Bands"
             disabled={isDisabled || noneSelected || !hasChanges}
-          >
-            {isLocking ? "Applying…" : "Lock Selected Bands"}
-          </Button>
+          />
           <Button
             variant="outline"
             size="icon"

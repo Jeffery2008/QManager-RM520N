@@ -41,11 +41,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
-  Loader2,
   AlertTriangleIcon,
   Check,
   ChevronsUpDown,
 } from "lucide-react";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { TbInfoCircleFilled } from "react-icons/tb";
 
 import type {
@@ -163,6 +163,8 @@ function SystemSettingsForm({
   error,
   saveSettings,
 }: SystemSettingsFormProps) {
+  const { saved, markSaved } = useSaveFlash();
+
   // --- Local form state (initialized from settings prop) ---
   const [tempUnit, setTempUnit] = useState<"celsius" | "fahrenheit">(
     settings?.temp_unit ?? "celsius",
@@ -243,6 +245,7 @@ function SystemSettingsForm({
     });
 
     if (success) {
+      markSaved();
       toast.success("Settings saved");
     } else {
       toast.error(error || "Failed to save settings");
@@ -256,6 +259,7 @@ function SystemSettingsForm({
     timezone,
     zonename,
     error,
+    markSaved,
   ]);
 
   return (
@@ -411,16 +415,12 @@ function SystemSettingsForm({
           {/* ── Save Button ───────────────────────────────────────── */}
           <Separator />
           <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={!canSave} className="w-fit">
-              {isSaving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save Settings"
-              )}
-            </Button>
+            <SaveButton
+              onClick={handleSave}
+              isSaving={isSaving}
+              saved={saved}
+              disabled={!canSave}
+            />
           </div>
         </div>
       </CardContent>

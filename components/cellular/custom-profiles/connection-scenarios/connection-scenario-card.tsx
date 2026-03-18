@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { motion } from "motion/react";
 import { Gamepad2, Play, Zap, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -341,16 +342,28 @@ const ConnectionScenariosCard = () => {
           </>
         ) : (
           <>
-            {scenarios.map((scenario) => (
-              <ScenarioItem
-                key={scenario.id}
-                scenario={scenario}
-                isActive={activeScenarioId === scenario.id}
-                isSelected={selectedId === scenario.id}
-                onSelect={handleSelect}
-                onDelete={handleDeleteScenario}
-              />
-            ))}
+            <motion.div
+              className="contents"
+              initial="hidden"
+              animate="visible"
+              variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06 } } }}
+            >
+              {scenarios.map((scenario) => (
+                <motion.div
+                  key={scenario.id}
+                  variants={{ hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                >
+                  <ScenarioItem
+                    scenario={scenario}
+                    isActive={activeScenarioId === scenario.id}
+                    isSelected={selectedId === scenario.id}
+                    onSelect={handleSelect}
+                    onDelete={handleDeleteScenario}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
             <AddScenarioItem onClick={() => setShowAddDialog(true)} />
           </>
         )}

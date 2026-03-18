@@ -31,11 +31,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { Loader2, RotateCcwIcon } from "lucide-react";
+import { RotateCcwIcon } from "lucide-react";
 import { IconGripVertical } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AiFillSignal } from "react-icons/ai";
+import { motion } from "motion/react";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 
 // =============================================================================
 // RAT name mapping: AT command value → display name
@@ -84,14 +86,16 @@ function DraggableNetworkItem({
   });
 
   return (
-    <div
+    <motion.div
       ref={setNodeRef}
-      className={`flex items-center gap-3 px-4 py-2 border bg-background rounded-lg transition-all duration-200 ${
-        isDragging ? "opacity-50 scale-95 z-10" : ""
-      }`}
+      className="flex items-center gap-3 px-4 py-2 border bg-background rounded-lg"
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition,
+        boxShadow: isDragging ? "0 8px 24px -4px hsl(var(--foreground) / 0.12)" : undefined,
+        opacity: isDragging ? 0.6 : 1,
+        scale: isDragging ? 0.98 : 1,
+        zIndex: isDragging ? 10 : undefined,
       }}
     >
       <Button
@@ -118,7 +122,7 @@ function DraggableNetworkItem({
       <span className="text-xs text-muted-foreground ml-auto">
         Priority {index + 1}
       </span>
-    </div>
+    </motion.div>
   );
 }
 
@@ -126,6 +130,7 @@ function DraggableNetworkItem({
 // Network Priority Card
 // =============================================================================
 const NetworkPriorityCard = () => {
+  const { saved, markSaved } = useSaveFlash();
   const [networks, setNetworks] = useState<NetworkItem[]>([]);
   const [fetchedOrder, setFetchedOrder] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
@@ -237,6 +242,7 @@ const NetworkPriorityCard = () => {
         return;
       }
 
+      markSaved();
       toast.success("Network priority updated");
 
       // Brief recovery delay for network re-registration
@@ -302,36 +308,39 @@ const NetworkPriorityCard = () => {
           onDragEnd={handleDragEnd}
           sensors={sensors}
         >
-          <div className="space-y-2">
+          <motion.div
+            className="space-y-2"
+            initial="hidden"
+            animate="visible"
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
+          >
             <SortableContext
               items={networkIds}
               strategy={verticalListSortingStrategy}
             >
               {networks.map((network, index) => (
-                <DraggableNetworkItem
+                <motion.div
                   key={network.id}
-                  network={network}
-                  index={index}
-                  disabled={isSaving}
-                />
+                  variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                >
+                  <DraggableNetworkItem
+                    network={network}
+                    index={index}
+                    disabled={isSaving}
+                  />
+                </motion.div>
               ))}
             </SortableContext>
-          </div>
+          </motion.div>
         </DndContext>
         <div className="mt-4 flex items-center gap-x-2">
-          <Button
+          <SaveButton
             onClick={handleSave}
-            disabled={isSaving || networks.length === 0}
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Settings"
-            )}
-          </Button>
+            isSaving={isSaving}
+            saved={saved}
+            disabled={networks.length === 0}
+          />
           <Button
             variant="outline"
             onClick={handleReset}

@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import {
   Card,
   CardContent,
@@ -17,6 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+const MotionTableRow = motion.create(TableRow);
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -187,7 +190,12 @@ export function TailscalePeersCard({
             </TableHeader>
             <TableBody aria-live="polite">
               {peers.map((peer, i) => (
-                <TableRow key={`${peer.hostname}-${peer.tailscale_ips?.[0] ?? i}`}>
+                <MotionTableRow
+                  key={`${peer.hostname}-${peer.tailscale_ips?.[0] ?? i}`}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.4), ease: "easeOut" }}
+                >
                   <TableCell className="max-w-48">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -232,7 +240,7 @@ export function TailscalePeersCard({
                   <TableCell className="hidden @md/card:table-cell text-xs text-muted-foreground">
                     {formatLastSeen(peer.last_seen, peer.online)}
                   </TableCell>
-                </TableRow>
+                </MotionTableRow>
               ))}
             </TableBody>
           </Table>

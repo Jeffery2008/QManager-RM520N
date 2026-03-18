@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type FormEvent, type ChangeEvent } from "react";
 import { toast } from "sonner";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import {
   Card,
   CardContent,
@@ -40,7 +41,7 @@ import { TbInfoCircleFilled } from "react-icons/tb";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, RotateCcwIcon, AlertTriangleIcon } from "lucide-react";
+import { RotateCcwIcon, AlertTriangleIcon } from "lucide-react";
 import type { BackupImeiConfig } from "@/types/imei-settings";
 
 interface BackupIMEICardProps {
@@ -58,6 +59,7 @@ const BackupIMEICard = ({
   isSaving,
   onSave,
 }: BackupIMEICardProps) => {
+  const { saved, markSaved } = useSaveFlash();
   const [localEnabled, setLocalEnabled] = useState(false);
   const [localImei, setLocalImei] = useState("");
   const [showInfoDialog, setShowInfoDialog] = useState(false);
@@ -112,6 +114,7 @@ const BackupIMEICard = ({
 
     const success = await onSave({ enabled: localEnabled, imei: localImei });
     if (success) {
+      markSaved();
       toast.success("Backup IMEI configuration saved");
     } else {
       toast.error("Failed to save backup configuration");
@@ -247,19 +250,12 @@ const BackupIMEICard = ({
             </FieldGroup>
           </FieldSet>
           <div className="flex items-center gap-x-2">
-            <Button
+            <SaveButton
               type="submit"
-              disabled={isSaving || (localEnabled && !isValidImei)}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Settings"
-              )}
-            </Button>
+              isSaving={isSaving}
+              saved={saved}
+              disabled={localEnabled && !isValidImei}
+            />
             <Button
               type="button"
               variant="outline"

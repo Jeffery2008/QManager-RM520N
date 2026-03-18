@@ -1,8 +1,10 @@
 "use client";
 
+import { motion } from "motion/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { FaCircle } from "react-icons/fa6";
 import {
   MdSignalCellular0Bar,
@@ -14,7 +16,11 @@ import {
   MdOutlineSignalCellularConnectedNoInternet0Bar,
 } from "react-icons/md";
 
-import { RSRP_THRESHOLDS, getSignalQuality } from "@/types/modem-status";
+import {
+  RSRP_THRESHOLDS,
+  getSignalQuality,
+  type SignalThresholds,
+} from "@/types/modem-status";
 
 // --- Signal bar icon based on RSRP quality ---
 function getSignalBarIcon(quality: string) {
@@ -54,9 +60,28 @@ function getStateDisplay(state: string) {
   }
 }
 
+// --- Value color based on signal quality threshold ---
+function getValueColorClass(quality: string): string {
+  switch (quality) {
+    case "excellent":
+    case "good":
+      return "text-success";
+    case "fair":
+      return "text-warning";
+    case "poor":
+      return "text-destructive";
+    default:
+      return "";
+  }
+}
+
 export interface SignalStatusRow {
   label: string;
   value: string;
+  /** Raw numeric value — enables quality-based color coding */
+  rawValue?: number | null;
+  /** Threshold set to use for color coding (RSRP, RSRQ, or SINR) */
+  thresholds?: SignalThresholds;
 }
 
 interface SignalStatusCardProps {
@@ -66,6 +91,16 @@ interface SignalStatusCardProps {
   rows: SignalStatusRow[];
   isLoading: boolean;
 }
+
+// Stagger variants for metric rows
+const listVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.04 } },
+};
+const rowVariants = {
+  hidden: { opacity: 0, y: 5 },
+  visible: { opacity: 1, y: 0 },
+};
 
 export function SignalStatusCard({
   title,
@@ -139,16 +174,38 @@ export function SignalStatusCard({
               getSignalBarIcon(signalQuality)
             )}
           </div>
-          <dl className="grid divide-y divide-border border-y border-border">
-            {rows.map((row) => (
-              <div key={row.label} className="flex items-center justify-between py-2">
-                <dt className="font-semibold text-muted-foreground text-sm">
-                  {row.label}
-                </dt>
-                <dd className="font-semibold text-sm">{row.value}</dd>
-              </div>
-            ))}
-          </dl>
+
+          {/* Metric rows — stagger in on first render */}
+          <motion.dl
+            className="grid divide-y divide-border border-y border-border"
+            variants={listVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {rows.map((row) => {
+              const quality =
+                row.rawValue != null && row.thresholds
+                  ? getSignalQuality(row.rawValue, row.thresholds)
+                  : "none";
+              const valueColor = getValueColorClass(quality);
+
+              return (
+                <motion.div
+                  key={row.label}
+                  variants={rowVariants}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="flex items-center justify-between py-2"
+                >
+                  <dt className="font-semibold text-muted-foreground text-sm">
+                    {row.label}
+                  </dt>
+                  <dd className={cn("font-semibold text-sm tabular-nums", valueColor)}>
+                    {row.value}
+                  </dd>
+                </motion.div>
+              );
+            })}
+          </motion.dl>
         </div>
       </CardContent>
     </Card>

@@ -255,6 +255,19 @@ const NetworkStatusComponent = ({
                         : "text-muted-foreground"
                   }
                 />
+                {/* Sonar ping — only when online */}
+                {internetAvailable === true ? (
+                  <span className="relative flex size-2 shrink-0">
+                    <span className="absolute inline-flex size-full rounded-full bg-success opacity-75 animate-ping" />
+                    <span className="relative inline-flex size-2 rounded-full bg-success" />
+                  </span>
+                ) : (
+                  <span
+                    className={`inline-flex size-2 rounded-full shrink-0 ${
+                      internetAvailable === false ? "bg-destructive" : "bg-muted-foreground"
+                    }`}
+                  />
+                )}
                 {internetAvailable === true
                   ? "Online"
                   : internetAvailable === false

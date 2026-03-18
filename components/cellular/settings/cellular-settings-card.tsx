@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, RotateCcwIcon } from "lucide-react";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
+import { RotateCcwIcon } from "lucide-react";
 import type { CellularSettings } from "@/types/cellular-settings";
 
 interface CellularSettingsCardProps {
@@ -35,6 +36,7 @@ const CellularSettingsCard = ({
   isSaving,
   onSave,
 }: CellularSettingsCardProps) => {
+  const { saved, markSaved } = useSaveFlash();
   const [simSlot, setSimSlot] = useState<string>("");
   const [cfun, setCfun] = useState<string>("");
   const [modePref, setModePref] = useState<string>("");
@@ -81,6 +83,7 @@ const CellularSettingsCard = ({
 
     const success = await onSave(changes);
     if (success) {
+      markSaved();
       toast.success("Modem settings saved");
     } else {
       toast.error("Failed to save modem settings");
@@ -258,16 +261,7 @@ const CellularSettingsCard = ({
             </FieldSet>
           </div>
           <div className="flex items-center gap-x-2">
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Settings"
-              )}
-            </Button>
+            <SaveButton type="submit" isSaving={isSaving} saved={saved} />
             <Button
               type="button"
               variant="outline"

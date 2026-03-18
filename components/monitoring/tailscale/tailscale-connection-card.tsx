@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 
 import {
@@ -500,17 +501,22 @@ export function TailscaleConnectionCard({
             </div>
 
             {/* Info rows */}
-            {infoRows.map((row) => (
+            {infoRows.map((row, i) => (
               <React.Fragment key={row.label}>
                 <Separator />
-                <div className="flex items-center justify-between gap-2">
+                <motion.div
+                  className="flex items-center justify-between gap-2"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.35), ease: "easeOut" }}
+                >
                   <p className="text-sm font-semibold text-muted-foreground shrink-0">
                     {row.label}
                   </p>
                   <p className="text-sm font-semibold text-right min-w-0 break-all">
                     {row.value}
                   </p>
-                </div>
+                </motion.div>
               </React.Fragment>
             ))}
 

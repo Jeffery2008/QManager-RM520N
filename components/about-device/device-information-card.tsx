@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import {
   Card,
   CardContent,
@@ -143,7 +144,12 @@ const DeviceInformationCard = ({
         ) : data ? (
           <div className="grid gap-4">
             {/* Modem image */}
-            <div className="flex items-center justify-center mb-4">
+            <motion.div
+              className="flex items-center justify-center mb-4"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+            >
               <div className="size-44 bg-primary/15 rounded-full p-4 flex items-center justify-center">
                 <img
                   src="/device-icon.svg"
@@ -151,7 +157,7 @@ const DeviceInformationCard = ({
                   className="size-full drop-shadow-md object-contain"
                 />
               </div>
-            </div>
+            </motion.div>
 
             {/* Data sections */}
             {buildSections(data).map((section) => (
@@ -159,11 +165,18 @@ const DeviceInformationCard = ({
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                   {section.title}
                 </h3>
-                <dl className="grid divide-y divide-border border-y border-border">
+                <motion.dl
+                  className="grid divide-y divide-border border-y border-border"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.04 } } }}
+                >
                   {section.rows.map((row) => (
-                    <div
+                    <motion.div
                       key={row.label}
                       className="flex items-center justify-between py-2"
+                      variants={{ hidden: { opacity: 0, y: 4 }, visible: { opacity: 1, y: 0 } }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
                     >
                       <dt className="text-sm font-semibold text-muted-foreground">
                         {row.label}
@@ -176,9 +189,9 @@ const DeviceInformationCard = ({
                       >
                         {row.value || "-"}
                       </dd>
-                    </div>
+                    </motion.div>
                   ))}
-                </dl>
+                </motion.dl>
               </div>
             ))}
           </div>

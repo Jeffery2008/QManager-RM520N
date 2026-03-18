@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { motion } from "motion/react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tooltip,
@@ -44,7 +46,41 @@ interface DeviceMetricsComponentProps {
 
 // --- Warning thresholds ---
 const TEMP_WARN = 60; // °C
-const CPU_WARN = 80; // percentage
+const TEMP_DANGER = 75; // °C
+const CPU_WARN = 70; // percentage
+const CPU_DANGER = 90; // percentage
+
+// --- Animated metric progress bar ---
+function MetricBar({
+  value,
+  max = 100,
+  warnAt,
+  dangerAt,
+}: {
+  value: number;
+  max?: number;
+  warnAt: number;
+  dangerAt: number;
+}) {
+  const pct = Math.min((value / max) * 100, 100);
+  const colorClass =
+    value >= dangerAt
+      ? "bg-destructive"
+      : value >= warnAt
+        ? "bg-warning"
+        : "bg-primary";
+  return (
+    <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+      <motion.div
+        className={cn("h-full rounded-full", colorClass)}
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: pct / 100 }}
+        style={{ originX: 0 }}
+        transition={{ type: "spring", stiffness: 180, damping: 24 }}
+      />
+    </div>
+  );
+}
 
 const DeviceMetricsComponent = ({
   deviceData,
@@ -71,6 +107,7 @@ const DeviceMetricsComponent = ({
 
   const isTempHigh = temp !== null && temp >= TEMP_WARN;
   const isCpuHigh = cpu !== null && cpu >= CPU_WARN;
+  const memPct = memTotal > 0 ? (memUsed / memTotal) * 100 : 0;
 
   if (isLoading) {
     return (
@@ -108,51 +145,66 @@ const DeviceMetricsComponent = ({
         <div className="grid gap-2">
           {/* Modem Temperature */}
           <Separator />
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-muted-foreground text-sm">
-              Modem Temperature
-            </p>
-            <div className="flex items-center gap-1.5">
-              {isTempHigh && (
-                <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
-                  <TbAlertTriangleFilled className="text-warning" />
-                  High Temp
-                </Badge>
-              )}
-              <p className="font-semibold text-sm tabular-nums">
-                {formatTemperature(temp, unitPrefs?.tempUnit)}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-muted-foreground text-sm">
+                Modem Temperature
               </p>
+              <div className="flex items-center gap-1.5">
+                {isTempHigh && (
+                  <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
+                    <TbAlertTriangleFilled className="text-warning" />
+                    High Temp
+                  </Badge>
+                )}
+                <p className="font-semibold text-sm tabular-nums">
+                  {formatTemperature(temp, unitPrefs?.tempUnit)}
+                </p>
+              </div>
             </div>
+            {temp !== null && (
+              <MetricBar value={temp} max={100} warnAt={TEMP_WARN} dangerAt={TEMP_DANGER} />
+            )}
           </div>
 
           {/* CPU Usage */}
           <Separator />
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-muted-foreground text-sm">
-              CPU Usage
-            </p>
-            <div className="flex items-center gap-1.5">
-              {isCpuHigh && (
-                <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
-                  <TbAlertTriangleFilled className="text-warning" />
-                  High CPU
-                </Badge>
-              )}
-              <p className="font-semibold text-sm tabular-nums">
-                {cpu !== null ? `${cpu}%` : "-"}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-muted-foreground text-sm">
+                CPU Usage
               </p>
+              <div className="flex items-center gap-1.5">
+                {isCpuHigh && (
+                  <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
+                    <TbAlertTriangleFilled className="text-warning" />
+                    High CPU
+                  </Badge>
+                )}
+                <p className="font-semibold text-sm tabular-nums">
+                  {cpu !== null ? `${cpu}%` : "-"}
+                </p>
+              </div>
             </div>
+            {cpu !== null && (
+              <MetricBar value={cpu} max={100} warnAt={CPU_WARN} dangerAt={CPU_DANGER} />
+            )}
           </div>
 
           {/* Memory Usage */}
           <Separator />
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-muted-foreground text-sm">
-              Memory Usage
-            </p>
-            <p className="font-semibold text-sm tabular-nums">
-              {memTotal > 0 ? `${memUsed} MB / ${memTotal} MB` : "-"}
-            </p>
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-muted-foreground text-sm">
+                Memory Usage
+              </p>
+              <p className="font-semibold text-sm tabular-nums">
+                {memTotal > 0 ? `${memUsed} MB / ${memTotal} MB` : "-"}
+              </p>
+            </div>
+            {memTotal > 0 && (
+              <MetricBar value={memPct} max={100} warnAt={70} dangerAt={90} />
+            )}
           </div>
 
           {/* Live Traffic */}
