@@ -14,9 +14,9 @@ function formatElapsed(seconds: number): string {
 export function ScanningView({ elapsedSeconds }: ScanningViewProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-      {/* Animated icon */}
+      {/* Animated icon — pulse is opacity-only (GPU composited, low power) */}
       <div className="relative flex items-center justify-center">
-        <div className="absolute size-16 animate-ping rounded-full bg-primary/10" />
+        <div className="absolute size-16 motion-safe:animate-pulse rounded-full bg-primary/10" />
         <div className="relative flex size-12 items-center justify-center rounded-full bg-primary/15">
           <ScanSearchIcon className="size-5 text-primary" />
         </div>
@@ -48,8 +48,8 @@ export function ScanningView({ elapsedSeconds }: ScanningViewProps) {
         Please don&apos;t close the tab or refresh the page.
       </p>
 
-      {/* Spinner for extra "alive" feedback */}
-      <Spinner className="size-4 text-muted-foreground/40" />
+      {/* Spinner for extra "alive" feedback — hidden for reduced-motion */}
+      <Spinner className="size-4 text-muted-foreground/40 motion-reduce:hidden" />
     </div>
   );
 }
