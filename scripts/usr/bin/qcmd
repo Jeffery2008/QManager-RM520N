@@ -161,7 +161,7 @@ if is_long_command "$COMMAND"; then
             echo $$ > "$PID_FILE"
 
             # Warm-up: flush residual serial buffer data + confirm modem responsive
-            sms_tool at "AT" > /dev/null 2>&1 || exit 3
+            sms_tool at "AT" > /dev/null 2>&1 || { rm -f "$PID_FILE"; exit 3; }
 
             # Real command with explicit native timeout (sms_tool -t)
             # Outer timeout is a safety net in case sms_tool hangs

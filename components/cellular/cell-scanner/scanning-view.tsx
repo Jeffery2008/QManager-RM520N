@@ -26,6 +26,7 @@ export function ScanningView({ elapsedSeconds }: ScanningViewProps) {
       <p
         className="text-2xl font-semibold tabular-nums tracking-tight text-foreground"
         role="timer"
+        aria-live="off"
         aria-label={`Scan elapsed time: ${formatElapsed(elapsedSeconds)}`}
       >
         {formatElapsed(elapsedSeconds)}
@@ -44,7 +45,7 @@ export function ScanningView({ elapsedSeconds }: ScanningViewProps) {
 
       {/* Navigation warning */}
       <p className="text-xs text-muted-foreground/60">
-        Please don&apos;t navigate away or refresh.
+        Please don&apos;t close the tab or refresh the page.
       </p>
 
       {/* Spinner for extra "alive" feedback */}

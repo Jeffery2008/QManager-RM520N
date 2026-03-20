@@ -150,7 +150,14 @@ export function useCellScanner(): UseCellScannerReturn {
 
       if (!data.success) {
         if (data.error === "already_running") {
+          // Scan already in progress — restore timer from sessionStorage, start polling
           setStatus("running");
+          const stored = sessionStorage.getItem(SCAN_START_KEY);
+          const startTime = stored ? Number(stored) : Date.now();
+          if (!stored) sessionStorage.setItem(SCAN_START_KEY, String(startTime));
+          startTimer(startTime);
+          ensurePolling();
+          return;
         } else {
           setStatus("error");
           setError(data.detail || data.error || "Failed to start scan");
