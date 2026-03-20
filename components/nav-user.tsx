@@ -166,6 +166,7 @@ export function NavUser({
 
     // Clear session and redirect to countdown page.
     setTimeout(() => {
+      sessionStorage.setItem("qm_rebooting", "1");
       document.cookie = "qm_logged_in=; Path=/; Max-Age=0";
       window.location.href = "/reboot/";
     }, 2000);

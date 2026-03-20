@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
 const TOTAL_SECONDS = 70;
 const POLL_START_AT = 35; // seconds remaining when polling begins
 const POLL_INTERVAL = 5000; // ms between polls
 const REDIRECT_DELAY = 3000; // ms to wait after device responds before redirecting
 const CHECK_ENDPOINT = "/cgi-bin/quecmanager/auth/check.sh";
+const OVERTIME_ESCAPE_AT = -180; // show escape link after 3 minutes past zero
+const SESSION_KEY = "qm_rebooting";
 
 // SVG ring geometry
 const RING_SIZE = 120;
@@ -29,25 +32,39 @@ function getPhase(remaining: number): Phase {
 }
 
 export function RebootCountdown() {
+  const [verified, setVerified] = useState(false);
   const [remaining, setRemaining] = useState(TOTAL_SECONDS);
   const pollingRef = useRef(false);
   const remainingRef = useRef(TOTAL_SECONDS);
+
+  // Direct-access guard: only show countdown if a reboot was actually triggered
+  useEffect(() => {
+    const flag = sessionStorage.getItem(SESSION_KEY);
+    if (!flag) {
+      window.location.href = "/";
+      return;
+    }
+    sessionStorage.removeItem(SESSION_KEY);
+    setVerified(true);
+  }, []);
 
   // Keep ref in sync so the polling effect can read it without re-subscribing
   useEffect(() => {
     remainingRef.current = remaining;
   }, [remaining]);
 
-  // Countdown timer
+  // Countdown timer — only start after guard passes
   useEffect(() => {
+    if (!verified) return;
     const id = setInterval(() => {
       setRemaining((prev) => prev - 1);
     }, 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [verified]);
 
   // Device health polling — single interval, checks remainingRef each tick
   useEffect(() => {
+    if (!verified) return;
     const id = setInterval(async () => {
       // Don't poll until countdown reaches the threshold
       if (remainingRef.current > POLL_START_AT) return;
@@ -71,11 +88,15 @@ export function RebootCountdown() {
     }, POLL_INTERVAL);
 
     return () => clearInterval(id);
-  }, []);
+  }, [verified]);
+
+  // Don't render until guard passes
+  if (!verified) return null;
 
   const phase = getPhase(remaining);
   const isOvertime = remaining <= 0;
   const displaySeconds = Math.max(0, remaining);
+  const showEscape = remaining <= OVERTIME_ESCAPE_AT;
 
   // Ring progress: 0 at start → full at 0 remaining
   const progress = Math.min(1, (TOTAL_SECONDS - remaining) / TOTAL_SECONDS);
@@ -83,8 +104,14 @@ export function RebootCountdown() {
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center bg-background p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.25, 1, 0.5, 1] }}
+        className="flex flex-col items-center"
+      >
       {/* Card */}
-      <div className="flex flex-col items-center gap-6 rounded-xl border border-border/50 bg-card px-12 py-10 shadow-lg max-w-[340px] w-full">
+      <div className="flex flex-col items-center gap-6 rounded-xl border bg-card px-12 py-10 shadow-sm max-w-[340px] w-full">
         {/* Logo */}
         <img
           src="/qmanager-logo.svg"
@@ -93,12 +120,22 @@ export function RebootCountdown() {
         />
 
         {/* Progress ring with countdown */}
-        <div className="relative" style={{ width: RING_SIZE, height: RING_SIZE }}>
+        <div
+          role="timer"
+          aria-label={
+            isOvertime
+              ? "Reconnecting, taking longer than usual"
+              : `${displaySeconds} seconds remaining`
+          }
+          className="relative"
+          style={{ width: RING_SIZE, height: RING_SIZE }}
+        >
           <svg
             width={RING_SIZE}
             height={RING_SIZE}
             viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
             className="-rotate-90"
+            aria-hidden="true"
           >
             {/* Background track */}
             <circle
@@ -122,7 +159,8 @@ export function RebootCountdown() {
               strokeLinecap="round"
               style={{
                 transition: "stroke-dashoffset 1s linear",
-                filter: "drop-shadow(0 0 6px hsl(var(--primary) / 0.3))",
+                filter:
+                  "drop-shadow(0 0 6px color-mix(in oklch, var(--primary) 30%, transparent))",
               }}
             />
           </svg>
@@ -146,6 +184,10 @@ export function RebootCountdown() {
 
         {/* Phase message */}
         <div className="text-center min-h-[48px] flex flex-col items-center justify-center">
+          {/* Visually hidden live region for screen reader phase announcements */}
+          <p className="sr-only" aria-live="polite" aria-atomic="true">
+            {phase.label}
+          </p>
           <AnimatePresence mode="wait">
             <motion.div
               key={phase.label}
@@ -153,6 +195,7 @@ export function RebootCountdown() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.2 }}
+              aria-hidden="true"
             >
               <p className="text-[15px] font-medium text-foreground">
                 {phase.label}
@@ -171,15 +214,14 @@ export function RebootCountdown() {
           {[1, 2, 3].map((seg) => (
             <div
               key={seg}
-              className="h-[3px] flex-1 rounded-full transition-colors duration-500"
-              style={{
-                backgroundColor:
-                  seg < phase.segment
-                    ? "hsl(var(--primary))"
-                    : seg === phase.segment
-                      ? "hsl(var(--primary) / 0.6)"
-                      : "hsl(var(--muted) / 0.3)",
-              }}
+              className={cn(
+                "h-[3px] flex-1 rounded-full transition-colors duration-500",
+                seg < phase.segment
+                  ? "bg-primary"
+                  : seg === phase.segment
+                    ? "bg-primary/60"
+                    : "bg-muted/30"
+              )}
             />
           ))}
         </div>
@@ -187,6 +229,17 @@ export function RebootCountdown() {
 
       {/* Brand text below card */}
       <p className="mt-5 text-xs text-muted-foreground/40">QManager</p>
+
+      {/* Overtime escape — appears after 3 minutes with no response */}
+      {showEscape && (
+        <a
+          href="/login/"
+          className="mt-3 text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+        >
+          Device may need manual attention — go to login
+        </a>
+      )}
+      </motion.div>
     </div>
   );
 }
