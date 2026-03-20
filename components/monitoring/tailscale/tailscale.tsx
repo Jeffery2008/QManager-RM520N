@@ -15,7 +15,7 @@ const TailscaleComponent = () => {
           Manage your Tailscale mesh VPN connection and network peers.
         </p>
       </div>
-      <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4">
+      <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">
         <TailscaleConnectionCard {...hookData} />
         <TailscalePeersCard
           status={hookData.status}

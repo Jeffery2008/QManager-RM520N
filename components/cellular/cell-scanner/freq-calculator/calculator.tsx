@@ -269,7 +269,7 @@ const FrequencyCalculator = () => {
   };
 
   return (
-    <div className="grid gap-4 @xl/main:grid-cols-2">
+    <div className="grid gap-4 @3xl/main:grid-cols-2">
       {/* Calculator Card */}
       <Card className="@container/card">
         <CardHeader>

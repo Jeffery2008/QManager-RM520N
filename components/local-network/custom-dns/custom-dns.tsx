@@ -10,7 +10,7 @@ const CustomDNSComponent = () => {
           for all devices on the local network.
         </p>
       </div>
-      <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4">
+      <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">
         <CustomDNSCard />
       </div>
     </div>

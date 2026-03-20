@@ -332,7 +332,7 @@ const ConnectionScenariosCard = () => {
   return (
     <div className="grid gap-y-6">
       {/* Row 1: Scenario Profile Cards */}
-      <div className="col-span-full grid grid-cols-2 @xl/main:grid-cols-4 gap-4">
+      <div className="col-span-full grid grid-cols-2 @3xl/main:grid-cols-4 gap-4">
         {isLoading ? (
           <>
             {[1, 2, 3].map((i) => (
@@ -370,7 +370,7 @@ const ConnectionScenariosCard = () => {
       </div>
 
       {/* Row 2: Selected Scenario Configuration */}
-      <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row">
+      <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row">
         {isLoading ? (
           <Card className="@container/card">
             <CardContent className="px-6">

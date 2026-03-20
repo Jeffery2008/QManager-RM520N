@@ -20,5 +20,7 @@
       "Bash(bash .claude/check-crlf.sh scripts/www/cgi-bin/quecmanager/cellular/settings.sh scripts/www/cgi-bin/quecmanager/cellular/mbn.sh scripts/www/cgi-bin/quecmanager/profiles/current_settings.sh scripts/www/cgi-bin/quecmanager/device/about.sh scripts/www/cgi-bin/quecmanager/frequency/status.sh scripts/usr/lib/qmanager/cgi_at.sh scripts/usr/bin/qmanager_poller)",
       "Bash(bash .claude/check-crlf.sh scripts/www/cgi-bin/quecmanager/cellular/apn.sh)"
     ]
-  }
+  },
+  "includeCoAuthoredBy": false,
+  "gitAttribution": false
 }

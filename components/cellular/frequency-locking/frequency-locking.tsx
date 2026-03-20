@@ -17,7 +17,7 @@ const FrequencyLockingComponent = () => {
           Lock to specific EARFCNs/NR-ARFCNs. Experimental — use with caution.
         </p>
       </div>
-      <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4">
+      <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">
         <LteFreqLockingComponent
           modemState={freqLock.modemState}
           modemData={modemData}

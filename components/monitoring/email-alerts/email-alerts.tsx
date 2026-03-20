@@ -20,7 +20,7 @@ const EmailAlertsComponent = () => {
           set duration.
         </p>
       </div>
-      <div className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4">
+      <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">
         <EmailAlertsSettingsCard onTestEmailSent={handleTestEmailSent} />
         <EmailAlertsLogCard refreshKey={logRefreshKey} />
       </div>

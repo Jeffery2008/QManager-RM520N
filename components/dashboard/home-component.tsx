@@ -30,13 +30,13 @@ const HomeComponent = () => {
   const { data, isLoading, isStale, error } = useModemStatus();
 
   return (
-    <div className="grid grid-cols-1 gap-6 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-5" aria-live="polite" aria-atomic="false">
+    <div className="grid grid-cols-1 gap-6 px-4 lg:px-6 @3xl/main:grid-cols-2 @5xl/main:grid-cols-5" aria-live="polite" aria-atomic="false">
       {error && !isLoading && (
         <div role="alert" className="col-span-full rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
           Unable to reach the modem. Data shown may be outdated.
         </div>
       )}
-      <div className="grid gap-4 @xl/main:col-span-3 @5xl/main:col-span-3 col-span-1">
+      <div className="grid gap-4 @3xl/main:col-span-3 @5xl/main:col-span-3 col-span-1">
         <NetworkStatusComponent
           data={data?.network ?? null}
           connectivity={data?.connectivity ?? null}
@@ -45,7 +45,7 @@ const HomeComponent = () => {
           isStale={isStale}
         />
         <motion.div
-          className="grid grid-cols-1 @xl/main:grid-cols-2 grid-flow-row gap-4"
+          className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -64,16 +64,16 @@ const HomeComponent = () => {
           </motion.div>
         </motion.div>
       </div>
-      <div className="@xl/main:col-span-2 @5xl/main:col-span-2 col-span-1 h-full *:data-[slot=card]:h-full">
+      <div className="@3xl/main:col-span-2 @5xl/main:col-span-2 col-span-1 h-full *:data-[slot=card]:h-full">
         <DeviceStatus
           data={data?.device ?? null}
           isLoading={isLoading}
         />
       </div>
 
-      <div className="col-span-1 xl:col-span-5">
+      <div className="col-span-full">
         <motion.div
-          className="grid grid-cols-1 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 grid-flow-row gap-4"
+          className="grid grid-cols-1 @3xl/main:grid-cols-2 @5xl/main:grid-cols-3 grid-flow-row gap-4"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -99,7 +99,7 @@ const HomeComponent = () => {
         </motion.div>
       </div>
 
-      <div className="col-span-1 xl:col-span-5">
+      <div className="col-span-full">
         <SignalHistoryComponent />
       </div>
     </div>

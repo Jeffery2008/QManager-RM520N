@@ -59,11 +59,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 {breadcrumbs.map((breadcrumb, index) => (
                   <React.Fragment key={breadcrumb.href}>
                     {index > 0 && (
-                      <BreadcrumbSeparator className="hidden md:block" />
+                      <BreadcrumbSeparator className="hidden desktop:block" />
                     )}
                     <BreadcrumbItem
                       className={
-                        breadcrumb.isCurrentPage ? "" : "hidden md:block"
+                        breadcrumb.isCurrentPage ? "" : "hidden desktop:block"
                       }
                     >
                       {breadcrumb.isCurrentPage ? (
