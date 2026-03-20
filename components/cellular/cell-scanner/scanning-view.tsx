@@ -1,0 +1,54 @@
+import { ScanSearchIcon } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+
+interface ScanningViewProps {
+  elapsedSeconds: number;
+}
+
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+export function ScanningView({ elapsedSeconds }: ScanningViewProps) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+      {/* Animated icon */}
+      <div className="relative flex items-center justify-center">
+        <div className="absolute size-16 animate-ping rounded-full bg-primary/10" />
+        <div className="relative flex size-12 items-center justify-center rounded-full bg-primary/15">
+          <ScanSearchIcon className="size-5 text-primary" />
+        </div>
+      </div>
+
+      {/* Elapsed time */}
+      <p
+        className="text-2xl font-semibold tabular-nums tracking-tight text-foreground"
+        role="timer"
+        aria-label={`Scan elapsed time: ${formatElapsed(elapsedSeconds)}`}
+      >
+        {formatElapsed(elapsedSeconds)}
+      </p>
+
+      {/* Status copy */}
+      <div className="max-w-xs space-y-1">
+        <p className="text-sm font-medium text-foreground">
+          Scanning nearby towers...
+        </p>
+        <p className="text-xs text-muted-foreground">
+          This usually takes 2-3 minutes. Other modem operations are paused
+          during the scan.
+        </p>
+      </div>
+
+      {/* Navigation warning */}
+      <p className="text-xs text-muted-foreground/60">
+        Please don&apos;t navigate away or refresh.
+      </p>
+
+      {/* Spinner for extra "alive" feedback */}
+      <Spinner className="size-4 text-muted-foreground/40" />
+    </div>
+  );
+}
