@@ -49,6 +49,18 @@ interface EnemyBeam extends Entity {
   dy: number;
 }
 
+interface Boss extends Entity {
+  hp: number;
+  maxHp: number;
+  tier: 1 | 2 | 3 | 4 | 5;
+  entered: boolean;
+  moveTimer: number;
+  shootTimer: number;
+  patternPhase: number;
+  targetX: number;
+  dx: number;
+}
+
 interface PowerUp extends Entity {
   dy: number;
   type: "rapid" | "shield" | "spread";
@@ -111,7 +123,235 @@ const RAPID_FIRE_DURATION = 5000;
 const SPREAD_SHOT_DURATION = 5000;
 const SPREAD_ANGLE = 0.3; // radians off-axis for spread
 
+const SCORE_BOSS = 100; // multiplied by boss tier
+const BOSS_WAVE_INTERVAL = 5;
+const BOSS_ENTER_Y = 60; // px from top where boss stops and attacks
+
 const LS_KEY = "qm_game_highscore";
+const PIXEL_SCALE = 2; // Each sprite pixel = 2x2 canvas pixels
+
+// ─── Sprite definitions (designed at half-res, rendered at 2x) ───────────────
+// 0=transparent, 1=primary, 2=dark(0.55 opacity), 3=highlight(white overlay)
+
+// Player ship — 12x14 → 24x28 rendered
+// A sleek top-down fighter with cockpit and engine ports
+const SPRITE_PLAYER: number[][] = [
+  [0,0,0,0,0,1,1,0,0,0,0,0],
+  [0,0,0,0,1,1,1,1,0,0,0,0],
+  [0,0,0,1,1,3,3,1,1,0,0,0],
+  [0,0,0,1,1,1,1,1,1,0,0,0],
+  [0,0,1,1,1,1,1,1,1,1,0,0],
+  [0,1,1,2,1,1,1,1,2,1,1,0],
+  [1,1,2,1,1,1,1,1,1,2,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,1,1,1,1,1,1,1,1,0,1],
+  [1,0,0,1,1,0,0,1,1,0,0,1],
+  [0,0,0,1,1,0,0,1,1,0,0,0],
+  [0,0,0,0,1,0,0,1,0,0,0,0],
+  [0,0,0,0,1,0,0,1,0,0,0,0],
+  [0,0,0,0,3,0,0,3,0,0,0,0],
+];
+
+// Meteor / interference enemy — 10x8 → 20x16 rendered
+// An irregular rocky asteroid shape
+const SPRITE_METEOR: number[][] = [
+  [0,0,0,1,1,1,1,0,0,0],
+  [0,0,1,1,1,2,1,1,0,0],
+  [0,1,1,2,1,1,1,1,1,0],
+  [1,1,1,1,1,1,2,1,1,1],
+  [1,1,2,1,1,1,1,1,1,1],
+  [1,1,1,1,2,1,1,2,1,0],
+  [0,1,1,1,1,1,1,1,0,0],
+  [0,0,0,1,1,1,0,0,0,0],
+];
+
+// Jammer / alien ship — 14x10 → 28x20 rendered
+// A wider alien craft with angular wings and a central eye
+const SPRITE_JAMMER: number[][] = [
+  [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+  [0,0,0,0,1,1,1,1,1,1,0,0,0,0],
+  [0,0,0,1,1,1,3,3,1,1,1,0,0,0],
+  [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+  [0,1,1,2,1,1,1,1,1,1,2,1,1,0],
+  [1,1,2,1,1,1,1,1,1,1,1,2,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,1,1,0,0,0,0,1,1,0,0,1],
+  [0,0,0,0,1,0,0,0,0,1,0,0,0,0],
+  [0,0,0,0,0,1,0,0,1,0,0,0,0,0],
+];
+
+// Rapid-fire power-up icon — 7x7 → 14x14 rendered (lightning bolt)
+const SPRITE_PU_RAPID: number[][] = [
+  [0,0,0,1,1,0,0],
+  [0,0,1,1,0,0,0],
+  [0,1,1,1,1,0,0],
+  [0,0,0,1,1,0,0],
+  [0,0,1,1,0,0,0],
+  [0,1,1,0,0,0,0],
+  [0,0,0,0,0,0,0],
+];
+
+// Shield power-up icon — 7x7 → 14x14 rendered (shield/diamond)
+const SPRITE_PU_SHIELD: number[][] = [
+  [0,0,0,1,0,0,0],
+  [0,0,1,1,1,0,0],
+  [0,1,1,3,1,1,0],
+  [0,1,1,1,1,1,0],
+  [0,0,1,1,1,0,0],
+  [0,0,0,1,0,0,0],
+  [0,0,0,0,0,0,0],
+];
+
+// Spread-shot power-up icon — 7x7 → 14x14 rendered (triple arrows up)
+const SPRITE_PU_SPREAD: number[][] = [
+  [0,1,0,1,0,1,0],
+  [1,1,0,1,0,1,1],
+  [0,0,0,1,0,0,0],
+  [0,1,0,1,0,1,0],
+  [1,1,0,1,0,1,1],
+  [0,0,0,1,0,0,0],
+  [0,0,0,0,0,0,0],
+];
+
+// Player engine flame animation — 2 frames, 4x3 → 8x6 rendered
+const SPRITE_ENGINE_FLAME: number[][][] = [
+  [
+    [0,1,1,0],
+    [0,3,3,0],
+    [0,0,0,0],
+  ],
+  [
+    [0,3,3,0],
+    [0,1,1,0],
+    [1,3,3,1],
+  ],
+];
+
+// Boss 1 — Signal Disruptor: 20x12 → 40x24. Amber jammer color.
+// A wide dish-shaped cruiser with a central cannon and flanking antenna pods.
+const SPRITE_BOSS1: number[][] = [
+  [0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,1,1,1,3,3,1,1,1,0,0,0,0,0,0],
+  [0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0],
+  [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+  [0,0,0,1,1,2,1,1,1,1,1,1,1,1,2,1,1,0,0,0],
+  [0,0,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,0,0],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1],
+  [1,0,0,1,1,1,1,0,0,1,1,0,0,1,1,1,1,0,0,1],
+  [0,0,0,0,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,3,3,0,0,0,0,0,0,0,0,0],
+];
+
+// Boss 2 — Frequency Jammer: 18x14 → 36x28. Red enemy color.
+// Aggressive wedge ship with swept wings and multi-barrel nose.
+const SPRITE_BOSS2: number[][] = [
+  [0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,1,1,3,3,1,1,0,0,0,0,0,0],
+  [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0],
+  [0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+  [0,0,0,1,1,1,2,1,1,1,1,1,2,1,1,1,0,0],
+  [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+  [0,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,2,1,1,1,1,2,1,1,1,1,2,1,1,1,2,1],
+  [1,0,0,1,1,1,0,0,1,1,1,1,0,0,1,1,0,1],
+  [0,0,0,0,1,1,0,0,1,1,1,1,0,0,1,1,0,0],
+  [0,0,0,0,0,0,0,0,3,0,0,3,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,3,0,0,3,0,0,0,0,0,0],
+];
+
+// Boss 3 — Band Blocker: 24x10 → 48x20. Purple powerUp color.
+// Ultra-wide blockade station with heavy armor and multiple emitter ports.
+const SPRITE_BOSS3: number[][] = [
+  [0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,1,1,3,1,1,3,1,1,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0],
+  [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0],
+  [0,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,0],
+  [1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1],
+  [1,1,2,1,1,1,1,1,1,2,1,1,1,1,2,1,1,1,1,1,1,1,2,1],
+  [1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1],
+  [0,0,0,0,0,0,0,0,0,0,0,3,3,0,0,0,0,0,0,0,0,0,0,0],
+];
+
+// Boss 4 — Network Nullifier: 16x14 → 32x28. Orange spread color.
+// Fast angular interceptor with a sharp nose and precision targeting array.
+const SPRITE_BOSS4: number[][] = [
+  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+  [0,0,0,0,0,1,1,3,3,1,1,0,0,0,0,0],
+  [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],
+  [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
+  [0,0,1,1,2,1,1,1,1,1,1,2,1,1,0,0],
+  [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+  [1,1,2,1,1,1,1,1,1,1,1,1,1,2,1,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,2,1,1,2,1,1,1,1,2,1,1,2,1,1],
+  [1,0,0,1,0,0,1,1,1,1,0,0,1,0,0,1],
+  [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,3,3,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,3,3,0,0,0,0,0,0,0],
+];
+
+// Boss 5 — Core Corruptor: 22x16 → 44x32. Red enemy color, complex multi-part.
+// The ultimate threat: a massive capital ship with a rotating core and heavy weapons.
+const SPRITE_BOSS5: number[][] = [
+  [0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,1,1,3,3,1,1,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,1,1,1,3,1,1,3,1,1,1,0,0,0,0,0,0],
+  [0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0],
+  [0,0,0,0,1,1,2,1,1,1,1,1,1,1,1,2,1,1,0,0,0,0],
+  [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0],
+  [0,0,1,1,1,1,1,1,2,1,1,1,1,2,1,1,1,1,1,1,0,0],
+  [0,1,1,2,1,1,1,1,1,1,3,3,1,1,1,1,1,1,2,1,1,0],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,1,2,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,2,1],
+  [1,1,1,1,1,0,0,1,1,1,2,2,1,1,1,0,0,1,1,1,1,1],
+  [1,0,0,1,1,0,0,1,1,0,0,0,0,1,1,0,0,1,1,0,0,1],
+  [0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0],
+  [0,0,0,0,0,0,0,0,3,0,0,0,0,3,0,0,0,0,0,0,0,0],
+];
+
+// ─── Sprite pre-rendering helper ─────────────────────────────────────────────
+
+function preRenderSprite(
+  pixels: number[][],
+  primaryColor: string,
+  scale: number,
+): OffscreenCanvas {
+  const h = pixels.length;
+  const w = pixels[0].length;
+  const canvas = new OffscreenCanvas(w * scale, h * scale);
+  const ctx = canvas.getContext("2d")!;
+
+  for (let row = 0; row < h; row++) {
+    for (let col = 0; col < w; col++) {
+      const val = pixels[row][col];
+      if (val === 0) continue;
+
+      if (val === 1) {
+        ctx.fillStyle = primaryColor;
+        ctx.globalAlpha = 1;
+      } else if (val === 2) {
+        ctx.fillStyle = primaryColor;
+        ctx.globalAlpha = 0.55;
+      } else if (val === 3) {
+        ctx.fillStyle = "#ffffff";
+        ctx.globalAlpha = 0.45;
+      }
+
+      ctx.fillRect(col * scale, row * scale, scale, scale);
+    }
+  }
+  ctx.globalAlpha = 1;
+  return canvas;
+}
 
 // ─── Engine ───────────────────────────────────────────────────────────────────
 
@@ -132,6 +372,25 @@ export class SignalStormEngine {
   private powerUps: PowerUp[] = [];
   private particles: Particle[] = [];
   private stars: Star[] = [];
+
+  // Pre-rendered sprite canvases
+  private spritePlayer!: OffscreenCanvas;
+  private spriteMeteor!: OffscreenCanvas;
+  private spriteJammer!: OffscreenCanvas;
+  private spritePuRapid!: OffscreenCanvas;
+  private spritePuShield!: OffscreenCanvas;
+  private spritePuSpread!: OffscreenCanvas;
+  private spriteFlames!: OffscreenCanvas[];
+  private flameFrame = 0;
+  private flameTimer = 0;
+  private spriteBoss1!: OffscreenCanvas;
+  private spriteBoss2!: OffscreenCanvas;
+  private spriteBoss3!: OffscreenCanvas;
+  private spriteBoss4!: OffscreenCanvas;
+  private spriteBoss5!: OffscreenCanvas;
+
+  private boss: Boss | null = null;
+  private bossDefeatFlash = 0;
 
   private score = 0;
   private highScore = 0;
@@ -167,6 +426,7 @@ export class SignalStormEngine {
 
     this.initStars();
     this.initPlayer();
+    this.preRenderSprites();
   }
 
   // ─── Public API ─────────────────────────────────────────────────────────────
@@ -232,6 +492,24 @@ export class SignalStormEngine {
     }
   }
 
+  private preRenderSprites(): void {
+    const s = PIXEL_SCALE;
+    this.spritePlayer = preRenderSprite(SPRITE_PLAYER, this.palette.player, s);
+    this.spriteMeteor = preRenderSprite(SPRITE_METEOR, this.palette.enemy, s);
+    this.spriteJammer = preRenderSprite(SPRITE_JAMMER, this.palette.jammer, s);
+    this.spritePuRapid = preRenderSprite(SPRITE_PU_RAPID, this.palette.powerUp, s);
+    this.spritePuShield = preRenderSprite(SPRITE_PU_SHIELD, this.palette.shield, s);
+    this.spritePuSpread = preRenderSprite(SPRITE_PU_SPREAD, this.palette.spread, s);
+    this.spriteFlames = SPRITE_ENGINE_FLAME.map((frame) =>
+      preRenderSprite(frame, this.palette.spread, s),
+    );
+    this.spriteBoss1 = preRenderSprite(SPRITE_BOSS1, this.palette.jammer, s);
+    this.spriteBoss2 = preRenderSprite(SPRITE_BOSS2, this.palette.enemy, s);
+    this.spriteBoss3 = preRenderSprite(SPRITE_BOSS3, this.palette.powerUp, s);
+    this.spriteBoss4 = preRenderSprite(SPRITE_BOSS4, this.palette.spread, s);
+    this.spriteBoss5 = preRenderSprite(SPRITE_BOSS5, this.palette.enemy, s);
+  }
+
   // ─── Update ──────────────────────────────────────────────────────────────────
 
   private update(timestamp: number): void {
@@ -278,10 +556,12 @@ export class SignalStormEngine {
     }
 
     // ── Spawn enemies ──
-    const spawnInterval = Math.max(
+    const baseSpawnInterval = Math.max(
       SPAWN_MIN_INTERVAL,
       SPAWN_BASE_INTERVAL - (this.wave - 1) * SPAWN_INTERVAL_DECREASE
     );
+    // Double the spawn interval during boss fights
+    const spawnInterval = this.boss ? baseSpawnInterval * 2 : baseSpawnInterval;
     this.spawnTimer += dt * 1000;
     if (this.spawnTimer >= spawnInterval) {
       this.spawnTimer = 0;
@@ -388,11 +668,32 @@ export class SignalStormEngine {
     // ── Update stars ──
     this.updateStars(dt);
 
+    // ── Engine flame animation ──
+    this.flameTimer += dt;
+    if (this.flameTimer >= 0.1) {
+      this.flameTimer = 0;
+      this.flameFrame = (this.flameFrame + 1) % this.spriteFlames.length;
+    }
+
     // ── Wave timer ──
     this.waveTimer += dt;
     if (this.waveTimer >= WAVE_DURATION) {
       this.wave += 1;
       this.waveTimer = 0;
+      // Spawn a boss at the start of every BOSS_WAVE_INTERVAL wave
+      if (this.wave % BOSS_WAVE_INTERVAL === 0 && !this.boss) {
+        this.spawnBoss();
+      }
+    }
+
+    // ── Boss defeat flash countdown ──
+    if (this.bossDefeatFlash > 0) {
+      this.bossDefeatFlash -= dt;
+    }
+
+    // ── Boss update ──
+    if (this.boss) {
+      this.updateBoss(dt, timestamp);
     }
 
     // ── Survival score ──
@@ -556,6 +857,247 @@ export class SignalStormEngine {
     );
   }
 
+  private spawnBoss(): void {
+    const tier = (((this.wave / BOSS_WAVE_INTERVAL) - 1) % 5 + 1) as 1 | 2 | 3 | 4 | 5;
+    const cycleNumber = Math.floor((this.wave - 1) / 25);
+    const baseHp = [0, 15, 20, 25, 18, 30][tier];
+    const hp = baseHp + cycleNumber * 10;
+
+    // Determine boss dimensions from sprite at full scale
+    const spriteWidths  = [0, 40, 36, 48, 32, 44];
+    const spriteHeights = [0, 24, 28, 20, 28, 32];
+    const w = spriteWidths[tier];
+    const h = spriteHeights[tier];
+
+    this.boss = {
+      x: this.width / 2 - w / 2,
+      y: -h,
+      width: w,
+      height: h,
+      active: true,
+      hp,
+      maxHp: hp,
+      tier,
+      entered: false,
+      moveTimer: 0,
+      shootTimer: 0,
+      patternPhase: 0,
+      targetX: this.width / 2 - w / 2,
+      dx: tier === 4 ? 250 : (tier === 3 ? 30 : 0),
+    };
+  }
+
+  private updateBoss(dt: number, timestamp: number): void {
+    const boss = this.boss!;
+    const centerX = this.width / 2 - boss.width / 2;
+
+    // ── Entry movement ──
+    if (!boss.entered) {
+      boss.y += 80 * dt;
+      if (boss.y >= BOSS_ENTER_Y) {
+        boss.y = BOSS_ENTER_Y;
+        boss.entered = true;
+        // Give boss 2 an initial random target
+        if (boss.tier === 2) {
+          boss.targetX = Math.random() * (this.width - boss.width);
+        }
+      }
+      return; // don't move/shoot until fully entered
+    }
+
+    // ── Movement patterns ──
+    boss.moveTimer += dt;
+
+    if (boss.tier === 1) {
+      // Smooth sine-wave left-right
+      boss.x = centerX + Math.sin(boss.moveTimer * 1.5) * (this.width * 0.35);
+
+    } else if (boss.tier === 2) {
+      // Dash to random X positions
+      const diff = boss.targetX - boss.x;
+      const step = 180 * dt;
+      if (Math.abs(diff) <= step) {
+        boss.x = boss.targetX;
+        boss.targetX = Math.random() * (this.width - boss.width);
+      } else {
+        boss.x += Math.sign(diff) * step;
+      }
+
+    } else if (boss.tier === 3) {
+      // Slow left-right sweep, bounces off edges
+      boss.x += boss.dx * dt;
+      if (boss.x <= 0) {
+        boss.x = 0;
+        boss.dx = Math.abs(boss.dx);
+      } else if (boss.x + boss.width >= this.width) {
+        boss.x = this.width - boss.width;
+        boss.dx = -Math.abs(boss.dx);
+      }
+
+    } else if (boss.tier === 4) {
+      // Fast zigzag, bounces off walls
+      boss.x += boss.dx * dt;
+      if (boss.x <= 0) {
+        boss.x = 0;
+        boss.dx = Math.abs(boss.dx);
+      } else if (boss.x + boss.width >= this.width) {
+        boss.x = this.width - boss.width;
+        boss.dx = -Math.abs(boss.dx);
+      }
+
+    } else if (boss.tier === 5) {
+      // Slow descent + left-right (like boss 3)
+      boss.x += boss.dx * dt;
+      if (boss.x <= 0) {
+        boss.x = 0;
+        boss.dx = Math.abs(boss.dx || 30);
+      } else if (boss.x + boss.width >= this.width) {
+        boss.x = this.width - boss.width;
+        boss.dx = -Math.abs(boss.dx || 30);
+      }
+      // Slowly descend, capped at 40% of height
+      const maxY = this.height * 0.4;
+      if (boss.y < maxY) {
+        boss.y += 15 * dt;
+        if (boss.y > maxY) boss.y = maxY;
+      }
+    }
+
+    // Clamp x to canvas
+    boss.x = Math.max(0, Math.min(boss.x, this.width - boss.width));
+
+    // ── Shooting ──
+    boss.shootTimer += dt;
+    const shootIntervals = [0, 1.5, 2.0, 2.5, 1.0, 1.5];
+    if (boss.shootTimer >= shootIntervals[boss.tier]) {
+      boss.shootTimer = 0;
+      this.bossShoot(boss);
+      // Boss 5 rotates through pattern phases
+      if (boss.tier === 5) {
+        boss.patternPhase = (boss.patternPhase + 1) % 4;
+      }
+    }
+
+    // ── Player beam collisions ──
+    for (const b of this.beams) {
+      if (!b.active) continue;
+      if (this.collides(b, boss)) {
+        b.active = false;
+        boss.hp -= 1;
+        // Small hit particle
+        this.spawnParticles(b.x + BEAM_W / 2, b.y, this.palette.text);
+        if (boss.hp <= 0) {
+          this.defeatBoss(boss);
+          return;
+        }
+      }
+    }
+
+    // ── Boss body vs player ──
+    if (this.collides(boss, this.player)) {
+      if (this.player.hasShield) {
+        this.player.hasShield = false;
+        this.spawnParticles(
+          this.player.x + PLAYER_W / 2,
+          this.player.y + PLAYER_H / 2,
+          this.palette.shield
+        );
+      } else {
+        this.triggerGameOver();
+      }
+    }
+  }
+
+  private bossShoot(boss: Boss): void {
+    const bCx = boss.x + boss.width / 2;
+    const bBottom = boss.y + boss.height;
+
+    const fireBeam = (x: number, dy: number, dx = 0) => {
+      this.enemyBeams.push({
+        x: x - BEAM_W / 2,
+        y: bBottom,
+        width: BEAM_W,
+        height: BEAM_H,
+        active: true,
+        dy,
+      });
+      // For angled beams we'd need dx support — store dx in the beam concept;
+      // since EnemyBeam only has dy, we approximate angled beams with x offset
+      void dx; // dx handled via x offset already encoded at spawn time
+    };
+
+    const effectiveTier = boss.tier === 5
+      ? ((boss.patternPhase % 4) + 1) as 1 | 2 | 3 | 4
+      : boss.tier;
+
+    if (effectiveTier === 1) {
+      // Single beam from center
+      fireBeam(bCx, 180);
+
+    } else if (effectiveTier === 2) {
+      // 3 spread beams — we simulate angle via horizontal x offset at distance
+      fireBeam(bCx, 160);
+      // Left angled: spawn offset left, same dy
+      fireBeam(bCx - 20, 160);
+      // Right angled: spawn offset right
+      fireBeam(bCx + 20, 160);
+
+    } else if (effectiveTier === 3) {
+      // 5 evenly-spaced beams across boss width
+      const step = boss.width / 4;
+      for (let i = 0; i <= 4; i++) {
+        fireBeam(boss.x + step * i, 120);
+      }
+
+    } else if (effectiveTier === 4) {
+      // Aimed beam toward player
+      const px = this.player.x + PLAYER_W / 2;
+      const py = this.player.y + PLAYER_H / 2;
+      const angle = Math.atan2(py - bBottom, px - bCx);
+      // We only have dy on EnemyBeam; spawn at x that approximates the angle
+      // by offsetting x toward the player and using full speed downward
+      const dist = Math.max(1, Math.abs(py - bBottom));
+      const xRatio = (px - bCx) / dist;
+      // Clamp xRatio to avoid extreme offsets
+      const xOff = Math.max(-60, Math.min(60, xRatio * 60));
+      void angle;
+      fireBeam(bCx + xOff, 220);
+    }
+  }
+
+  private defeatBoss(boss: Boss): void {
+    // Big explosion
+    const cx = boss.x + boss.width / 2;
+    const cy = boss.y + boss.height / 2;
+    const count = 12 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 60 + Math.random() * 120;
+      const color = i % 3 === 0 ? this.palette.text : (i % 3 === 1 ? this.palette.jammer : this.palette.enemy);
+      this.particles.push({
+        x: cx + (Math.random() - 0.5) * boss.width,
+        y: cy + (Math.random() - 0.5) * boss.height,
+        dx: Math.cos(angle) * speed,
+        dy: Math.sin(angle) * speed,
+        life: 0.6 + Math.random() * 0.6,
+        maxLife: 0.6 + Math.random() * 0.6,
+        color,
+        size: 3 + Math.random() * 5,
+      });
+    }
+
+    // Guaranteed power-up drop
+    this.spawnPowerUp(cx, cy);
+
+    // Score bonus
+    this.score += SCORE_BOSS * boss.tier;
+
+    // Flash text
+    this.bossDefeatFlash = 2.5;
+
+    this.boss = null;
+  }
+
   private updateParticles(dt: number): void {
     for (const p of this.particles) {
       p.x += p.dx * dt;
@@ -626,10 +1168,21 @@ export class SignalStormEngine {
       // 4. Player: signal tower shape
       this.drawPlayer();
 
-      // 5. Player beams
-      ctx.fillStyle = this.palette.beam;
+      // 5. Player beams (energy bolt with glow)
       for (const b of this.beams) {
+        // Glow
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = this.palette.beam;
+        ctx.fillRect(b.x - 1, b.y, b.width + 2, b.height);
+        // Core
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = this.palette.beam;
         ctx.fillRect(b.x, b.y, b.width, b.height);
+        // Bright center pixel
+        ctx.fillStyle = "#ffffff";
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(b.x + 1, b.y + 1, 1, b.height - 2);
+        ctx.globalAlpha = 1;
       }
 
       // 6. Enemies
@@ -637,9 +1190,18 @@ export class SignalStormEngine {
         this.drawEnemy(e);
       }
 
-      // 7. Enemy beams
-      ctx.fillStyle = this.palette.enemy;
+      // 6b. Boss
+      if (this.boss) {
+        this.drawBoss(this.boss);
+      }
+
+      // 7. Enemy beams (red energy bolt)
       for (const eb of this.enemyBeams) {
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = this.palette.enemy;
+        ctx.fillRect(eb.x - 1, eb.y, eb.width + 2, eb.height);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = this.palette.enemy;
         ctx.fillRect(eb.x, eb.y, eb.width, eb.height);
       }
 
@@ -664,9 +1226,26 @@ export class SignalStormEngine {
 
       // 11. Power-up indicators
       this.drawPowerUpIndicators();
+
+      // 12. Boss HP bar
+      if (this.boss) {
+        this.drawBossHP(this.boss);
+      }
+
+      // 13. Boss defeated flash
+      if (this.bossDefeatFlash > 0) {
+        const alpha = Math.min(1, this.bossDefeatFlash);
+        ctx.globalAlpha = alpha;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = this.palette.jammer;
+        ctx.font = "bold 22px monospace";
+        ctx.fillText("BOSS DEFEATED", width / 2, height / 2 - 40);
+        ctx.globalAlpha = 1;
+      }
     }
 
-    // 12. Game over overlay
+    // 14. Game over overlay
     if (this.gameState === "GAME_OVER") {
       this.drawGameOver();
     }
@@ -676,112 +1255,113 @@ export class SignalStormEngine {
     const { ctx } = this;
     const { x, y } = this.player;
 
-    ctx.fillStyle = this.palette.player;
+    // Draw pre-rendered ship sprite
+    ctx.drawImage(this.spritePlayer, x, y);
 
-    // Base rectangle (main body)
-    ctx.fillRect(x + 4, y + 14, PLAYER_W - 8, PLAYER_H - 14);
-
-    // Wider mid-section
-    ctx.fillRect(x + 2, y + 18, PLAYER_W - 4, 6);
-
-    // Antenna mast
-    ctx.fillRect(x + PLAYER_W / 2 - 1, y, 2, 14);
-
-    // Left antenna arm
-    ctx.fillRect(x + 4, y + 6, PLAYER_W / 2 - 5, 2);
-
-    // Right antenna arm
-    ctx.fillRect(x + PLAYER_W / 2 + 1, y + 6, PLAYER_W / 2 - 5, 2);
-
-    // Signal tip dot
-    ctx.beginPath();
-    ctx.arc(x + PLAYER_W / 2, y + 1, 2, 0, Math.PI * 2);
-    ctx.fill();
+    // Draw animated engine flame below the ship
+    const flame = this.spriteFlames[this.flameFrame];
+    const flameX = x + PLAYER_W / 2 - flame.width / 2;
+    const flameY = y + PLAYER_H - 2;
+    ctx.drawImage(flame, flameX, flameY);
   }
 
   private drawEnemy(e: Enemy): void {
     const { ctx } = this;
+    const sprite = e.type === "jammer" ? this.spriteJammer : this.spriteMeteor;
+    ctx.drawImage(sprite, e.x, e.y);
 
-    if (e.type === "jammer") {
-      // Jammer: larger, more imposing rectangle with cross pattern
-      ctx.fillStyle = this.palette.jammer;
+    // Damage flash: if jammer has taken 1 hit (hp=1 of 2), flash briefly
+    if (e.type === "jammer" && e.hp === 1) {
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = "#ffffff";
       ctx.fillRect(e.x, e.y, e.width, e.height);
-
-      // Cross detail
-      ctx.fillStyle = this.palette.background;
-      ctx.globalAlpha = 0.4;
-      ctx.fillRect(e.x + e.width / 2 - 1, e.y + 2, 2, e.height - 4);
-      ctx.fillRect(e.x + 2, e.y + e.height / 2 - 1, e.width - 4, 2);
-      ctx.globalAlpha = 1;
-
-      // Highlight top edge
-      ctx.fillStyle = this.palette.jammer;
-      ctx.globalAlpha = 0.6;
-      ctx.fillRect(e.x, e.y, e.width, 2);
-      ctx.globalAlpha = 1;
-    } else {
-      // Interference: rectangle with noisy pattern
-      ctx.fillStyle = this.palette.enemy;
-      ctx.fillRect(e.x, e.y, e.width, e.height);
-
-      // Noisy inner lines
-      ctx.fillStyle = this.palette.background;
-      ctx.globalAlpha = 0.35;
-      for (let i = 0; i < 3; i++) {
-        const lineY = e.y + 3 + i * 4;
-        ctx.fillRect(e.x + 2, lineY, e.width - 4, 1);
-      }
-      ctx.globalAlpha = 1;
-
-      // Corner dots as "antenna nodes"
-      ctx.fillStyle = this.palette.enemy;
-      ctx.globalAlpha = 0.8;
-      ctx.fillRect(e.x + 1, e.y + 1, 3, 3);
-      ctx.fillRect(e.x + e.width - 4, e.y + 1, 3, 3);
       ctx.globalAlpha = 1;
     }
   }
 
   private drawPowerUp(p: PowerUp): void {
     const { ctx } = this;
-    const cx = p.x + POWERUP_W / 2;
-    const cy = p.y + POWERUP_H / 2;
-    const r = POWERUP_W / 2;
+    const sprite =
+      p.type === "rapid"
+        ? this.spritePuRapid
+        : p.type === "shield"
+          ? this.spritePuShield
+          : this.spritePuSpread;
 
-    // Glow
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle =
+    // Pulsing glow behind the sprite
+    const pulse = 0.2 + Math.sin(this.lastTime / 200) * 0.1;
+    const color =
       p.type === "rapid"
         ? this.palette.powerUp
         : p.type === "shield"
           ? this.palette.shield
           : this.palette.spread;
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(cx, cy, r + 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Solid circle
-    ctx.globalAlpha = 1;
-    ctx.fillStyle =
-      p.type === "rapid"
-        ? this.palette.powerUp
-        : p.type === "shield"
-          ? this.palette.shield
-          : this.palette.spread;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Letter inside
-    ctx.fillStyle = this.palette.background;
-    ctx.font = "bold 8px monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(
-      p.type === "rapid" ? "R" : p.type === "shield" ? "S" : "W",
-      cx,
-      cy
+    ctx.arc(
+      p.x + POWERUP_W / 2,
+      p.y + POWERUP_H / 2,
+      POWERUP_W / 2 + 3,
+      0,
+      Math.PI * 2,
     );
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Draw the pixel art icon
+    ctx.drawImage(sprite, p.x, p.y);
+  }
+
+  private drawBoss(boss: Boss): void {
+    const { ctx } = this;
+    const sprites: OffscreenCanvas[] = [
+      this.spriteBoss1, // index 0 unused via [tier] indexing
+      this.spriteBoss1,
+      this.spriteBoss2,
+      this.spriteBoss3,
+      this.spriteBoss4,
+      this.spriteBoss5,
+    ];
+    const sprite = sprites[boss.tier];
+    ctx.drawImage(sprite, Math.round(boss.x), Math.round(boss.y));
+
+    // Damage flash when hp < 30% of max
+    if (boss.hp / boss.maxHp < 0.3) {
+      ctx.globalAlpha = 0.25 + Math.sin(this.lastTime / 80) * 0.15;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(boss.x, boss.y, boss.width, boss.height);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  private drawBossHP(boss: Boss): void {
+    const { ctx, width } = this;
+    const margin = 16;
+    const barY = 48;
+    const barH = 6;
+    const barW = width - margin * 2;
+    const fillW = Math.max(0, (boss.hp / boss.maxHp) * barW);
+
+    // Background track
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = this.palette.textMuted;
+    ctx.fillRect(margin, barY, barW, barH);
+    ctx.globalAlpha = 1;
+
+    // HP fill — color shifts red as hp drops
+    const hpRatio = boss.hp / boss.maxHp;
+    const fillColor = hpRatio > 0.5 ? this.palette.jammer : this.palette.enemy;
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(margin, barY, fillW, barH);
+
+    // Boss name label
+    const bossNames = ["", "SIGNAL DISRUPTOR", "FREQUENCY JAMMER", "BAND BLOCKER", "NETWORK NULLIFIER", "CORE CORRUPTOR"];
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = fillColor;
+    ctx.font = "bold 10px monospace";
+    ctx.fillText(`⚠ ${bossNames[boss.tier]}  ${boss.hp}/${boss.maxHp}`, width / 2, barY - 2);
   }
 
   private drawHUD(): void {
@@ -920,6 +1500,8 @@ export class SignalStormEngine {
     this.enemyBeams = [];
     this.powerUps = [];
     this.particles = [];
+    this.boss = null;
+    this.bossDefeatFlash = 0;
 
     this.initPlayer();
     // Re-scatter stars
