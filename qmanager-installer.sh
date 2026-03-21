@@ -6,7 +6,7 @@
 #
 # Usage:
 #   wget -O /tmp/qmanager-installer.sh \
-#     https://github.com/dr-dolomite/QManager/raw/main/qmanager-installer.sh
+#     https://github.com/dr-dolomite/QManager/raw/refs/heads/development-home/qmanager-installer.sh
 #   sh /tmp/qmanager-installer.sh
 #
 # Environment variables:
