@@ -10,15 +10,22 @@
 #   sh /tmp/qmanager-installer.sh
 #
 # Environment variables:
-#   QMANAGER_BRANCH   Git branch to download from (default: main)
+#   QMANAGER_VERSION  Release tag to download (default: latest)
 #
 # ==============================================================================
 
 # --- Configuration -----------------------------------------------------------
 
-QMANAGER_BRANCH="${QMANAGER_BRANCH:-main}"
-DOWNLOAD_URL="https://github.com/dr-dolomite/QManager/raw/${QMANAGER_BRANCH}/qmanager-build/qmanager.tar.gz"
-ARCHIVE_PATH="/tmp/qmanager.tar.gz"
+GITHUB_REPO="dr-dolomite/QManager"
+QMANAGER_VERSION="${QMANAGER_VERSION:-latest}"
+
+if [ "$QMANAGER_VERSION" = "latest" ]; then
+    DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/qmanager.zip"
+else
+    DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/${QMANAGER_VERSION}/qmanager.zip"
+fi
+
+ARCHIVE_PATH="/tmp/qmanager.zip"
 EXTRACT_DIR="/tmp/qmanager_install"
 
 # Device paths (must match install.sh / uninstall.sh)
@@ -126,12 +133,20 @@ do_install() {
 
     local size
     size=$(du -k "$ARCHIVE_PATH" 2>/dev/null | awk '{print $1 "K"}')
-    info "Downloaded qmanager.tar.gz ($size)"
+    info "Downloaded qmanager.zip ($size)"
 
     # Extract
     step "Extracting archive..."
     rm -rf "$EXTRACT_DIR"
-    tar xzf "$ARCHIVE_PATH" -C /tmp/ 2>/dev/null || die "Extraction failed — archive may be corrupt"
+
+    # Check for unzip
+    if ! command -v unzip >/dev/null 2>&1; then
+        warn "unzip not found — attempting to install..."
+        opkg update >/dev/null 2>&1 || true
+        opkg install unzip >/dev/null 2>&1 || die "Failed to install unzip (opkg install unzip)"
+    fi
+
+    unzip -q -o "$ARCHIVE_PATH" -d /tmp/ 2>/dev/null || die "Extraction failed — archive may be corrupt"
     [ -d "$EXTRACT_DIR" ] || die "Extraction failed — $EXTRACT_DIR not found"
     info "Extracted to $EXTRACT_DIR"
 
@@ -150,6 +165,13 @@ do_install() {
     rm -f "$ARCHIVE_PATH"
     rm -rf "$EXTRACT_DIR"
     info "Temporary files removed"
+
+    # Show version info
+    if [ "$QMANAGER_VERSION" = "latest" ]; then
+        info "Installed from latest release"
+    else
+        info "Installed from release $QMANAGER_VERSION"
+    fi
 }
 
 # ==============================================================================
@@ -343,7 +365,7 @@ do_download_only() {
         info "Downloaded to $ARCHIVE_PATH ($size)"
         printf "\n"
         printf "  To install later:\n\n"
-        printf "     tar xzf %s -C /tmp/\n" "$ARCHIVE_PATH"
+        printf "     unzip -o %s -d /tmp/\n" "$ARCHIVE_PATH"
         printf "     sh %s/install.sh\n\n" "$EXTRACT_DIR"
     else
         die "Download failed"
