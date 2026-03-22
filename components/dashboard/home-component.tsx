@@ -3,11 +3,13 @@
 import React from "react";
 import { motion, type Variants } from "motion/react";
 import { useModemStatus } from "@/hooks/use-modem-status";
+import { useBandwidthMonitor } from "@/hooks/use-bandwidth-monitor";
 import NetworkStatusComponent from "./network-status";
 import DeviceStatus from "./device-status";
 import LTEStatusComponent from "./lte-status";
 import NrStatusComponent from "./nr-status";
 import { SignalHistoryComponent } from "./signal-history";
+import BandwidthMonitorComponent from "./bandwidth-monitor";
 import RecentActivitiesComponent from "./recent-activities";
 import DeviceMetricsComponent from "./device-metrics";
 import LiveLatencyComponent from "./live-latency";
@@ -28,6 +30,7 @@ const itemVariants: Variants = {
 
 const HomeComponent = () => {
   const { data, isLoading, isStale, error } = useModemStatus();
+  const bandwidth = useBandwidthMonitor();
 
   return (
     <div className="grid grid-cols-1 gap-6 px-4 lg:px-6 @3xl/main:grid-cols-2 @5xl/main:grid-cols-5" aria-live="polite" aria-atomic="false">
@@ -85,6 +88,11 @@ const HomeComponent = () => {
               lteData={data?.lte ?? null}
               nrData={data?.nr ?? null}
               isLoading={isLoading}
+              liveBandwidth={
+                bandwidth.isConnected
+                  ? { download: bandwidth.currentDownload, upload: bandwidth.currentUpload }
+                  : null
+              }
             />
           </motion.div>
           <motion.div variants={itemVariants} className="h-full *:data-[slot=card]:h-full">
@@ -102,6 +110,15 @@ const HomeComponent = () => {
       <div className="col-span-full">
         <SignalHistoryComponent />
       </div>
+
+      <motion.div
+        className="col-span-full"
+        variants={itemVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <BandwidthMonitorComponent />
+      </motion.div>
     </div>
   );
 };

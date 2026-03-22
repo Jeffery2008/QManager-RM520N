@@ -27,6 +27,7 @@ import type {
 } from "@/types/modem-status";
 import {
   formatBytesPerSec,
+  formatBitsPerSec,
   formatBytes,
   formatUptime,
   calculateLteDistance,
@@ -42,6 +43,8 @@ interface DeviceMetricsComponentProps {
   lteData: LteStatus | null;
   nrData: NrStatus | null;
   isLoading: boolean;
+  /** Live bandwidth from WebSocket (bps). Falls back to poller data when null. */
+  liveBandwidth?: { download: number; upload: number } | null;
 }
 
 // --- Warning thresholds ---
@@ -88,6 +91,7 @@ const DeviceMetricsComponent = ({
   lteData,
   nrData,
   isLoading,
+  liveBandwidth,
 }: DeviceMetricsComponentProps) => {
   const unitPrefs = useUnitPreferences();
   const temp = deviceData?.temperature ?? null;
@@ -210,20 +214,31 @@ const DeviceMetricsComponent = ({
           {/* Live Traffic */}
           <Separator />
           <div className="flex items-center justify-between">
-            <p className="font-semibold text-muted-foreground text-sm">
-              Live Traffic
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-semibold text-muted-foreground text-sm">
+                Live Traffic
+              </p>
+              {liveBandwidth && (
+                <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/30 text-[10px] px-1.5 py-0">
+                  WS
+                </Badge>
+              )}
+            </div>
             <div className="flex items-center gap-x-2">
               <div className="flex items-center gap-1">
                 <TbCircleArrowDownFilled className="text-info size-5" />
                 <p className="font-semibold text-sm tabular-nums">
-                  {formatBytesPerSec(rxSpeed)}
+                  {liveBandwidth
+                    ? formatBitsPerSec(liveBandwidth.download)
+                    : formatBytesPerSec(rxSpeed)}
                 </p>
               </div>
               <div className="flex items-center gap-1">
                 <TbCircleArrowUpFilled className="text-purple-500 size-5" />
                 <p className="font-semibold text-sm tabular-nums">
-                  {formatBytesPerSec(txSpeed)}
+                  {liveBandwidth
+                    ? formatBitsPerSec(liveBandwidth.upload)
+                    : formatBytesPerSec(txSpeed)}
                 </p>
               </div>
             </div>

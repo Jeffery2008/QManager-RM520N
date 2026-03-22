@@ -525,6 +525,25 @@ export function formatBytesPerSec(bytesPerSec: number): string {
 }
 
 /**
+ * Formats bits per second into a human-readable string.
+ * Unlike formatBytesPerSec (which takes bytes and converts to bits),
+ * this takes raw bits per second directly (e.g., from WebSocket bandwidth data).
+ * e.g., 12500000 → "12.5 Mbps"
+ */
+export function formatBitsPerSec(bitsPerSec: number): string {
+  if (bitsPerSec >= 1_000_000_000) {
+    return `${(bitsPerSec / 1_000_000_000).toFixed(2)} Gbps`;
+  }
+  if (bitsPerSec >= 1_000_000) {
+    return `${(bitsPerSec / 1_000_000).toFixed(1)} Mbps`;
+  }
+  if (bitsPerSec >= 1_000) {
+    return `${(bitsPerSec / 1_000).toFixed(0)} Kbps`;
+  }
+  return `${Math.round(bitsPerSec)} bps`;
+}
+
+/**
  * Formats total bytes into a human-readable string.
  * e.g., 1073741824 → "1.0 GB"
  */

@@ -1,0 +1,45 @@
+#!/bin/sh
+# =============================================================================
+# qmanager_bandwidth_genconf — Generate bridge_traffic_monitor config from UCI
+# =============================================================================
+# Reads UCI quecmanager.bridge_monitor.* values and writes the config file
+# that the bridge_traffic_monitor_rm551 binary expects.
+#
+# Called by /etc/init.d/qmanager_bandwidth before starting the binary.
+#
+# Install location: /usr/bin/qmanager_bandwidth_genconf
+# =============================================================================
+
+CONF_DIR="/etc/quecmanager/settings"
+CONF_FILE="$CONF_DIR/bridge_traffic_monitor.conf"
+
+# Read UCI value with fallback
+uci_get() {
+    local val
+    val=$(uci -q get "quecmanager.bridge_monitor.$1" 2>/dev/null)
+    if [ -z "$val" ]; then echo "$2"; else echo "$val"; fi
+}
+
+# Read settings from UCI
+refresh_rate_ms=$(uci_get refresh_rate_ms 1000)
+ws_port=$(uci_get ws_port 8838)
+interfaces=$(uci_get interfaces "br-lan,eth0,rmnet_data0,rmnet_data1,rmnet_ipa0")
+channel=$(uci_get channel "network-monitor")
+json_mode=$(uci_get json_mode "yes")
+
+# Ensure config directory exists
+mkdir -p "$CONF_DIR"
+
+# Write config file
+cat > "$CONF_FILE" << EOF
+output_path=/tmp/quecmanager/bridge_traffic_monitor
+minimal_mode=no
+json_mode=${json_mode}
+channel=${channel}
+refresh_rate_ms=${refresh_rate_ms}
+required_interfaces=${interfaces}
+websocat_enabled=yes
+websocat_url=wss://localhost:${ws_port}
+EOF
+
+exit 0

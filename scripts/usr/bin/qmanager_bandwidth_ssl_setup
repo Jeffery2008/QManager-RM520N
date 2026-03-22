@@ -1,0 +1,74 @@
+#!/bin/sh
+# =============================================================================
+# qmanager_bandwidth_ssl_setup — Generate self-signed PKCS12 cert for websocat
+# =============================================================================
+# Idempotent: skips generation if certificate already exists.
+# Called by /etc/init.d/qmanager_bandwidth before starting websocat.
+#
+# Dependencies: openssl (opkg install openssl-util)
+#
+# Output:
+#   /etc/qmanager/bandwidth_certs/key.pem    — RSA private key
+#   /etc/qmanager/bandwidth_certs/cert.pem   — Self-signed X.509 certificate
+#   /etc/qmanager/bandwidth_certs/ws.p12     — PKCS12 bundle (for websocat)
+#
+# Install location: /usr/bin/qmanager_bandwidth_ssl_setup
+# =============================================================================
+
+CERT_DIR="/etc/qmanager/bandwidth_certs"
+KEY_FILE="$CERT_DIR/key.pem"
+CERT_FILE="$CERT_DIR/cert.pem"
+P12_FILE="$CERT_DIR/ws.p12"
+
+# Already generated — nothing to do
+if [ -f "$P12_FILE" ]; then
+    exit 0
+fi
+
+# Check openssl is available
+if ! command -v openssl >/dev/null 2>&1; then
+    logger -t qmanager_bandwidth_ssl "ERROR: openssl not found. Install with: opkg install openssl-util"
+    exit 1
+fi
+
+# Ensure output directory exists
+mkdir -p "$CERT_DIR"
+
+# Get hostname for certificate CN
+cn=$(uci -q get system.@system[0].hostname 2>/dev/null)
+[ -z "$cn" ] && cn="QuecManager"
+
+# Generate 2048-bit RSA private key
+openssl genrsa -out "$KEY_FILE" 2048 2>/dev/null
+if [ $? -ne 0 ]; then
+    logger -t qmanager_bandwidth_ssl "ERROR: Failed to generate RSA key"
+    rm -f "$KEY_FILE"
+    exit 1
+fi
+
+# Generate self-signed certificate (10-year expiry)
+openssl req -new -x509 -key "$KEY_FILE" -out "$CERT_FILE" \
+    -days 3650 -subj "/CN=$cn" 2>/dev/null
+if [ $? -ne 0 ]; then
+    logger -t qmanager_bandwidth_ssl "ERROR: Failed to generate certificate"
+    rm -f "$KEY_FILE" "$CERT_FILE"
+    exit 1
+fi
+
+# Export as PKCS12 (websocat requires this format)
+# Empty passphrase via -passout pass:
+openssl pkcs12 -export -out "$P12_FILE" \
+    -inkey "$KEY_FILE" -in "$CERT_FILE" \
+    -passout pass: 2>/dev/null
+if [ $? -ne 0 ]; then
+    logger -t qmanager_bandwidth_ssl "ERROR: Failed to create PKCS12 bundle"
+    rm -f "$KEY_FILE" "$CERT_FILE" "$P12_FILE"
+    exit 1
+fi
+
+# Restrict permissions
+chmod 600 "$KEY_FILE" "$P12_FILE"
+chmod 644 "$CERT_FILE"
+
+logger -t qmanager_bandwidth_ssl "SSL certificate generated successfully"
+exit 0

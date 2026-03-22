@@ -23,6 +23,15 @@ import { Input } from "@/components/ui/input";
 import { Toggle } from "@/components/ui/toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TbInfoCircleFilled } from "react-icons/tb";
 import { AlertTriangleIcon, CircleIcon } from "lucide-react";
 
@@ -33,6 +42,7 @@ import type {
 } from "@/hooks/use-system-settings";
 import type { ScheduleConfig, LowPowerConfig } from "@/types/system-settings";
 import { DAY_LABELS } from "@/types/system-settings";
+import type { UseBandwidthSettingsReturn } from "@/hooks/use-bandwidth-settings";
 
 // ─── Animation variants ────────────────────────────────────────────────────
 
@@ -54,7 +64,9 @@ type ScheduledOperationsCardProps = Pick<
   | "error"
   | "saveScheduledReboot"
   | "saveLowPower"
->;
+> & {
+  bandwidth?: UseBandwidthSettingsReturn;
+};
 
 const ScheduledOperationsCard = ({
   scheduledReboot,
@@ -63,6 +75,7 @@ const ScheduledOperationsCard = ({
   error,
   saveScheduledReboot,
   saveLowPower,
+  bandwidth,
 }: ScheduledOperationsCardProps) => {
   // ─── Scheduled Reboot local state ──────────────────────────────────────────
   const [rebootEnabled, setRebootEnabled] = useState(false);
@@ -517,6 +530,199 @@ const ScheduledOperationsCard = ({
               ))}
             </div>
           </motion.fieldset>
+
+          {/* ─── Visual break between sections ───────────────────────────── */}
+          <Separator className="my-4" />
+
+          {/* ─── Section C: Bandwidth Monitor ─────────────────────────────── */}
+          <motion.div variants={itemVariants} className="flex items-center gap-1.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex"
+                  aria-label="Bandwidth monitor info"
+                >
+                  <TbInfoCircleFilled className="size-5 text-info" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>
+                  Monitors real-time network throughput across multiple <br />
+                  interfaces using a dedicated binary and WebSocket stream. <br />
+                  Requires <code>websocat</code> and <code>openssl-util</code> packages.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+            <p className="font-semibold text-sm">Bandwidth Monitor</p>
+          </motion.div>
+          <Separator />
+
+          {bandwidth?.isLoading ? (
+            <>
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-44" />
+                <Skeleton className="h-6 w-28" />
+              </div>
+              <Separator />
+              <Skeleton className="h-8 w-full" />
+            </>
+          ) : (
+            <>
+              {/* Dependency warnings */}
+              {bandwidth?.dependencies && !bandwidth.dependencies.websocat_installed && (
+                <motion.div variants={itemVariants}>
+                  <Alert>
+                    <AlertTriangleIcon className="size-4" />
+                    <AlertDescription>
+                      <code>websocat</code> is not installed. Install with:{" "}
+                      <code className="text-xs">opkg install websocat</code>
+                    </AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
+              {bandwidth?.dependencies && !bandwidth.dependencies.openssl_installed && (
+                <motion.div variants={itemVariants}>
+                  <Alert>
+                    <AlertTriangleIcon className="size-4" />
+                    <AlertDescription>
+                      <code>openssl-util</code> is not installed. Install with:{" "}
+                      <code className="text-xs">opkg install openssl-util</code>
+                    </AlertDescription>
+                  </Alert>
+                </motion.div>
+              )}
+
+              {/* Enable toggle */}
+              <motion.div variants={itemVariants} className="flex items-center justify-between">
+                <p className="font-semibold text-muted-foreground text-sm">
+                  Enable Bandwidth Monitor
+                </p>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="bandwidth-monitor"
+                    checked={bandwidth?.settings?.enabled ?? false}
+                    disabled={bandwidth?.isSaving}
+                    onCheckedChange={async (checked) => {
+                      if (!bandwidth) return;
+                      const success = await bandwidth.saveSettings({
+                        action: "save_settings",
+                        enabled: checked,
+                      });
+                      if (success) {
+                        toast.success(
+                          checked
+                            ? "Bandwidth monitor enabled"
+                            : "Bandwidth monitor disabled",
+                        );
+                      } else {
+                        toast.error("Failed to update bandwidth monitor");
+                      }
+                    }}
+                  />
+                  <Label htmlFor="bandwidth-monitor">
+                    {bandwidth?.settings?.enabled ? "Enabled" : "Disabled"}
+                  </Label>
+                </div>
+              </motion.div>
+              <Separator />
+
+              {/* Refresh rate (when enabled) */}
+              {bandwidth?.settings?.enabled && (
+                <>
+                  <motion.div variants={itemVariants} className="flex items-center justify-between mt-4">
+                    <Label className="font-semibold text-muted-foreground text-sm">
+                      Refresh Rate
+                    </Label>
+                    <Select
+                      value={String(bandwidth.settings.refresh_rate_ms)}
+                      onValueChange={async (value) => {
+                        const success = await bandwidth.saveSettings({
+                          action: "save_settings",
+                          refresh_rate_ms: Number(value),
+                        });
+                        if (success) {
+                          toast.success("Refresh rate updated");
+                        } else {
+                          toast.error("Failed to update refresh rate");
+                        }
+                      }}
+                      disabled={bandwidth.isSaving}
+                    >
+                      <SelectTrigger className="w-32 h-8" aria-label="Refresh rate">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="500" className="rounded-lg">500ms</SelectItem>
+                        <SelectItem value="1000" className="rounded-lg">1000ms</SelectItem>
+                        <SelectItem value="2000" className="rounded-lg">2000ms</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </motion.div>
+                  <Separator />
+
+                  {/* Status indicators */}
+                  <motion.div variants={itemVariants} className="flex items-center justify-between mt-4">
+                    <p className="font-semibold text-muted-foreground text-sm">
+                      Service Status
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={
+                          bandwidth.status?.websocat_running
+                            ? "text-emerald-600 border-emerald-500/30"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        WebSocket {bandwidth.status?.websocat_running ? "Running" : "Stopped"}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className={
+                          bandwidth.status?.monitor_running
+                            ? "text-emerald-600 border-emerald-500/30"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        Monitor {bandwidth.status?.monitor_running ? "Running" : "Stopped"}
+                      </Badge>
+                    </div>
+                  </motion.div>
+                  <Separator />
+
+                  {/* Regenerate SSL */}
+                  <motion.div variants={itemVariants} className="flex items-center justify-between mt-4">
+                    <div>
+                      <p className="font-semibold text-muted-foreground text-sm">
+                        SSL Certificate
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {bandwidth.status?.ssl_cert_exists
+                          ? "Certificate exists"
+                          : "No certificate found"}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={bandwidth.isSaving}
+                      onClick={async () => {
+                        const success = await bandwidth.regenerateSsl();
+                        if (success) {
+                          toast.success("SSL certificate regenerated");
+                        } else {
+                          toast.error("Failed to regenerate certificate");
+                        }
+                      }}
+                    >
+                      Regenerate
+                    </Button>
+                  </motion.div>
+                </>
+              )}
+            </>
+          )}
         </motion.div>
       </CardContent>
     </Card>
