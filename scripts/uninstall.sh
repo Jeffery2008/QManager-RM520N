@@ -314,28 +314,19 @@ remove_backend() {
 remove_frontend() {
     step "Removing frontend files"
 
-    # Remove QManager-specific directories from /www/
-    local removed_dirs=0
-    for dir in _next dashboard cellular monitoring local-network \
-               login about-device support system-settings setup reboot; do
-        if [ -d "$WWW_ROOT/$dir" ]; then
-            rm -rf "$WWW_ROOT/$dir"
-            removed_dirs=$(( removed_dirs + 1 ))
-        fi
+    # Clean /www/ — remove everything except preserved directories
+    local removed=0
+    for item in "$WWW_ROOT"/*; do
+        name=$(basename "$item")
+        case "$name" in
+            cgi-bin|luci-static) continue ;;
+            *)
+                rm -rf "$item"
+                removed=$(( removed + 1 ))
+                ;;
+        esac
     done
-    info "Removed $removed_dirs frontend director(ies) from $WWW_ROOT"
-
-    # Remove root-level QManager files (HTML + public assets)
-    rm -f "$WWW_ROOT/index.html" \
-          "$WWW_ROOT/404.html" \
-          "$WWW_ROOT/favicon.ico" \
-          "$WWW_ROOT/qmanager-logo.svg" \
-          "$WWW_ROOT/device-icon.svg" \
-          "$WWW_ROOT/device-icon-1.svg" \
-          "$WWW_ROOT/discord-qr.svg" \
-          "$WWW_ROOT/file.svg" \
-          "$WWW_ROOT/globe.svg" \
-          "$WWW_ROOT/window.svg"
+    info "Removed $removed item(s) from $WWW_ROOT"
 
     # Restore the original OpenWRT/LuCI index.html from backup
     if [ -f "$BACKUP_DIR/index.html.orig" ]; then

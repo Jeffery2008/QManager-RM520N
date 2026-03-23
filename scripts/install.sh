@@ -344,20 +344,14 @@ install_frontend() {
     file_count=$(count_files "$SRC_FRONTEND")
     info "Deploying $file_count frontend files"
 
-    # Remove old QManager frontend directories (keep cgi-bin/ and non-QM files)
-    for dir in _next dashboard cellular monitoring local-network \
-               login about-device support system-settings setup reboot; do
-        rm -rf "$WWW_ROOT/$dir"
+    # Clean /www/ — remove everything except preserved directories
+    for item in "$WWW_ROOT"/*; do
+        name=$(basename "$item")
+        case "$name" in
+            cgi-bin|luci-static) continue ;;
+            *) rm -rf "$item" ;;
+        esac
     done
-
-    # Remove old QManager root files (HTML + public assets)
-    rm -f "$WWW_ROOT/index.html"
-    rm -f "$WWW_ROOT/404.html"
-    rm -f "$WWW_ROOT/favicon.ico"
-    rm -f "$WWW_ROOT/qmanager-logo.svg"
-    rm -f "$WWW_ROOT/device-icon.svg" "$WWW_ROOT/device-icon-1.svg"
-    rm -f "$WWW_ROOT/discord-qr.svg"
-    rm -f "$WWW_ROOT/file.svg" "$WWW_ROOT/globe.svg" "$WWW_ROOT/window.svg"
 
     # Copy new frontend
     cp -r "$SRC_FRONTEND"/* "$WWW_ROOT/"
@@ -611,15 +605,14 @@ uninstall() {
         info "Removed UCI config"
     fi
 
-    # Remove frontend and restore original index.html
-    for dir in _next dashboard cellular monitoring local-network \
-               login about-device support system-settings setup reboot; do
-        rm -rf "$WWW_ROOT/$dir"
+    # Remove frontend — clean /www/ except preserved directories
+    for item in "$WWW_ROOT"/*; do
+        name=$(basename "$item")
+        case "$name" in
+            cgi-bin|luci-static) continue ;;
+            *) rm -rf "$item" ;;
+        esac
     done
-    rm -f "$WWW_ROOT/index.html" "$WWW_ROOT/404.html" "$WWW_ROOT/favicon.ico"
-    rm -f "$WWW_ROOT/qmanager-logo.svg" "$WWW_ROOT/device-icon.svg" \
-          "$WWW_ROOT/device-icon-1.svg" "$WWW_ROOT/discord-qr.svg" \
-          "$WWW_ROOT/file.svg" "$WWW_ROOT/globe.svg" "$WWW_ROOT/window.svg"
 
     if [ -f "$BACKUP_DIR/index.html.orig" ]; then
         cp "$BACKUP_DIR/index.html.orig" "$WWW_ROOT/index.html"
