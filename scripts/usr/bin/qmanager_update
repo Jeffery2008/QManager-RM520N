@@ -6,6 +6,8 @@
 #
 # Usage:
 #   qmanager_update install <download_url> <version> [download_size]
+#   qmanager_update download <tarball_url> <checksum_url> <version>
+#   qmanager_update install_staged
 #   qmanager_update rollback <rollback_url> <rollback_version>
 # =============================================================================
 
@@ -134,6 +136,126 @@ if [ "$MODE" = "install" ]; then
     log "Install complete"
 
     # 5. Cleanup and reboot
+    rm -rf /tmp/qmanager_install
+    write_status "rebooting" "Rebooting device..." "$VERSION" ""
+    log "Rebooting"
+    rm -f "$PID_FILE"
+    trap - EXIT INT TERM
+    sleep 1
+    reboot
+    exit 0
+fi
+
+# =============================================================================
+# DOWNLOAD mode — download and verify only, no install
+# =============================================================================
+if [ "$MODE" = "download" ]; then
+    URL="$2"
+    CHECKSUM_URL="$3"
+    VERSION="$4"
+
+    STAGED_TARBALL="/tmp/qmanager_staged.tar.gz"
+    STAGED_VERSION="/tmp/qmanager_staged_version"
+
+    # Validate URL origin (prevent SSRF)
+    case "$URL" in
+        https://github.com/dr-dolomite/QManager/releases/download/*/qmanager.tar.gz) ;;
+        *) die "Invalid download URL" ;;
+    esac
+
+    # 1. Download tarball
+    write_status "downloading" "Downloading QManager ${VERSION}..." "$VERSION" ""
+    log "Downloading $URL"
+    rm -f "$STAGED_TARBALL"
+
+    if ! http_download "$URL" "$STAGED_TARBALL"; then
+        die "Download failed. Check your internet connection."
+    fi
+    log "Download complete"
+
+    # 2. Verify archive integrity (tar check)
+    if ! tar tzf "$STAGED_TARBALL" >/dev/null 2>&1; then
+        rm -f "$STAGED_TARBALL"
+        die "Downloaded file is corrupt. Please try again."
+    fi
+
+    if ! tar tzf "$STAGED_TARBALL" | grep -q "install.sh"; then
+        rm -f "$STAGED_TARBALL"
+        die "Invalid update package — missing install.sh."
+    fi
+    log "Archive integrity verified"
+
+    # 3. SHA-256 verification (if checksum URL provided)
+    write_status "verifying" "Verifying SHA-256..." "$VERSION" ""
+    if [ -n "$CHECKSUM_URL" ]; then
+        checksum_file="/tmp/qmanager_staged_sha256.txt"
+        rm -f "$checksum_file"
+
+        if http_download "$CHECKSUM_URL" "$checksum_file" 15; then
+            expected_sha=$(awk '{print $1}' "$checksum_file" 2>/dev/null)
+            actual_sha=$(sha256sum "$STAGED_TARBALL" 2>/dev/null | awk '{print $1}')
+
+            if [ -n "$expected_sha" ] && [ -n "$actual_sha" ]; then
+                if [ "$actual_sha" != "$expected_sha" ]; then
+                    rm -f "$STAGED_TARBALL" "$checksum_file"
+                    die "SHA-256 mismatch — download may be corrupt or tampered"
+                fi
+                log "SHA-256 verified"
+            else
+                log "SHA-256 check skipped (sha256sum not available)"
+            fi
+            rm -f "$checksum_file"
+        else
+            log "Checksum file not available — skipping SHA-256 verification"
+        fi
+    fi
+
+    # 4. Stage version marker
+    echo "$VERSION" > "$STAGED_VERSION"
+
+    # 5. Report ready
+    local_size=$(du -k "$STAGED_TARBALL" 2>/dev/null | awk '{printf "%.1f MB", $1/1024}')
+    write_status "ready" "Download verified ($local_size)" "$VERSION" "$local_size"
+    log "Staged $VERSION ($local_size) — ready for install"
+
+    rm -f "$PID_FILE"
+    trap - EXIT INT TERM
+    exit 0
+fi
+
+# =============================================================================
+# INSTALL_STAGED mode — install a previously downloaded tarball
+# =============================================================================
+if [ "$MODE" = "install_staged" ]; then
+    STAGED_TARBALL="/tmp/qmanager_staged.tar.gz"
+    STAGED_VERSION="/tmp/qmanager_staged_version"
+
+    [ -f "$STAGED_TARBALL" ] || die "No staged tarball found. Download first."
+    [ -f "$STAGED_VERSION" ] || die "No staged version marker found."
+
+    VERSION=$(cat "$STAGED_VERSION" 2>/dev/null)
+    log "Installing staged version: $VERSION"
+
+    # 1. Save current version for tracking
+    write_status "installing" "Installing QManager ${VERSION}..." "$VERSION" ""
+    current_ver=$(get_current_version)
+    mkdir -p "$UPDATES_DIR"
+    echo "$current_ver" > "$UPDATES_DIR/previous_version"
+    log "Saved previous version ($current_ver)"
+
+    # 2. Extract and install
+    rm -rf /tmp/qmanager_install
+    tar xzf "$STAGED_TARBALL" -C /tmp/
+    rm -f "$STAGED_TARBALL" "$STAGED_VERSION"
+    cd /tmp/qmanager_install || die "Extraction failed — /tmp/qmanager_install not found"
+
+    log "Running install.sh --skip-packages --no-reboot"
+    if ! sh install.sh --skip-packages --no-reboot >> "$LOG_FILE" 2>&1; then
+        die "Installation failed. Check /tmp/qmanager_update.log for details."
+    fi
+    log "Install complete"
+
+    # 3. Cleanup and reboot
     rm -rf /tmp/qmanager_install
     write_status "rebooting" "Rebooting device..." "$VERSION" ""
     log "Rebooting"
