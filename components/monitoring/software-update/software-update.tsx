@@ -33,10 +33,12 @@ import { UpdatePreferencesCard } from "./update-preferences-card";
 export function StatusBadge({
   updateAvailable,
   isUpdating,
+  isDownloading,
   updateStatus,
 }: {
   updateAvailable: boolean;
   isUpdating: boolean;
+  isDownloading?: boolean;
   updateStatus: UpdateStatus;
 }) {
   if (isUpdating && updateStatus.status !== "error") {
@@ -44,6 +46,14 @@ export function StatusBadge({
       <Badge variant="info">
         <DownloadIcon />
         Updating
+      </Badge>
+    );
+  }
+  if (isDownloading) {
+    return (
+      <Badge variant="info">
+        <DownloadIcon />
+        Downloading
       </Badge>
     );
   }
@@ -215,8 +225,16 @@ function SegmentedProgress({ activeIndex }: { activeIndex: number }) {
 
 const SoftwareUpdateComponent = () => {
   const hookData = useSoftwareUpdate();
-  const { updateInfo, updateStatus, isLoading, isChecking, isUpdating, error } =
-    hookData;
+  const {
+    updateInfo,
+    updateStatus,
+    downloadState,
+    isLoading,
+    isChecking,
+    isUpdating,
+    isDownloading,
+    error,
+  } = hookData;
 
   // ── Fatal error (no data at all) ──────────────────────────────────────
   if (error && !updateInfo && !isLoading) {
@@ -314,19 +332,24 @@ const SoftwareUpdateComponent = () => {
         <UpdateStatusCard
           updateInfo={updateInfo}
           updateStatus={updateStatus}
+          downloadState={downloadState}
           isLoading={isLoading}
           isChecking={isChecking}
           isUpdating={isUpdating}
+          isDownloading={isDownloading}
           error={error}
           lastChecked={hookData.lastChecked}
           checkForUpdates={hookData.checkForUpdates}
-          installUpdate={hookData.installUpdate}
+          downloadUpdate={hookData.downloadUpdate}
+          installStaged={hookData.installStaged}
         />
         <UpdatePreferencesCard
           updateInfo={updateInfo}
           isLoading={isLoading}
           isUpdating={isUpdating}
-          rollback={hookData.rollback}
+          isDownloading={isDownloading}
+          downloadUpdate={hookData.downloadUpdate}
+          installStaged={hookData.installStaged}
           togglePrerelease={hookData.togglePrerelease}
           saveAutoUpdate={hookData.saveAutoUpdate}
         />
