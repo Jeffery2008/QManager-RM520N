@@ -50,3 +50,25 @@ export interface InstallResult {
   message?: string;
   detail?: string;
 }
+
+export interface TrafficMasqueradeSettings {
+  enabled: boolean;
+  status: "running" | "stopped" | "error";
+  uptime: string;
+  packets_processed: number;
+  sni_domain: string;
+  binary_installed: boolean;
+  kernel_module_loaded: boolean;
+}
+
+export interface TrafficMasqueradeResponse extends TrafficMasqueradeSettings {
+  success: boolean;
+}
+
+export interface MasqueradeTestResult {
+  status: "idle" | "running" | "complete" | "error";
+  injected?: boolean;
+  packets?: number;
+  message?: string;
+  error?: string;
+}

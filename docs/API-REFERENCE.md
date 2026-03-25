@@ -871,7 +871,9 @@ The HTTP response is flushed before the device reboots asynchronously. The conne
 
 ---
 
-## Video Optimizer
+## DPI Settings
+
+The DPI Settings page manages two features through a single CGI endpoint: **Video Optimizer** (SNI splitting for video throttle bypass) and **Traffic Masquerade** (fake TLS ClientHello with spoofed SNI). Both share the nfqws binary and kernel module but run as separate nfqws instances on different NFQUEUE numbers.
 
 ### GET `/network/video_optimizer.sh`
 
@@ -892,6 +894,26 @@ Read video optimizer settings and service status.
 ```
 
 Status values: `running`, `stopped`, `restarting`, `error`
+
+### GET `/network/video_optimizer.sh?section=masquerade`
+
+Read traffic masquerade settings and service status.
+
+**Response:**
+```json
+{
+  "success": true,
+  "enabled": true,
+  "status": "running",
+  "uptime": "1h 12m",
+  "packets_processed": 15320,
+  "sni_domain": "speedtest.net",
+  "binary_installed": true,
+  "kernel_module_loaded": true
+}
+```
+
+Status values: `running`, `stopped`
 
 ### GET `/network/video_optimizer.sh?action=verify_status`
 
@@ -940,17 +962,27 @@ Poll nfqws installation progress/results.
 
 ### POST `/network/video_optimizer.sh`
 
-Save settings:
+**Save video optimizer settings:**
 ```json
 {"action": "save", "enabled": true}
 ```
 
-Start verification:
+**Save traffic masquerade settings:**
+```json
+{"action": "save_masquerade", "enabled": true, "sni_domain": "speedtest.net"}
+```
+
+- `enabled` (boolean, required): Enable or disable traffic masquerade.
+- `sni_domain` (string, optional): Domain to spoof in fake TLS ClientHello. Must contain at least one dot, max 253 characters. Defaults to `speedtest.net` if not provided.
+
+Saving masquerade settings restarts the entire `qmanager_dpi` service (both instances) to apply changes.
+
+**Start verification:**
 ```json
 {"action": "verify"}
 ```
 
-Install nfqws binary (downloads from zapret GitHub releases):
+**Install nfqws binary** (downloads from zapret GitHub releases):
 ```json
 {"action": "install"}
 ```

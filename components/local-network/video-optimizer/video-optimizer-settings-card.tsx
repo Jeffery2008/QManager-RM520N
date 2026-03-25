@@ -20,11 +20,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   Download,
+  Info,
   Loader2,
   ShieldCheck,
   ShieldOff,
   Zap,
 } from "lucide-react";
+import { TbAlertTriangleFilled } from "react-icons/tb";
 import { useVideoOptimizer } from "@/hooks/use-video-optimizer";
 
 function VideoOptimizerSkeleton() {
@@ -232,7 +234,17 @@ function VerificationDisplay({
   );
 }
 
-export default function VideoOptimizerSettingsCard() {
+interface VideoOptimizerSettingsCardProps {
+  hook: ReturnType<typeof useVideoOptimizer>;
+  otherActive?: boolean;
+  onSaved?: () => void;
+}
+
+export default function VideoOptimizerSettingsCard({
+  hook,
+  otherActive = false,
+  onSaved,
+}: VideoOptimizerSettingsCardProps) {
   const {
     settings,
     isLoading,
@@ -243,7 +255,7 @@ export default function VideoOptimizerSettingsCard() {
     runVerification,
     installResult,
     runInstall,
-  } = useVideoOptimizer();
+  } = hook;
 
   const [isEnabled, setIsEnabled] = useState(false);
   const { saved, markSaved } = useSaveFlash();
@@ -269,17 +281,20 @@ export default function VideoOptimizerSettingsCard() {
         toast.success(
           isEnabled ? "Video Optimizer enabled" : "Video Optimizer disabled"
         );
+        onSaved?.();
       } else {
         toast.error(error || "Failed to save settings");
       }
     },
-    [isEnabled, saveSettings, markSaved, error]
+    [isEnabled, saveSettings, markSaved, error, onSaved]
   );
 
   if (isLoading) return <VideoOptimizerSkeleton />;
 
   const canEnable =
-    settings?.binary_installed && settings?.kernel_module_loaded;
+    settings?.binary_installed && settings?.kernel_module_loaded && !otherActive;
+  // Allow toggling OFF even when canEnable is false (e.g., other feature is active)
+  const canToggle = canEnable || settings?.enabled;
   const isRunning = settings?.status === "running";
 
   return (
@@ -297,6 +312,20 @@ export default function VideoOptimizerSettingsCard() {
         </div>
       </CardHeader>
       <CardContent>
+        <div className="flex items-start gap-2 p-2 rounded-md bg-warning/10 border border-warning/30 text-warning text-sm mb-4">
+          <TbAlertTriangleFilled className="size-5 mt-0.5 shrink-0" />
+          <p className="font-semibold">Experimental Feature</p>
+        </div>
+
+        <div className="flex items-start gap-2 p-2 rounded-md bg-info/10 border border-info/30 text-info text-sm mb-4">
+          <Info className="size-4 mt-0.5 shrink-0" />
+          <p>
+            Some carriers (e.g., T-Mobile) may detect DPI evasion and
+            de-prioritize your connection. Use the verification test to confirm
+            it works on your carrier without side effects.
+          </p>
+        </div>
+
         {!settings?.binary_installed && (
           <div className="mb-4 space-y-3">
             <Alert>
@@ -374,6 +403,16 @@ export default function VideoOptimizerSettingsCard() {
           </Alert>
         )}
 
+        {otherActive && (
+          <Alert className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Traffic Masquerade is currently active. Disable it first before
+              enabling Video Optimizer.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form className="grid gap-4" onSubmit={handleSave}>
           <FieldSet>
             <FieldGroup>
@@ -388,7 +427,7 @@ export default function VideoOptimizerSettingsCard() {
                   id="dpi-enabled"
                   checked={isEnabled}
                   onCheckedChange={setIsEnabled}
-                  disabled={!canEnable || isSaving}
+                  disabled={!canToggle || isSaving}
                   aria-label="Enable Video Optimizer"
                 />
               </Field>
@@ -422,7 +461,7 @@ export default function VideoOptimizerSettingsCard() {
                 type="submit"
                 isSaving={isSaving}
                 saved={saved}
-                disabled={!isDirty || !canEnable}
+                disabled={!isDirty || !canToggle}
               />
             </FieldGroup>
           </FieldSet>

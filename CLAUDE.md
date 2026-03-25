@@ -25,22 +25,25 @@
 
 ## CGI Endpoint Reference (Additions)
 
-| Feature         | CGI Script                   | Hook                     | Types                | Reboot? |
-|-----------------|------------------------------|--------------------------|----------------------|---------|
-| Video Optimizer | `network/video_optimizer.sh` | `use-video-optimizer.ts` | `video-optimizer.ts` | No      |
+| Feature      | CGI Script                   | Hook                                                   | Types                | Reboot? |
+|--------------|------------------------------|--------------------------------------------------------|----------------------|---------|
+| DPI Settings | `network/video_optimizer.sh` | `use-video-optimizer.ts` + `use-traffic-masquerade.ts` | `video-optimizer.ts` | No      |
 
 ## Feature-Specific Notes
 
-### Video Optimizer (DPI Evasion)
+### DPI Settings (DPI Evasion)
 
+- **Page renamed** from "Video Optimizer" to "DPI Settings" — contains Video Optimizer + Traffic Masquerade cards
 - **Binary**: nfqws from zapret project, installed at `/usr/bin/nfqws`
 - **Not bundled**: nfqws is downloaded on demand from [zapret GitHub releases](https://github.com/bol-van/zapret/releases) via `qmanager_dpi_install` — avoids opkg dependency issues on custom firmware
 - **Installer**: `qmanager_dpi_install` — detects arch, fetches `openwrt-embedded.tar.gz`, extracts arch-specific binary, installs to `/usr/bin/nfqws`
 - **Installer state**: `/tmp/qmanager_dpi_install.json` (progress file), `/tmp/qmanager_dpi_install.pid` (singleton guard)
 - **Hostname list**: `/etc/qmanager/video_domains.txt` (curated video CDNs, excludes generic CDN domains)
-- **nftables rules**: NFQUEUE on wwan0, queue 200, `bypass` flag for graceful failure
-- **Strategies**: TCP SNI split (`--dpi-desync=split2`) + QUIC desync (`--dpi-desync-udplen-increment`)
+- **Video Optimizer nftables**: NFQUEUE on wwan0, queue 200, `bypass` flag for graceful failure
+- **Video Optimizer strategies**: TCP SNI split (`--dpi-desync=split2`) + QUIC desync (`--dpi-desync-udplen-increment`)
+- **Traffic Masquerade**: second nfqws instance (queue 201) injects fake TLS ClientHello with spoofed SNI (default: `speedtest.net`) using `--dpi-desync=fake --dpi-desync-fake-tls-mod=sni=<domain> --dpi-desync-fooling=badseq`
+- **Masquerade helper**: `masq_helper.sh` — rule insertion/removal, status, uptime, packet count for the masquerade instance
 - **Verification**: `qmanager_dpi_verify` — curl with `--connect-to` SNI spoofing against speed.cloudflare.com
 - **Kernel support**: `dpi_check_kmod()` checks `/proc/config.gz` for `CONFIG_NETFILTER_NETLINK_QUEUE=y` (built-in) before trying lsmod/modprobe
-- **Init.d**: `qmanager_dpi` (procd, START=99, UCI-gated)
+- **Init.d**: `qmanager_dpi` (procd, START=99, UCI-gated, manages both nfqws instances)
 - **Dependencies**: `libnetfilter-queue`, `libnfnetlink`, `libmnl`, full `curl` (not BusyBox); kernel NFQUEUE support (built-in or `kmod-nft-queue`)

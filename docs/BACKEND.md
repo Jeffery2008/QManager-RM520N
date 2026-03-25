@@ -212,12 +212,35 @@ Video Optimizer helper functions. Guard-loaded (`_DPI_HELPER_LOADED`).
 | `dpi_check_binary()` | Verify nfqws binary exists |
 | `dpi_check_kmod()` | Check NFQUEUE support (built-in via `/proc/config.gz` or loadable module) |
 | `dpi_check_libs()` | Verify shared library dependencies |
-| `dpi_insert_rules(iface)` | Add nftables NFQUEUE rules |
-| `dpi_remove_rules()` | Remove nftables NFQUEUE rules by comment |
+| `dpi_insert_rules(iface)` | Add nftables NFQUEUE rules (queue 200) |
+| `dpi_remove_rules()` | Remove nftables NFQUEUE rules by comment (`qmanager_dpi`) |
 | `dpi_get_status()` | Return running/stopped |
 | `dpi_get_uptime()` | Calculate from PID timestamp |
 | `dpi_get_packet_count()` | Read nftables counter |
 | `dpi_get_domain_count()` | Count hostlist entries |
+
+### masq_helper.sh
+
+Traffic Masquerade helper functions. Guard-loaded (`_MASQ_HELPER_LOADED`). Sources `dpi_helper.sh` for shared constants and prerequisite checks.
+
+**Constants:**
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `MASQ_PID` | `/var/run/nfqws_masq.pid` | PID file for uptime tracking |
+| `MASQ_QUEUE_NUM` | `201` | NFQUEUE number (separate from Video Optimizer's queue 200) |
+| `MASQ_NFT_COMMENT` | `qmanager_masq` | nftables rule comment for identification |
+
+**Functions:**
+
+| Function | Description |
+|----------|-------------|
+| `masq_insert_rules(iface)` | Add nftables NFQUEUE rules for all HTTPS traffic (TCP + QUIC port 443, queue 201) |
+| `masq_remove_rules()` | Remove nftables rules by comment (`qmanager_masq`) |
+| `masq_get_status()` | Return `running` or `stopped` based on PID file |
+| `masq_get_uptime()` | Calculate human-readable uptime from PID file timestamp |
+| `masq_get_packet_count()` | Read nftables counter for masquerade rules |
+| `get_nfqws_pid_by_queue(qnum)` | Find nfqws PID by scanning `/proc/*/cmdline` for `qnum=<N>` |
 
 ---
 
@@ -389,17 +412,20 @@ Downloads and installs the nfqws binary from the [zapret](https://github.com/bol
 
 Status values: `running`, `complete`, `error`
 
-### qmanager_dpi (Video Optimizer)
+### qmanager_dpi (DPI Evasion — Video Optimizer + Traffic Masquerade)
 
-**Type:** Procd service (daemon pattern)
+**Type:** Procd service (multi-instance daemon pattern)
 **Binary:** `/usr/bin/nfqws` (from zapret project)
-**Config:** UCI `quecmanager.video_optimizer`
+**Config:** UCI `quecmanager.video_optimizer` + `quecmanager.traffic_masquerade`
 
-Manages the nfqws DPI evasion service for video throttle bypass. Inserts nftables NFQUEUE rules on wwan0 to intercept TLS/QUIC handshake packets and applies SNI fragmentation/desync strategies.
+Manages up to two nfqws instances for DPI evasion. Each instance runs on its own NFQUEUE number and is independently UCI-gated:
 
-**Start:** Checks UCI enabled + binary + kernel module → inserts nftables rules → launches nfqws via procd
-**Stop:** Removes nftables rules → kills nfqws → cleans up PID file
-**Respawn:** 3600s window, 5s delay, max 5 respawns
+- **Instance 1 (`nfqws`)**: Video Optimizer — SNI split on queue 200, filtered by hostname list. Enabled via `quecmanager.video_optimizer.enabled`.
+- **Instance 2 (`nfqws_masq`)**: Traffic Masquerade — fake TLS ClientHello with spoofed SNI on queue 201, applied to all HTTPS traffic. Enabled via `quecmanager.traffic_masquerade.enabled`.
+
+**Start:** Checks binary + kernel module (shared prerequisites) → for each enabled instance: inserts nftables rules → launches nfqws via procd → writes PID files by scanning `/proc/*/cmdline` for queue numbers
+**Stop:** Removes all nftables rules (both `qmanager_dpi` and `qmanager_masq` comments) → kills both instances → cleans up PID files
+**Respawn:** 3600s window, 5s delay, max 5 respawns (per instance)
 
 ### qcmd
 
@@ -423,7 +449,7 @@ result=$(qcmd 'AT+QENG="servingcell"')
 | `qmanager_wan_guard` | non-procd | 99 | `qmanager_wan_guard` | WAN profile validation (one-shot) |
 | `qmanager_tower_failover` | non-procd | 99 | `qmanager_tower_failover` | Tower failover watchdog |
 | `qmanager_low_power_check` | non-procd | 99 | `qmanager_low_power_check` | Boot-time low power window check (one-shot, double-fork) |
-| `qmanager_dpi` | procd | 99 | `nfqws` | Video Optimizer DPI evasion service (UCI-gated) |
+| `qmanager_dpi` | procd | 99 | `nfqws` (x2) | DPI evasion: Video Optimizer (queue 200) + Traffic Masquerade (queue 201), each UCI-gated |
 
 Non-procd services use the double-fork pattern for daemonization:
 ```sh
@@ -542,7 +568,7 @@ All auth endpoints set `_SKIP_AUTH=1`.
 | `mtu.sh` | GET/POST | MTU size |
 | `dns.sh` | GET/POST | Custom DNS override |
 | `ip_passthrough.sh` | GET/POST | IP passthrough mode |
-| `video_optimizer.sh` | GET/POST | Video Optimizer settings, install, and verify |
+| `video_optimizer.sh` | GET/POST | DPI Settings (Video Optimizer + Traffic Masquerade), install, and verify |
 
 #### Custom Profiles (`profiles/`)
 
@@ -621,6 +647,7 @@ All auth endpoints set `_SKIP_AUTH=1`.
 | `qmanager_dpi_verify.pid` | dpi_verify | Verification singleton PID |
 | `qmanager_sessions/` | CGI (auth) | Session files |
 | `qmanager.log` | all (qlog) | Centralized log file |
+| `/var/run/nfqws_masq.pid` | qmanager_dpi | Traffic Masquerade nfqws instance PID (uptime tracking) |
 
 ### Persistent Configuration (`/etc/qmanager/`)
 
@@ -648,6 +675,11 @@ All auth endpoints set `_SKIP_AUTH=1`.
 | `quecmanager.settings.low_power_start` | `HH:MM` | Low power window start |
 | `quecmanager.settings.low_power_end` | `HH:MM` | Low power window end |
 | `quecmanager.settings.low_power_days` | `0,1,...,6` | Low power days (0=Sun) |
+| `quecmanager.video_optimizer.enabled` | `0`, `1` | Video Optimizer on/off |
+| `quecmanager.video_optimizer.quic_enabled` | `0`, `1` | QUIC desync on/off (default `1`) |
+| `quecmanager.video_optimizer.interface` | interface name | WAN interface (default `rmnet_data0`) |
+| `quecmanager.traffic_masquerade.enabled` | `0`, `1` | Traffic Masquerade on/off |
+| `quecmanager.traffic_masquerade.sni_domain` | domain name | Spoofed SNI domain (default `speedtest.net`) |
 | `system.@system[0].timezone` | POSIX TZ string | System timezone |
 | `system.@system[0].zonename` | IANA zone name | System timezone display name |
 

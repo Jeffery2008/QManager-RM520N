@@ -1,6 +1,8 @@
 #!/bin/sh /etc/rc.common
-# qmanager_dpi — Video Optimizer (DPI evasion) service
-# Manages nfqws lifecycle for video throttle bypass
+# qmanager_dpi — DPI evasion service
+# Runs a single nfqws instance in one of two modes:
+#   Video Optimizer (split2 on video hostnames) OR Traffic Masquerade (fake SNI on all traffic)
+# Mutually exclusive — only one mode can be active at a time.
 
 START=99
 STOP=10
@@ -8,58 +10,80 @@ USE_PROCD=1
 
 . /usr/lib/qmanager/qlog.sh
 . /usr/lib/qmanager/dpi_helper.sh
+# masq_helper.sh not needed — both modes share dpi_helper's queue/rules/PID
 
 qlog_init "qmanager_dpi"
 
 start_service() {
-    local enabled
-    enabled=$(uci -q get quecmanager.video_optimizer.enabled)
-    [ "$enabled" = "1" ] || return 0
+    # Always auto-detect interface from default route (rmnet_data can change between reconnects)
+    local iface
+    iface=$(ip route 2>/dev/null | awk '/^default/{print $5; exit}')
+    iface="${iface:-rmnet_data0}"
 
-    # Check binary
+    # Shared prerequisite checks
     if ! dpi_check_binary; then
         qlog_error "nfqws binary not found at $NFQWS_BIN"
         return 1
     fi
 
-    # Check kernel module
     if ! dpi_check_kmod; then
         qlog_error "Failed to load nfnetlink_queue kernel module"
         return 1
     fi
 
-    # Check hostlist
-    if [ ! -f "$DPI_HOSTLIST" ]; then
-        qlog_error "Hostname list not found at $DPI_HOSTLIST"
-        return 1
+    # Determine which mode is active (mutually exclusive)
+    local vo_enabled masq_enabled
+    vo_enabled=$(uci -q get quecmanager.video_optimizer.enabled)
+    masq_enabled=$(uci -q get quecmanager.traffic_masquerade.enabled)
+
+    # Neither enabled — nothing to do
+    [ "$vo_enabled" = "1" ] || [ "$masq_enabled" = "1" ] || return 0
+
+    # Clean up any stale rules
+    dpi_remove_rules
+
+    local args="--qnum=$DPI_QUEUE_NUM"
+
+    if [ "$masq_enabled" = "1" ]; then
+        # --- Traffic Masquerade mode ---
+        local sni_domain
+        sni_domain=$(uci -q get quecmanager.traffic_masquerade.sni_domain)
+        sni_domain="${sni_domain:-speedtest.net}"
+
+        args="$args --dpi-desync=fake"
+        args="$args --dpi-desync-fake-tls-mod=sni=$sni_domain"
+        args="$args --dpi-desync-fooling=badseq"
+        args="$args --dpi-desync-udplen-increment=2"
+
+        qlog_info "Starting traffic masquerade on $iface (sni=$sni_domain)"
+
+    elif [ "$vo_enabled" = "1" ]; then
+        # --- Video Optimizer mode ---
+        if [ ! -f "$DPI_HOSTLIST" ]; then
+            qlog_error "Hostname list not found at $DPI_HOSTLIST"
+            return 1
+        fi
+
+        local quic_enabled
+        quic_enabled=$(uci -q get quecmanager.video_optimizer.quic_enabled)
+
+        args="$args --hostlist=$DPI_HOSTLIST"
+        args="$args --dpi-desync=split2"
+        args="$args --dpi-desync-split-seqovl=1"
+        args="$args --dpi-desync-split-pos=1"
+
+        if [ "$quic_enabled" != "0" ]; then
+            args="$args --dpi-desync-udplen-increment=2"
+        fi
+
+        qlog_info "Starting video optimizer on $iface"
     fi
 
-    # Read UCI config
-    local quic_enabled iface
-    quic_enabled=$(uci -q get quecmanager.video_optimizer.quic_enabled)
-    iface=$(uci -q get quecmanager.video_optimizer.interface)
-    DPI_INTERFACE="${iface:-wwan0}"
-
-    # Remove stale rules, insert fresh
-    dpi_remove_rules
-    if ! dpi_insert_rules "$DPI_INTERFACE"; then
+    # Insert nftables rules (same for both modes — single queue)
+    if ! dpi_insert_rules "$iface"; then
         qlog_error "Failed to insert nftables NFQUEUE rules"
         return 1
     fi
-
-    # Build nfqws args
-    local args="--qnum=$DPI_QUEUE_NUM"
-    args="$args --hostlist=$DPI_HOSTLIST"
-    args="$args --dpi-desync=split2"
-    args="$args --dpi-desync-split-seqovl=1"
-    args="$args --dpi-desync-split-pos=1"
-
-    # Add QUIC desync if enabled (default: yes)
-    if [ "$quic_enabled" != "0" ]; then
-        args="$args --dpi-desync-udplen-increment=2"
-    fi
-
-    qlog_info "Starting nfqws on $DPI_INTERFACE (queue=$DPI_QUEUE_NUM)"
 
     procd_open_instance nfqws
     procd_set_param command $NFQWS_BIN $args
@@ -68,17 +92,17 @@ start_service() {
     procd_set_param stderr 1
     procd_close_instance
 
-    # Write PID file manually for uptime tracking (procd doesn't write one)
+    # Write PID file for uptime tracking
     sleep 1
     pidof nfqws > "$NFQWS_PID" 2>/dev/null || true
 
-    qlog_info "nfqws service started"
+    qlog_info "DPI service started"
 }
 
 stop_service() {
-    qlog_info "Stopping nfqws service"
+    qlog_info "Stopping DPI service"
     dpi_remove_rules
-    [ -f "$NFQWS_PID" ] && rm -f "$NFQWS_PID"
+    rm -f "$NFQWS_PID"
 }
 
 service_triggers() {

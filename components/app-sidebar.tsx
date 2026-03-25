@@ -189,7 +189,7 @@ const data = {
           url: "/local-network/ttl-settings",
         },
         {
-          title: "Video Optimizer",
+          title: "DPI Settings",
           url: "/local-network/video-optimizer",
         },
       ],
