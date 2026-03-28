@@ -1,14 +1,12 @@
 "use client";
 
-import { useVideoOptimizer } from "@/hooks/use-video-optimizer";
 import { useTrafficMasquerade } from "@/hooks/use-traffic-masquerade";
 import TrafficMasqueradeSettingsCard from "./traffic-masquerade-settings-card";
 
 export default function TrafficMasqueradeComponent() {
-  const videoOptimizer = useVideoOptimizer();
   const trafficMasquerade = useTrafficMasquerade();
 
-  const voActive = videoOptimizer.settings?.enabled === true;
+  const voActive = trafficMasquerade.settings?.other_enabled === true;
 
   return (
     <div className="@container/main mx-auto p-2">
@@ -18,11 +16,10 @@ export default function TrafficMasqueradeComponent() {
           Make all HTTPS traffic appear as a whitelisted service to carrier DPI
         </p>
       </div>
-      <div className="max-w-2xl">
+      <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">
         <TrafficMasqueradeSettingsCard
           hook={trafficMasquerade}
           otherActive={voActive}
-          onSaved={() => videoOptimizer.refresh(true)}
         />
       </div>
     </div>

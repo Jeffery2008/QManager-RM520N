@@ -1,15 +1,13 @@
 "use client";
 
 import { useVideoOptimizer } from "@/hooks/use-video-optimizer";
-import { useTrafficMasquerade } from "@/hooks/use-traffic-masquerade";
 import VideoOptimizerSettingsCard from "./video-optimizer-settings-card";
 import CdnHostlistCard from "./cdn-hostlist-card";
 
 export default function VideoOptimizerComponent() {
   const videoOptimizer = useVideoOptimizer();
-  const trafficMasquerade = useTrafficMasquerade();
 
-  const masqActive = trafficMasquerade.settings?.enabled === true;
+  const masqActive = videoOptimizer.settings?.other_enabled === true;
 
   return (
     <div className="@container/main mx-auto p-2">
@@ -24,7 +22,6 @@ export default function VideoOptimizerComponent() {
         <VideoOptimizerSettingsCard
           hook={videoOptimizer}
           otherActive={masqActive}
-          onSaved={() => trafficMasquerade.refresh(true)}
         />
         <CdnHostlistCard />
       </div>

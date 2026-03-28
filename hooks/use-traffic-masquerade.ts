@@ -20,6 +20,7 @@ export function useTrafficMasquerade() {
   const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
     };
@@ -43,6 +44,7 @@ export function useTrafficMasquerade() {
 
       setSettings({
         enabled: data.enabled,
+        other_enabled: data.other_enabled,
         status: data.status,
         uptime: data.uptime,
         packets_processed: data.packets_processed,

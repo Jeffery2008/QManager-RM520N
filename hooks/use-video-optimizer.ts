@@ -29,6 +29,7 @@ export function useVideoOptimizer() {
   const installPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       if (pollTimerRef.current) {
@@ -58,6 +59,7 @@ export function useVideoOptimizer() {
 
       setSettings({
         enabled: data.enabled,
+        other_enabled: data.other_enabled,
         status: data.status,
         uptime: data.uptime,
         packets_processed: data.packets_processed,

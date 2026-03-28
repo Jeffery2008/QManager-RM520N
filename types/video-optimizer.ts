@@ -1,5 +1,6 @@
 export interface VideoOptimizerSettings {
   enabled: boolean;
+  other_enabled: boolean;
   status: "running" | "stopped" | "restarting" | "error";
   uptime: string;
   packets_processed: number;
@@ -11,6 +12,7 @@ export interface VideoOptimizerSettings {
 export interface VideoOptimizerResponse {
   success: boolean;
   enabled: boolean;
+  other_enabled: boolean;
   status: "running" | "stopped" | "restarting" | "error";
   uptime: string;
   packets_processed: number;
@@ -53,6 +55,7 @@ export interface InstallResult {
 
 export interface TrafficMasqueradeSettings {
   enabled: boolean;
+  other_enabled: boolean;
   status: "running" | "stopped" | "error";
   uptime: string;
   packets_processed: number;

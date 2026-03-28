@@ -81,6 +81,7 @@ GET)
     # --- Traffic Masquerade section ---
     if [ "$section" = "masquerade" ]; then
         masq_enabled=$(uci -q get quecmanager.traffic_masquerade.enabled)
+        vo_enabled=$(uci -q get quecmanager.video_optimizer.enabled)
         sni_domain=$(uci -q get quecmanager.traffic_masquerade.sni_domain)
         # Only report live stats when masquerade is the active mode —
         # VO and masq share a single nfqws process/PID/counters
@@ -99,6 +100,7 @@ GET)
         jq -n \
             --argjson success true \
             --arg enabled "${masq_enabled:-0}" \
+            --arg vo_enabled "${vo_enabled:-0}" \
             --arg status "$masq_status" \
             --arg uptime "$masq_uptime" \
             --argjson packets_processed "${masq_packets:-0}" \
@@ -108,6 +110,7 @@ GET)
             '{
                 success: $success,
                 enabled: ($enabled == "1"),
+                other_enabled: ($vo_enabled == "1"),
                 status: $status,
                 uptime: $uptime,
                 packets_processed: $packets_processed,
@@ -120,6 +123,7 @@ GET)
 
     # Read UCI settings
     enabled=$(uci -q get quecmanager.video_optimizer.enabled)
+    masq_enabled=$(uci -q get quecmanager.traffic_masquerade.enabled)
 
     # Only report live stats when video optimizer is the active mode —
     # VO and masq share a single nfqws process/PID/counters
@@ -140,6 +144,7 @@ GET)
     jq -n \
         --argjson success true \
         --arg enabled "${enabled:-0}" \
+        --arg masq_enabled "${masq_enabled:-0}" \
         --arg status "$status" \
         --arg uptime "$uptime" \
         --argjson packets_processed "${packets:-0}" \
@@ -149,6 +154,7 @@ GET)
         '{
             success: $success,
             enabled: ($enabled == "1"),
+            other_enabled: ($masq_enabled == "1"),
             status: $status,
             uptime: $uptime,
             packets_processed: $packets_processed,
