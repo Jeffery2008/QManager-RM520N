@@ -34,7 +34,7 @@ set -e
 
 # --- Configuration -----------------------------------------------------------
 
-VERSION="v0.1.5"
+VERSION="v0.1.6"
 INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Destinations
@@ -445,6 +445,64 @@ install_backend() {
     info "Backend installed"
 }
 
+# --- Clean Up Legacy Scripts -------------------------------------------------
+# Compares scripts on the device against the current package. Anything on
+# the device that is NOT in the package is a leftover from a previous version
+# and gets removed. This keeps the device clean across upgrades.
+
+cleanup_legacy_scripts() {
+    step "Cleaning up legacy scripts"
+
+    local removed=0
+
+    # --- /usr/bin/ daemons (qmanager_*, qcmd, bridge_traffic_monitor_*) ---
+    for f in "$BIN_DIR"/qmanager_* "$BIN_DIR/qcmd" \
+             "$BIN_DIR"/bridge_traffic_monitor_*; do
+        [ -f "$f" ] || continue
+        fname=$(basename "$f")
+        # Keep if this file exists in the current package
+        [ -f "$SRC_SCRIPTS/usr/bin/$fname" ] && continue
+        rm -f "$f"
+        info "  Removed legacy daemon: $fname"
+        removed=$(( removed + 1 ))
+    done
+
+    # --- /etc/init.d/ services (qmanager*) ---
+    for f in "$INITD_DIR"/qmanager*; do
+        [ -f "$f" ] || continue
+        fname=$(basename "$f")
+        [ -f "$SRC_SCRIPTS/etc/init.d/$fname" ] && continue
+        # Disable and stop before removing
+        "$f" disable 2>/dev/null || true
+        "$f" stop 2>/dev/null || true
+        rm -f "$f"
+        # Clean up rc.d symlinks for this service
+        for _link in /etc/rc.d/*"$fname"*; do
+            [ -e "$_link" ] && rm -f "$_link"
+        done
+        info "  Removed legacy service: $fname"
+        removed=$(( removed + 1 ))
+    done
+
+    # --- /usr/lib/qmanager/ libraries ---
+    if [ -d "$LIB_DIR" ]; then
+        for f in "$LIB_DIR"/*; do
+            [ -f "$f" ] || continue
+            fname=$(basename "$f")
+            [ -f "$SRC_SCRIPTS/usr/lib/qmanager/$fname" ] && continue
+            rm -f "$f"
+            info "  Removed legacy library: $fname"
+            removed=$(( removed + 1 ))
+        done
+    fi
+
+    if [ "$removed" -gt 0 ]; then
+        info "Removed $removed legacy file(s)"
+    else
+        info "No legacy scripts found"
+    fi
+}
+
 # --- Fix Line Endings --------------------------------------------------------
 
 fix_line_endings() {
@@ -461,7 +519,7 @@ fix_line_endings() {
             > "$scanlist"
         while IFS= read -r f; do
             # grep for literal CR byte — portable, no 'file' command needed
-            if grep -ql "$(printf '\r')" "$f" 2>/dev/null; then
+            if grep -q "$(printf '\r')" "$f" 2>/dev/null; then
                 tr -d '\r' < "$f" > "$f.lf_tmp" && mv "$f.lf_tmp" "$f"
                 echo "$f" >> "$tmplist"
             fi
@@ -477,6 +535,42 @@ fix_line_endings() {
     else
         info "All files already have correct LF line endings"
     fi
+}
+
+# --- Fix Permissions ---------------------------------------------------------
+# Ensures correct permissions on ALL qmanager scripts on the device,
+# including any that were already installed from a previous version.
+
+fix_permissions() {
+    step "Verifying file permissions"
+
+    # Daemons and utilities — must be executable (755)
+    for f in "$BIN_DIR"/qmanager_* "$BIN_DIR/qcmd" \
+             "$BIN_DIR"/bridge_traffic_monitor_*; do
+        [ -f "$f" ] && chmod 755 "$f"
+    done
+    info "Daemons and utilities: 755"
+
+    # Init.d services — must be executable (755)
+    for f in "$INITD_DIR"/qmanager*; do
+        [ -f "$f" ] && chmod 755 "$f"
+    done
+    info "Init.d services: 755"
+
+    # CGI endpoints — .sh executable (755), .json readable (644)
+    if [ -d "$CGI_DIR" ]; then
+        find "$CGI_DIR" -name "*.sh" -exec chmod 755 {} \;
+        find "$CGI_DIR" -name "*.json" -exec chmod 644 {} \;
+        info "CGI scripts: 755, JSON data: 644"
+    fi
+
+    # Shared libraries — readable, not executable (644)
+    if [ -d "$LIB_DIR" ]; then
+        find "$LIB_DIR" -maxdepth 1 -type f -exec chmod 644 {} \;
+        info "Shared libraries: 644"
+    fi
+
+    info "All permissions verified"
 }
 
 # --- Enable Services ---------------------------------------------------------
@@ -640,9 +734,11 @@ uninstall() {
     # Remove runtime state
     rm -f /tmp/qmanager_*.json /tmp/qmanager.log* 2>/dev/null || true
     rm -f /tmp/qmanager_update.pid /tmp/qmanager_update.log 2>/dev/null || true
+    rm -f /tmp/qmanager_dpi_install.pid /tmp/qmanager_watchcat.pid 2>/dev/null || true
     rm -f /tmp/qmanager_*.lock /tmp/qmanager_long_running 2>/dev/null || true
     rm -f /tmp/qmanager_email_reload /tmp/qmanager_imei_check_done 2>/dev/null || true
     rm -f /tmp/qmanager_low_power_active /tmp/qmanager_recovery_active 2>/dev/null || true
+    rm -f /tmp/qmanager_staged.tar.gz /tmp/qmanager_staged_version 2>/dev/null || true
     rm -rf /tmp/quecmanager 2>/dev/null || true
     rm -rf "$SESSION_DIR"
     info "Removed runtime state from /tmp"
@@ -846,7 +942,7 @@ main() {
         TOTAL_STEPS=$(( TOTAL_STEPS + 2 ))           # backup_originals + install_frontend
     fi
     if [ "$DO_BACKEND" = "1" ]; then
-        TOTAL_STEPS=$(( TOTAL_STEPS + 2 ))           # install_backend + fix_line_endings
+        TOTAL_STEPS=$(( TOTAL_STEPS + 4 ))           # install_backend + cleanup_legacy + fix_line_endings + fix_permissions
         [ "$DO_ENABLE" = "1" ] && TOTAL_STEPS=$(( TOTAL_STEPS + 1 ))  # enable_services
         [ "$DO_START"  = "1" ] && TOTAL_STEPS=$(( TOTAL_STEPS + 1 ))  # start_services
     fi
@@ -868,7 +964,9 @@ main() {
 
     if [ "$DO_BACKEND" = "1" ]; then
         install_backend
+        cleanup_legacy_scripts
         fix_line_endings
+        fix_permissions
 
         if [ "$DO_ENABLE" = "1" ]; then
             enable_services

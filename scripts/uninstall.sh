@@ -17,11 +17,12 @@
 #   - Frontend files from /www/ (restores original index.html if backed up)
 #   - CGI endpoints from /www/cgi-bin/quecmanager/
 #   - Shared libraries from /usr/lib/qmanager/
-#   - Daemons from /usr/bin/qmanager_* and /usr/bin/qcmd
-#   - Init.d services from /etc/init.d/qmanager*
-#   - Runtime state from /tmp (JSON, logs, sessions, lock files)
+#   - Daemons from /usr/bin/qmanager_*, /usr/bin/qcmd, nfqws, bridge_traffic_monitor
+#   - Init.d services from /etc/init.d/qmanager* (dynamic scan)
+#   - Runtime state from /tmp (JSON, logs, sessions, lock files, staged updates)
 #   - UCI config namespace (quecmanager.*)
 #   - Firewall rule files (/etc/firewall.user.ttl, /etc/firewall.user.mtu)
+#   - nftables DPI rules (qmanager_dpi table)
 #   - Optionally: /etc/qmanager/ (password, profiles, backups)
 #
 # =============================================================================
@@ -30,7 +31,7 @@ set -e
 
 # --- Configuration -----------------------------------------------------------
 
-VERSION="v0.1.3"
+VERSION="v0.1.6"
 
 # Paths
 WWW_ROOT="/www"
@@ -172,20 +173,12 @@ confirm_uninstall() {
 stop_services() {
     step "Stopping all QManager services"
 
-    # Stop main service (poller + ping + watchcat)
-    if [ -x "$INITD_DIR/qmanager" ]; then
-        "$INITD_DIR/qmanager" stop 2>/dev/null || true
-        info "Stopped qmanager (poller, ping, watchcat)"
-    fi
-
-    # Stop auxiliary services
-    for svc in qmanager_eth_link qmanager_mtu qmanager_imei_check \
-               qmanager_wan_guard qmanager_watchcat qmanager_tower_failover \
-               qmanager_ttl qmanager_low_power_check qmanager_bandwidth; do
-        if [ -x "$INITD_DIR/$svc" ]; then
-            "$INITD_DIR/$svc" stop 2>/dev/null || true
-        fi
+    # Stop all qmanager init.d services (dynamic — catches any version's services)
+    for f in "$INITD_DIR"/qmanager*; do
+        [ -x "$f" ] || continue
+        "$f" stop 2>/dev/null || true
     done
+    info "Stopped all init.d services"
 
     # Kill any lingering processes by name
     for proc in qmanager_poller qmanager_ping qmanager_watchcat \
@@ -196,7 +189,8 @@ stop_services() {
                 qmanager_wan_guard qmanager_low_power \
                 qmanager_low_power_check qmanager_scheduled_reboot \
                 qmanager_update qmanager_auto_update \
-                bridge_traffic_monitor_rm551 websocat; do
+                qmanager_dpi_install qmanager_dpi_verify \
+                bridge_traffic_monitor_rm551 websocat nfqws; do
         killall "$proc" 2>/dev/null || true
     done
 
@@ -209,17 +203,15 @@ stop_services() {
 remove_services() {
     step "Removing init.d services"
 
+    # Dynamic scan — catches services from any QManager version
     local removed=0
-    for svc in qmanager qmanager_eth_link qmanager_ttl qmanager_mtu \
-               qmanager_wan_guard qmanager_imei_check \
-               qmanager_tower_failover qmanager_low_power_check \
-               qmanager_watchcat qmanager_bandwidth; do
-        if [ -f "$INITD_DIR/$svc" ]; then
-            "$INITD_DIR/$svc" disable 2>/dev/null || true
-            rm -f "$INITD_DIR/$svc"
-            info "Removed /etc/init.d/$svc"
-            removed=$(( removed + 1 ))
-        fi
+    for f in "$INITD_DIR"/qmanager*; do
+        [ -f "$f" ] || continue
+        fname=$(basename "$f")
+        "$f" disable 2>/dev/null || true
+        rm -f "$f"
+        info "Removed /etc/init.d/$fname"
+        removed=$(( removed + 1 ))
     done
 
     # Clean up any leftover rc.d symlinks
@@ -250,10 +242,13 @@ remove_backend() {
         rm -f "$f"
         bin_count=$(( bin_count + 1 ))
     done
-    if [ -f "$BIN_DIR/bridge_traffic_monitor_rm551" ]; then
-        rm -f "$BIN_DIR/bridge_traffic_monitor_rm551"
-        bin_count=$(( bin_count + 1 ))
-    fi
+    # Non-qmanager-prefixed binaries
+    for extra in bridge_traffic_monitor_rm551 nfqws; do
+        if [ -f "$BIN_DIR/$extra" ]; then
+            rm -f "$BIN_DIR/$extra"
+            bin_count=$(( bin_count + 1 ))
+        fi
+    done
     info "Removed $bin_count binary/daemon file(s) from $BIN_DIR"
 
     # Remove shared libraries
@@ -289,6 +284,12 @@ remove_backend() {
         rm -f /etc/firewall.user.mtu
         info "Removed /etc/firewall.user.mtu"
     fi
+
+    # Remove nftables rules (DPI/nfqws)
+    nft list ruleset 2>/dev/null | grep -q "qmanager_dpi" && {
+        nft delete table inet qmanager_dpi 2>/dev/null || true
+        info "Removed nftables DPI rules"
+    }
 
     # Remove msmtp config
     if [ -f /etc/qmanager/msmtprc ]; then
@@ -371,14 +372,19 @@ remove_runtime_state() {
 
     # Lock, PID, and flag files
     rm -f /tmp/qmanager_*.lock \
+          /tmp/qmanager_*.pid \
           /tmp/qmanager_email_reload \
           /tmp/qmanager_imei_check_done \
-          /tmp/qmanager_update.pid \
           /tmp/qmanager_long_running \
           /tmp/qmanager_low_power_active \
           /tmp/qmanager_recovery_active \
-          /tmp/qmanager_watchcat.pid \
           /tmp/qm_spin_out \
+          2>/dev/null || true
+
+    # Staged update files
+    rm -f /tmp/qmanager_staged.tar.gz \
+          /tmp/qmanager_staged_version \
+          /tmp/qmanager_staged_sha256.txt \
           2>/dev/null || true
 
     # Bandwidth monitor runtime directory

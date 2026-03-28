@@ -22,7 +22,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Download,
-  Info,
   Loader2,
   Zap,
 } from "lucide-react";
