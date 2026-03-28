@@ -35,33 +35,21 @@ separator "TIER 1 — Combined: AT+QRSRP;+QRSRQ;+QSINR"
 qcmd 'AT+QRSRP;+QRSRQ;+QSINR' 2>/dev/null
 
 # --- Tier 2: Warm (every 30s) ---
+# These sections mirror the actual poller command groups.
 
-separator "TIER 2 — AT+QCAINFO (carrier aggregation — enable, read, disable)"
-qcmd 'AT+QCAINFO=1' 2>/dev/null
+separator "TIER 2 — AT+QCAINFO (enable + query)"
+qcmd 'AT+QCAINFO=1' >/dev/null 2>&1
 sleep 1
-qcmd 'AT+QCAINFO' 2>/dev/null
-qcmd 'AT+QCAINFO=0' 2>/dev/null
+qcmd_exec 'AT+QCAINFO' 2>/dev/null
 
-separator "TIER 2 — Combined: AT+QCAINFO=1;+QCAINFO;+QCAINFO=0"
-qcmd_exec 'AT+QCAINFO=1;+QCAINFO;+QCAINFO=0' 2>/dev/null
+separator "TIER 2 — Group 1: AT+CGCONTRDP;+QMAP=\"WWAN\" (APN + WAN IPs)"
+qcmd 'AT+CGCONTRDP;+QMAP="WWAN"' 2>/dev/null
 
-separator "TIER 2 — AT+QNWCFG=\"lte_time_advance\" (LTE timing advance)"
-qcmd 'AT+QNWCFG="lte_time_advance"' 2>/dev/null
+separator "TIER 2 — Group 2: NR timing + MIMO"
+qcmd 'AT+QNWCFG="nr5g_time_advance";+QNWCFG="nr5g_mimo_layers"' 2>/dev/null
 
-separator "TIER 2 — AT+QNWCFG=\"nr5g_time_advance\" (NR timing advance)"
-qcmd 'AT+QNWCFG="nr5g_time_advance"' 2>/dev/null
-
-separator "TIER 2 — AT+QNWCFG=\"lte_mimo_layers\" (LTE MIMO)"
-qcmd 'AT+QNWCFG="lte_mimo_layers"' 2>/dev/null
-
-separator "TIER 2 — AT+QNWCFG=\"nr5g_mimo_layers\" (NR MIMO)"
-qcmd 'AT+QNWCFG="nr5g_mimo_layers"' 2>/dev/null
-
-separator "TIER 2 — AT+CGCONTRDP (PDP context details)"
-qcmd 'AT+CGCONTRDP' 2>/dev/null
-
-separator "TIER 2 — AT+QMAP=\"WWAN\" (active data CID)"
-qcmd 'AT+QMAP="WWAN"' 2>/dev/null
+separator "TIER 2 — Group 3: LTE timing + MIMO"
+qcmd 'AT+QNWCFG="lte_time_advance";+QNWCFG="lte_mimo_layers"' 2>/dev/null
 
 # --- Tier 3: Cold (every 60s) ---
 

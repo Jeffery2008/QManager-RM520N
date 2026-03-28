@@ -606,7 +606,10 @@ parse_ca_info() {
                     if [ "$nfields" -ge 12 ]; then
                         local raw_snr
                         raw_snr=$(printf '%s' "$csv" | cut -d',' -f12)
-                        cc_sinr=$(printf '%s' "$raw_snr" | awk '{if($1+0==$1) printf "%.1f", $1/100; else print "null"}')
+                        case "$raw_snr" in
+                            -32768) cc_sinr="null" ;;
+                            *) cc_sinr=$(printf '%s' "$raw_snr" | awk '{if($1+0==$1) printf "%.1f", $1/100; else print "null"}') ;;
+                        esac
                     fi
                 else
                     # Short form (PCC or old SCC):
@@ -617,7 +620,10 @@ parse_ca_info() {
                     if [ "$nfields" -ge 8 ]; then
                         local raw_snr
                         raw_snr=$(printf '%s' "$csv" | cut -d',' -f8)
-                        cc_sinr=$(printf '%s' "$raw_snr" | awk '{if($1+0==$1) printf "%.1f", $1/100; else print "null"}')
+                        case "$raw_snr" in
+                            -32768) cc_sinr="null" ;;
+                            *) cc_sinr=$(printf '%s' "$raw_snr" | awk '{if($1+0==$1) printf "%.1f", $1/100; else print "null"}') ;;
+                        esac
                     fi
                 fi
                 ;;

@@ -478,11 +478,11 @@ collect_boot_data() {
     fi
 
     # =========================================================================
-    # Group B: Enables + post-enable reads — compound AT (11 → 1 call)
-    # First 4 sub-commands are idempotent writes (enable MIMO/TA reporting).
+    # Group B: Enables + post-enable reads — compound AT (12 → 1 call)
+    # First 5 sub-commands are idempotent writes (enable MIMO/TA/CA reporting).
     # Modem processes sequentially, so enables are active before reads.
     # =========================================================================
-    result=$(qcmd 'AT+QNWCFG="lte_mimo_layers",1;+QNWCFG="nr5g_mimo_layers",1;+QNWCFG="lte_time_advance",1;+QNWCFG="nr5g_time_advance",1;+QNWCFG="lte_mimo_layers";+QNWCFG="nr5g_mimo_layers";+QMAP="MPDN_RULE";+QMAP="IPPT_NAT";+QCFG="usbnet";+QMAP="DHCPV4DNS"' 2>/dev/null)
+    result=$(qcmd 'AT+QCAINFO=1;+QNWCFG="lte_mimo_layers",1;+QNWCFG="nr5g_mimo_layers",1;+QNWCFG="lte_time_advance",1;+QNWCFG="nr5g_time_advance",1;+QNWCFG="lte_mimo_layers";+QNWCFG="nr5g_mimo_layers";+QMAP="MPDN_RULE";+QMAP="IPPT_NAT";+QCFG="usbnet";+QMAP="DHCPV4DNS"' 2>/dev/null)
 
     if [ -n "$result" ]; then
         # MIMO layers (parser greps for each prefix independently)
@@ -667,57 +667,45 @@ poll_tier2() {
     fi
     sleep "$SIP_DELAY"
 
-    # Carrier Aggregation — AT+QCAINFO=1;+QCAINFO;+QCAINFO=0
-    result=$(qcmd_exec 'AT+QCAINFO=1;+QCAINFO;+QCAINFO=0')
-    if [ $? -eq 0 ]; then
-        parse_ca_info "$result"
-    else
-        t2_ca_active=false
-        t2_ca_count=0
-        t2_nr_ca_active=false
-        t2_nr_ca_count=0
-        t2_total_bandwidth_mhz=0
-        t2_bandwidth_details=""
-        t2_carrier_components="[]"
-    fi
-    sleep "$SIP_DELAY"
+    # Network info split into 3 independent groups so that LTE errors
+    # (in SA mode) or NR errors (in LTE-only) cannot kill the whole chain.
 
-    # Compound AT: network info queries in one call.
-    # NR commands are last — they may ERROR when not on 5G; placing them
-    # last ensures LTE/general responses are preserved if the modem aborts.
-    result=$(qcmd 'AT+QNWCFG="lte_time_advance";+QNWCFG="lte_mimo_layers";+CGCONTRDP;+QMAP="WWAN";+QNWCFG="nr5g_time_advance";+QNWCFG="nr5g_mimo_layers"' 2>/dev/null)
-
+    # --- Group 1: APN + WAN IPs (always safe, mode-independent) ---
+    result=$(qcmd 'AT+CGCONTRDP;+QMAP="WWAN"' 2>/dev/null)
     if [ -n "$result" ]; then
-        # Timing advance (parser handles both LTE and NR from same blob)
-        parse_time_advance "$result"
-
-        # MIMO layers (parser greps for each prefix independently)
-        parse_mimo "$result" "$result"
-
-        # APN + DNS
         if printf '%s\n' "$result" | grep -q '+CGCONTRDP:'; then
             parse_cgcontrdp "$result"
         else
-            t2_apn=""
-            t2_primary_dns=""
-            t2_secondary_dns=""
+            t2_apn="" ; t2_primary_dns="" ; t2_secondary_dns=""
         fi
-
-        # WAN IP addresses
         if printf '%s\n' "$result" | grep -q '+QMAP:'; then
             parse_wan_ip "$result"
         else
-            t2_wan_ipv4=""
-            t2_wan_ipv6=""
+            t2_wan_ipv4="" ; t2_wan_ipv6=""
         fi
     else
-        lte_ta=""
+        t2_apn="" ; t2_primary_dns="" ; t2_secondary_dns=""
+        t2_wan_ipv4="" ; t2_wan_ipv6=""
+    fi
+    sleep "$SIP_DELAY"
+
+    # --- Group 2: NR timing + MIMO (fails gracefully in LTE-only) ---
+    result=$(qcmd 'AT+QNWCFG="nr5g_time_advance";+QNWCFG="nr5g_mimo_layers"' 2>/dev/null)
+    if [ -n "$result" ]; then
+        parse_time_advance "$result"
+        parse_mimo "" "$result"
+    else
         nr_ta=""
-        t2_apn=""
-        t2_primary_dns=""
-        t2_secondary_dns=""
-        t2_wan_ipv4=""
-        t2_wan_ipv6=""
+    fi
+    sleep "$SIP_DELAY"
+
+    # --- Group 3: LTE timing + MIMO (fails gracefully in SA) ---
+    result=$(qcmd 'AT+QNWCFG="lte_time_advance";+QNWCFG="lte_mimo_layers"' 2>/dev/null)
+    if [ -n "$result" ]; then
+        parse_time_advance "$result"
+        parse_mimo "$result" ""
+    else
+        lte_ta=""
     fi
 }
 
@@ -1252,6 +1240,22 @@ poll_cycle() {
 
     # Tier 1 (AT commands — may block if modem is unresponsive)
     poll_serving_cell
+    sleep "$SIP_DELAY"
+
+    # Carrier Aggregation — QCAINFO reporting enabled at boot (Group B).
+    local ca_result
+    ca_result=$(qcmd_exec 'AT+QCAINFO')
+    if [ $? -eq 0 ] && [ -n "$ca_result" ]; then
+        parse_ca_info "$ca_result"
+    else
+        t2_ca_active=false
+        t2_ca_count=0
+        t2_nr_ca_active=false
+        t2_nr_ca_count=0
+        t2_total_bandwidth_mhz=0
+        t2_bandwidth_details=""
+        t2_carrier_components="[]"
+    fi
     sleep "$SIP_DELAY"
 
     # CFUN — standalone query every cycle (compound commands timeout in CFUN=0)
