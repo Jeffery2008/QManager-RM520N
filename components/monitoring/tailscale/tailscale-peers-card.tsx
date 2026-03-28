@@ -23,7 +23,7 @@ const MotionTableRow = motion.create(TableRow);
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UsersIcon, ShieldIcon, AlertCircle } from "lucide-react";
+import { UsersIcon, ShieldIcon, AlertCircle, CheckCircle2Icon, MinusCircleIcon } from "lucide-react";
 import type { TailscaleStatus, TailscalePeer } from "@/hooks/use-tailscale";
 
 // =============================================================================
@@ -226,11 +226,17 @@ export function TailscalePeersCard({
                     {capitalizeOS(peer.os)}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={peer.online ? "success" : "secondary"}
-                    >
-                      {peer.online ? "Online" : "Offline"}
-                    </Badge>
+                    {peer.online ? (
+                      <Badge variant="outline" className="bg-success/15 text-success hover:bg-success/20 border-success/30">
+                        <CheckCircle2Icon className="h-3 w-3" />
+                        Online
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-muted-foreground/30">
+                        <MinusCircleIcon className="h-3 w-3" />
+                        Offline
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="hidden @md/card:table-cell text-xs text-muted-foreground">
                     {formatLastSeen(peer.last_seen, peer.online)}

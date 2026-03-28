@@ -37,6 +37,9 @@ import {
   AlertCircle,
   RefreshCcwIcon,
   AlertTriangleIcon,
+  CheckCircle2Icon,
+  MinusCircleIcon,
+  LogInIcon,
 } from "lucide-react";
 import type { UseTailscaleReturn } from "@/hooks/use-tailscale";
 
@@ -265,7 +268,8 @@ export function TailscaleConnectionCard({
               <p className="text-sm font-semibold text-muted-foreground">
                 Service
               </p>
-              <Badge className="bg-muted text-muted-foreground border-border">
+              <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-muted-foreground/30">
+                <MinusCircleIcon className="h-3 w-3" />
                 Stopped
               </Badge>
             </div>
@@ -317,7 +321,8 @@ export function TailscaleConnectionCard({
               <p className="text-sm font-semibold text-muted-foreground">
                 Status
               </p>
-              <Badge className="bg-warning text-warning-foreground border-warning">
+              <Badge variant="outline" className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
+                <LogInIcon className="h-3 w-3" />
                 Needs Login
               </Badge>
             </div>
@@ -495,7 +500,8 @@ export function TailscaleConnectionCard({
               <p className="text-sm font-semibold text-muted-foreground">
                 Status
               </p>
-              <Badge variant="success">
+              <Badge variant="outline" className="bg-success/15 text-success hover:bg-success/20 border-success/30">
+                <CheckCircle2Icon className="h-3 w-3" />
                 Connected
               </Badge>
             </div>
@@ -605,7 +611,8 @@ export function TailscaleConnectionCard({
             <p className="text-sm font-semibold text-muted-foreground">
               Status
             </p>
-            <Badge className="bg-muted text-muted-foreground border-border">
+            <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-muted-foreground/30">
+              <MinusCircleIcon className="h-3 w-3" />
               Disconnected
             </Badge>
           </div>

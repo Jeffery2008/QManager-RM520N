@@ -29,7 +29,7 @@ const MotionTableRow = motion.create(TableRow);
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCcwIcon, Clock, MailIcon, AlertCircle } from "lucide-react";
+import { RefreshCcwIcon, Clock, MailIcon, AlertCircle, CheckCircle2Icon, XCircleIcon } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
@@ -283,13 +283,17 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          entry.status === "sent" ? "success" : "destructive"
-                        }
-                      >
-                        {entry.status === "sent" ? "Sent" : "Failed"}
-                      </Badge>
+                      {entry.status === "sent" ? (
+                        <Badge variant="outline" className="bg-success/15 text-success hover:bg-success/20 border-success/30">
+                          <CheckCircle2Icon className="h-3 w-3" />
+                          Sent
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30">
+                          <XCircleIcon className="h-3 w-3" />
+                          Failed
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="hidden @md/card:table-cell text-sm text-muted-foreground">
                       <span className="block truncate">{entry.recipient}</span>

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 
 import { CgEthernet } from "react-icons/cg";
-import { RefreshCcwIcon, Loader2, AlertCircle, CheckIcon } from "lucide-react";
+import { RefreshCcwIcon, Loader2, AlertCircle, CheckIcon, CheckCircle2Icon, XCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSaveFlash } from "@/components/ui/save-button";
 import { Badge } from "@/components/ui/badge";
@@ -382,11 +382,17 @@ const EthernetStatusCard = () => {
               <p className="font-semibold text-muted-foreground @sm/card:text-base text-sm">
                 Link Status
               </p>
-              <Badge
-                variant={isConnected ? "success" : "destructive"}
-              >
-                {isConnected ? "Connected" : "Disconnected"}
-              </Badge>
+              {isConnected ? (
+                <Badge variant="outline" className="bg-success/15 text-success hover:bg-success/20 border-success/30">
+                  <CheckCircle2Icon className="h-3 w-3" />
+                  Connected
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30">
+                  <XCircleIcon className="h-3 w-3" />
+                  Disconnected
+                </Badge>
+              )}
             </div>
             <Separator />
             <div className="flex items-center justify-between">

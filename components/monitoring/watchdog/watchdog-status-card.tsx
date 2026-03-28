@@ -26,7 +26,17 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DogIcon, InfoIcon, Loader2 } from "lucide-react";
+import {
+  DogIcon,
+  InfoIcon,
+  Loader2,
+  CheckCircle2Icon,
+  TriangleAlertIcon,
+  AlertCircleIcon,
+  ClockIcon,
+  LockIcon,
+  MinusCircleIcon,
+} from "lucide-react";
 import { useModemStatus } from "@/hooks/use-modem-status";
 import { formatTimeAgo } from "@/types/modem-status";
 import type { WatchcatState } from "@/types/modem-status";
@@ -39,32 +49,43 @@ interface WatchdogStatusCardProps {
 
 const STATE_BADGE_CONFIG: Record<
   WatchcatState,
-  { label: string; variant: "success" | "warning" | "destructive" | "info" | "secondary"; className?: string }
+  { label: string; variant: "outline"; className: string; icon: React.ReactNode }
 > = {
   monitor: {
     label: "Monitoring",
-    variant: "success",
+    variant: "outline",
+    className: "bg-success/15 text-success hover:bg-success/20 border-success/30",
+    icon: <CheckCircle2Icon className="h-3 w-3" />,
   },
   suspect: {
     label: "Detecting Issue",
-    variant: "warning",
+    variant: "outline",
+    className: "bg-warning/15 text-warning hover:bg-warning/20 border-warning/30",
+    icon: <TriangleAlertIcon className="h-3 w-3" />,
   },
   recovery: {
     label: "Recovering",
-    variant: "destructive",
-    className: "animate-pulse motion-reduce:animate-none",
+    variant: "outline",
+    className: "bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30 animate-pulse motion-reduce:animate-none",
+    icon: <AlertCircleIcon className="h-3 w-3" />,
   },
   cooldown: {
     label: "Cooldown",
-    variant: "info",
+    variant: "outline",
+    className: "bg-info/15 text-info hover:bg-info/20 border-info/30",
+    icon: <ClockIcon className="h-3 w-3" />,
   },
   locked: {
     label: "Locked",
-    variant: "secondary",
+    variant: "outline",
+    className: "bg-muted/50 text-muted-foreground border-muted-foreground/30",
+    icon: <LockIcon className="h-3 w-3" />,
   },
   disabled: {
     label: "Disabled",
-    variant: "secondary",
+    variant: "outline",
+    className: "bg-muted/50 text-muted-foreground border-muted-foreground/30",
+    icon: <MinusCircleIcon className="h-3 w-3" />,
   },
 };
 
@@ -238,7 +259,7 @@ export function WatchdogStatusCard({
                 exit={{ opacity: 0, scale: 0.88 }}
                 transition={{ duration: 0.18, type: "spring", stiffness: 400, damping: 24 }}
               >
-                <Badge variant={badge.variant} className={badge.className}>{badge.label}</Badge>
+                <Badge variant={badge.variant} className={badge.className}>{badge.icon}{badge.label}</Badge>
               </motion.div>
             </AnimatePresence>
           </div>

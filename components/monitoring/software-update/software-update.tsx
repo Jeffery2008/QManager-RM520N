@@ -15,7 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   CheckIcon,
+  CheckCircle2Icon,
   AlertTriangleIcon,
+  TriangleAlertIcon,
   DownloadIcon,
   LoaderCircle,
   RefreshCwIcon,
@@ -43,31 +45,31 @@ export function StatusBadge({
 }) {
   if (isUpdating && updateStatus.status !== "error") {
     return (
-      <Badge variant="info">
-        <DownloadIcon />
+      <Badge variant="outline" className="bg-info/15 text-info hover:bg-info/20 border-info/30">
+        <DownloadIcon className="h-3 w-3" />
         Updating
       </Badge>
     );
   }
   if (isDownloading) {
     return (
-      <Badge variant="info">
-        <DownloadIcon />
+      <Badge variant="outline" className="bg-info/15 text-info hover:bg-info/20 border-info/30">
+        <DownloadIcon className="h-3 w-3" />
         Downloading
       </Badge>
     );
   }
   if (updateAvailable) {
     return (
-      <Badge variant="warning">
-        <AlertTriangleIcon />
+      <Badge variant="outline" className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
+        <TriangleAlertIcon className="h-3 w-3" />
         Update available
       </Badge>
     );
   }
   return (
-    <Badge variant="success">
-      <CheckIcon />
+    <Badge variant="outline" className="bg-success/15 text-success hover:bg-success/20 border-success/30">
+      <CheckCircle2Icon className="h-3 w-3" />
       Up to date
     </Badge>
   );
