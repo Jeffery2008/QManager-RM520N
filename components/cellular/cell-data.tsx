@@ -90,20 +90,82 @@ function decToHex(value: number | null): string {
 }
 
 /**
- * Truncate an IPv6 address for display.
- * e.g. "2607:f8b0:4005:805::200e" → "2607:f8b0:4...::200e"
+ * Normalize an IPv6 address to RFC 5952 compressed form.
+ * Handles both standard colon notation and Quectel's dotted-decimal
+ * octet format (16 dot-separated bytes from AT+CGCONTRDP).
+ *
+ * Examples:
+ *   "253.0.151.106.0.0.0.0.0.0.0.0.0.0.0.9" → "fd00:9b6a::9"
+ *   "2607:fb90:0000:0000:0000:0000:0000:c505" → "2607:fb90::c505"
+ *   "10.151.151.44" (IPv4, 4 octets) → returned as-is
  */
-function truncateIpv6(ip: string): string {
-  if (!ip || ip.length <= 20) return ip || "-";
-  // Find the :: separator if present
-  const dcIdx = ip.indexOf("::");
-  if (dcIdx !== -1) {
-    const prefix = ip.substring(0, Math.min(dcIdx, 11));
-    const suffix = ip.substring(dcIdx);
-    return `${prefix}...${suffix}`;
+function compressIPv6(ip: string): string {
+  if (!ip) return "-";
+
+  let groups: string[];
+
+  // Detect Quectel dotted-decimal IPv6: exactly 16 dot-separated decimal octets
+  const dotParts = ip.split(".");
+  if (dotParts.length === 16 && dotParts.every((p) => /^\d{1,3}$/.test(p))) {
+    // Pair octets into 8 hex groups
+    groups = [];
+    for (let i = 0; i < 16; i += 2) {
+      const hi = parseInt(dotParts[i], 10);
+      const lo = parseInt(dotParts[i + 1], 10);
+      groups.push(((hi << 8) | lo).toString(16));
+    }
+  } else if (ip.includes(":")) {
+    // Standard colon notation — expand :: to full 8 groups first
+    const halves = ip.split("::");
+    if (halves.length === 2) {
+      const left = halves[0] ? halves[0].split(":") : [];
+      const right = halves[1] ? halves[1].split(":") : [];
+      const fill = 8 - left.length - right.length;
+      groups = [...left, ...Array(fill).fill("0"), ...right];
+    } else {
+      groups = ip.split(":");
+    }
+    // Strip leading zeros from each group
+    groups = groups.map((g) => (parseInt(g, 16) || 0).toString(16));
+  } else {
+    // IPv4 or unknown — return as-is
+    return ip;
   }
-  // No :: — truncate middle
-  return `${ip.substring(0, 11)}...${ip.substring(ip.length - 5)}`;
+
+  // Find longest run of consecutive "0" groups (RFC 5952: use :: for first longest)
+  let bestStart = -1,
+    bestLen = 0,
+    curStart = -1,
+    curLen = 0;
+  for (let i = 0; i < groups.length; i++) {
+    if (groups[i] === "0") {
+      if (curStart === -1) curStart = i;
+      curLen++;
+    } else {
+      if (curLen > bestLen) {
+        bestStart = curStart;
+        bestLen = curLen;
+      }
+      curStart = -1;
+      curLen = 0;
+    }
+  }
+  if (curLen > bestLen) {
+    bestStart = curStart;
+    bestLen = curLen;
+  }
+
+  // Collapse the longest zero run into ::
+  if (bestLen >= 2) {
+    const left = groups.slice(0, bestStart).join(":");
+    const right = groups.slice(bestStart + bestLen).join(":");
+    if (!left && !right) return "::";
+    if (!left) return "::" + right;
+    if (!right) return left + "::";
+    return left + "::" + right;
+  }
+
+  return groups.join(":");
 }
 
 // =============================================================================
@@ -381,7 +443,7 @@ const CellDataComponent = ({
               WAN IPv6
             </p>
             <div className="flex items-center gap-1.5">
-              {network?.wan_ipv6 && network.wan_ipv6.length > 20 ? (
+              {network?.wan_ipv6 && compressIPv6(network.wan_ipv6) !== network.wan_ipv6 ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button type="button" className="inline-flex" aria-label="More info">
@@ -394,7 +456,7 @@ const CellDataComponent = ({
                 </Tooltip>
               ) : null}
               <p className="text-sm font-semibold font-mono">
-                {network?.wan_ipv6 ? truncateIpv6(network.wan_ipv6) : "-"}
+                {network?.wan_ipv6 ? compressIPv6(network.wan_ipv6) : "-"}
               </p>
             </div>
           </motion.div>
@@ -409,9 +471,23 @@ const CellDataComponent = ({
             <p className="text-sm font-semibold text-muted-foreground">
               Primary DNS
             </p>
-            <p className="text-sm font-semibold font-mono">
-              {network?.primary_dns || "-"}
-            </p>
+            <div className="flex items-center gap-1.5">
+              {network?.primary_dns && compressIPv6(network.primary_dns) !== network.primary_dns ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="inline-flex" aria-label="More info">
+                      <TbInfoCircleFilled className="size-5 text-info" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-mono">{network.primary_dns}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+              <p className="text-sm font-semibold font-mono">
+                {network?.primary_dns ? compressIPv6(network.primary_dns) : "-"}
+              </p>
+            </div>
           </motion.div>
 
           {/* Secondary DNS */}
@@ -424,9 +500,23 @@ const CellDataComponent = ({
             <p className="text-sm font-semibold text-muted-foreground">
               Secondary DNS
             </p>
-            <p className="text-sm font-semibold font-mono">
-              {network?.secondary_dns || "-"}
-            </p>
+            <div className="flex items-center gap-1.5">
+              {network?.secondary_dns && compressIPv6(network.secondary_dns) !== network.secondary_dns ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="inline-flex" aria-label="More info">
+                      <TbInfoCircleFilled className="size-5 text-info" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-mono">{network.secondary_dns}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+              <p className="text-sm font-semibold font-mono">
+                {network?.secondary_dns ? compressIPv6(network.secondary_dns) : "-"}
+              </p>
+            </div>
           </motion.div>
           <Separator />
         </motion.div>
