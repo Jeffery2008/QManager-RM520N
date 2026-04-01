@@ -414,7 +414,17 @@ const CellDataComponent = ({
             <p className="text-sm font-semibold text-muted-foreground">
               Active MIMO
             </p>
-            <p className="text-sm font-semibold">{device?.mimo || "-"}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold">{device?.mimo || "-"}</p>
+              <Button
+                variant="link"
+                size="sm"
+                className="p-0.5 cursor-pointer"
+                asChild
+              >
+                <Link href="/cellular/antenna-statistics">Per-Antenna</Link>
+              </Button>
+            </div>
           </motion.div>
 
           {/* WAN IPv4 */}
