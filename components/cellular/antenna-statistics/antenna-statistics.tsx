@@ -39,12 +39,12 @@ const ANTENNA_LABELS = [
   { name: "MIMO 4", rx: "RX3" },
 ] as const;
 
-const QUALITY_COLORS: Record<string, string> = {
-  excellent: "text-success",
-  good: "text-success",
-  fair: "text-warning",
-  poor: "text-destructive",
-  none: "text-muted-foreground",
+const QUALITY_BAR_COLORS: Record<string, string> = {
+  excellent: "bg-success",
+  good: "bg-success",
+  fair: "bg-warning",
+  poor: "bg-destructive",
+  none: "bg-muted-foreground",
 };
 
 // =============================================================================
@@ -74,11 +74,26 @@ function fmtSignal(value: number | null, unit: string): string {
 // =============================================================================
 
 /** Animated progress bar (spring scaleX) — matches active-bands.tsx pattern */
-function AnimatedProgress({ value }: { value: number }) {
+function AnimatedProgress({
+  value,
+  label,
+  barColor = "bg-primary",
+}: {
+  value: number;
+  label: string;
+  barColor?: string;
+}) {
   return (
-    <div className="h-1.5 flex-1 min-w-0 overflow-hidden rounded-full bg-secondary">
+    <div
+      className="h-1.5 flex-1 min-w-0 overflow-hidden rounded-full bg-secondary"
+      role="progressbar"
+      aria-valuenow={Math.round(value)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={label}
+    >
       <motion.div
-        className="h-full rounded-full bg-primary"
+        className={`h-full rounded-full ${barColor}`}
         initial={{ scaleX: 0 }}
         animate={{ scaleX: value / 100 }}
         style={{ originX: 0 }}
@@ -108,10 +123,12 @@ function MetricRow({
       <span className="text-xs uppercase tracking-wide text-muted-foreground w-10 shrink-0">
         {label}
       </span>
-      <AnimatedProgress value={progress} />
-      <span
-        className={`text-sm font-semibold tabular-nums min-w-17 text-right shrink-0 ${QUALITY_COLORS[quality]}`}
-      >
+      <AnimatedProgress
+        value={progress}
+        label={`${label} signal strength`}
+        barColor={QUALITY_BAR_COLORS[quality]}
+      />
+      <span className="text-sm font-semibold tabular-nums min-w-17 text-right shrink-0">
         {fmtSignal(value, unit)}
       </span>
     </div>
@@ -135,7 +152,7 @@ function AntennaSection({
   const isInactive = rsrp === null && rsrq === null && sinr === null;
 
   return (
-    <div className={isInactive ? "opacity-25" : undefined}>
+    <div className={isInactive ? "opacity-25" : ""}>
       <div className="flex items-baseline gap-1.5 mb-2">
         <span className="text-base font-semibold">{name}</span>
         <span className="text-xs text-muted-foreground">{rx}</span>
@@ -250,13 +267,13 @@ function AntennaStatsSkeleton() {
             <div className="divide-y divide-border">
               {[0, 1, 2, 3].map((j) => (
                 <div key={j} className={j === 0 ? "pb-3" : "py-3"}>
-                  <Skeleton className="h-4 w-24 mb-2" />
+                  <Skeleton className="h-5 w-24 mb-2" />
                   <div className="grid gap-1.5">
                     {[0, 1, 2].map((k) => (
                       <div key={k} className="flex items-center gap-2">
-                        <Skeleton className="h-3 w-9" />
+                        <Skeleton className="h-3.5 w-10" />
                         <Skeleton className="h-1.5 flex-1" />
-                        <Skeleton className="h-3 w-15" />
+                        <Skeleton className="h-4 w-17" />
                       </div>
                     ))}
                   </div>
