@@ -257,34 +257,34 @@ export interface TrafficStatus {
 
 /** Signal quality thresholds for UI indicators */
 export interface SignalThresholds {
-  excellent: number;
-  good: number;
-  fair: number;
-  poor: number;
+  Excellent: number;
+  Good: number;
+  Fair: number;
+  Poor: number;
 }
 
 /** RSRP thresholds (dBm) — higher (less negative) is better */
 export const RSRP_THRESHOLDS: SignalThresholds = {
-  excellent: -80,
-  good: -100,
-  fair: -110,
-  poor: -140,
+  Excellent: -80,
+  Good: -100,
+  Fair: -110,
+  Poor: -140,
 };
 
 /** RSRQ thresholds (dB) — higher (less negative) is better */
 export const RSRQ_THRESHOLDS: SignalThresholds = {
-  excellent: -5,
-  good: -10,
-  fair: -15,
-  poor: -20,
+  Excellent: -5,
+  Good: -10,
+  Fair: -15,
+  Poor: -20,
 };
 
 /** SINR thresholds (dB) — higher is better */
 export const SINR_THRESHOLDS: SignalThresholds = {
-  excellent: 20,
-  good: 13,
-  fair: 0,
-  poor: -20,
+  Excellent: 20,
+  Good: 13,
+  Fair: 0,
+  Poor: -20,
 };
 
 /**
@@ -294,12 +294,12 @@ export const SINR_THRESHOLDS: SignalThresholds = {
 export function getSignalQuality(
   value: number | null,
   thresholds: SignalThresholds
-): "excellent" | "good" | "fair" | "poor" | "none" {
-  if (value === null || value === undefined) return "none";
-  if (value >= thresholds.excellent) return "excellent";
-  if (value >= thresholds.good) return "good";
-  if (value >= thresholds.fair) return "fair";
-  return "poor";
+): "Excellent" | "Good" | "Fair" | "Poor" | "None" {
+  if (value === null || value === undefined) return "None";
+  if (value >= thresholds.Excellent) return "Excellent";
+  if (value >= thresholds.Good) return "Good";
+  if (value >= thresholds.Fair) return "Fair";
+  return "Poor";
 }
 
 export type ConnectivityState =
@@ -430,10 +430,10 @@ export interface PingHistoryEntry {
 
 /** Latency quality thresholds (ms) — lower is better */
 export const LATENCY_THRESHOLDS = {
-  excellent: 30,
-  good: 60,
-  fair: 100,
-  poor: Infinity,
+  Excellent: 30,
+  Good: 60,
+  Fair: 100,
+  Poor: Infinity,
 } as const;
 
 /**
@@ -442,12 +442,12 @@ export const LATENCY_THRESHOLDS = {
  */
 export function getLatencyQuality(
   latencyMs: number | null
-): "excellent" | "good" | "fair" | "poor" | "none" {
-  if (latencyMs === null || latencyMs === undefined) return "none";
-  if (latencyMs <= LATENCY_THRESHOLDS.excellent) return "excellent";
-  if (latencyMs <= LATENCY_THRESHOLDS.good) return "good";
-  if (latencyMs <= LATENCY_THRESHOLDS.fair) return "fair";
-  return "poor";
+): "Excellent" | "Good" | "Fair" | "Poor" | "None" {
+  if (latencyMs === null || latencyMs === undefined) return "None";
+  if (latencyMs <= LATENCY_THRESHOLDS.Excellent) return "Excellent";
+  if (latencyMs <= LATENCY_THRESHOLDS.Good) return "Good";
+  if (latencyMs <= LATENCY_THRESHOLDS.Fair) return "Fair";
+  return "Poor";
 }
 
 /**
@@ -636,10 +636,10 @@ export function signalToProgress(
   thresholds: SignalThresholds
 ): number {
   if (value === null || value === undefined) return 0;
-  // Map from [poor, excellent] → [0, 100]
-  const range = thresholds.excellent - thresholds.poor;
+  // Map from [Poor, Excellent] → [0, 100]
+  const range = thresholds.Excellent - thresholds.Poor;
   if (range === 0) return 50;
-  const pct = ((value - thresholds.poor) / range) * 100;
+  const pct = ((value - thresholds.Poor) / range) * 100;
   return Math.max(0, Math.min(100, pct));
 }
 

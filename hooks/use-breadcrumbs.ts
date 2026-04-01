@@ -14,6 +14,7 @@ const routeNameMap: Record<string, string> = {
   dashboard: 'Dashboard',
   home: 'Home',
   cellular: 'Cellular',
+  antenna: 'Antenna Measurements',
   sms: 'SMS Center',
   'custom-profiles': 'Custom Profiles',
   'connection-scenarios': 'Connection Scenarios',
