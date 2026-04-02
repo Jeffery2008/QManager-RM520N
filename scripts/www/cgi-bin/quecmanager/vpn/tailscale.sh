@@ -45,7 +45,17 @@ is_daemon_running() {
 }
 
 # --- Helper: check if tailscale is enabled on boot --------------------------
+# luci-app-tailscale uses UCI enabled flag as the authoritative control.
+# The init script's section_enabled() checks this, AND a WAN interface
+# trigger can fire reload even without the /etc/rc.d symlink.
 get_boot_enabled() {
+    local uci_enabled
+    uci_enabled=$(uci -q get tailscale.@tailscale[0].enabled 2>/dev/null)
+    if [ -n "$uci_enabled" ]; then
+        [ "$uci_enabled" = "1" ] && echo "true" || echo "false"
+        return
+    fi
+    # Fallback for non-luci-app installs: check init.d symlink
     if [ -x /etc/init.d/tailscale ]; then
         /etc/init.d/tailscale enabled && echo "true" || echo "false"
     else
@@ -478,10 +488,19 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         fi
         case "$boot_enabled" in
             true)
+                # Toggle UCI flag (authoritative for luci-app-tailscale)
+                if uci -q get tailscale.@tailscale[0] >/dev/null 2>&1; then
+                    uci set tailscale.@tailscale[0].enabled='1'
+                    uci commit tailscale
+                fi
                 /etc/init.d/tailscale enable >/dev/null 2>&1
                 qlog_info "Tailscale enabled on boot"
                 ;;
             false)
+                if uci -q get tailscale.@tailscale[0] >/dev/null 2>&1; then
+                    uci set tailscale.@tailscale[0].enabled='0'
+                    uci commit tailscale
+                fi
                 /etc/init.d/tailscale disable >/dev/null 2>&1
                 qlog_info "Tailscale disabled on boot"
                 ;;
