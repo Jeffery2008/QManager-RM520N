@@ -657,9 +657,6 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         # Disable boot entry if init script exists
         [ -x /etc/init.d/netbird ] && /etc/init.d/netbird disable >/dev/null 2>&1
 
-        # Remove firewall zone
-        vpn_fw_remove_zone "netbird"
-
         # Remove packages
         opkg remove netbird >/dev/null 2>&1
 
@@ -676,6 +673,12 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
         qlog_info "NetBird uninstalled successfully"
         cgi_success
+
+        # Remove firewall zone in background AFTER response is sent.
+        # vpn_fw_remove_zone restarts the firewall which kills the HTTP
+        # connection — doing it after cgi_success ensures the frontend
+        # receives a clean JSON response.
+        ( vpn_fw_remove_zone "netbird" ) </dev/null >/dev/null 2>&1 &
         exit 0
     fi
 

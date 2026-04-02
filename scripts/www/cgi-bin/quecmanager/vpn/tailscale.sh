@@ -276,7 +276,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             fi
 
             printf '{"success":true,"status":"running","message":"Installing tailscale..."}' > "$TS_INSTALL_RESULT"
-            if ! opkg install tailscale tailscaled >/dev/null 2>&1; then
+            if ! opkg install luci-app-tailscale >/dev/null 2>&1; then
                 printf '{"success":false,"status":"error","message":"opkg install failed","detail":"Package may not be available for this architecture"}' > "$TS_INSTALL_RESULT"
                 exit 1
             fi
@@ -516,11 +516,8 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         # Disable boot entry if init script exists
         [ -x /etc/init.d/tailscale ] && /etc/init.d/tailscale disable >/dev/null 2>&1
 
-        # Remove firewall zone
-        vpn_fw_remove_zone "tailscale"
-
         # Remove packages
-        opkg remove tailscale tailscaled >/dev/null 2>&1
+        opkg remove luci-app-tailscale >/dev/null 2>&1
 
         # Clean up state files
         rm -rf /var/lib/tailscale/
@@ -535,6 +532,12 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
         qlog_info "Tailscale uninstalled successfully"
         cgi_success
+
+        # Remove firewall zone in background AFTER response is sent.
+        # vpn_fw_remove_zone restarts the firewall which kills the HTTP
+        # connection — doing it after cgi_success ensures the frontend
+        # receives a clean JSON response.
+        ( vpn_fw_remove_zone "tailscale" ) </dev/null >/dev/null 2>&1 &
         exit 0
     fi
 
