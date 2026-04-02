@@ -355,8 +355,10 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         # Clean up old temp files
         rm -f "$AUTH_URL_FILE" "$TS_UP_OUTPUT"
 
-        # Run tailscale up in background, capturing JSON output
-        ( tailscale up --accept-routes --json > "$TS_UP_OUTPUT" 2>&1 ) &
+        # CRITICAL: NEVER use --accept-routes — it disconnects the device from
+        # the network entirely and requires a physical reboot to recover.
+        # Run tailscale up in background, capturing output for auth URL
+        ( tailscale up --accept-dns=false --json > "$TS_UP_OUTPUT" 2>&1 ) &
         ts_up_pid=$!
         echo "$ts_up_pid" > "$TS_UP_PID_FILE"
 
@@ -370,6 +372,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
                 state=$(jq -r 'select(.BackendState == "Running") | .BackendState' "$TS_UP_OUTPUT" 2>/dev/null | head -1)
                 if [ "$state" = "Running" ]; then
                     rm -f "$AUTH_URL_FILE" "$TS_UP_PID_FILE"
+                    vpn_fw_ensure_zone "tailscale" "tailscale0"
                     qlog_info "Tailscale already authenticated"
                     jq -n '{"success": true, "already_authenticated": true}'
                     exit 0
