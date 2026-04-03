@@ -421,3 +421,64 @@ Combine both frontend and backend steps above, then restart:
 ```bash
 ssh root@192.168.224.1 'reboot'
 ```
+
+---
+
+## RM520N-GL Deployment
+
+The RM520N-GL is a fundamentally different deployment target — QManager runs directly on the modem's internal Linux OS instead of on an external OpenWRT router.
+
+### Prerequisites (RM520N-GL)
+
+The RM520N-GL must have the following pre-installed (via the RGMII Toolkit):
+- **Entware** — Package manager at `/opt` (bind-mounted from `/usrdata/opt`)
+- **socat-at-bridge** — AT command transport layer (7 systemd services)
+- **lighttpd** — Web server with CGI and SSL support
+- **sudo** — For privileged operations from the `www-data` user
+
+These are installed by the [RGMII Toolkit](https://github.com/iamromulan/quectel-rgmii-toolkit) setup script.
+
+### Target Device Requirements
+
+| Requirement | Details |
+|------------|---------|
+| Platform | Quectel RM520N-GL (SDXLEMUR, ARMv7l) |
+| Kernel | 5.4.180+ |
+| Init system | systemd |
+| Package manager | Entware opkg |
+| Writable partition | `/usrdata/` (persistent) |
+| Web server | lighttpd (from Entware) |
+| AT bridge | socat-at-bridge running (smd11 and/or smd7) |
+| Shell | `/bin/bash` (native) |
+
+### Filesystem Layout
+
+All QManager files deploy to `/usrdata/` since the root filesystem is read-only:
+
+```
+/usrdata/
+├── qmanager/                       # Persistent config
+│   ├── config.json                 # Main configuration (replaces UCI)
+│   ├── profiles/                   # Custom SIM profiles
+│   └── ...
+├── www/                            # lighttpd document root
+│   ├── cgi-bin/quecmanager/        # CGI endpoints
+│   └── (Next.js static export)
+├── usr/
+│   ├── bin/                        # Daemons (qmanager_poller, etc.)
+│   └── lib/qmanager/              # Shared shell libraries
+└── opt/                            # Entware packages (bind-mount → /opt)
+```
+
+### Key Differences from OpenWRT Deployment
+
+| Aspect | OpenWRT (RM551E) | RM520N-GL |
+|--------|------------------|-----------|
+| Deploy target | `/www/`, `/etc/init.d/`, `/usr/bin/` | `/usrdata/www/`, systemd units, `/usrdata/usr/bin/` |
+| Service management | `service X enable && service X start` | `systemctl enable X && systemctl start X` |
+| Root filesystem | Writable | Read-only (`mount -o remount,rw /` for systemd unit install) |
+| Package install | `opkg install jq` | `opkg install jq` (Entware) |
+| Web server | uhttpd (built-in) | lighttpd (Entware, separate config) |
+| CGI config | uhttpd built-in | lighttpd `cgi.assign` in conf |
+
+> **See also:** [RM520N-GL Architecture Report](rm520n-gl-architecture.md) for the complete platform analysis and porting strategy.

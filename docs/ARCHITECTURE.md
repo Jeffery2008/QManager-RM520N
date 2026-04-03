@@ -292,3 +292,77 @@ The apply process runs asynchronously via `qmanager_profile_apply` daemon. The f
 | Timezone | UCI `system.@system[0].timezone/zonename` | UCI |
 | Auth password | `/etc/qmanager/shadow` | SHA-256 hash |
 | Sessions | `/tmp/qmanager_sessions/<token>` | One file per session |
+
+---
+
+## RM520N-GL Platform Variant
+
+QManager is being extended to support the Quectel RM520N-GL, which runs internally on the modem's own Linux OS rather than OpenWRT on an external host. This creates fundamental architectural differences.
+
+### System Overview (RM520N-GL)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                      Browser (Client)                     │
+│  ┌─────────────────────────────────────────────────────┐ │
+│  │            Next.js Static App (React 19)            │ │
+│  │  (Same frontend, platform-agnostic components)      │ │
+│  └──────────────┬──────────────────────────────────────┘ │
+└─────────────────┼────────────────────────────────────────┘
+                  │ HTTP GET/POST (HTTPS via lighttpd)
+                  ▼
+┌──────────────────────────────────────────────────────────┐
+│          RM520N-GL Modem (Vanilla Linux, systemd)         │
+│  ┌──────────────────────────────────────────────────────┐│
+│  │  lighttpd → /usrdata/www/cgi-bin/ (CGI)             ││
+│  │  ┌──────────────────────────────────────────────────┐│
+│  │  │ cgi_base.sh (adapted for vanilla Linux)         │││
+│  │  └──────────────────────────────────────────────────┘│
+│  │       │ reads cache      │ executes AT               ││
+│  │       ▼                  ▼                            ││
+│  │  /tmp/qmanager_    microcom + flock                   ││
+│  │  status.json       → /dev/ttyOUT ──┐                 ││
+│  │       ▲                             │                 ││
+│  │       │ writes every 2s             ▼                 ││
+│  │  ┌──────────────┐    socat PTY bridge                ││
+│  │  │  qmanager    │    ┌──────────┐  ┌──────────┐     ││
+│  │  │  poller      │    │/dev/smd11│  │/dev/smd7 │     ││
+│  │  │  (systemd)   │    └──────────┘  └──────────┘     ││
+│  │  └──────────────┘         └────────┬───────┘         ││
+│  │                              Modem AT Processor       ││
+│  └──────────────────────────────────────────────────────┘│
+└──────────────────────────────────────────────────────────┘
+```
+
+### AT Command Transport Comparison
+
+| Aspect | RM551E (OpenWRT) | RM520N-GL (Vanilla Linux) |
+|--------|------------------|---------------------------|
+| Tool | `qcmd` (wraps `sms_tool`) | `microcom -t <ms>` + `flock` |
+| Device | USB CDC ACM (host-side) | `/dev/ttyOUT` (smd11), `/dev/ttyOUT2` (smd7) |
+| Bridge | None needed | socat PTY pair + `cat` pipes (7 systemd services) |
+| Locking | Implicit per-process | Explicit `flock /var/lock/atcmd.lock` required |
+| Compound cmds | Semicolon batching via `qcmd` | Supported through same PTY interface |
+| Timeout | Configurable via `sms_tool` | `microcom -t <ms>` (millisecond precision) |
+
+### Platform Abstraction Strategy
+
+The AT command layer will be abstracted so both platforms can share the same CGI scripts and poller logic:
+
+1. **`qcmd` wrapper** — Each platform provides its own `/usr/bin/qcmd` (or equivalent) that accepts the same interface: `qcmd 'AT+COMMAND'`
+2. **Config abstraction** — UCI calls wrapped in helper functions that dispatch to file-based config on RM520N-GL
+3. **Init system** — procd init.d scripts have systemd `.service` counterparts
+4. **Shared frontend** — The React frontend is platform-agnostic; only backend scripts differ
+
+### Key Filesystem Differences
+
+| Purpose | RM551E (OpenWRT) | RM520N-GL |
+|---------|------------------|-----------|
+| Persistent config | `/etc/qmanager/` | `/usrdata/qmanager/` |
+| Temp/runtime | `/tmp/` | `/tmp/` (same) |
+| CGI scripts | `/www/cgi-bin/quecmanager/` | `/usrdata/www/cgi-bin/quecmanager/` |
+| Init scripts | `/etc/init.d/` | `/lib/systemd/system/` |
+| Shared libs | `/usr/lib/qmanager/` | `/usrdata/usr/lib/qmanager/` |
+| Frontend | `/www/` | `/usrdata/www/` |
+
+> **See also:** [RM520N-GL Architecture Report](rm520n-gl-architecture.md) for the complete platform analysis including socat bridge internals, systemd service graph, and porting strategy.

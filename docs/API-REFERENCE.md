@@ -20,6 +20,22 @@ All endpoints return JSON with a consistent structure:
 
 ---
 
+## Platform Notes
+
+### RM520N-GL Variant
+
+On the RM520N-GL, CGI endpoints are served by lighttpd instead of uhttpd, and AT commands go through the socat PTY bridge instead of `sms_tool`. The API contract (request/response format) remains the same — only the transport layer differs.
+
+Key differences:
+- **Base URL**: Same (`/cgi-bin/quecmanager/`), but served from `/usrdata/www/cgi-bin/quecmanager/`
+- **Auth**: Same cookie-based session mechanism (adapted for lighttpd)
+- **AT execution**: `microcom` + `flock` instead of `qcmd`/`sms_tool`
+- **UCI-dependent endpoints**: Features that read/write UCI config (watchdog, system settings, DPI, bandwidth monitor) require adaptation to file-based config on RM520N-GL
+
+Endpoints marked with "(OpenWRT only)" in the reference below are not available on the RM520N-GL variant.
+
+---
+
 ## Authentication
 
 ### GET `/auth/check.sh`

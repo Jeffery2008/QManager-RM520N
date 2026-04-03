@@ -1,6 +1,6 @@
 # QManager Documentation
 
-QManager is a modern web-based GUI for managing Quectel cellular modems on OpenWRT devices. It provides real-time signal monitoring, cellular configuration, network management, and advanced diagnostics through an intuitive interface.
+QManager is a modern web-based GUI for managing Quectel cellular modems. It supports two deployment targets: OpenWRT devices (RM551E-GL) and the Quectel RM520N-GL modem's internal Linux OS. It provides real-time signal monitoring, cellular configuration, network management, and advanced diagnostics through an intuitive interface.
 
 **Version:** v0.1.2
 **License:** MIT
@@ -18,6 +18,7 @@ QManager is a modern web-based GUI for managing Quectel cellular modems on OpenW
 | [API Reference](API-REFERENCE.md) | Complete CGI endpoint reference with request/response schemas |
 | [Design System](DESIGN-SYSTEM.md) | Colors, typography, components, theming, and UI conventions |
 | [Deployment Guide](DEPLOYMENT.md) | Building, installing, and deploying to OpenWRT devices |
+| [RM520N-GL Architecture](rm520n-gl-architecture.md) | AT command handling, system analysis, and porting guide for the RM520N-GL modem |
 
 ---
 
@@ -26,8 +27,10 @@ QManager is a modern web-based GUI for managing Quectel cellular modems on OpenW
 ### Prerequisites
 
 - [Bun](https://bun.sh/) (package manager and runtime)
-- Compatible Quectel modem (RM520N-GL, RM551E-GL, RM500Q, etc.)
-- OpenWRT device with the modem connected
+- Compatible Quectel modem:
+  - **RM551E-GL** (on OpenWRT host) — primary target
+  - **RM520N-GL** (standalone, internal Linux) — via `dev-rm520` branch
+  - Other Quectel modems on OpenWRT (RM500Q, etc.)
 
 ### Development
 
@@ -61,8 +64,8 @@ The `out/` directory contains the complete frontend — deploy it to the OpenWRT
 | **Charts** | Recharts 2.15 |
 | **Forms** | React Hook Form + Zod validation |
 | **Animations** | Motion (Framer Motion) |
-| **Backend** | OpenWRT CGI shell scripts (BusyBox /bin/sh) |
-| **AT Commands** | `qcmd` wrapper for Quectel modem communication |
+| **Backend** | CGI shell scripts — OpenWRT (BusyBox /bin/sh) or RM520N-GL (bash) |
+| **AT Commands** | `qcmd` wrapper — `sms_tool` (RM551E) or socat PTY bridge (RM520N-GL) |
 | **Package Manager** | Bun |
 
 ---
@@ -81,6 +84,7 @@ The `out/` directory contains the complete frontend — deploy it to the OpenWRT
 - **System Settings** — WAN Guard toggle, unit preferences (temp/distance), timezone, scheduled reboot, low power mode
 - **Tailscale VPN** — Status monitoring and management
 - **Dark/Light Mode** — Full theme support with OKLCH colors
+- **Multi-Platform** — Supports both OpenWRT (RM551E) and standalone RM520N-GL deployments
 
 ---
 
@@ -105,6 +109,7 @@ QManager/
 │   ├── usr/bin/            # Daemons & utilities (18)
 │   ├── usr/lib/qmanager/   # Shared libraries (10)
 │   └── www/cgi-bin/        # CGI endpoints (60 scripts)
+├── simpleadmin-source/     # Reference: original RM520N-GL admin panel
 └── docs/                   # This documentation
 ```
 

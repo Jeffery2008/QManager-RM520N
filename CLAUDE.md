@@ -51,6 +51,38 @@ All status badges use `variant="outline"` with semantic color classes and `size-
 - **Primary action buttons**: Use default variant (not outline) for main actions like Record, Save, Apply. Use `SaveButton` component for save-specific actions with loading animation.
 - **Step-based progress**: Use `Loader2Icon` spinner + dot indicators for step/sample progress. Reserve fill/progress bars for data visualization (signal strength, quality meters) only.
 
+## RM520N-GL Variant
+
+QManager is being extended to support the Quectel RM520N-GL modem. This variant runs vanilla Linux (SDXLEMUR, ARMv7l, kernel 5.4.180) internally — NOT OpenWRT on an external host. The `dev-rm520` branch contains this work.
+
+Key platform differences from RM551E (current target):
+
+### AT Command Transport
+
+- **RM551E**: `sms_tool` via USB, wrapped by `qcmd`
+- **RM520N-GL**: socat PTY bridge, accessed via `microcom -t <ms> /dev/ttyOUT` or `atcmd`
+- Two SMD channels: `/dev/smd11` (free, primary) and `/dev/smd7` (requires killing `port_bridge`)
+- Virtual TTY devices: `/dev/ttyOUT` (smd11) and `/dev/ttyOUT2` (smd7)
+- **CRITICAL: No locking in existing implementation — must add `flock` serialization**
+
+### System Differences
+
+| Concern | RM551E (OpenWRT) | RM520N-GL (Vanilla Linux) |
+|---------|-----------------|---------------------------|
+| Init system | procd | systemd (`.service` units) |
+| Config store | UCI | Files in `/usrdata/` (persistent partition) |
+| Root filesystem | Read-write | Read-only by default (`mount -o remount,rw /`) |
+| Shell | BusyBox sh (POSIX only) | `/bin/bash` available |
+| Web server | uhttpd | lighttpd (Entware) |
+| Firewall | nftables / fw4 | iptables direct |
+| TTL interface | `wwan0` | `rmnet+` |
+| Package manager | opkg (system) | Entware opkg at `/opt` (bind-mounted from `/usrdata/opt`) |
+| LAN config | UCI (`network.*`) | `/etc/data/mobileap_cfg.xml` via xmlstarlet |
+
+**Architecture reference:** Full details in `docs/rm520n-gl-architecture.md`
+
+**Source reference:** `simpleadmin-source/` contains the original RM520N-GL admin panel that this work builds upon.
+
 ## CGI Endpoint Reference (Additions)
 
 | Feature      | CGI Script                   | Hook                                                   | Types                | Reboot? |

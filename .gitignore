@@ -49,3 +49,6 @@ RELEASE_NOTE.md
 /.superpowers
 /docs/superpowers
 /.claude
+
+# simpleadmin source
+/simpleadmin-source

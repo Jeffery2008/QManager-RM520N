@@ -59,6 +59,26 @@ result=$(qcmd 'AT+QENG="servingcell"')
 
 Never access the modem serial port directly.
 
+### RM520N-GL AT Commands
+
+On the RM520N-GL variant, AT commands go through a socat PTY bridge instead of `sms_tool`:
+
+```sh
+# RM551E (OpenWRT) — current
+result=$(qcmd 'AT+QENG="servingcell"')
+
+# RM520N-GL — via microcom with flock serialization
+result=$(flock /var/lock/atcmd.lock microcom -t 2000 /dev/ttyOUT <<< "AT+QENG=\"servingcell\"")
+```
+
+The plan is to provide a platform-specific `qcmd` wrapper so CGI scripts can use the same interface on both platforms. See `docs/rm520n-gl-architecture.md` for the full AT transport architecture.
+
+Key differences:
+- Two AT channels: `/dev/ttyOUT` (smd11, primary) and `/dev/ttyOUT2` (smd7, secondary)
+- Must use `flock` for serialization — no implicit locking
+- `microcom` provides millisecond-precision timeouts
+- `/bin/bash` is available (not just BusyBox sh), but scripts should remain POSIX-compatible for shared code
+
 ### No `setsid`
 
 BusyBox doesn't have `setsid`. Use the double-fork pattern for background daemons:
@@ -730,3 +750,52 @@ cgi_error "error_code" "Human-readable detail message"
 # Reboot after response
 cgi_reboot_response  # flushes HTTP, then reboots async
 ```
+
+---
+
+## RM520N-GL Backend Differences
+
+The RM520N-GL variant requires significant backend adaptations:
+
+### Init System: systemd vs procd
+
+| procd (RM551E) | systemd (RM520N-GL) |
+|----------------|---------------------|
+| `/etc/init.d/qmanager_poller` | `qmanager-poller.service` |
+| `start_service()` / `stop_service()` | `ExecStart=` / `ExecStop=` |
+| `procd_set_param command` | Unit file `ExecStart=` directive |
+| `procd_set_param respawn` | `Restart=on-failure`, `RestartSec=` |
+| `enable` / `disable` (symlink) | `systemctl enable` / `disable` |
+| `service qmanager_poller start` | `systemctl start qmanager-poller` |
+
+### Config System: UCI vs File-based
+
+| UCI (RM551E) | File-based (RM520N-GL) |
+|-------------|------------------------|
+| `uci get quecmanager.poller.enabled` | Read from `/usrdata/qmanager/config.json` |
+| `uci set quecmanager.poller.enabled=1` | Write to `/usrdata/qmanager/config.json` |
+| `uci commit quecmanager` | Direct file write (atomic via tmp+mv) |
+
+### Filesystem Layout
+
+```
+/usrdata/                           # Persistent writable partition
+├── qmanager/                       # Config and state (replaces /etc/qmanager/)
+├── www/                            # Web root (replaces /www/)
+│   ├── cgi-bin/quecmanager/        # CGI endpoints
+│   └── (static frontend)
+├── usr/
+│   ├── bin/                        # Daemons and utilities
+│   └── lib/qmanager/              # Shared libraries
+└── opt/                            # Entware (bind-mounted to /opt)
+```
+
+### Firewall: iptables vs nftables
+
+| nftables/fw4 (RM551E) | iptables (RM520N-GL) |
+|-----------------------|----------------------|
+| `nft add rule ...` | `iptables -A ...` |
+| `fw4 zone` | Direct `iptables` chain management |
+| `-o wwan0` | `-o rmnet+` (wildcard for cellular interfaces) |
+
+> **See also:** [RM520N-GL Architecture Report](rm520n-gl-architecture.md) for the complete platform analysis.
