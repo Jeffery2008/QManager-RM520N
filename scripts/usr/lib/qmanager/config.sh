@@ -48,6 +48,10 @@ qm_config_init() {
   "settings": {
     "temp_unit": "celsius",
     "distance_unit": "km",
+    "hostname": "",
+    "timezone": "UTC0",
+    "zonename": "UTC",
+    "sms_tool_device": "",
     "low_power_enabled": 0,
     "low_power_start": "23:00",
     "low_power_end": "06:00",
