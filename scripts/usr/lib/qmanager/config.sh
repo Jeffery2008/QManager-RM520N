@@ -34,14 +34,6 @@ qm_config_init() {
     "channel": "network-monitor",
     "json_mode": "yes"
   },
-  "video_optimizer": {
-    "enabled": 0,
-    "quic_enabled": 1
-  },
-  "traffic_masquerade": {
-    "enabled": 0,
-    "sni_domain": "speedtest.net"
-  },
   "eth_link": {
     "speed_limit": "auto"
   },
