@@ -15,6 +15,8 @@
     qlog_warn() { logger -t auto_update "WARN: $1"; }
 }
 
+[ -f /usr/lib/qmanager/config.sh ] && . /usr/lib/qmanager/config.sh
+
 qlog_init "auto_update"
 
 # --- Configuration -----------------------------------------------------------
@@ -40,8 +42,7 @@ fi
 current_version=$(tr -d '[:space:]' < "$VERSION_FILE" 2>/dev/null)
 [ -z "$current_version" ] && current_version="0.0.0"
 
-include_prerelease=$(uci -q get quecmanager.update.include_prerelease 2>/dev/null)
-[ -z "$include_prerelease" ] && include_prerelease="1"
+include_prerelease=$(qm_config_get update include_prerelease 1)
 
 # --- Fetch GitHub releases ---------------------------------------------------
 

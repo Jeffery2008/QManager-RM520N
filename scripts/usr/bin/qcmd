@@ -41,7 +41,13 @@ mkdir -p /var/lock 2>/dev/null
 
 # --- SMS tool device override (e.g. "-d /dev/smd7") -------------------------
 SMS_TOOL_ARGS=""
-_sms_dev=$(uci -q get quecmanager.settings.sms_tool_device 2>/dev/null)
+_sms_dev=""
+if [ -f /etc/qmanager/at_device ]; then
+    _sms_dev=$(cat /etc/qmanager/at_device 2>/dev/null | tr -d '[:space:]')
+elif [ -f /usr/lib/qmanager/config.sh ]; then
+    . /usr/lib/qmanager/config.sh
+    _sms_dev=$(qm_config_get settings sms_tool_device "")
+fi
 [ -n "$_sms_dev" ] && SMS_TOOL_ARGS="-d $_sms_dev"
 
 # --- Parse Arguments ---------------------------------------------------------
