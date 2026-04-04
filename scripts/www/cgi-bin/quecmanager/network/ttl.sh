@@ -1,5 +1,6 @@
 #!/bin/sh
 . /usr/lib/qmanager/cgi_base.sh
+. /usr/lib/qmanager/platform.sh
 # =============================================================================
 # ttl.sh — CGI Endpoint: TTL / Hop Limit Configuration (GET + POST)
 # =============================================================================
@@ -29,7 +30,7 @@ cgi_handle_options
 
 # --- Configuration -----------------------------------------------------------
 TTL_FILE="/etc/firewall.user.ttl"
-TTL_INIT="/etc/init.d/qmanager_ttl"
+TTL_INIT="qmanager_ttl"
 
 # --- Helper: parse current values from the firewall rules file ----------------
 get_current_values() {
@@ -66,7 +67,7 @@ EOF
 
     # Check autostart status
     autostart="false"
-    if [ -f "$TTL_INIT" ] && "$TTL_INIT" enabled 2>/dev/null; then
+    if svc_is_enabled "$TTL_INIT"; then
         autostart="true"
     fi
 
@@ -129,10 +130,10 @@ $(get_current_values)
 EOF
 
     if [ "$cur_ttl" -gt 0 ] 2>/dev/null; then
-        iptables -t mangle -D POSTROUTING -o rmnet+ -j TTL --ttl-set "$cur_ttl" 2>/dev/null
+        run_iptables -t mangle -D POSTROUTING -o rmnet+ -j TTL --ttl-set "$cur_ttl" 2>/dev/null
     fi
     if [ "$cur_hl" -gt 0 ] 2>/dev/null; then
-        ip6tables -t mangle -D POSTROUTING -o rmnet+ -j HL --hl-set "$cur_hl" 2>/dev/null
+        run_ip6tables -t mangle -D POSTROUTING -o rmnet+ -j HL --hl-set "$cur_hl" 2>/dev/null
     fi
 
     # --- Write new rules file (atomic: temp + mv) ---
@@ -140,11 +141,11 @@ EOF
     > "$TTL_TMP"
     if [ "$new_ttl" -gt 0 ] 2>/dev/null; then
         echo "iptables -t mangle -A POSTROUTING -o rmnet+ -j TTL --ttl-set $new_ttl" >> "$TTL_TMP"
-        iptables -t mangle -A POSTROUTING -o rmnet+ -j TTL --ttl-set "$new_ttl"
+        run_iptables -t mangle -A POSTROUTING -o rmnet+ -j TTL --ttl-set "$new_ttl"
     fi
     if [ "$new_hl" -gt 0 ] 2>/dev/null; then
         echo "ip6tables -t mangle -A POSTROUTING -o rmnet+ -j HL --hl-set $new_hl" >> "$TTL_TMP"
-        ip6tables -t mangle -A POSTROUTING -o rmnet+ -j HL --hl-set "$new_hl"
+        run_ip6tables -t mangle -A POSTROUTING -o rmnet+ -j HL --hl-set "$new_hl"
     fi
     mv "$TTL_TMP" "$TTL_FILE"
 
