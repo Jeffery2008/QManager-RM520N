@@ -29,7 +29,14 @@ SYSTEMD_DIR="/etc/systemd/system"
 CONF_DIR="/etc/qmanager"
 CERT_DIR="/usrdata/qmanager/certs"
 SESSION_DIR="/tmp/qmanager_sessions"
-SUDOERS_FILE="/etc/sudoers.d/qmanager"
+# Detect Entware vs system sudo
+if [ -d /opt/etc/sudoers.d ]; then
+    SUDOERS_FILE="/opt/etc/sudoers.d/qmanager"
+elif [ -d /etc/sudoers.d ]; then
+    SUDOERS_FILE="/etc/sudoers.d/qmanager"
+else
+    SUDOERS_FILE=""
+fi
 LIGHTTPD_CONF="/usrdata/simpleadmin/lighttpd.conf"
 
 PURGE=0
@@ -83,8 +90,12 @@ rm -rf "$CGI_DIR"
 info "Removed CGI endpoints"
 
 # --- Remove sudoers ---
-rm -f "$SUDOERS_FILE"
-info "Removed sudoers rules"
+if [ -n "$SUDOERS_FILE" ] && [ -f "$SUDOERS_FILE" ]; then
+    rm -f "$SUDOERS_FILE"
+    info "Removed sudoers rules from $SUDOERS_FILE"
+else
+    info "No sudoers rules to remove"
+fi
 
 # --- Remove frontend (restore SimpleAdmin backup if available) ---
 for item in "$WWW_ROOT"/*; do

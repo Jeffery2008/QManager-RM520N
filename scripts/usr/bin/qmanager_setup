@@ -11,18 +11,37 @@
 # Ensure required directories exist
 mkdir -p /var/lock /etc/qmanager /usr/lib/qmanager /tmp/quecmanager
 
+# Session directory — www-data needs write access (cleared on reboot since /tmp is tmpfs)
+mkdir -p /tmp/qmanager_sessions
+chown www-data:www-data /tmp/qmanager_sessions
+chmod 700 /tmp/qmanager_sessions
+
+# Config directory — www-data needs write access for auth.json, profiles
+chown -R www-data:www-data /etc/qmanager
+
 # Make all qmanager binaries executable
 for f in /usr/bin/qmanager_*; do
     [ -f "$f" ] && chmod +x "$f"
 done
 
-# Make all CGI scripts executable
-for f in /www/cgi-bin/quecmanager/*.sh /www/cgi-bin/quecmanager/*/*.sh; do
+# Make all CGI scripts executable — detect correct path
+CGI_DIR="/usrdata/simpleadmin/www/cgi-bin/quecmanager"
+[ ! -d "$CGI_DIR" ] && CGI_DIR="/www/cgi-bin/quecmanager"
+for f in "$CGI_DIR"/*.sh "$CGI_DIR"/*/*.sh; do
     [ -f "$f" ] && chmod +x "$f"
 done
 
 # Secure auth config
 [ -f /etc/qmanager/auth.json ] && chmod 600 /etc/qmanager/auth.json
+
+# Loopback iptables rules — CGI scripts need localhost access to lighttpd
+# (default RM520N-GL firewall drops non-bridge/eth traffic on ports 80/443)
+if command -v iptables >/dev/null 2>&1; then
+    iptables -C INPUT -i lo -p tcp --dport 80 -j ACCEPT 2>/dev/null || \
+        iptables -I INPUT 1 -i lo -p tcp --dport 80 -j ACCEPT
+    iptables -C INPUT -i lo -p tcp --dport 443 -j ACCEPT 2>/dev/null || \
+        iptables -I INPUT 1 -i lo -p tcp --dport 443 -j ACCEPT
+fi
 
 # Create default long_commands.list if missing
 if [ ! -f /etc/qmanager/long_commands.list ]; then

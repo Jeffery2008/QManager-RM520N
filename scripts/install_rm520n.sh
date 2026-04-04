@@ -37,7 +37,7 @@ set -e
 
 # --- Configuration -----------------------------------------------------------
 
-VERSION="v0.1.12"
+VERSION="v0.1.13"
 INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Destinations
@@ -46,7 +46,20 @@ CGI_DIR="/usrdata/simpleadmin/www/cgi-bin/quecmanager"
 LIB_DIR="/usr/lib/qmanager"
 BIN_DIR="/usr/bin"
 SYSTEMD_DIR="/etc/systemd/system"
-SUDOERS_DIR="/etc/sudoers.d"
+# Detect Entware vs system sudo
+if [ -f /opt/etc/sudoers ]; then
+    SUDOERS_DIR="/opt/etc/sudoers.d"
+    SUDOERS_CONF="/opt/etc/sudoers"
+    SUDO_BIN="/opt/bin/sudo"
+elif [ -f /etc/sudoers ]; then
+    SUDOERS_DIR="/etc/sudoers.d"
+    SUDOERS_CONF="/etc/sudoers"
+    SUDO_BIN="/usr/bin/sudo"
+else
+    SUDOERS_DIR=""
+    SUDOERS_CONF=""
+    SUDO_BIN=""
+fi
 CONF_DIR="/etc/qmanager"
 CERT_DIR="/usrdata/qmanager/certs"
 SESSION_DIR="/tmp/qmanager_sessions"
@@ -111,10 +124,10 @@ preflight() {
     fi
 
     # Remount root filesystem read-write if needed
-    if ! touch /tmp/.qm_rw_test 2>/dev/null; then
-        mount -o remount,rw / 2>/dev/null || warn "Could not remount / read-write"
+    if ! touch /usr/.qm_rw_test 2>/dev/null; then
+        mount -o remount,rw / 2>/dev/null || die "Could not remount / read-write"
     fi
-    rm -f /tmp/.qm_rw_test
+    rm -f /usr/.qm_rw_test
 
     # Check source directories exist
     if [ "$DO_FRONTEND" = "1" ] && [ ! -d "$SRC_FRONTEND" ]; then
@@ -242,6 +255,19 @@ install_frontend() {
     # Copy new frontend
     cp -r "$SRC_FRONTEND"/* "$WWW_ROOT/"
 
+    # Remove SimpleAdmin CGI scripts (keep only quecmanager/ subdirectory)
+    if [ -d "$WWW_ROOT/cgi-bin" ]; then
+        local sa_removed=0
+        for item in "$WWW_ROOT/cgi-bin"/*; do
+            name=$(basename "$item")
+            case "$name" in
+                quecmanager) continue ;;
+                *) rm -rf "$item"; sa_removed=$(( sa_removed + 1 )) ;;
+            esac
+        done
+        [ "$sa_removed" -gt 0 ] && info "Removed $sa_removed SimpleAdmin CGI scripts"
+    fi
+
     info "Frontend installed ($file_count files)"
 }
 
@@ -263,8 +289,23 @@ install_backend() {
     if [ -d "$SRC_SCRIPTS/usr/bin" ]; then
         for f in "$SRC_SCRIPTS/usr/bin"/*; do
             [ -f "$f" ] || continue
-            cp "$f" "$BIN_DIR/$(basename "$f")"
-            chmod +x "$BIN_DIR/$(basename "$f")"
+            local fname; fname=$(basename "$f")
+            # On RM520N-GL: install qcmd_rm520n as qcmd, skip the OpenWRT qcmd
+            case "$fname" in
+                qcmd_rm520n)
+                    cp "$f" "$BIN_DIR/qcmd"
+                    chmod +x "$BIN_DIR/qcmd"
+                    info "Installed qcmd_rm520n as qcmd (RM520N-GL AT transport)"
+                    bin_count=$(( bin_count + 1 ))
+                    continue
+                    ;;
+                qcmd)
+                    # Skip OpenWRT variant — replaced by qcmd_rm520n above
+                    continue
+                    ;;
+            esac
+            cp "$f" "$BIN_DIR/$fname"
+            chmod +x "$BIN_DIR/$fname"
             bin_count=$(( bin_count + 1 ))
         done
         info "$bin_count daemons/utilities installed to $BIN_DIR"
@@ -290,11 +331,20 @@ install_backend() {
     fi
 
     # --- Sudoers ---
-    if [ -f "$SRC_SCRIPTS/etc/sudoers.d/qmanager" ]; then
+    if [ -f "$SRC_SCRIPTS/etc/sudoers.d/qmanager" ] && [ -n "$SUDOERS_DIR" ]; then
+        mkdir -p "$SUDOERS_DIR"
+        # Ensure sudoers includes the drop-in directory
+        if ! grep -q "includedir.*sudoers.d" "$SUDOERS_CONF" 2>/dev/null; then
+            echo "#includedir $SUDOERS_DIR" >> "$SUDOERS_CONF"
+            info "Added #includedir $SUDOERS_DIR to $SUDOERS_CONF"
+        fi
         cp "$SRC_SCRIPTS/etc/sudoers.d/qmanager" "$SUDOERS_DIR/qmanager"
         chmod 440 "$SUDOERS_DIR/qmanager"
         chown root:root "$SUDOERS_DIR/qmanager"
-        info "Sudoers rules installed (440)"
+        info "Sudoers rules installed to $SUDOERS_DIR (440)"
+    elif [ -z "$SUDOERS_DIR" ]; then
+        warn "sudo not found — install Entware sudo: $OPKG install sudo"
+        warn "Skipping sudoers rules (CGI privilege escalation will not work)"
     fi
 
     # --- lighttpd config ---
@@ -322,8 +372,13 @@ install_backend() {
     fi
 
     # --- Create required directories ---
+    # www-data (lighttpd CGI) needs write access to config dir (auth.json, profiles)
+    # and session dir (session tokens)
     mkdir -p "$CONF_DIR/profiles"
+    chown -R www-data:www-data "$CONF_DIR"
     mkdir -p "$SESSION_DIR"
+    chown www-data:www-data "$SESSION_DIR"
+    chmod 700 "$SESSION_DIR"
     mkdir -p /var/lock
 
     # --- Config files (deploy new, don't overwrite existing) ---
@@ -404,8 +459,8 @@ fix_permissions() {
 enable_services() {
     step "Enabling systemd services"
 
-    # Always-on services
-    for svc in qmanager-ping qmanager-poller qmanager-ttl \
+    # Always-on services (setup runs first — creates dirs, sets perms, iptables loopback)
+    for svc in qmanager-setup qmanager-ping qmanager-poller qmanager-ttl \
                qmanager-mtu qmanager-imei-check; do
         if [ -f "$SYSTEMD_DIR/${svc}.service" ]; then
             systemctl enable "$svc" 2>/dev/null
@@ -429,6 +484,17 @@ enable_services() {
 
 start_services() {
     step "Starting QManager services"
+
+    # Add loopback iptables rules — CGI scripts need localhost access to lighttpd
+    # (default RM520N-GL firewall drops non-bridge/eth traffic on 80/443)
+    if ! iptables -C INPUT -i lo -p tcp --dport 80 -j ACCEPT 2>/dev/null; then
+        iptables -I INPUT 1 -i lo -p tcp --dport 80 -j ACCEPT
+        info "Added iptables loopback rule for port 80"
+    fi
+    if ! iptables -C INPUT -i lo -p tcp --dport 443 -j ACCEPT 2>/dev/null; then
+        iptables -I INPUT 1 -i lo -p tcp --dport 443 -j ACCEPT
+        info "Added iptables loopback rule for port 443"
+    fi
 
     # Restart lighttpd to pick up new config
     systemctl restart lighttpd 2>/dev/null || warn "Could not restart lighttpd"

@@ -1,5 +1,5 @@
 # QManager — sudoers rules for CGI scripts (lighttpd runs as www-data)
-# Install location: /etc/sudoers.d/qmanager
+# Install location: /opt/etc/sudoers.d/qmanager (Entware) or /etc/sudoers.d/qmanager
 
 # Service control (used by platform.sh svc_* functions)
 www-data ALL=(root) NOPASSWD: /usr/bin/systemctl start *, /usr/bin/systemctl stop *, /usr/bin/systemctl restart *, /usr/bin/systemctl enable *, /usr/bin/systemctl disable *, /usr/bin/systemctl is-enabled *, /usr/bin/systemctl is-active *

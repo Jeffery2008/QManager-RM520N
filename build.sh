@@ -21,7 +21,7 @@ fail() { printf "${RED}[%s] ERROR:${NC} %s\n" "$(date +%H:%M:%S)" "$1"; exit 1; 
 [ -d "$OUT_DIR" ] || fail "'out/' not found — run 'bun run build' first"
 
 step "Cleaning qmanager_install/..."
-rm -rf "$INSTALL_DIR/out" "$INSTALL_DIR/scripts" "$INSTALL_DIR/install.sh" "$INSTALL_DIR/uninstall.sh"
+rm -rf "$INSTALL_DIR/out" "$INSTALL_DIR/scripts" "$INSTALL_DIR/install.sh" "$INSTALL_DIR/uninstall.sh" "$INSTALL_DIR/install_rm520n.sh" "$INSTALL_DIR/uninstall_rm520n.sh"
 mkdir -p "$INSTALL_DIR"
 
 step "Copying frontend build output..."
