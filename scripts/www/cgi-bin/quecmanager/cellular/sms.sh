@@ -1,14 +1,12 @@
 #!/bin/sh
 . /usr/lib/qmanager/cgi_base.sh
 # =============================================================================
-# sms_rm520n.sh — CGI Endpoint: SMS Center (RM520N-GL Variant)
+# sms.sh — CGI Endpoint: SMS Center (RM520N-GL)
 # =============================================================================
 # GET:  Returns all received SMS messages and storage status via sms_tool.
 # POST: Sends, deletes individual, or deletes all SMS messages.
 #
-# This is the RM520N-GL variant of sms.sh. It targets the socat-at-bridge
-# PTY device (/dev/ttyOUT for smd11) instead of the OpenWRT USB serial device.
-# The API contract is identical to the RM551E variant.
+# Targets the socat-at-bridge PTY device (/dev/ttyOUT2 for smd7) on RM520N-GL.
 #
 # External tool (static ARM binary; device configurable via /etc/qmanager/at_device):
 #   sms_tool recv -j              -> JSON: {"msg":[{index,sender,timestamp,content,...}]}

@@ -117,7 +117,9 @@ cgi_error() {
 # ---------------------------------------------------------------------------
 cgi_reboot_response() {
     echo '{"success":true}'
-    ( ( sleep 1 && reboot ) </dev/null >/dev/null 2>&1 & )
+    _reboot_cmd="reboot"
+    command -v run_reboot >/dev/null 2>&1 && _reboot_cmd="run_reboot"
+    ( ( sleep 1 && $_reboot_cmd ) </dev/null >/dev/null 2>&1 & )
     exit 0
 }
 

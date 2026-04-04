@@ -83,11 +83,6 @@ const data = {
       url: "/console",
       icon: TerminalSquareIcon,
     },
-    {
-      title: "Luci",
-      url: "/cgi-bin/luci",
-      icon: PackageOpenIcon,
-    }
   ],
   navSecondary: [
     {

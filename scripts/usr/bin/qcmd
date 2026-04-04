@@ -171,7 +171,7 @@ flock_wait() {
 # =============================================================================
 # EXECUTION
 #
-# Uses subshell + FD 9 redirect: ( flock 9; ...; ) 9>"$LOCK_FILE"
+# Uses subshell + FD 9 redirect: ( flock 9; ...; ) 9<"$LOCK_FILE"
 # Lock is auto-released when the subshell exits.
 # =============================================================================
 
@@ -197,7 +197,7 @@ if is_long_command "$COMMAND"; then
             cmd_rc=$?
             rm -f "$PID_FILE"
             exit $cmd_rc
-        ) 9>"$LOCK_FILE"
+        ) 9<"$LOCK_FILE"
     )
     exit_code=$?
 
@@ -253,7 +253,7 @@ else
             cmd_rc=$?
             rm -f "$PID_FILE"
             exit $cmd_rc
-        ) 9>"$LOCK_FILE"
+        ) 9<"$LOCK_FILE"
     )
     exit_code=$?
 
@@ -272,7 +272,7 @@ else
                     cmd_rc=$?
                     rm -f "$PID_FILE"
                     exit $cmd_rc
-                ) 9>"$LOCK_FILE"
+                ) 9<"$LOCK_FILE"
             )
             exit_code=$?
         fi

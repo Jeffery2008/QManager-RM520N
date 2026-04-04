@@ -290,20 +290,6 @@ install_backend() {
         for f in "$SRC_SCRIPTS/usr/bin"/*; do
             [ -f "$f" ] || continue
             local fname; fname=$(basename "$f")
-            # On RM520N-GL: install qcmd_rm520n as qcmd, skip the OpenWRT qcmd
-            case "$fname" in
-                qcmd_rm520n)
-                    cp "$f" "$BIN_DIR/qcmd"
-                    chmod +x "$BIN_DIR/qcmd"
-                    info "Installed qcmd_rm520n as qcmd (RM520N-GL AT transport)"
-                    bin_count=$(( bin_count + 1 ))
-                    continue
-                    ;;
-                qcmd)
-                    # Skip OpenWRT variant — replaced by qcmd_rm520n above
-                    continue
-                    ;;
-            esac
             cp "$f" "$BIN_DIR/$fname"
             chmod +x "$BIN_DIR/$fname"
             bin_count=$(( bin_count + 1 ))
@@ -436,7 +422,7 @@ fix_permissions() {
     step "Verifying file permissions"
 
     # Daemons — executable
-    for f in "$BIN_DIR"/qmanager_* "$BIN_DIR/qcmd" "$BIN_DIR/qcmd_rm520n"; do
+    for f in "$BIN_DIR"/qmanager_* "$BIN_DIR/qcmd" "$BIN_DIR/qcmd_test"; do
         [ -f "$f" ] && chmod 755 "$f"
     done
     info "Daemons: 755"
@@ -463,11 +449,25 @@ fix_permissions() {
 enable_services() {
     step "Enabling systemd services"
 
-    # Always-on services (setup runs first — creates dirs, sets perms, iptables loopback)
+    # RM520N-GL's minimal systemd ignores `systemctl enable` for boot startup.
+    # SimpleAdmin's proven pattern: explicit symlinks into multi-user.target.wants.
+    # The wants dir lives under /lib/systemd/system/ on this platform.
+    WANTS_DIR="/lib/systemd/system/multi-user.target.wants"
+    mkdir -p "$WANTS_DIR"
+
+    # Enable the target — this is what multi-user.target pulls in at boot
+    if [ -f "$SYSTEMD_DIR/qmanager.target" ]; then
+        ln -sf "$SYSTEMD_DIR/qmanager.target" "$WANTS_DIR/qmanager.target"
+        info "Linked qmanager.target → multi-user.target.wants"
+    fi
+
+    # Always-on services — symlink into target.wants so target pulls them in
     for svc in qmanager-setup qmanager-ping qmanager-poller qmanager-ttl \
                qmanager-mtu qmanager-imei-check; do
         if [ -f "$SYSTEMD_DIR/${svc}.service" ]; then
-            systemctl enable "$svc" 2>/dev/null
+            # Symlink into qmanager.target.wants (for target dependency)
+            mkdir -p "$SYSTEMD_DIR/qmanager.target.wants"
+            ln -sf "$SYSTEMD_DIR/${svc}.service" "$SYSTEMD_DIR/qmanager.target.wants/${svc}.service"
             info "Enabled $svc"
         fi
     done
@@ -475,13 +475,15 @@ enable_services() {
     # Config-gated services — enable only if previously active
     for svc in qmanager-watchcat qmanager-tower-failover; do
         if [ -f "$SYSTEMD_DIR/${svc}.service" ]; then
-            if systemctl is-enabled "$svc" >/dev/null 2>&1; then
+            if [ -L "$SYSTEMD_DIR/qmanager.target.wants/${svc}.service" ]; then
                 info "$svc already enabled"
             else
                 info "Skipped $svc (enable manually if needed)"
             fi
         fi
     done
+
+    systemctl daemon-reload
 }
 
 # --- Start Services ----------------------------------------------------------
@@ -504,9 +506,12 @@ start_services() {
     systemctl restart lighttpd 2>/dev/null || warn "Could not restart lighttpd"
     info "lighttpd restarted with QManager config"
 
-    # Start core services
-    systemctl start qmanager-ping 2>/dev/null || true
-    systemctl start qmanager-poller 2>/dev/null || true
+    # Run setup oneshot first (creates lock files, session dirs, iptables rules)
+    systemctl start qmanager-setup 2>/dev/null || true
+
+    # Start the target — systemd resolves dependencies and starts all enabled services
+    systemctl daemon-reload
+    systemctl start qmanager.target 2>/dev/null || true
     sleep 2
 
     # Verify

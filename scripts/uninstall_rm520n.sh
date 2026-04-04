@@ -71,13 +71,15 @@ done
 sleep 1
 info "Killed lingering processes"
 
-# --- Remove systemd unit files ---
+# --- Remove systemd unit files and boot symlinks ---
 rm -f "$SYSTEMD_DIR"/qmanager*.service "$SYSTEMD_DIR"/qmanager*.target
+rm -rf "$SYSTEMD_DIR"/qmanager.target.wants
+rm -f /lib/systemd/system/multi-user.target.wants/qmanager.target
 systemctl daemon-reload
-info "Removed systemd units"
+info "Removed systemd units and boot symlinks"
 
 # --- Remove daemons ---
-rm -f "$BIN_DIR/qcmd" "$BIN_DIR/qcmd_rm520n"
+rm -f "$BIN_DIR/qcmd" "$BIN_DIR/qcmd_test"
 rm -f "$BIN_DIR"/qmanager_*
 info "Removed daemons from $BIN_DIR"
 

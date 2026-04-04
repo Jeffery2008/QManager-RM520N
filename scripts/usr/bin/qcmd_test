@@ -1,16 +1,16 @@
 #!/bin/sh
 # =============================================================================
-# qcmd_test_rm520n — Smoke test for qcmd on RM520N-GL
+# qcmd_test — Smoke test for qcmd on RM520N-GL
 # =============================================================================
 # Validates the full chain: sms_tool binary → socat PTY bridge → modem
 #
-# Run this after installing sms_tool and qcmd_rm520n on the device:
+# Run this after installing sms_tool and qcmd on the device:
 #   1. Copy sms_tool_arm to /usr/bin/sms_tool
-#   2. Copy qcmd_rm520n to /usr/bin/qcmd
+#   2. Ensure qcmd is installed at /usr/bin/qcmd
 #   3. Ensure socat-at-bridge is running (systemctl status socat-smd11)
-#   4. Run: sh /usr/bin/qcmd_test_rm520n
+#   4. Run: sh /usr/bin/qcmd_test
 #
-# Install location: /usr/bin/qcmd_test_rm520n
+# Install location: /usr/bin/qcmd_test
 # =============================================================================
 
 PASS=0

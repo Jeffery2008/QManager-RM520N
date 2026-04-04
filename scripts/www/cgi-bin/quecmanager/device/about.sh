@@ -119,7 +119,7 @@ sys_openwrt=""
 if [ -f /etc/openwrt_release ]; then
     sys_openwrt=$(. /etc/openwrt_release && echo "$DISTRIB_RELEASE")
 elif [ -f /etc/quectel-project-version ]; then
-    sys_openwrt=$(cat /etc/quectel-project-version 2>/dev/null | tr -d '[:space:]')
+    sys_openwrt=$(grep 'Project Rev' /etc/quectel-project-version 2>/dev/null | sed 's/.*: *//' | tr -d ' \r')
 fi
 
 # =============================================================================

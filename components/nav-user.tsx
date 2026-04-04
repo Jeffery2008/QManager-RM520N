@@ -8,6 +8,7 @@ import {
   LogOut,
   Moon,
   Power,
+  RefreshCw,
   Sun,
   Camera,
   Pencil,
@@ -92,7 +93,9 @@ export function NavUser({
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [nameDialogOpen, setNameDialogOpen] = useState(false);
   const [rebootDialogOpen, setRebootDialogOpen] = useState(false);
+  const [reconnectDialogOpen, setReconnectDialogOpen] = useState(false);
   const [rebooting, setRebooting] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
 
   // --- Name edit state ---
   const [nameInput, setNameInput] = useState(displayName);
@@ -170,6 +173,29 @@ export function NavUser({
       document.cookie = "qm_logged_in=; Path=/; Max-Age=0";
       window.location.href = "/reboot/";
     }, 2000);
+  };
+
+  const handleReconnect = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setReconnecting(true);
+    try {
+      const resp = await authFetch("/cgi-bin/quecmanager/system/reboot.sh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reconnect" }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        toast.success("Network reconnect initiated. Connection may drop briefly.");
+      } else {
+        toast.error("Reconnect failed.");
+      }
+    } catch {
+      toast.error("Failed to send reconnect command.");
+    } finally {
+      setReconnecting(false);
+      setReconnectDialogOpen(false);
+    }
   };
 
   const initials =
@@ -269,6 +295,12 @@ export function NavUser({
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                onClick={() => setReconnectDialogOpen(true)}
+              >
+                <RefreshCw />
+                Reconnect Network
+              </DropdownMenuItem>
+              <DropdownMenuItem
                 variant="destructive"
                 onClick={() => setRebootDialogOpen(true)}
               >
@@ -335,6 +367,37 @@ export function NavUser({
         open={passwordDialogOpen}
         onOpenChange={setPasswordDialogOpen}
       />
+
+      <AlertDialog open={reconnectDialogOpen} onOpenChange={(open) => {
+        if (!reconnecting) setReconnectDialogOpen(open);
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reconnect Network</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will deregister from the network and reregister, forcing a fresh connection. Internet will drop briefly.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reconnecting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={reconnecting}
+              onClick={handleReconnect}
+            >
+              {reconnecting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Reconnecting...
+                </>
+              ) : (
+                "Reconnect"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={rebootDialogOpen} onOpenChange={(open) => {
         if (!rebooting) setRebootDialogOpen(open);

@@ -10,6 +10,9 @@ The RM520N-GL is a fundamentally different platform: it runs its own Linux OS in
 
 - [Quick Reference](#quick-reference)
 - [Platform Comparison](#platform-comparison)
+- [Known Platform Quirks](#known-platform-quirks)
+  - [`fs.protected_regular=1` — Sticky Directory File Protection](#fsprotected_regular1--sticky-directory-file-protection)
+  - [`systemctl enable` Does Not Work for Boot Startup](#systemctl-enable-does-not-work-for-boot-startup)
 - [AT Command Transport Layer](#at-command-transport-layer)
   - [Physical Layer: SMD Ports](#physical-layer-smd-ports)
   - [PTY Bridge Architecture](#pty-bridge-architecture)
@@ -85,6 +88,85 @@ This table maps every major subsystem between the current QManager target (RM551
 | **Auth** | Cookie-based multi-session | HTTP Basic Auth (`.htpasswd`) | Different auth middleware |
 | **LAN config** | UCI network config | XML (`mobileap_cfg.xml`) via xmlstarlet | Completely different API |
 | **Compound AT** | Semicolon batching via `qcmd` | Supported, but needs serialization | Add `flock` around compound commands |
+| **`fs.protected_regular`** | Not set (typical) | `=1` (kernel default) | All shared `/tmp` files must be `www-data`-owned; see [Known Platform Quirks](#known-platform-quirks) |
+
+---
+
+## Known Platform Quirks
+
+### `fs.protected_regular=1` — Sticky Directory File Protection
+
+The RM520N-GL kernel ships with `fs.protected_regular=1`. This Linux security feature restricts opening files with `O_CREAT` in world-writable, sticky-bit directories like `/tmp/`. The rule is:
+
+> Opening is **blocked** unless `file_owner == caller_uid` **OR** `dir_owner == caller_uid`.
+
+Since `/tmp` is owned by `root`:
+- **Root opening www-data files:** `dir_owner` (root) matches caller (root) -- **ALLOWED**
+- **www-data opening root files:** neither `file_owner` nor `dir_owner` matches -- **BLOCKED** (`Permission denied`)
+
+This affects **every file in `/tmp/` that both root processes (daemons, setup scripts) and `www-data` processes (CGI scripts via lighttpd) need to access**. Shell `>` and `>>` redirects include the `O_CREAT` flag internally, triggering this protection even on existing files. The `9>"$LOCK_FILE"` pattern used by `qcmd` for `flock` serialization is especially affected.
+
+**Affected shared files:**
+
+| File | Purpose | Accessed By |
+|------|---------|-------------|
+| `/tmp/qmanager_at.lock` | AT command `flock` serialization | `qcmd` (www-data CGI + root daemons) |
+| `/tmp/qmanager_at.pid` | Current AT command PID tracking | `qcmd` (www-data CGI + root daemons) |
+| `/tmp/qmanager.log` | Centralized `qlog` output | All daemons (root) + log viewer CGI (www-data) |
+
+**Two-part fix (confirmed working in deployment):**
+
+**1. Pre-create files with correct ownership.** The `qmanager_setup` boot service (systemd oneshot, runs as root before other QManager services) pre-creates these files as `www-data`:
+
+```bash
+# qmanager_setup — pre-create shared /tmp files for fs.protected_regular
+touch /tmp/qmanager_at.lock /tmp/qmanager_at.pid /tmp/qmanager.log
+chown www-data:www-data /tmp/qmanager_at.lock /tmp/qmanager_at.pid /tmp/qmanager.log
+chmod 666 /tmp/qmanager_at.lock /tmp/qmanager_at.pid /tmp/qmanager.log
+```
+
+**2. Use read-only FD redirects for flock.** Even with `www-data`-owned files, `9>"$LOCK_FILE"` still fails because shell `>` always passes `O_CREAT` to the `open()` syscall, regardless of whether the file exists. The fix in `qcmd_rm520n` is to use `9<` (read-only open) instead of `9>`:
+
+```bash
+# RM520N-GL (qcmd_rm520n) — read-only FD, no O_CREAT
+( flock_wait 9 "$LOCK_WAIT_LONG"; ...; ) 9<"$LOCK_FILE"
+
+# OpenWRT (qcmd) — write FD works fine (no protected_regular)
+( flock_wait 9 "$LOCK_WAIT_LONG"; ...; ) 9>"$LOCK_FILE"
+```
+
+This works because `flock()` operates on file descriptors, not files — it does not care whether the FD is opened for reading or writing. Read-only FDs have been valid for `flock` since Linux 2.6.12+. The lock file just needs to exist (handled by step 1).
+
+> **WARNING:** Any new daemon or CGI script that creates shared files in `/tmp/` must follow this pattern: pre-create in `qmanager_setup` with `www-data` ownership, and open with `<` (not `>`) when using `flock`. If a root process creates the file first, `www-data` CGI scripts will get `Permission denied` and fail silently.
+
+> **NOTE:** This protection does NOT affect `/usrdata/` or `/etc/qmanager/` (neither has the sticky bit set). It is specific to `/tmp/` (and any other `+t` directories).
+
+### `systemctl enable` Does Not Work for Boot Startup
+
+On the RM520N-GL's minimal systemd, `systemctl enable` appears to succeed (service shows "enabled" in `systemctl status`) but **services do not actually start on boot**. The `WantedBy=` directives in `[Install]` sections are silently ignored.
+
+**Root cause:** The systemd implementation on this platform does not process `[Install]` stanzas during `systemctl enable`. It marks the service as enabled in its database but does not create the symlinks that `multi-user.target` needs to pull services in at boot.
+
+**Fix (confirmed working in deployment):** Create explicit symlinks, following the pattern proven by SimpleAdmin on this same platform. The QManager target itself must be symlinked into `multi-user.target.wants/`, and individual services are symlinked into `qmanager.target.wants/`:
+
+```bash
+# Link the QManager target into multi-user.target.wants so it starts at boot
+WANTS_DIR="/lib/systemd/system/multi-user.target.wants"
+mkdir -p "$WANTS_DIR"
+ln -sf /etc/systemd/system/qmanager.target "$WANTS_DIR/qmanager.target"
+
+# Link individual services into qmanager.target.wants (for target dependency)
+mkdir -p /etc/systemd/system/qmanager.target.wants
+ln -sf /etc/systemd/system/qmanager_poller.service \
+    /etc/systemd/system/qmanager.target.wants/qmanager_poller.service
+# ... repeat for each service
+```
+
+**Boot chain:** `multi-user.target` --> `qmanager.target` (via explicit symlink) --> individual services (via `qmanager.target.wants/` symlinks).
+
+> **WARNING:** Do not rely on `systemctl enable` for boot persistence on the RM520N-GL. Always create explicit symlinks in the install script. `systemctl enable` can still be used for runtime start/stop, but the symlinks are what makes boot startup work.
+
+> **NOTE:** The symlink target directory is `/lib/systemd/system/multi-user.target.wants/` (not `/etc/systemd/system/`). This is where the platform's boot loader looks for wanted units.
 
 ---
 

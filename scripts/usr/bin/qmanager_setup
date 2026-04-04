@@ -11,9 +11,14 @@
 # Ensure required directories exist
 mkdir -p /var/lock /etc/qmanager /usr/lib/qmanager /tmp/quecmanager
 
-# Lock files — both root (daemons) and www-data (CGI) need access
-touch /var/lock/qmanager.lock /var/lock/qmanager.pid
-chmod 666 /var/lock/qmanager.lock /var/lock/qmanager.pid
+# Shared /tmp files — owned by www-data so CGI scripts can open them.
+# Root (daemons) can still open because root owns the /tmp directory.
+# CRITICAL: fs.protected_regular=1 on RM520N-GL means O_CREAT in sticky /tmp
+# is blocked unless file_owner==caller OR dir_owner==caller.
+# Must match paths in /usr/bin/qcmd: LOCK_FILE and PID_FILE
+touch /tmp/qmanager_at.lock /tmp/qmanager_at.pid /tmp/qmanager.log
+chown www-data:www-data /tmp/qmanager_at.lock /tmp/qmanager_at.pid /tmp/qmanager.log
+chmod 666 /tmp/qmanager_at.lock /tmp/qmanager_at.pid /tmp/qmanager.log
 
 # Session directory — www-data needs write access (cleared on reboot since /tmp is tmpfs)
 mkdir -p /tmp/qmanager_sessions
