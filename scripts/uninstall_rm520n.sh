@@ -132,10 +132,14 @@ info "Removed QManager TLS certs"
 
 # --- Remove firewall rules ---
 rm -f /etc/firewall.user.ttl /etc/firewall.user.mtu 2>/dev/null || true
-# Remove live loopback iptables rules (added by qmanager_setup for CGI localhost access)
+# Remove live iptables rules added by qmanager_setup
 if command -v iptables >/dev/null 2>&1; then
     iptables -D INPUT -i lo -p tcp --dport 80 -j ACCEPT 2>/dev/null || true
     iptables -D INPUT -i lo -p tcp --dport 443 -j ACCEPT 2>/dev/null || true
+    for port in 80 443 22; do
+        iptables -D INPUT -i bridge0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null || true
+        iptables -D INPUT -i eth0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null || true
+    done
 fi
 
 # --- Remove runtime state ---

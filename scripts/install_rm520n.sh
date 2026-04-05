@@ -76,13 +76,11 @@ SRC_FRONTEND="$INSTALL_DIR/out"
 SRC_SCRIPTS="$INSTALL_DIR/scripts"
 SRC_DEPS="$INSTALL_DIR/dependencies"
 
-# Entware paths — ensure Entware binaries (e.g. dropbear in /opt/sbin) are
-# discoverable by command -v throughout the installer.
-export PATH="/opt/bin:/opt/sbin:$PATH"
+# Entware opkg path
 OPKG="/opt/bin/opkg"
 
 # Optional packages (not bundled — installed from Entware if available)
-OPTIONAL_PACKAGES=""
+OPTIONAL_PACKAGES="msmtp"
 
 # --- Colors & Icons ----------------------------------------------------------
 
@@ -153,9 +151,6 @@ install_dependencies() {
 
     # --- sms_tool (static ARM binary — direct copy) ---
     if [ -f "$SRC_DEPS/sms_tool" ]; then
-        # Remove existing binary first — cp fails with "Text file busy" if it's
-        # currently running (e.g. poller or socat bridge has it open).
-        rm -f "$BIN_DIR/sms_tool" 2>/dev/null
         cp "$SRC_DEPS/sms_tool" "$BIN_DIR/sms_tool"
         chmod +x "$BIN_DIR/sms_tool"
         info "sms_tool installed to $BIN_DIR/sms_tool"
@@ -541,8 +536,8 @@ enable_services() {
 start_services() {
     step "Starting QManager services"
 
-    # Add loopback iptables rules — CGI scripts need localhost access to lighttpd
-    # (default RM520N-GL firewall drops non-bridge/eth traffic on 80/443)
+    # iptables rules — allow access to web UI and SSH
+    # Default RM520N-GL firewall drops non-bridge/eth traffic; replaces simplefirewall
     if ! iptables -C INPUT -i lo -p tcp --dport 80 -j ACCEPT 2>/dev/null; then
         iptables -I INPUT 1 -i lo -p tcp --dport 80 -j ACCEPT
         info "Added iptables loopback rule for port 80"
@@ -551,6 +546,17 @@ start_services() {
         iptables -I INPUT 1 -i lo -p tcp --dport 443 -j ACCEPT
         info "Added iptables loopback rule for port 443"
     fi
+
+    # External access — HTTP, HTTPS, SSH on LAN interfaces (bridge0, eth0)
+    for port in 80 443 22; do
+        if ! iptables -C INPUT -i bridge0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null; then
+            iptables -A INPUT -i bridge0 -p tcp --dport "$port" -j ACCEPT
+        fi
+        if ! iptables -C INPUT -i eth0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null; then
+            iptables -A INPUT -i eth0 -p tcp --dport "$port" -j ACCEPT
+        fi
+    done
+    info "Added iptables LAN access rules for ports 80, 443, 22"
 
     # Restart lighttpd to pick up new config
     systemctl restart lighttpd 2>/dev/null || warn "Could not restart lighttpd"
