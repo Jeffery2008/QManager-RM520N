@@ -166,11 +166,12 @@ export function NavUser({
     sessionStorage.setItem("qm_rebooting", "1");
     document.cookie = "qm_logged_in=; Path=/; Max-Age=0";
 
-    // Fire-and-forget: send the reboot POST, don't await the response.
+    // Fire-and-forget: keepalive ensures the request survives page navigation.
     fetch("/cgi-bin/quecmanager/system/reboot.sh", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "reboot" }),
+      keepalive: true,
     }).catch(() => {});
 
     // Navigate to countdown page immediately
