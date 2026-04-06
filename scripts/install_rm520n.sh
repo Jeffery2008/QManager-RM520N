@@ -192,11 +192,127 @@ install_dependencies() {
         warn "/dev/smd11 not found — AT commands will not work until modem is ready"
     fi
 
-    # --- Entware packages -----------------------------------------------------
+    # --- Entware bootstrap -------------------------------------------------------
+    # If opkg is not installed, bootstrap Entware from scratch.
+    # This replicates the RGMII toolkit's Entware installation process.
     if [ ! -x "$OPKG" ]; then
-        warn "Entware opkg not found at $OPKG — skipping package installation"
-        warn "Manually install lighttpd, jq, sudo, and coreutils-timeout"
+        info "Entware not found — bootstrapping from bin.entware.net"
+
+        # Prevent library conflicts during bootstrap
+        unset LD_LIBRARY_PATH
+        unset LD_PRELOAD
+
+        ENTWARE_ARCH="armv7sf-k3.2"
+        ENTWARE_URL="http://bin.entware.net/${ENTWARE_ARCH}/installer"
+
+        # Rename factory opkg if present (conflicts with Entware opkg)
+        if command -v opkg >/dev/null 2>&1; then
+            _old_opkg=$(command -v opkg)
+            mv "$_old_opkg" "${_old_opkg}_old" 2>/dev/null || true
+            info "Renamed factory opkg to opkg_old"
+        fi
+
+        # Create /usrdata/opt and bind-mount to /opt via systemd
+        mkdir -p /usrdata/opt
+
+        if [ ! -f /lib/systemd/system/opt.mount ]; then
+            cat > /lib/systemd/system/opt.mount << 'MOUNTEOF'
+[Unit]
+Description=Bind /usrdata/opt to /opt
+
+[Mount]
+What=/usrdata/opt
+Where=/opt
+Type=none
+Options=bind
+
+[Install]
+WantedBy=multi-user.target
+MOUNTEOF
+            info "Created opt.mount systemd unit"
+        fi
+
+        # Bootstrap service ensures opt.mount starts at boot
+        if [ ! -f /lib/systemd/system/start-opt-mount.service ]; then
+            cat > /lib/systemd/system/start-opt-mount.service << 'SVCEOF'
+[Unit]
+Description=Ensure opt.mount is started at boot
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl start opt.mount
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+            ln -sf /lib/systemd/system/start-opt-mount.service \
+                /lib/systemd/system/multi-user.target.wants/start-opt-mount.service
+            info "Created start-opt-mount.service"
+        fi
+
+        systemctl daemon-reload
+        systemctl start opt.mount 2>/dev/null || true
+        info "Mounted /usrdata/opt → /opt"
+
+        # Create directory structure
+        for folder in bin etc lib/opkg tmp var/lock; do
+            mkdir -p "/opt/$folder"
+        done
+        chmod 777 /opt/tmp
+
+        # Download opkg binary and config
+        wget -q "$ENTWARE_URL/opkg" -O /opt/bin/opkg \
+            || die "Failed to download opkg from $ENTWARE_URL"
+        chmod 755 /opt/bin/opkg
+        wget -q "$ENTWARE_URL/opkg.conf" -O /opt/etc/opkg.conf \
+            || die "Failed to download opkg.conf from $ENTWARE_URL"
+        info "Downloaded opkg package manager"
+
+        # Install base Entware
+        /opt/bin/opkg update >/dev/null 2>&1 \
+            || die "opkg update failed — check internet connectivity"
+        /opt/bin/opkg install entware-opt >/dev/null 2>&1 \
+            || die "Failed to install entware-opt base package"
+        info "Entware base installed"
+
+        # Link system user/group files
+        for file in passwd group shells shadow gshadow; do
+            [ -f "/etc/$file" ] && ln -sf "/etc/$file" "/opt/etc/$file"
+        done
+        [ -f /etc/localtime ] && ln -sf /etc/localtime /opt/etc/localtime
+
+        # Create Entware init.d service (starts Entware services at boot)
+        if [ ! -f /lib/systemd/system/rc.unslung.service ]; then
+            cat > /lib/systemd/system/rc.unslung.service << 'RCEOF'
+[Unit]
+Description=Start Entware services
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 5
+ExecStart=/opt/etc/init.d/rc.unslung start
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+RCEOF
+            ln -sf /lib/systemd/system/rc.unslung.service \
+                /lib/systemd/system/multi-user.target.wants/rc.unslung.service
+            info "Created rc.unslung.service"
+        fi
+
+        # Create global symlink for opkg
+        ln -sf /opt/bin/opkg /bin/opkg 2>/dev/null || true
+
+        systemctl daemon-reload
+        info "Entware bootstrap complete"
     else
+        info "Entware already installed at $OPKG"
+    fi
+
+    # --- Entware packages (requires opkg to be available) ---------------------
+    if [ -x "$OPKG" ]; then
         # lighttpd (web server)
         if [ -x /opt/sbin/lighttpd ]; then
             info "lighttpd is already installed"
@@ -640,15 +756,15 @@ start_services() {
 
 setup_ssh() {
     # Skip prompt if SSH is already configured and running
-    if pgrep -x dropbear >/dev/null 2>&1 && [ -f /opt/etc/init.d/S51dropbear ]; then
+    if pgrep -x dropbear >/dev/null 2>&1 && [ -f "$SYSTEMD_DIR/dropbear.service" ]; then
         info "SSH (dropbear) already configured and running"
         return 0
     fi
 
     printf "\n"
     printf "  ${BOLD}Enable SSH access (dropbear)?${NC}\n"
-    printf "  ${DIM}This sets up persistent SSH on port 22 via Entware init.${NC}\n"
-    printf "  ${DIM}Root filesystem doesn't survive reboots — Entware's /opt does.${NC}\n\n"
+    printf "  ${DIM}Persistent SSH on port 22 via systemd service.${NC}\n"
+    printf "  ${DIM}Host keys are stored in /opt/etc/dropbear/ (persistent via Entware).${NC}\n\n"
     printf "  Enable SSH? [y/N] "
     read -r answer
     case "$answer" in
@@ -656,45 +772,62 @@ setup_ssh() {
         *) info "Skipped SSH setup"; return 0 ;;
     esac
 
-    # Verify dropbear is installed
+    # Install dropbear if not present (from bundled .ipk or Entware)
     if ! command -v dropbear >/dev/null 2>&1; then
-        warn "dropbear not installed — cannot set up SSH"
-        return 0
-    fi
-
-    # Verify Entware init.d exists
-    if [ ! -d /opt/etc/init.d ]; then
-        warn "/opt/etc/init.d not found — Entware init system missing"
-        return 0
-    fi
-
-    local initscript="/opt/etc/init.d/S51dropbear"
-
-    # Create Entware init script if missing
-    if [ ! -f "$initscript" ]; then
-        cat > "$initscript" << 'INITEOF'
-#!/bin/sh
-ENABLED=yes
-PROCS=dropbear
-ARGS="-p 22"
-PREARGS=""
-. /opt/etc/init.d/rc.func
-INITEOF
-        chmod +x "$initscript"
-        info "Created $initscript"
+        if [ -x "$OPKG" ]; then
+            if ls "$SRC_DEPS"/dropbear*.ipk >/dev/null 2>&1; then
+                "$OPKG" install "$SRC_DEPS"/dropbear*.ipk >/dev/null 2>&1 \
+                    && info "dropbear installed from bundled package" \
+                    || { warn "dropbear install failed"; return 0; }
+            else
+                "$OPKG" install dropbear >/dev/null 2>&1 \
+                    && info "dropbear installed from Entware" \
+                    || { warn "dropbear install failed"; return 0; }
+            fi
+        else
+            warn "Cannot install dropbear — opkg not available"
+            return 0
+        fi
     else
-        info "Entware dropbear init script already exists"
+        info "dropbear already installed"
     fi
+
+    # opkg post-install auto-generates RSA, ECDSA, and ED25519 host keys
+    # in /opt/etc/dropbear/ which persists via /usrdata/opt bind mount.
+    # dropbear finds them automatically — no -r flag needed.
+
+    # Create systemd service (not Entware init.d — more reliable on RM520N-GL)
+    if [ ! -f "$SYSTEMD_DIR/dropbear.service" ]; then
+        cat > "$SYSTEMD_DIR/dropbear.service" << 'SSHEOF'
+[Unit]
+Description=Dropbear SSH Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/sbin/dropbear -F -E -p 22
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+SSHEOF
+        info "Created dropbear.service"
+    fi
+
+    # Enable for boot via symlink (systemctl enable doesn't work on RM520N-GL)
+    ln -sf "$SYSTEMD_DIR/dropbear.service" "$WANTS_DIR/dropbear.service"
+    systemctl daemon-reload
 
     # Start dropbear now
     if pgrep -x dropbear >/dev/null 2>&1; then
         info "dropbear is already running"
     else
-        "$initscript" start 2>/dev/null || true
-        if pgrep -x dropbear >/dev/null 2>&1; then
+        systemctl start dropbear 2>/dev/null || true
+        sleep 1
+        if systemctl is-active dropbear >/dev/null 2>&1; then
             info "dropbear started on port 22"
         else
-            warn "dropbear failed to start — check: $initscript start"
+            warn "dropbear failed to start — check: journalctl -u dropbear"
         fi
     fi
 
