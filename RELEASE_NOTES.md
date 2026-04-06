@@ -60,15 +60,7 @@
 
 ## 📥 Installation
 
-**Prerequisite:** You must install **SimpleAdmin** first using the [Quectel RGMII Toolkit](https://github.com/iamromulan/quectel-rgmii-toolkit) (by iamromulan). ADB into your modem and run the toolkit script:
-
-```sh
-cd /tmp && curl -fsSL -o RMxxx_rgmii_toolkit.sh \
-  https://raw.githubusercontent.com/iamromulan/quectel-rgmii-toolkit/SDXLEMUR/RMxxx_rgmii_toolkit.sh && \
-  chmod +x RMxxx_rgmii_toolkit.sh && ./RMxxx_rgmii_toolkit.sh && cd /
-```
-
-Follow the prompts to install **SimpleAdmin and Entware**. This sets up the web server, socat PTY bridge, and foundational services that QManager builds upon. Once done, proceed with QManager:
+**No prerequisites required** — QManager is fully independent. The installer bootstraps Entware, installs lighttpd, and sets up everything from scratch. You only need ADB or SSH access and internet connectivity on the modem.
 
 ADB or SSH into the modem and run:
 
@@ -78,7 +70,7 @@ curl -fsSL -o /tmp/qmanager-installer.sh \
   bash /tmp/qmanager-installer.sh
 ```
 
-The interactive installer fetches the latest release, verifies the SHA-256 checksum, backs up SimpleAdmin, installs everything (`sms_tool`, `jq`, `dropbear` bundled), configures lighttpd + systemd, and reboots the modem.
+The interactive installer fetches the latest release, verifies the SHA-256 checksum, bootstraps Entware (if needed), installs lighttpd + `atcli_smd11` + `jq` + `dropbear`, configures systemd services, and reboots the modem.
 
 ### Uninstalling
 
@@ -88,8 +80,6 @@ bash /tmp/qmanager_install/uninstall_rm520n.sh
 # To also remove config/profiles/passwords:
 bash /tmp/qmanager_install/uninstall_rm520n.sh --purge
 ```
-
-SimpleAdmin is restored from backup automatically.
 
 ---
 

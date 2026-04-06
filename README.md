@@ -100,13 +100,12 @@ bash /tmp/qmanager_install/uninstall_rm520n.sh
 bash /tmp/qmanager_install/uninstall_rm520n.sh --purge
 ```
 
-SimpleAdmin's original `index.html` and lighttpd config are restored from backup.
-
 ---
 
 ## Additional Dependencies
 
-- **Bundled with installer:** `sms_tool` (static ARM binary), `jq` (Entware package), `dropbear` (SSH server)
+- **Bundled with installer:** `atcli_smd11` (ARM binary, AT command transport via `/dev/smd11`), `jq` (Entware package), `dropbear` (SSH server)
+- **Installed from Entware:** `lighttpd` + `lighttpd-mod-openssl`, `sudo`, `coreutils-timeout`
 - **Optional:** `msmtp` (email alerts) -- can be installed from within the app
 
 ---
@@ -119,7 +118,7 @@ SimpleAdmin's original `index.html` and lighttpd config are restored from backup
 | **Styling** | Tailwind CSS v4, OKLCH colors, Euclid Circular B + Manrope |
 | **Components** | shadcn/ui (42+ components), Recharts, React Hook Form + Zod |
 | **Backend** | Shell scripts (Bash), CGI endpoints via lighttpd |
-| **AT Commands** | `qcmd` wrapper with socat PTY bridge on `/dev/ttyOUT2` (smd7) |
+| **AT Commands** | `qcmd` wrapper with `atcli_smd11` on `/dev/smd11` (direct, no socat) |
 | **Init System** | systemd (`.service` units in `/lib/systemd/system/`) |
 | **Package Manager** | Bun (development), Entware opkg (device) |
 
@@ -128,7 +127,7 @@ SimpleAdmin's original `index.html` and lighttpd config are restored from backup
 ## Architecture
 
 ```
-Browser --- authFetch() --- lighttpd --- CGI Scripts --- qcmd --- socat PTY --- Modem AT
+Browser --- authFetch() --- lighttpd --- CGI Scripts --- qcmd --- atcli_smd11 --- /dev/smd11 --- Modem
                 |                  |                       |
                 |          Shell Libraries (12)      flock serialization
                 |
@@ -138,14 +137,14 @@ Browser --- authFetch() --- lighttpd --- CGI Scripts --- qcmd --- socat PTY --- 
        (tiered polling: 2s/10s/30s)
 ```
 
-The frontend is a statically-exported Next.js app served by lighttpd from `/usrdata/simpleadmin/www`. The backend is shell scripts running on the modem's internal Linux -- CGI endpoints for API requests and systemd-managed daemons for data collection.
+The frontend is a statically-exported Next.js app served by lighttpd from `/usrdata/qmanager/www`. The backend is shell scripts running on the modem's internal Linux -- CGI endpoints for API requests and systemd-managed daemons for data collection.
 
 **Key Data Flow:**
 
 - **Poller daemon** queries the modem via AT commands every 2-30s (3 tiers) and writes a JSON cache file
 - **CGI endpoints** (59 scripts) read the cache for GET requests, execute AT commands for POST requests
 - **React hooks** (31 custom hooks) poll the CGI layer and provide loading/error/staleness states
-- **AT transport** uses `sms_tool` over a socat PTY bridge on `/dev/ttyOUT2` (smd7 channel)
+- **AT transport** uses `atcli_smd11` on `/dev/smd11` directly (no socat PTY bridge needed)
 
 **Platform Details:**
 
@@ -231,7 +230,7 @@ QManager/
 │   ├── install_rm520n.sh       # Device installation script
 │   └── uninstall_rm520n.sh     # Clean removal script
 ├── dependencies/               # Bundled ARM binaries and packages
-│   ├── sms_tool                # Static ARM binary (AT command transport)
+│   ├── atcli_smd11             # ARM binary (AT command transport via /dev/smd11)
 │   ├── jq.ipk                  # JSON processor
 │   └── dropbear_*.ipk          # SSH server
 ├── docs/                       # Documentation

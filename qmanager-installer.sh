@@ -23,8 +23,8 @@ CHECKSUM_PATH="/tmp/qmanager_sha256sum.txt"
 EXTRACT_DIR="/tmp/qmanager_install"
 
 # Device paths (must match install_rm520n.sh / uninstall_rm520n.sh)
-WWW_ROOT="/usrdata/simpleadmin/www"
-CGI_DIR="/usrdata/simpleadmin/www/cgi-bin/quecmanager"
+WWW_ROOT="/usrdata/qmanager/www"
+CGI_DIR="/usrdata/qmanager/www/cgi-bin/quecmanager"
 LIB_DIR="/usr/lib/qmanager"
 BIN_DIR="/usr/bin"
 SYSTEMD_DIR="/lib/systemd/system"
