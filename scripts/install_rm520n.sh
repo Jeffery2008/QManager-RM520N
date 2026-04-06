@@ -306,8 +306,9 @@ RCEOF
             info "Created rc.unslung.service"
         fi
 
-        # Create global symlink for opkg
+        # Create global symlinks for critical Entware binaries
         ln -sf /opt/bin/opkg /bin/opkg 2>/dev/null || true
+        ln -sf /opt/bin/jq /usr/bin/jq 2>/dev/null || true
 
         systemctl daemon-reload
         info "Entware bootstrap complete"
@@ -353,6 +354,9 @@ RCEOF
                 && info "jq installed from Entware" \
                 || die "Failed to install jq"
         fi
+
+        # Ensure jq is in standard PATH (lighttpd CGI won't see /opt/bin)
+        [ -x /opt/bin/jq ] && ln -sf /opt/bin/jq /usr/bin/jq 2>/dev/null || true
 
         # coreutils-timeout
         if command -v timeout >/dev/null 2>&1; then

@@ -12,6 +12,12 @@
 _CGI_BASE_LOADED=1
 
 # ---------------------------------------------------------------------------
+# PATH — ensure Entware binaries (jq, sudo, etc.) are discoverable.
+# lighttpd's CGI environment has a minimal PATH that excludes /opt/bin.
+# ---------------------------------------------------------------------------
+export PATH="/opt/bin:/opt/sbin:/usr/bin:/usr/sbin:/bin:/sbin:$PATH"
+
+# ---------------------------------------------------------------------------
 # Logging — source qlog.sh with no-op fallbacks if library is missing
 # ---------------------------------------------------------------------------
 . /usr/lib/qmanager/qlog.sh 2>/dev/null || {
