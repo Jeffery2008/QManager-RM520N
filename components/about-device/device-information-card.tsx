@@ -40,34 +40,34 @@ interface DeviceInformationCardProps {
 function buildSections(data: AboutDeviceData): DataSection[] {
   return [
     {
-      title: "Device",
+      title: "设备",
       rows: [
-        { label: "Manufacturer", value: data.device.manufacturer },
-        { label: "Model", value: data.device.model },
-        { label: "Firmware", value: data.device.firmware },
-        { label: "Build Date", value: data.device.build_date },
+        { label: "制造商", value: data.device.manufacturer },
+        { label: "型号", value: data.device.model },
+        { label: "固件版本", value: data.device.firmware },
+        { label: "构建日期", value: data.device.build_date },
         { label: "IMEI", value: data.device.imei, mono: true },
         {
-          label: "3GPP Release (LTE)",
+          label: "3GPP 版本（LTE）",
           value: data.threeGppRelease.lte,
         },
         {
-          label: "3GPP Release (NR5G)",
+          label: "3GPP 版本（NR5G）",
           value: data.threeGppRelease.nr5g,
         },
       ],
     },
     {
-      title: "System",
+      title: "系统",
       rows: [
-        { label: "Hostname", value: data.system.hostname },
+        { label: "主机名", value: data.system.hostname },
         {
-          label: "System Version",
+          label: "系统版本",
           value: data.system.openwrt_version,
           mono: true,
         },
         {
-          label: "Kernel Version",
+          label: "内核版本",
           value: data.system.kernel_version,
           mono: true,
         },
@@ -83,10 +83,10 @@ function DeviceInformationSkeleton() {
     <Card className="@container/card">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold">
-          Device Information
+          设备信息
         </CardTitle>
         <CardDescription>
-          Modem identity and system details.
+          调制解调器身份信息与系统详情。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -122,22 +122,22 @@ const DeviceInformationCard = ({
     <Card className="@container/card">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold">
-          Device Information
+          设备信息
         </CardTitle>
         <CardDescription>
-          Modem identity and system details.
+          调制解调器身份信息与系统详情。
         </CardDescription>
       </CardHeader>
       <CardContent aria-live="polite">
         {error ? (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Failed to load device information</AlertTitle>
+            <AlertTitle>加载设备信息失败</AlertTitle>
             <AlertDescription className="flex items-center justify-between">
               <span>{error}</span>
               <Button variant="outline" size="sm" onClick={onRetry}>
                 <RefreshCcw className="size-3.5 mr-1.5" />
-                Retry
+                重试
               </Button>
             </AlertDescription>
           </Alert>
@@ -153,7 +153,7 @@ const DeviceInformationCard = ({
               <div className="size-44 bg-primary/15 rounded-full p-4 flex items-center justify-center">
                 <img
                   src="/device-icon.svg"
-                  alt={data.device.model ? `${data.device.model} modem` : "Modem"}
+                  alt={data.device.model ? `${data.device.model} 调制解调器` : "调制解调器"}
                   className="size-full drop-shadow-md object-contain"
                 />
               </div>

@@ -10,9 +10,9 @@ const AboutDeviceComponent = () => {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">About Device</h1>
+        <h1 className="text-3xl font-bold mb-2">关于设备</h1>
         <p className="text-muted-foreground">
-          Device identity, network addresses, and system information.
+          查看设备身份信息、网络地址与系统信息。
         </p>
       </div>
       <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">

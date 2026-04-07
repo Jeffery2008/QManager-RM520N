@@ -59,12 +59,12 @@ export function ChangePasswordDialog({
       setError("");
 
       if (newPassword.length < 6) {
-        setError("New password must be at least 6 characters.");
+        setError("新密码至少需要 6 个字符。");
         return;
       }
 
       if (newPassword !== confirmPassword) {
-        setError("New passwords do not match.");
+        setError("两次输入的新密码不一致。");
         return;
       }
 
@@ -72,7 +72,7 @@ export function ChangePasswordDialog({
       try {
         const result = await changePassword(currentPassword, newPassword);
         if (!result.success) {
-          setError(result.error || "Password change failed.");
+          setError(result.error || "修改密码失败。");
         }
         // On success, changePassword() clears the session and redirects to login
       } finally {
@@ -87,15 +87,15 @@ export function ChangePasswordDialog({
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
+            <DialogTitle>修改密码</DialogTitle>
             <DialogDescription>
-              You will be logged out after changing your password.
+              修改密码后，系统会自动将你退出登录。
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
             <Field>
               <FieldLabel htmlFor="current-password">
-                Current Password
+                当前密码
               </FieldLabel>
               <div className="relative">
                 <Input
@@ -115,14 +115,14 @@ export function ChangePasswordDialog({
                   className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={() => setShowCurrentPassword((v) => !v)}
                   tabIndex={-1}
-                  aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+                  aria-label={showCurrentPassword ? "隐藏密码" : "显示密码"}
                 >
                   {showCurrentPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
                 </Button>
               </div>
             </Field>
             <Field>
-              <FieldLabel htmlFor="new-password">New Password</FieldLabel>
+              <FieldLabel htmlFor="new-password">新密码</FieldLabel>
               <div className="relative">
                 <Input
                   id="new-password"
@@ -141,7 +141,7 @@ export function ChangePasswordDialog({
                   className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={() => setShowNewPassword((v) => !v)}
                   tabIndex={-1}
-                  aria-label={showNewPassword ? "Hide password" : "Show password"}
+                  aria-label={showNewPassword ? "隐藏密码" : "显示密码"}
                 >
                   {showNewPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
                 </Button>
@@ -149,7 +149,7 @@ export function ChangePasswordDialog({
             </Field>
             <Field>
               <FieldLabel htmlFor="confirm-new-password">
-                Confirm New Password
+                确认新密码
               </FieldLabel>
               <div className="relative">
                 <Input
@@ -169,7 +169,7 @@ export function ChangePasswordDialog({
                   className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   onClick={() => setShowConfirmPassword((v) => !v)}
                   tabIndex={-1}
-                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  aria-label={showConfirmPassword ? "隐藏密码" : "显示密码"}
                 >
                   {showConfirmPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
                 </Button>
@@ -188,16 +188,16 @@ export function ChangePasswordDialog({
               onClick={() => handleOpenChange(false)}
               disabled={isSubmitting}
             >
-              Cancel
+              取消
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Spinner className="mr-2" />
-                  Changing...
+                  修改中...
                 </>
               ) : (
-                "Change Password"
+                "修改密码"
               )}
             </Button>
           </DialogFooter>

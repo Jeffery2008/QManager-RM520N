@@ -79,10 +79,10 @@ const MBNCard = ({
     if (localAutoSel === "1" && currentAutoSel !== "1") {
       const success = await onSave({ action: "auto_sel", auto_sel: 1 });
       if (success) {
-        toast.success("Auto-select enabled — reboot required");
+        toast.success("已启用自动选择，需要重启");
         setShowRebootDialog(true);
       } else {
-        toast.error("Failed to enable auto-select");
+        toast.error("启用自动选择失败");
       }
       return;
     }
@@ -91,10 +91,10 @@ const MBNCard = ({
     if (localAutoSel === "0" && currentAutoSel !== "0" && selectedProfile === currentProfile?.name) {
       const success = await onSave({ action: "auto_sel", auto_sel: 0 });
       if (success) {
-        toast.success("Auto-select disabled — reboot required");
+        toast.success("已关闭自动选择，需要重启");
         setShowRebootDialog(true);
       } else {
-        toast.error("Failed to disable auto-select");
+        toast.error("关闭自动选择失败");
       }
       return;
     }
@@ -106,15 +106,15 @@ const MBNCard = ({
         profile_name: selectedProfile,
       });
       if (success) {
-        toast.success("Carrier profile applied — reboot required");
+        toast.success("运营商配置已应用，需要重启");
         setShowRebootDialog(true);
       } else {
-        toast.error("Failed to apply carrier profile");
+        toast.error("应用运营商配置失败");
       }
       return;
     }
 
-    toast.info("No changes to save");
+    toast.info("没有需要保存的更改");
   };
 
   const handleReset = () => {
@@ -132,9 +132,9 @@ const MBNCard = ({
     setIsRebooting(true);
     const sent = await onReboot();
     if (sent) {
-      toast.success("Device is rebooting...");
+      toast.success("设备正在重启...");
     } else {
-      toast.error("Reboot failed — restart the device manually");
+      toast.error("重启失败，请手动重启设备");
       setIsRebooting(false);
     }
   };
@@ -182,7 +182,7 @@ const MBNCard = ({
             <FieldSet>
               <FieldGroup>
                 <Field>
-                  <FieldLabel htmlFor="mbn-auto-select">Auto-Select Profile</FieldLabel>
+                  <FieldLabel htmlFor="mbn-auto-select">自动选择配置</FieldLabel>
                   <Select
                     value={
                       localAutoSel ||
@@ -191,18 +191,18 @@ const MBNCard = ({
                     onValueChange={setLocalAutoSel}
                     disabled={isSaving}
                   >
-                    <SelectTrigger id="mbn-auto-select" aria-label="Auto-Select Profile">
-                      <SelectValue placeholder="Choose Auto-Select" />
+                    <SelectTrigger id="mbn-auto-select" aria-label="自动选择配置">
+                      <SelectValue placeholder="选择自动选择方式" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Enabled</SelectItem>
-                      <SelectItem value="0">Disabled</SelectItem>
+                      <SelectItem value="1">已启用</SelectItem>
+                      <SelectItem value="0">已停用</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
 
                 <Field>
-                  <FieldLabel htmlFor="mbn-carrier-config">Carrier Configuration</FieldLabel>
+                  <FieldLabel htmlFor="mbn-carrier-config">运营商配置</FieldLabel>
                   <Select
                     value={
                       selectedProfile ||
@@ -213,8 +213,8 @@ const MBNCard = ({
                     onValueChange={setSelectedProfile}
                     disabled={isSaving || localAutoSel === "1"}
                   >
-                    <SelectTrigger id="mbn-carrier-config" aria-label="Carrier Configuration">
-                      <SelectValue placeholder="Choose Carrier Configuration" />
+                    <SelectTrigger id="mbn-carrier-config" aria-label="运营商配置">
+                      <SelectValue placeholder="Choose 运营商配置" />
                     </SelectTrigger>
                     <SelectContent>
                       {profiles?.map((p) => (
@@ -245,7 +245,7 @@ const MBNCard = ({
               variant="outline"
               onClick={handleReset}
               disabled={isSaving}
-              aria-label="Reset to saved values"
+              aria-label="恢复为已保存的值"
             >
               <RotateCcwIcon />
             </Button>

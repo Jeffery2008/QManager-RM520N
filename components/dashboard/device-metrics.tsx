@@ -110,7 +110,7 @@ const DeviceMetricsComponent = ({
       <Card className="@container/card">
         <CardHeader className="-mb-4">
           <CardTitle className="text-lg font-semibold">
-            Device Metrics
+            设备指标
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -134,7 +134,7 @@ const DeviceMetricsComponent = ({
     <Card className="@container/card">
       <CardHeader className="-mb-4">
         <CardTitle className="text-lg font-semibold tabular-nums">
-          Device Metrics
+          设备指标
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -144,13 +144,13 @@ const DeviceMetricsComponent = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <p className="font-semibold text-muted-foreground text-sm">
-                Modem Temperature
+                调制解调器温度
               </p>
               <div className="flex items-center gap-1.5">
                 {isTempHigh && (
                   <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
                     <TbAlertTriangleFilled className="text-warning" />
-                    High Temp
+                    温度偏高
                   </Badge>
                 )}
                 <p className="font-semibold text-sm tabular-nums">
@@ -168,13 +168,13 @@ const DeviceMetricsComponent = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <p className="font-semibold text-muted-foreground text-sm">
-                CPU Usage
+                CPU 使用率
               </p>
               <div className="flex items-center gap-1.5">
                 {isCpuHigh && (
                   <Badge className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
                     <TbAlertTriangleFilled className="text-warning" />
-                    High CPU
+                    CPU 偏高
                   </Badge>
                 )}
                 <p className="font-semibold text-sm tabular-nums">
@@ -192,7 +192,7 @@ const DeviceMetricsComponent = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <p className="font-semibold text-muted-foreground text-sm">
-                Memory Usage
+                内存使用
               </p>
               <p className="font-semibold text-sm tabular-nums">
                 {memTotal > 0 ? `${memUsed} MB / ${memTotal} MB` : "-"}
@@ -207,7 +207,7 @@ const DeviceMetricsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              Live Traffic
+              实时流量
             </p>
             <div className="flex items-center gap-x-2">
               <div className="flex items-center gap-1">
@@ -229,13 +229,13 @@ const DeviceMetricsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              LTE Cell Distance
+              LTE 小区距离
             </p>
 
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="inline-flex" aria-label="More info">
+                  <button type="button" className="inline-flex" aria-label="更多信息">
                     <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
@@ -243,12 +243,13 @@ const DeviceMetricsComponent = ({
                   {/* Will show in Hexadecimal form */}
                   {lteData?.ta !== null && lteData?.ta !== undefined ? (
                     <p>
-                      This is only an approximation based <br /> on the LTE
-                      Timing Advance value of{" "}
+                      这是根据 LTE Timing Advance 值{" "}
                       <span className="font-semibold">{lteData.ta}</span>.
+                      <br />
+                      计算得到的近似距离。
                     </p>
                   ) : (
-                    <p>Timing Advance value is not available.</p>
+                    <p>当前没有可用的 Timing Advance 值。</p>
                   )}
                 </TooltipContent>
               </Tooltip>
@@ -262,12 +263,12 @@ const DeviceMetricsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              NR Cell Distance
+              NR 小区距离
             </p>
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="inline-flex" aria-label="More info">
+                  <button type="button" className="inline-flex" aria-label="更多信息">
                     <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
@@ -275,12 +276,13 @@ const DeviceMetricsComponent = ({
                   {/* Will show in Hexadecimal form */}
                   {nrData?.ta !== null && nrData?.ta !== undefined ? (
                     <p>
-                      This is only an approximation based <br /> on the NR
-                      Timing Advance value of{" "}
+                      这是根据 NR Timing Advance 值{" "}
                       <span className="font-semibold">{nrData.ta}</span>.
+                      <br />
+                      计算得到的近似距离。
                     </p>
                   ) : (
-                    <p>Timing Advance value is not available.</p>
+                    <p>当前没有可用的 Timing Advance 值。</p>
                   )}
                 </TooltipContent>
               </Tooltip>
@@ -294,7 +296,7 @@ const DeviceMetricsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              Connection Uptime
+              连接时长
             </p>
             <p className="font-semibold text-sm tabular-nums">
               {displayConnUptime > 0 ? formatUptime(displayConnUptime) : "-"}
@@ -305,7 +307,7 @@ const DeviceMetricsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              Device Uptime
+              设备运行时长
             </p>
             <p className="font-semibold text-sm tabular-nums">
               {displayDevUptime > 0 ? formatUptime(displayDevUptime) : "-"}

@@ -52,7 +52,7 @@ export function NavCellular({
   return (
     <SidebarGroup>
       <SidebarGroupLabel>
-        Cellular
+        蜂窝网络
       </SidebarGroupLabel>
       <SidebarMenu>
         {cellular.map((item) => {
@@ -77,7 +77,7 @@ export function NavCellular({
                   <CollapsibleTrigger asChild>
                     <SidebarMenuAction className="data-[state=open]:rotate-90">
                       <ChevronRight />
-                      <span className="sr-only">Toggle</span>
+                      <span className="sr-only">展开或收起</span>
                     </SidebarMenuAction>
                   </CollapsibleTrigger>
                   <CollapsibleContent>

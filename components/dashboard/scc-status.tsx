@@ -28,7 +28,7 @@ const SccStatusComponent = ({ carriers }: SccStatusProps) => {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg font-semibold">
-          Secondary Carriers
+          辅载波
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -36,14 +36,14 @@ const SccStatusComponent = ({ carriers }: SccStatusProps) => {
           {/* Summary — mirrors SignalStatusCard's signal strength header */}
           <div className="flex items-center justify-between">
             <div className="grid gap-0.5">
-              <h3 className="text-sm font-semibold">Carrier Aggregation</h3>
+              <h3 className="text-sm font-semibold">载波聚合</h3>
               <div className="flex items-center gap-x-1">
                 <FaCircle
                   className="w-2 h-2 text-success"
                   aria-hidden
                 />
                 <p className="text-muted-foreground text-xs">
-                  {sccCarriers.length} active carrier{sccCarriers.length !== 1 ? "s" : ""}
+                  已启用 {sccCarriers.length} 条辅载波
                 </p>
               </div>
             </div>

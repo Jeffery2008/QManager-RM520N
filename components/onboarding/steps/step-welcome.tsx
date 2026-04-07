@@ -38,11 +38,11 @@ export function StepWelcome() {
       {/* Main message */}
       <motion.div {...fadeUp(1)} className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold tracking-tight leading-tight">
-          Your modem,<br />intelligently managed.
+          让你的调制解调器，<br />从一开始就更好用。
         </h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Let&apos;s get you set up in a few quick steps. Only your password is
-          required — everything else is optional and adjustable anytime.
+          只需几个步骤即可完成初始化。只有密码是必填项，
+          其他内容都可以跳过，并且后续随时都能修改。
         </p>
       </motion.div>
 
@@ -51,10 +51,10 @@ export function StepWelcome() {
         {...fadeUp(2)}
         className="flex flex-col gap-1.5 border-l-2 border-border pl-4"
       >
-        <StepPreviewItem label="Password" required />
-        <StepPreviewItem label="Network mode" />
-        <StepPreviewItem label="APN or SIM profile" />
-        <StepPreviewItem label="Band preferences" />
+        <StepPreviewItem label="密码" required />
+        <StepPreviewItem label="网络模式" />
+        <StepPreviewItem label="APN 或 SIM 配置" />
+        <StepPreviewItem label="频段偏好" />
       </motion.div>
     </div>
   );
@@ -72,7 +72,7 @@ function StepPreviewItem({
       <span className="size-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
       <span>{label}</span>
       {required && (
-        <span className="text-xs font-medium text-foreground">Required</span>
+        <span className="text-xs font-medium text-foreground">必填</span>
       )}
     </div>
   );

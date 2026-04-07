@@ -53,7 +53,7 @@ export function NavMonitoring({
   return (
     <SidebarGroup>
       <SidebarGroupLabel>
-        Monitoring
+        监控
       </SidebarGroupLabel>
       <SidebarMenu>
         {monitoring.map((item) => {
@@ -85,7 +85,7 @@ export function NavMonitoring({
                   <CollapsibleTrigger asChild>
                     <SidebarMenuAction className="data-[state=open]:rotate-90">
                       <ChevronRight />
-                      <span className="sr-only">Toggle</span>
+                      <span className="sr-only">展开或收起</span>
                     </SidebarMenuAction>
                   </CollapsibleTrigger>
                   <CollapsibleContent>

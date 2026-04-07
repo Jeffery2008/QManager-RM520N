@@ -77,16 +77,16 @@ const IMEISettingsCard = ({
     if (!isValidImei) return;
 
     if (!hasChanged) {
-      toast.info("No changes to save");
+      toast.info("没有需要保存的更改");
       return;
     }
 
     const success = await onSave(imei);
     if (success) {
-      toast.success("IMEI saved — reboot required to apply");
+      toast.success("IMEI 已保存，重启后生效");
       setShowRebootDialog(true);
     } else {
-      toast.error("Failed to save IMEI");
+      toast.error("保存 IMEI 失败");
     }
   };
 
@@ -101,9 +101,9 @@ const IMEISettingsCard = ({
     setIsRebooting(true);
     const sent = await onReboot();
     if (sent) {
-      toast.success("Device is rebooting...");
+      toast.success("设备正在重启...");
     } else {
-      toast.error("Reboot failed — restart the device manually");
+      toast.error("重启失败，请手动重启设备");
       setIsRebooting(false);
     }
   };
@@ -118,7 +118,7 @@ const IMEISettingsCard = ({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>IMEI Settings</CardTitle>
+          <CardTitle>IMEI 设置</CardTitle>
           <CardDescription>
             Please proceed with caution when modifying IMEI settings. Incorrect
             changes may lead to device malfunctions or legal issues.
@@ -144,7 +144,7 @@ const IMEISettingsCard = ({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>IMEI Settings</CardTitle>
+        <CardTitle>IMEI 设置</CardTitle>
         <CardDescription>
           Change the device&apos;s IMEI identifier. A reboot is required after changes.
           Check your local regulations before modifying.
@@ -157,12 +157,12 @@ const IMEISettingsCard = ({
               <FieldGroup>
                 <Field>
                   <FieldLabel htmlFor="device-imei-input">
-                    Set Device IMEI
+                    设置设备 IMEI
                   </FieldLabel>
                   <InputGroup>
                     <InputGroupInput
                       id="device-imei-input"
-                      placeholder="Enter Device IMEI"
+                      placeholder="输入设备 IMEI"
                       value={imei}
                       onChange={handleImeiChange}
                       maxLength={15}
@@ -177,14 +177,14 @@ const IMEISettingsCard = ({
                           <button
                             type="button"
                             className="pl-1.5 inline-flex items-center"
-                            aria-label="IMEI legal warning"
+                            aria-label="IMEI 合规提醒"
                           >
                             <AlertTriangleIcon className="text-muted-foreground size-4" />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>
-                            IMEI modification regulations vary by country.
+                            不同国家/地区对 IMEI 修改的法规要求不同。
                             <br />
                             Check your local laws before changing the IMEI.
                           </p>
@@ -224,7 +224,7 @@ const IMEISettingsCard = ({
               variant="outline"
               onClick={handleReset}
               disabled={isSaving}
-              aria-label="Reset to saved values"
+              aria-label="恢复为已保存的值"
             >
               <RotateCcwIcon />
             </Button>
@@ -237,7 +237,7 @@ const IMEISettingsCard = ({
         }}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Reboot Required</AlertDialogTitle>
+              <AlertDialogTitle>需要重启</AlertDialogTitle>
               <AlertDialogDescription>
                 IMEI changes require a device reboot to take effect. Would you
                 like to reboot now?

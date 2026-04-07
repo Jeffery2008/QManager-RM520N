@@ -36,11 +36,11 @@ const DeviceStatusComponent = ({
   const [hidePrivate, setHidePrivate] = useState(false);
 
   const rows = [
-    { label: "Manufacturer", value: data?.manufacturer || "-" },
-    { label: "Firmware Version", value: data?.firmware || "-" },
-    { label: "Build Date", value: data?.build_date || "-" },
+    { label: "制造商", value: data?.manufacturer || "-" },
+    { label: "固件版本", value: data?.firmware || "-" },
+    { label: "构建日期", value: data?.build_date || "-" },
     {
-      label: "Phone Number",
+      label: "电话号码",
       value: data?.phone_number || "-",
       mono: true,
       private: true,
@@ -48,17 +48,17 @@ const DeviceStatusComponent = ({
     { label: "IMSI", value: data?.imsi || "-", mono: true, private: true },
     { label: "ICCID", value: data?.iccid || "-", mono: true, private: true },
     {
-      label: "Device IMEI",
+      label: "设备 IMEI",
       value: data?.imei || "-",
       mono: true,
       private: true,
     },
     {
-      label: "LTE Category",
+      label: "LTE 类别",
       value: data?.lte_category ? `Cat ${data.lte_category}` : "-",
       mono: true,
     },
-    { label: "Active MIMO", value: data?.mimo || "-", mono: true },
+    { label: "当前 MIMO", value: data?.mimo || "-", mono: true },
   ];
 
   if (isLoading) {
@@ -66,7 +66,7 @@ const DeviceStatusComponent = ({
       <Card className="@container/card col-span-2">
         <CardHeader>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl text-center">
-            Device Information
+            设备信息
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -95,7 +95,7 @@ const DeviceStatusComponent = ({
     <Card className="@container/card col-span-2">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold @[250px]/card:text-3xl text-center flex-1">
-          Device Information
+          设备信息
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -104,7 +104,7 @@ const DeviceStatusComponent = ({
             <div className="size-44 bg-primary/15 rounded-full p-4 flex items-center justify-center">
               <img
                 src="/device-icon.svg"
-                alt="Device Icon"
+                alt="设备图标"
                 className="size-full drop-shadow-md object-contain"
               />
             </div>
@@ -117,7 +117,7 @@ const DeviceStatusComponent = ({
                 size="icon"
                 onClick={() => setHidePrivate((prev) => !prev)}
                 aria-label={
-                  hidePrivate ? "Show private details" : "Hide private details"
+                  hidePrivate ? "显示隐私信息" : "隐藏隐私信息"
                 }
               >
                 {hidePrivate ? (

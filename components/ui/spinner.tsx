@@ -10,7 +10,7 @@ function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
         className={cn("size-4 animate-spin", className)}
         {...props}
       />
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">加载中</span>
     </span>
   )
 }

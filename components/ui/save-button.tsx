@@ -39,7 +39,7 @@ interface SaveButtonProps extends Omit<ButtonProps, "children"> {
 export function SaveButton({
   isSaving,
   saved,
-  label = "Save Settings",
+  label = "保存设置",
   disabled,
   className,
   ...props
@@ -63,7 +63,7 @@ export function SaveButton({
             transition={{ duration: 0.14 }}
           >
             <Loader2 className="size-3.5 animate-spin" />
-            Saving…
+            保存中…
           </motion.span>
         ) : saved ? (
           <motion.span
@@ -75,7 +75,7 @@ export function SaveButton({
             transition={{ duration: 0.18, type: "spring", stiffness: 400, damping: 22 }}
           >
             <CheckIcon className="size-3.5" />
-            Saved!
+            已保存
           </motion.span>
         ) : (
           <motion.span

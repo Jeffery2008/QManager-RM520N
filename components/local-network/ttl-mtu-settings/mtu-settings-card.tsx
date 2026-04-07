@@ -39,7 +39,7 @@ const MTUSettingsCard = () => {
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Maximum Transmission Unit (MTU) Configuration</CardTitle>
+          <CardTitle>最大传输单元（MTU）配置</CardTitle>
           <CardDescription>
             Set the maximum packet size on the cellular data interface. Lower
             values can help with fragmentation issues.
@@ -121,7 +121,7 @@ function MTUForm({
       const success = await disableMtu();
       if (success) {
         markSaved();
-        toast.success("Custom MTU disabled");
+        toast.success("已关闭自定义 MTU");
       } else {
         toast.error(error || "Failed to disable MTU settings");
       }
@@ -143,7 +143,7 @@ function MTUForm({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Maximum Transmission Unit (MTU) Configuration</CardTitle>
+        <CardTitle>最大传输单元（MTU）配置</CardTitle>
         <CardDescription>
           Set the maximum packet size on the cellular data interface. Lower
           values can help with fragmentation issues.
@@ -162,7 +162,7 @@ function MTUForm({
               <div className="grid gap-2">
                 <Field orientation="horizontal" className="w-fit">
                   <FieldLabel htmlFor="mtu-setting">
-                    Enable Custom MTU
+                    启用自定义 MTU
                   </FieldLabel>
                   <Switch
                     id="mtu-setting"
@@ -173,13 +173,13 @@ function MTUForm({
               </div>
 
               <Field>
-                <FieldLabel htmlFor="mtu-value">MTU Value</FieldLabel>
+                <FieldLabel htmlFor="mtu-value">MTU 值</FieldLabel>
                 <Input
                   id="mtu-value"
                   type="number"
                   min="576"
                   max="9000"
-                  placeholder="e.g. 1500"
+                  placeholder="例如：1500"
                   className="w-full"
                   value={mtuValue}
                   onChange={(e) => setMtuValue(e.target.value)}
@@ -200,7 +200,7 @@ function MTUForm({
               type="submit"
               isSaving={isSaving}
               saved={saved}
-              label="Apply"
+              label="应用"
               disabled={!isDirty}
             />
           </div>

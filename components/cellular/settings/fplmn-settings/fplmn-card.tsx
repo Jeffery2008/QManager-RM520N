@@ -93,14 +93,14 @@ const FPLMNCard = () => {
       if (!mountedRef.current) return;
 
       if (data.success) {
-        toast.success("Blocked networks cleared");
+        toast.success("已清除被阻止的网络");
         await fetchStatus(true);
       } else {
-        toast.error(data.detail || "Failed to clear blocked networks");
+        toast.error(data.detail || "清除被阻止的网络失败");
       }
     } catch {
       if (mountedRef.current) {
-        toast.error("Failed to clear blocked networks");
+        toast.error("清除被阻止的网络失败");
       }
     } finally {
       if (mountedRef.current) {
@@ -114,7 +114,7 @@ const FPLMNCard = () => {
   // ---------------------------------------------------------------------------
   const cardHeader = (
     <CardHeader>
-      <CardTitle>Blocked Networks</CardTitle>
+      <CardTitle>被阻止的网络</CardTitle>
       <CardDescription>
         Your SIM stores a list of networks that previously rejected your
         device. Clearing this list may restore connectivity and improve
@@ -125,7 +125,7 @@ const FPLMNCard = () => {
           rel="noreferrer"
           className="underline ml-1 text-primary hover:text-primary/80"
         >
-          Learn more
+          了解更多
         </a>
         .
       </CardDescription>
@@ -158,7 +158,7 @@ const FPLMNCard = () => {
               <EmptyMedia variant="icon" className="bg-destructive rounded-xl">
                 <AlertTriangleIcon className="text-destructive-foreground size-6" />
               </EmptyMedia>
-              <EmptyTitle>Unable to Check</EmptyTitle>
+              <EmptyTitle>无法检查</EmptyTitle>
               <EmptyDescription className="max-w-xs text-pretty">
                 {fetchError}
               </EmptyDescription>
@@ -166,7 +166,7 @@ const FPLMNCard = () => {
             <EmptyContent>
               <Button variant="outline" onClick={() => fetchStatus()}>
                 <RefreshCcwIcon />
-                Retry
+                重试
               </Button>
             </EmptyContent>
           </Empty>
@@ -193,7 +193,7 @@ const FPLMNCard = () => {
                   <EmptyMedia variant="icon" className="bg-destructive rounded-xl">
                     <AlertTriangleIcon className="text-destructive-foreground size-6" />
                   </EmptyMedia>
-                  <EmptyTitle>Blocked Networks Found</EmptyTitle>
+                  <EmptyTitle>被阻止的网络 Found</EmptyTitle>
                   <EmptyDescription className="max-w-xs text-pretty">
                     Your SIM has blocked one or more networks, which may prevent
                     connection. Clearing the list is recommended.
@@ -211,7 +211,7 @@ const FPLMNCard = () => {
                         Clearing...
                       </>
                     ) : (
-                      "Clear Blocked Networks"
+                      "Clear 被阻止的网络"
                     )}
                   </Button>
                 </EmptyContent>
@@ -230,15 +230,15 @@ const FPLMNCard = () => {
                   <EmptyMedia variant="icon" className="bg-primary rounded-xl">
                     <CircleCheckIcon className="text-primary-foreground size-6" />
                   </EmptyMedia>
-                  <EmptyTitle>No Blocked Networks</EmptyTitle>
+                  <EmptyTitle>No 被阻止的网络</EmptyTitle>
                   <EmptyDescription className="max-w-xs text-pretty">
-                    Your SIM has no blocked networks. No action needed.
+                    你的 SIM 没有被阻止的网络，无需处理。
                   </EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent>
                   <Button variant="outline" onClick={() => fetchStatus()}>
                     <RefreshCcwIcon />
-                    Refresh Status
+                    刷新状态
                   </Button>
                 </EmptyContent>
               </Empty>

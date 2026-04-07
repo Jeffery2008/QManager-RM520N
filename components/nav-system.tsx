@@ -53,7 +53,7 @@ export function NavSystem({
   return (
     <SidebarGroup>
       <SidebarGroupLabel>
-        System
+        系统
       </SidebarGroupLabel>
       <SidebarMenu>
         {system.map((item) => {
@@ -85,7 +85,7 @@ export function NavSystem({
                   <CollapsibleTrigger asChild>
                     <SidebarMenuAction className="data-[state=open]:rotate-90">
                       <ChevronRight />
-                      <span className="sr-only">Toggle</span>
+                      <span className="sr-only">展开或收起</span>
                     </SidebarMenuAction>
                   </CollapsibleTrigger>
                   <CollapsibleContent>

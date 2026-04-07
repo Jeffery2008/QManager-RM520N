@@ -107,7 +107,7 @@ function DraggableNetworkItem({
         disabled={disabled}
       >
         <IconGripVertical className="text-muted-foreground size-4" />
-        <span className="sr-only">Drag to reorder</span>
+        <span className="sr-only">拖动以重新排序</span>
       </Button>
       <div className="flex items-center gap-x-3">
         <div
@@ -127,7 +127,7 @@ function DraggableNetworkItem({
 }
 
 // =============================================================================
-// Network Priority Card
+// 网络优先级 Card
 // =============================================================================
 const NetworkPriorityCard = () => {
   const { saved, markSaved } = useSaveFlash();
@@ -219,7 +219,7 @@ const NetworkPriorityCard = () => {
     const newOrder = networks.map((n) => n.id).join(":");
 
     if (newOrder === fetchedOrder) {
-      toast.info("No changes to save");
+      toast.info("没有需要保存的更改");
       return;
     }
 
@@ -238,12 +238,12 @@ const NetworkPriorityCard = () => {
       if (!mountedRef.current) return;
 
       if (!data.success) {
-        toast.error(data.detail || "Failed to set network priority");
+        toast.error(data.detail || "设置网络优先级失败");
         return;
       }
 
       markSaved();
-      toast.success("Network priority updated");
+      toast.success("网络优先级已更新");
 
       // Brief recovery delay for network re-registration
       await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -252,7 +252,7 @@ const NetworkPriorityCard = () => {
       await fetchOrder(true);
     } catch {
       if (mountedRef.current) {
-        toast.error("Failed to set network priority");
+        toast.error("设置网络优先级失败");
       }
     } finally {
       if (mountedRef.current) {
@@ -277,9 +277,9 @@ const NetworkPriorityCard = () => {
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Network Priority</CardTitle>
+          <CardTitle>网络优先级</CardTitle>
           <CardDescription>
-            Set the priority order of your network connections.
+            设置网络连接的优先级顺序。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -296,9 +296,9 @@ const NetworkPriorityCard = () => {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Network Priority</CardTitle>
+        <CardTitle>网络优先级</CardTitle>
         <CardDescription>
-          Set the priority order of your network connections.
+          设置网络连接的优先级顺序。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -345,7 +345,7 @@ const NetworkPriorityCard = () => {
             variant="outline"
             onClick={handleReset}
             disabled={isSaving}
-            aria-label="Reset to saved values"
+            aria-label="恢复为已保存的值"
           >
             <RotateCcwIcon />
           </Button>

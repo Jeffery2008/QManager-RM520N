@@ -25,20 +25,20 @@ interface AboutQManagerCardProps {
 
 const AboutQManagerCard = ({ data, isLoading }: AboutQManagerCardProps) => {
   const networkRows = [
-    { label: "Device IP", value: data?.network.device_ip },
-    { label: "LAN Gateway", value: data?.network.lan_gateway },
+    { label: "设备 IP", value: data?.network.device_ip },
+    { label: "LAN 网关", value: data?.network.lan_gateway },
     { label: "WWAN IPv4", value: data?.network.wan_ipv4 },
     { label: "WWAN IPv6", value: data?.network.wan_ipv6 },
-    { label: "Public IPv4", value: data?.network.public_ipv4 },
-    { label: "Public IPv6", value: data?.network.public_ipv6 },
+    { label: "公网 IPv4", value: data?.network.public_ipv4 },
+    { label: "公网 IPv6", value: data?.network.public_ipv6 },
   ];
 
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold">About QManager</CardTitle>
+        <CardTitle className="text-2xl font-semibold">关于 QManager</CardTitle>
         <CardDescription>
-          Modem management interface for Quectel modems.
+          面向 Quectel 调制解调器的管理界面。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -47,7 +47,7 @@ const AboutQManagerCard = ({ data, isLoading }: AboutQManagerCardProps) => {
           <div className="flex items-center justify-center">
             <Image
               src={QManagerLogo}
-              alt="QManager Logo"
+              alt="QManager 标志"
               className="size-24"
               priority
             />
@@ -56,20 +56,17 @@ const AboutQManagerCard = ({ data, isLoading }: AboutQManagerCardProps) => {
           {/* Description */}
           <div className="grid gap-y-4">
             <p className="text-sm text-muted-foreground text-pretty leading-relaxed font-medium">
-              Hey there! Rus here. QManager is the latest iteration of
-              QuecManager, built with a newer and more reliable approach
-              compared to its predecessor &mdash; while still combining
-              technical settings for advanced users with a simplified UI for
-              those just getting started. QManager promises to deliver the same
-              features QuecManager had, only better, more reliable, and more
-              user-friendly. Special thanks to iamromulan, clndwhr, and Wutang
-              Clan! If you like this project, any kind of support is much
-              appreciated. Thanks!
+              你好，我是 Rus。QManager 是 QuecManager 的新一代版本，
+              采用了更现代、也更可靠的实现方式。它既保留了进阶用户需要的技术设置，
+              也为刚上手的用户提供了更简洁直观的界面。QManager 的目标是延续
+              QuecManager 的能力，并在稳定性、易用性和整体体验上做得更好。
+              特别感谢 iamromulan、clndwhr 和 Wutang Clan 的支持。
+              如果你喜欢这个项目，任何形式的支持都非常感谢。
             </p>
 
             {/* All rights reserved */}
             <p className="text-sm text-muted-foreground text-center">
-              © {new Date().getFullYear()} QManager. All rights reserved.
+              © {new Date().getFullYear()} QManager。保留所有权利。
             </p>
           </div>
 
@@ -81,7 +78,7 @@ const AboutQManagerCard = ({ data, isLoading }: AboutQManagerCardProps) => {
             <dl className="grid divide-y divide-border border-y border-border">
               <div className="flex items-center justify-between py-2">
                 <dt className="text-sm font-semibold text-muted-foreground">
-                  Version
+                  版本
                 </dt>
                 <dd className="text-sm font-semibold tabular-nums">
                   {packageJson.version}
@@ -93,7 +90,7 @@ const AboutQManagerCard = ({ data, isLoading }: AboutQManagerCardProps) => {
           {/* Network info */}
           <div>
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-              Network
+              网络
             </h3>
             <dl className="grid divide-y divide-border border-y border-border">
               {isLoading

@@ -80,12 +80,12 @@ export function StepConnection({
     }
 
     if (!apnName.trim()) {
-      setFormError("APN name is required.");
+      setFormError("APN 名称不能为空。");
       return;
     }
 
     if (selectedType === "profile" && !profileName.trim()) {
-      setFormError("Profile name is required.");
+      setFormError("配置名称不能为空。");
       return;
     }
 
@@ -132,10 +132,10 @@ export function StepConnection({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
         <h2 className="text-2xl font-semibold tracking-tight">
-          Configure your connection
+          配置连接
         </h2>
         <p className="text-sm text-muted-foreground">
-          Set up your data APN or create a custom SIM profile.
+          设置数据 APN，或创建一个自定义 SIM 配置。
         </p>
       </div>
 
@@ -145,15 +145,15 @@ export function StepConnection({
           selected={selectedType === "profile"}
           onClick={() => handleTypeSelect("profile")}
           icon={<FolderOpenIcon className="size-5" />}
-          title="Custom Profile"
-          description="Save complete configs per SIM"
+          title="自定义配置"
+          description="为每张 SIM 保存完整配置"
         />
         <ChoiceCard
           selected={selectedType === "apn"}
           onClick={() => handleTypeSelect("apn")}
           icon={<WrenchIcon className="size-5" />}
-          title="APN Only"
-          description="Quick setup for your carrier"
+          title="仅 APN"
+          description="快速适配你的运营商"
         />
       </div>
 
@@ -169,10 +169,10 @@ export function StepConnection({
           <FieldGroup>
             {selectedType === "profile" && (
               <Field>
-                <FieldLabel htmlFor="conn-profile-name">Profile Name</FieldLabel>
+                <FieldLabel htmlFor="conn-profile-name">配置名称</FieldLabel>
                 <Input
                   id="conn-profile-name"
-                  placeholder="e.g. Home SIM, Data Only"
+                  placeholder="例如：家庭卡、纯流量卡"
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
                 />
@@ -180,10 +180,10 @@ export function StepConnection({
             )}
 
             <Field>
-              <FieldLabel htmlFor="conn-carrier">Carrier Preset</FieldLabel>
+              <FieldLabel htmlFor="conn-carrier">运营商预设</FieldLabel>
               <Select value={mno} onValueChange={handleMnoChange}>
                 <SelectTrigger id="conn-carrier">
-                  <SelectValue placeholder="Select carrier…" />
+                  <SelectValue placeholder="选择运营商…" />
                 </SelectTrigger>
                 <SelectContent>
                   {MNO_PRESETS.map((p) => (
@@ -191,31 +191,31 @@ export function StepConnection({
                       {p.label}
                     </SelectItem>
                   ))}
-                  <SelectItem value={MNO_CUSTOM_ID}>Custom</SelectItem>
+                  <SelectItem value={MNO_CUSTOM_ID}>自定义</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="conn-apn">APN Name</FieldLabel>
+              <FieldLabel htmlFor="conn-apn">APN 名称</FieldLabel>
               <Input
                 id="conn-apn"
-                placeholder="e.g. internet, SMARTLTE"
+                placeholder="例如：internet、SMARTLTE"
                 value={apnName}
                 onChange={(e) => setApnName(e.target.value)}
               />
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="conn-pdp">IP Protocol</FieldLabel>
+              <FieldLabel htmlFor="conn-pdp">IP 协议</FieldLabel>
               <Select value={pdpType} onValueChange={setPdpType}>
                 <SelectTrigger id="conn-pdp">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="IPV4V6">IPv4 + IPv6 (Default)</SelectItem>
-                  <SelectItem value="IP">IPv4 Only</SelectItem>
-                  <SelectItem value="IPV6">IPv6 Only</SelectItem>
+                  <SelectItem value="IPV4V6">IPv4 + IPv6（默认）</SelectItem>
+                  <SelectItem value="IP">仅 IPv4</SelectItem>
+                  <SelectItem value="IPV6">仅 IPv6</SelectItem>
                 </SelectContent>
               </Select>
             </Field>

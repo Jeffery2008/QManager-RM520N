@@ -51,17 +51,17 @@ function getSignalBarIcon(quality: string) {
 function getStateDisplay(state: string) {
   switch (state) {
     case "connected":
-      return { color: "text-success", label: "Connected" };
+      return { color: "text-success", label: "已连接" };
     case "disconnected":
-      return { color: "text-destructive", label: "Disconnected" };
+      return { color: "text-destructive", label: "未连接" };
     case "searching":
-      return { color: "text-warning", label: "Searching" };
+      return { color: "text-warning", label: "搜索中" };
     case "limited":
-      return { color: "text-warning", label: "Limited Service" };
+      return { color: "text-warning", label: "服务受限" };
     case "inactive":
-      return { color: "text-muted-foreground", label: "Inactive" };
+      return { color: "text-muted-foreground", label: "未激活" };
     default:
-      return { color: "text-muted-foreground", label: "Unknown" };
+      return { color: "text-muted-foreground", label: "未知" };
   }
 }
 
@@ -134,7 +134,7 @@ export function SignalStatusCard({
         <div className="grid gap-4">
           <div className="flex items-center justify-between">
             <div className="grid gap-0.5">
-              <h3 className="text-sm font-semibold">Signal Strength</h3>
+              <h3 className="text-sm font-semibold">信号强度</h3>
               <div className="flex items-center gap-x-1">
                 <FaCircle
                   className={`${stateDisplay.color} w-2 h-2`}

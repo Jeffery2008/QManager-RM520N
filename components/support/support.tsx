@@ -33,9 +33,9 @@ const SupportComponent = () => {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Support</h1>
+        <h1 className="text-3xl font-bold mb-2">支持</h1>
         <p className="text-muted-foreground">
-          Get help, report issues, or connect with the community.
+          获取帮助、反馈问题，或加入社区交流。
         </p>
       </div>
       <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">
@@ -44,17 +44,17 @@ const SupportComponent = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-muted-foreground" />
-              Contact
+              联系方式
             </CardTitle>
             <CardDescription>
-              Reach out for questions, bug reports, or feature requests.
+              可用于提问、反馈 Bug 或提出功能需求。
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Found a bug, have a feature idea, or need help with your
-                setup? Reach out through any of the channels below.
+                如果你遇到 Bug、想到新功能，或在配置过程中需要帮助，
+                可以通过下面的渠道联系。
               </p>
               <div>
                 <dl className="grid divide-y divide-border border-y border-border">
@@ -99,24 +99,23 @@ const SupportComponent = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <DiscordIcon className="h-5 w-5 text-muted-foreground" />
-              Community
+              社区
             </CardTitle>
             <CardDescription>
-              Join the Cellular Modem Talk/Development Discord server.
+              加入 Cellular Modem Talk/Development Discord 服务器。
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                The Cellular Modem Talk/Development community on Discord is where users share
-                configurations, troubleshoot issues together, and discuss
-                cellular networking tips. Come say hello!
+                Discord 上的 Cellular Modem Talk/Development 社区是用户分享配置、
+                一起排障、交流蜂窝网络经验的地方。欢迎加入。
               </p>
               <div className="flex flex-col items-center gap-4">
                 <div className="rounded-lg border border-border bg-muted p-2">
                   <Image
                     src="/discord-qr.svg"
-                    alt="QR code for QManager Discord server invite"
+                    alt="QManager Discord 邀请二维码"
                     width={192}
                     height={192}
                     className="size-48"

@@ -44,7 +44,7 @@ const LTEStatusComponent = ({ data, isLoading }: LTEStatusComponentProps) => {
 
   return (
     <SignalStatusCard
-      title="4G Primary Status"
+      title="4G 主载波状态"
       state={data?.state ?? "unknown"}
       rsrp={data?.rsrp ?? null}
       rows={rows}

@@ -111,7 +111,7 @@ export function NavUser({
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file.");
+      toast.error("请选择图片文件。");
       return;
     }
     const reader = new FileReader();
@@ -119,7 +119,7 @@ export function NavUser({
       const base64 = reader.result as string;
       localStorage.setItem("qm_display_avatar", base64);
       setAvatarSrc(base64);
-      toast.success("Profile photo updated.");
+      toast.success("头像已更新。");
     };
     reader.readAsDataURL(file);
     // Reset so same file can be re-selected
@@ -141,14 +141,14 @@ export function NavUser({
       });
       const json = await resp.json();
       if (!json.success) {
-        toast.error("Failed to update display name.");
+        toast.error("更新显示名称失败。");
         return;
       }
       setDisplayName(name);
       setNameDialogOpen(false);
-      toast.success("Display name updated.");
+      toast.success("显示名称已更新。");
     } catch {
-      toast.error("Failed to update display name.");
+      toast.error("更新显示名称失败。");
     } finally {
       setSavingName(false);
     }
@@ -189,12 +189,12 @@ export function NavUser({
       });
       const data = await resp.json();
       if (data.success) {
-        toast.success("Network reconnect initiated. Connection may drop briefly.");
+        toast.success("已开始重新连接网络，连接可能会短暂中断。");
       } else {
-        toast.error("Reconnect failed.");
+        toast.error("重新连接失败。");
       }
     } catch {
-      toast.error("Failed to send reconnect command.");
+      toast.error("发送重新连接命令失败。");
     } finally {
       setReconnecting(false);
       setReconnectDialogOpen(false);
@@ -252,7 +252,7 @@ export function NavUser({
                     type="button"
                     onClick={handleAvatarClick}
                     className="relative group shrink-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label="Change profile photo"
+                    aria-label="更换头像"
                   >
                     <Avatar className="h-8 w-8 rounded-lg">
                       <AvatarImage src={avatarSrc} alt={displayName} />
@@ -278,13 +278,13 @@ export function NavUser({
                   }}
                 >
                   <Pencil />
-                  Change Display Name
+                  修改显示名称
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => setPasswordDialogOpen(true)}
                 >
                   <KeyRound />
-                  Change Password
+                  修改密码
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() =>
@@ -293,7 +293,7 @@ export function NavUser({
                 >
                   <Sun className="dark:hidden" />
                   <Moon className="hidden dark:block" />
-                  Toggle Theme
+                  切换主题
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
@@ -301,18 +301,18 @@ export function NavUser({
                 onClick={() => setReconnectDialogOpen(true)}
               >
                 <RefreshCw />
-                Reconnect Network
+                重新连接网络
               </DropdownMenuItem>
               <DropdownMenuItem
                 variant="destructive"
                 onClick={() => setRebootDialogOpen(true)}
               >
                 <Power />
-                Reboot Device
+                重启设备
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => logout()}>
                 <LogOut />
-                Log out
+                退出登录
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -329,13 +329,13 @@ export function NavUser({
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Change Display Name</DialogTitle>
+            <DialogTitle>修改显示名称</DialogTitle>
           </DialogHeader>
           <div className="py-2">
             <Input
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
-              placeholder="Your name"
+              placeholder="输入名称"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleNameSave();
@@ -347,7 +347,7 @@ export function NavUser({
               variant="outline"
               onClick={() => setNameDialogOpen(false)}
             >
-              Cancel
+              取消
             </Button>
             <Button
               onClick={handleNameSave}
@@ -356,10 +356,10 @@ export function NavUser({
               {savingName ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Saving...
+                  保存中...
                 </>
               ) : (
-                "Save"
+                "保存"
               )}
             </Button>
           </DialogFooter>
@@ -376,14 +376,14 @@ export function NavUser({
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reconnect Network</AlertDialogTitle>
+            <AlertDialogTitle>重新连接网络</AlertDialogTitle>
             <AlertDialogDescription>
-              This will deregister from the network and reregister, forcing a fresh connection. Internet will drop briefly.
+              这将先从网络注销再重新注册，以强制建立全新连接。期间网络会短暂中断。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={reconnecting}>
-              Cancel
+              取消
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={reconnecting}
@@ -392,10 +392,10 @@ export function NavUser({
               {reconnecting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Reconnecting...
+                  重连中...
                 </>
               ) : (
-                "Reconnect"
+                "重新连接"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -407,16 +407,16 @@ export function NavUser({
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reboot Device</AlertDialogTitle>
+            <AlertDialogTitle>重启设备</AlertDialogTitle>
             <AlertDialogDescription aria-live="polite">
               {rebooting
-                ? "Reboot command sent. You will be logged out shortly..."
-                : "The device will restart and all network connections will drop until it comes back online."}
+                ? "重启命令已发送，你即将被退出登录..."
+                : "设备将会重启，在重新上线之前所有网络连接都会中断。"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={rebooting}>
-              Not Now
+              稍后再说
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -426,10 +426,10 @@ export function NavUser({
               {rebooting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Rebooting...
+                  重启中...
                 </>
               ) : (
-                "Reboot Now"
+                "立即重启"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

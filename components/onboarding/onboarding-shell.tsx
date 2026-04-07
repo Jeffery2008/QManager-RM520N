@@ -14,12 +14,12 @@ import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
 const TOTAL_STEPS = 6;
 
 const STEP_LABELS = [
-  "Welcome",
-  "Password",
-  "Network Mode",
-  "Connection",
-  "Band Preferences",
-  "Complete",
+  "欢迎",
+  "密码",
+  "网络模式",
+  "连接设置",
+  "频段偏好",
+  "完成",
 ];
 
 interface OnboardingShellProps {
@@ -62,10 +62,10 @@ export function OnboardingShell({
   const showSkip = !!onSkip && !isFirstStep && !isLastStep;
 
   const defaultContinueLabel = isFirstStep
-    ? "Get Started"
+    ? "开始设置"
     : isLastStep
-      ? "Go to Dashboard"
-      : "Continue";
+      ? "进入仪表盘"
+      : "继续";
 
   const currentStepLabel = STEP_LABELS[currentStep - 1] ?? "";
 
@@ -84,7 +84,7 @@ export function OnboardingShell({
         aria-atomic="true"
         className="sr-only"
       >
-        {currentStepLabel ? `Step ${currentStep} of ${TOTAL_STEPS}: ${currentStepLabel}` : ""}
+        {currentStepLabel ? `第 ${currentStep} / ${TOTAL_STEPS} 步：${currentStepLabel}` : ""}
       </p>
 
       <div className="w-full max-w-md">
@@ -96,7 +96,7 @@ export function OnboardingShell({
             aria-valuenow={currentStep}
             aria-valuemin={1}
             aria-valuemax={TOTAL_STEPS}
-            aria-label={`Step ${currentStep} of ${TOTAL_STEPS}`}
+            aria-label={`第 ${currentStep} / ${TOTAL_STEPS} 步`}
             className="flex items-center justify-center gap-2"
           >
             {Array.from({ length: TOTAL_STEPS }, (_, i) => {
@@ -151,7 +151,7 @@ export function OnboardingShell({
                   className="gap-1.5 text-muted-foreground"
                 >
                   <ArrowLeftIcon className="size-3.5" />
-                  Back
+                  返回
                 </Button>
               ) : (
                 <div />
@@ -166,7 +166,7 @@ export function OnboardingShell({
                     disabled={isLoading}
                     className="text-muted-foreground"
                   >
-                    Skip
+                    跳过
                   </Button>
                 )}
                 <Button
@@ -178,7 +178,7 @@ export function OnboardingShell({
                   {isLoading ? (
                     <>
                       <Spinner className="size-3.5" />
-                      <span>Saving…</span>
+                      <span>保存中…</span>
                     </>
                   ) : (
                     <>
@@ -196,7 +196,7 @@ export function OnboardingShell({
 
         {/* Branding footer */}
         <p className="mt-4 text-center text-xs text-muted-foreground/50">
-          QManager — Quectel Modem Management
+          QManager · Quectel 调制解调器管理
         </p>
       </div>
     </div>

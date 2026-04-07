@@ -39,7 +39,7 @@ const HomeComponent = () => {
     <div className="grid grid-cols-1 gap-6 px-4 lg:px-6 @3xl/main:grid-cols-2 @5xl/main:grid-cols-5" aria-live="polite" aria-atomic="false">
       {error && !isLoading && (
         <div role="alert" className="col-span-full rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Unable to reach the modem. Data shown may be outdated.
+          无法连接到调制解调器，当前显示的数据可能不是最新的。
         </div>
       )}
       <div className="grid gap-4 @3xl/main:col-span-3 @5xl/main:col-span-3 col-span-1">

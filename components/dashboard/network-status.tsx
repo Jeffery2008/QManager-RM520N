@@ -46,36 +46,36 @@ function getNetworkDisplay(
     case "5G-NSA":
       return {
         icon: <MdOutline5G className="size-full text-white" />,
-        label: "5G Signal",
+        label: "5G 信号",
         sublabel: nrCaActive ? "5G + LTE / NR-CA" : "5G + LTE",
         hasNetwork: true,
       };
     case "5G-SA":
       return {
         icon: <MdOutline5G className="size-full text-white" />,
-        label: "5G Signal",
-        sublabel: nrCaActive ? "Standalone / NR-CA" : "Standalone",
+        label: "5G 信号",
+        sublabel: nrCaActive ? "独立组网 / NR-CA" : "独立组网",
         hasNetwork: true,
       };
     case "LTE":
       return caActive
         ? {
             icon: <Md4gPlusMobiledata className="size-full text-white" />,
-            label: "LTE+ Signal",
-            sublabel: "4G Carrier Aggregation",
+            label: "LTE+ 信号",
+            sublabel: "4G 载波聚合",
             hasNetwork: true,
           }
         : {
             icon: <Md4gMobiledata className="size-full text-white" />,
-            label: "LTE Signal",
-            sublabel: "4G Connected",
+            label: "LTE 信号",
+            sublabel: "4G 已连接",
             hasNetwork: true,
           };
     default:
       return {
         icon: <Md3gMobiledata className="size-full text-white/50" />,
-        label: "Signal",
-        sublabel: "No 4G/5G",
+        label: "信号",
+        sublabel: "无 4G/5G",
         hasNetwork: false,
       };
   }
@@ -85,19 +85,19 @@ function getNetworkDisplay(
 function getServiceLabel(status: ServiceStatus) {
   switch (status) {
     case "optimal":
-      return "Optimal";
+      return "最佳";
     case "connected":
-      return "Connected";
+      return "已连接";
     case "limited":
-      return "Limited";
+      return "受限";
     case "no_service":
-      return "No Service";
+      return "无服务";
     case "searching":
-      return "Searching";
+      return "搜索中";
     case "sim_error":
-      return "SIM Error";
+      return "SIM 错误";
     default:
-      return "Unknown";
+      return "未知";
   }
 }
 
@@ -201,7 +201,7 @@ const NetworkStatusComponent = ({
       <CardHeader>
         <div className="flex md:flex-row flex-col xl:items-center justify-center xl:justify-between gap-2">
           <CardTitle className="text-2xl font-semibold @[250px]/card:text-3xl">
-            Network Status
+            网络状态
           </CardTitle>
 
           {/* Status badges */}
@@ -219,7 +219,7 @@ const NetworkStatusComponent = ({
                   className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
                 >
                   <div className="w-2 h-2 rounded-full bg-warning" />
-                  Data Delayed
+                  数据延迟
                 </Badge>
               )}
 
@@ -244,10 +244,10 @@ const NetworkStatusComponent = ({
                   }`}
                 />
                 {isAirplaneMode
-                  ? "Airplane Mode"
+                  ? "飞行模式"
                   : radioOn
-                    ? "Radio On"
-                    : "Radio Off"}
+                    ? "无线已开启"
+                    : "无线已关闭"}
               </Badge>
 
               {/* Internet status — green/red/gray based on ping daemon */}
@@ -275,10 +275,10 @@ const NetworkStatusComponent = ({
                   />
                 )}
                 {internetAvailable === true
-                  ? "Online"
+                  ? "在线"
                   : internetAvailable === false
-                    ? "Offline"
-                    : "Internet"}
+                    ? "离线"
+                    : "互联网"}
               </Badge>
             </div>
           )}
@@ -328,10 +328,10 @@ const NetworkStatusComponent = ({
               </div>
               <div className="grid gap-0.5 text-center">
                 <h3 className="text-base font-semibold leading-none">
-                  {isAirplaneMode ? "Low Power" : networkDisplay.label}
+                  {isAirplaneMode ? "低功耗" : networkDisplay.label}
                 </h3>
                 <p className="text-muted-foreground text-sm">
-                  {isAirplaneMode ? "Radio Off" : networkDisplay.sublabel}
+                  {isAirplaneMode ? "无线已关闭" : networkDisplay.sublabel}
                 </p>
               </div>
             </div>
@@ -378,8 +378,8 @@ const NetworkStatusComponent = ({
                 </h3>
                 <p className="text-muted-foreground text-sm">
                   {isAirplaneMode
-                    ? "Airplane Mode"
-                    : carrier || "No Carrier"}
+                    ? "飞行模式"
+                    : carrier || "无运营商"}
                 </p>
               </div>
             </div>
@@ -428,10 +428,10 @@ const NetworkStatusComponent = ({
               </div>
               <div className="grid gap-0.5 text-center">
                 <h3 className="text-base font-semibold leading-none">
-                  {isAirplaneMode ? "Standby" : "Service"}
+                  {isAirplaneMode ? "待机" : "服务"}
                 </h3>
                 <p className="text-muted-foreground text-sm">
-                  {isAirplaneMode ? "Radio Off" : serviceLabel}
+                  {isAirplaneMode ? "无线已关闭" : serviceLabel}
                 </p>
               </div>
             </div>

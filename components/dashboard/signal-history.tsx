@@ -30,7 +30,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useSignalHistory } from "@/hooks/use-signal-history";
 import type { SignalChartPoint } from "@/hooks/use-signal-history";
 
-export const description = "Signal history chart for RSRP, RSRQ, and SINR";
+export const description = "用于展示 RSRP、RSRQ 与 SINR 历史变化的图表";
 
 const chartConfig = {
   rsrp4G: {
@@ -99,14 +99,14 @@ export function SignalHistoryComponent() {
   // Time window description based on actual data span
   const getTimeSpan = () => {
     if (chartData.length < 2) return "signal strength";
-    return "signal strength over recent history";
+    return "最近一段时间的信号强度变化";
   };
 
   return (
     <Card className="@container/card">
       <CardHeader>
         <CardTitle className="text-2xl font-semibold @[250px]/card:text-3xl">
-          Signal Quality Monitor
+          信号质量监控
         </CardTitle>
         <CardAction>
           <ToggleGroup
@@ -124,7 +124,7 @@ export function SignalHistoryComponent() {
             <SelectTrigger
               className="flex w-32 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[540px]/card:hidden"
               size="sm"
-              aria-label="Select signal type"
+              aria-label="选择信号类型"
             >
               <SelectValue placeholder="RSRP" />
             </SelectTrigger>
@@ -145,11 +145,11 @@ export function SignalHistoryComponent() {
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         {isLoading ? (
           <div className="flex h-[250px] items-center justify-center text-muted-foreground text-sm">
-            Loading signal history…
+            正在加载信号历史…
           </div>
         ) : chartData.length === 0 ? (
           <div className="flex h-[250px] items-center justify-center text-muted-foreground text-sm">
-            No signal history available yet. Data will appear after ~10 seconds.
+            暂无信号历史数据，约 10 秒后会开始显示。
           </div>
         ) : (
           <ChartContainer
@@ -232,11 +232,10 @@ export function SignalHistoryComponent() {
         <div className="flex w-full items-start gap-2 text-sm">
           <div className="grid gap-2">
             <div className="flex items-center gap-2 leading-none font-medium">
-              This chart shows the {signalType.toUpperCase()} {getTimeSpan()}.
+              该图表展示 {signalType.toUpperCase()} 的 {getTimeSpan()}。
             </div>
             <div className="text-muted-foreground flex items-center gap-2 leading-none">
-              Values may fluctuate due to environmental factors and network
-              conditions.
+              数值会受到环境因素和网络条件影响而波动。
             </div>
           </div>
         </div>

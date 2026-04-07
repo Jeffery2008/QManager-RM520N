@@ -44,7 +44,7 @@ const NrStatusComponent = ({ data, isLoading }: NrStatusComponentProps) => {
 
   return (
     <SignalStatusCard
-      title="5G Primary Status"
+      title="5G 主载波状态"
       state={data?.state ?? "unknown"}
       rsrp={data?.rsrp ?? null}
       rows={rows}

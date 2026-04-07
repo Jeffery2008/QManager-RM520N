@@ -62,10 +62,10 @@ function BandPresetSection({
   onCustomBandToggle,
 }: BandPresetSectionProps) {
   const options: { id: BandPreset; label: string; detail?: string }[] = [
-    { id: "all", label: "All bands (default)" },
+    { id: "all", label: "全部频段（默认）" },
     {
       id: "low",
-      label: "Low-band only",
+      label: "仅低频段",
       detail: presets.low
         .split(":")
         .map((b) => `${prefix}${b}`)
@@ -73,13 +73,13 @@ function BandPresetSection({
     },
     {
       id: "mid",
-      label: "Mid-band only",
+      label: "仅中频段",
       detail: presets.mid
         .split(":")
         .map((b) => `${prefix}${b}`)
         .join(", "),
     },
-    { id: "custom", label: "Custom…" },
+    { id: "custom", label: "自定义…" },
   ];
 
   return (
@@ -247,15 +247,15 @@ export function StepBandLocking({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
-        <h2 className="text-2xl font-semibold tracking-tight">Band preferences</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">频段偏好</h2>
         <p className="text-sm text-muted-foreground">
-          Lock specific frequency bands for better signal on your network.
+          锁定特定频段，以获得更稳定或更符合预期的网络表现。
         </p>
       </div>
 
       <div className="flex flex-col gap-5">
         <BandPresetSection
-          title="LTE Bands"
+          title="LTE 频段"
           prefix="B"
           allBands={ALL_LTE_BANDS}
           presets={LTE_PRESETS}
@@ -268,7 +268,7 @@ export function StepBandLocking({
         <div className="border-t border-border" />
 
         <BandPresetSection
-          title="5G Bands (NSA + SA)"
+          title="5G 频段（NSA + SA）"
           prefix="N"
           allBands={ALL_NR5G_BANDS}
           presets={NR5G_PRESETS}

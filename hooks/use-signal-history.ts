@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { authFetch } from "@/lib/auth-fetch";
 import type { SignalHistoryEntry } from "@/types/modem-status";
+import { formatUiTime } from "@/lib/locale";
 
 // =============================================================================
 // useSignalHistory — Polling Hook for Signal History Chart
@@ -84,10 +85,9 @@ function bestAntenna(values: (number | null)[]): number | null {
  */
 function toChartPoint(entry: SignalHistoryEntry): SignalChartPoint {
   const date = new Date(entry.ts * 1000);
-  const time = date.toLocaleTimeString("en-US", {
+  const time = formatUiTime(date, {
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
   });
 
   return {

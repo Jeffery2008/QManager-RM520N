@@ -121,9 +121,9 @@ const APNSettingsCard = ({
     const success = await onSave(request);
     if (success) {
       markSaved();
-      toast.success("APN settings applied successfully");
+      toast.success("APN 设置已成功应用");
     } else {
-      toast.error("Failed to apply APN settings");
+      toast.error("应用 APN 设置失败");
     }
   };
 
@@ -143,7 +143,7 @@ const APNSettingsCard = ({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>APN Settings</CardTitle>
+          <CardTitle>APN 设置</CardTitle>
           <CardDescription>
             Configure and manage Access Point Names (APNs) for your cellular
             connections.
@@ -184,7 +184,7 @@ const APNSettingsCard = ({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>APN Settings</CardTitle>
+        <CardTitle>APN 设置</CardTitle>
         <CardDescription>
           Configure and manage Access Point Names (APNs) for your cellular
           connections.
@@ -197,10 +197,10 @@ const APNSettingsCard = ({
               <FieldGroup>
                 <div className="grid @md/card:grid-cols-2 grid-cols-1 grid-flow-row gap-4">
                   <Field>
-                    <FieldLabel htmlFor="active-apn">Active APN *</FieldLabel>
+                    <FieldLabel htmlFor="active-apn">当前 APN *</FieldLabel>
                     <Input
                       id="active-apn"
-                      placeholder="Enter Active APN"
+                      placeholder="输入当前 APN"
                       value={activeApn}
                       onChange={(e) => setActiveApn(e.target.value)}
                       disabled={isSaving}
@@ -210,7 +210,7 @@ const APNSettingsCard = ({
                   </Field>
 
                   <Field>
-                    <FieldLabel>Carrier Preset</FieldLabel>
+                    <FieldLabel>运营商预设</FieldLabel>
                     <Select
                       value={
                         autoApnPreset ||
@@ -220,7 +220,7 @@ const APNSettingsCard = ({
                       disabled={isSaving}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Choose Carrier Preset" />
+                        <SelectValue placeholder="Choose 运营商预设" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
@@ -236,7 +236,7 @@ const APNSettingsCard = ({
 
                 <div className="grid @md/card:grid-cols-2 grid-cols-1 grid-flow-row gap-4">
                   <Field>
-                    <FieldLabel>Connection Profile</FieldLabel>
+                    <FieldLabel>连接配置</FieldLabel>
                     <Select
                       value={
                         selectedCid ||
@@ -246,7 +246,7 @@ const APNSettingsCard = ({
                       disabled={isSaving}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Choose Connection Profile" />
+                        <SelectValue placeholder="Choose 连接配置" />
                       </SelectTrigger>
                       <SelectContent>
                         {profiles?.map((p) => (
@@ -260,7 +260,7 @@ const APNSettingsCard = ({
                   </Field>
 
                   <Field>
-                    <FieldLabel>IP Protocol</FieldLabel>
+                    <FieldLabel>IP 协议</FieldLabel>
                     <Select
                       value={
                         pdpType ||
@@ -273,7 +273,7 @@ const APNSettingsCard = ({
                       disabled={isSaving}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Choose IP Protocol" />
+                        <SelectValue placeholder="Choose IP 协议" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="IPV4V6">
@@ -295,7 +295,7 @@ const APNSettingsCard = ({
               variant="outline"
               onClick={handleReset}
               disabled={isSaving}
-              aria-label="Reset to saved values"
+              aria-label="恢复为已保存的值"
             >
               <RotateCcwIcon />
             </Button>

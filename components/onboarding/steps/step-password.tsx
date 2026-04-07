@@ -28,7 +28,7 @@ function getStrength(pw: string): 0 | 1 | 2 | 3 | 4 {
   return Math.min(score, 4) as 0 | 1 | 2 | 3 | 4;
 }
 
-const STRENGTH_LABELS = ["", "Weak", "Fair", "Good", "Strong"] as const;
+const STRENGTH_LABELS = ["", "弱", "一般", "良好", "强"] as const;
 
 function strengthColorClass(strength: number) {
   if (strength === 1) return "bg-destructive";
@@ -67,11 +67,11 @@ export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPa
     setError("");
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+      setError("密码至少需要 6 个字符。");
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError("两次输入的密码不一致。");
       return;
     }
 
@@ -95,7 +95,7 @@ export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPa
         }
         onSuccess();
       } else {
-        setError(result.error || "Setup failed. Please try again.");
+        setError(result.error || "初始化失败，请重试。");
       }
     } finally {
       setIsSubmitting(false);
@@ -110,35 +110,35 @@ export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPa
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
-        <h2 className="text-2xl font-semibold tracking-tight">Secure your setup</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">保护你的设备访问</h2>
         <p className="text-sm text-muted-foreground">
-          Choose a password to protect access to your modem interface.
+          设置一个密码，保护对调制解调器管理界面的访问。
         </p>
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
         <FieldGroup>
           <Field>
-            <FieldLabel htmlFor="onboard-name">Your name <span className="text-muted-foreground font-normal">(optional)</span></FieldLabel>
+            <FieldLabel htmlFor="onboard-name">你的名称 <span className="text-muted-foreground font-normal">（可选）</span></FieldLabel>
             <Input
               id="onboard-name"
               type="text"
-              placeholder="e.g. Alex"
+              placeholder="例如：Alex"
               autoComplete="name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               disabled={isSubmitting}
             />
-            <FieldDescription>Shown in the sidebar. You can change this anytime.</FieldDescription>
+            <FieldDescription>会显示在侧边栏中，之后可以随时修改。</FieldDescription>
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="onboard-password">Password</FieldLabel>
+            <FieldLabel htmlFor="onboard-password">密码</FieldLabel>
             <div className="relative">
               <Input
                 id="onboard-password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Create a password"
+                placeholder="创建密码"
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -152,7 +152,7 @@ export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPa
                 className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "隐藏密码" : "显示密码"}
               >
                 {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
               </Button>
@@ -203,16 +203,16 @@ export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPa
               )}
             </AnimatePresence>
 
-            <FieldDescription>Minimum 6 characters</FieldDescription>
+            <FieldDescription>至少 6 个字符</FieldDescription>
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="onboard-confirm">Confirm Password</FieldLabel>
+            <FieldLabel htmlFor="onboard-confirm">确认密码</FieldLabel>
             <div className="relative">
               <Input
                 id="onboard-confirm"
                 type={showConfirm ? "text" : "password"}
-                placeholder="Confirm your password"
+                placeholder="再次输入密码"
                 autoComplete="new-password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
@@ -226,7 +226,7 @@ export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPa
                 className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={() => setShowConfirm((v) => !v)}
                 tabIndex={-1}
-                aria-label={showConfirm ? "Hide password" : "Show password"}
+                aria-label={showConfirm ? "隐藏密码" : "显示密码"}
               >
                 {showConfirm ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
               </Button>

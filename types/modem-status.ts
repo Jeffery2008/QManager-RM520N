@@ -618,13 +618,13 @@ export function formatDistance(
   if (km === null) return "-";
   if (unit === "miles") {
     const miles = km * 0.621371;
-    if (miles < 0.01) return "< 50 ft";
-    if (miles < 1) return `${Math.round(miles * 5280)} ft`;
-    return `${miles.toFixed(2)} mi`;
+    if (miles < 0.01) return "< 50 英尺";
+    if (miles < 1) return `${Math.round(miles * 5280)} 英尺`;
+    return `${miles.toFixed(2)} 英里`;
   }
-  if (km < 0.01) return "< 10 m";
+  if (km < 0.01) return "< 10 米";
   if (km < 1) return `${Math.round(km * 1000)} m`;
-  return `${km.toFixed(2)} km`;
+  return `${km.toFixed(2)} 公里`;
 }
 
 /**
@@ -666,11 +666,11 @@ export function formatTimeAgo(timestamp: number): string {
   const now = Math.floor(Date.now() / 1000);
   const diff = now - timestamp;
 
-  if (diff < 0) return "just now";
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 0) return "刚刚";
+  if (diff < 60) return "刚刚";
+  if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`;
+  return `${Math.floor(diff / 86400)} 天前`;
 }
 
 // --- Cell ID / TAC Display Utilities -----------------------------------------
@@ -688,16 +688,16 @@ export function formatNumericField(value: number | null | undefined): string {
  * e.g., 45910 → "12h 45m", 30 → "0m", 3661 → "1h 1m"
  */
 export function formatUptime(seconds: number): string {
-  if (seconds <= 0) return "0m";
+  if (seconds <= 0) return "0 分";
 
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
 
   const parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  parts.push(`${minutes}m`);
+  if (days > 0) parts.push(`${days} 天`);
+  if (hours > 0) parts.push(`${hours} 小时`);
+  parts.push(`${minutes} 分`);
 
   return parts.join(" ");
 }

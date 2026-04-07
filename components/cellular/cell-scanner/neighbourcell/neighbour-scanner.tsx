@@ -60,7 +60,7 @@ const NeighbourCellScanner = () => {
   const hasScanResults = status === "complete" && results.length > 0;
   const isScanning = status === "running";
 
-  // --- Lock Cell Handler -----------------------------------------------------
+  // --- 锁定小区 Handler -----------------------------------------------------
   const handleLockCell = useCallback((cell: NeighbourCellResult) => {
     setLockTarget(cell);
   }, []);
@@ -86,17 +86,17 @@ const NeighbourCellScanner = () => {
       const data = await res.json();
 
       if (data.success) {
-        toast.success("Cell Locked", {
+        toast.success("小区已锁定", {
           description: `Locked to LTE PCI ${lockTarget.pci} on EARFCN ${lockTarget.frequency}`,
         });
       } else {
-        toast.error("Lock Failed", {
+        toast.error("锁定失败", {
           description: data.detail || data.error || "Unknown error",
         });
       }
     } catch {
-      toast.error("Lock Failed", {
-        description: "Failed to connect to modem",
+      toast.error("锁定失败", {
+        description: "连接调制解调器失败",
       });
     } finally {
       setIsLocking(false);
@@ -132,7 +132,7 @@ const NeighbourCellScanner = () => {
                 </div>
                 <Button onClick={startScan} variant="outline" size="sm">
                   <RefreshCcwIcon className="size-4" />
-                  Retry Scan
+                  重新扫描
                 </Button>
               </div>
             ) : (
@@ -154,7 +154,7 @@ const NeighbourCellScanner = () => {
                       `neighbour_scan_${new Date().toISOString().slice(0, 10)}.csv`,
                     )
                   }
-                  aria-label="Download CSV"
+                  aria-label="下载 CSV"
                 >
                   <DownloadIcon />
                 </Button>
@@ -171,7 +171,7 @@ const NeighbourCellScanner = () => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Lock to Cell?</AlertDialogTitle>
+            <AlertDialogTitle>锁定到该小区？</AlertDialogTitle>
             <AlertDialogDescription>
               This will lock the modem to the following cell. It will only
               connect to this specific cell until the lock is removed.
@@ -192,7 +192,7 @@ const NeighbourCellScanner = () => {
                   Locking...
                 </>
               ) : (
-                "Lock Cell"
+                "锁定小区"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

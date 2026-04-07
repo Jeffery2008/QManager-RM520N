@@ -20,38 +20,38 @@ const SETTINGS_ENDPOINT = "/cgi-bin/quecmanager/cellular/settings.sh";
 const NETWORK_OPTIONS = [
   {
     id: "AUTO",
-    label: "Automatic",
-    description: "Connect to the best available network",
+    label: "自动",
+    description: "连接当前可用的最佳网络",
     Icon: RefreshCwIcon,
     show5gArch: false,
   },
   {
     id: "LTE",
-    label: "LTE Only",
-    description: "4G LTE — stable and widely available",
+    label: "仅 LTE",
+    description: "4G LTE，稳定且覆盖广",
     Icon: SignalIcon,
     show5gArch: false,
   },
   {
     id: "NR5G",
-    label: "5G Only",
-    description: "5G standalone — fastest where available",
+    label: "仅 5G",
+    description: "5G 独立组网，可用时速度最快",
     Icon: ZapIcon,
     show5gArch: true,
   },
   {
     id: "LTE:NR5G",
     label: "LTE + 5G",
-    description: "Dual mode with automatic fallback",
+    description: "双模运行，自动回退",
     Icon: LayersIcon,
     show5gArch: true,
   },
 ];
 
 const NR5G_ARCH_OPTIONS = [
-  { id: 0, label: "Auto (SA + NSA)", description: "Use both standalone and non-standalone" },
-  { id: 1, label: "NSA Only", description: "5G via LTE anchor — broader coverage" },
-  { id: 2, label: "SA Only", description: "Standalone 5G — lowest latency" },
+  { id: 0, label: "自动（SA + NSA）", description: "同时使用独立组网与非独立组网" },
+  { id: 1, label: "仅 NSA", description: "通过 LTE 锚点接入 5G，覆盖更广" },
+  { id: 2, label: "仅 SA", description: "独立组网 5G，延迟更低" },
 ];
 
 interface StepNetworkModeProps {
@@ -121,16 +121,16 @@ export function StepNetworkMode({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1.5">
-        <h2 className="text-2xl font-semibold tracking-tight">Preferred network</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">首选网络</h2>
         <p className="text-sm text-muted-foreground">
-          How should your modem connect? You can change this anytime in Settings.
+          你的调制解调器应如何接入网络？后续可在设置中随时修改。
         </p>
       </div>
 
       {/* Network type — role="radiogroup" for screen readers */}
       <div
         role="radiogroup"
-        aria-label="Network type"
+        aria-label="网络类型"
         className="flex flex-col gap-2"
       >
         {NETWORK_OPTIONS.map((option) => {
@@ -187,11 +187,11 @@ export function StepNetworkMode({
       {selectedOption.show5gArch && (
         <div className="flex flex-col gap-3 border-t border-border pt-4">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            5G Architecture
+            5G 架构
           </p>
           <div
             role="radiogroup"
-            aria-label="5G architecture"
+            aria-label="5G 架构"
             className="flex flex-col gap-1.5"
           >
             {NR5G_ARCH_OPTIONS.map((arch) => {

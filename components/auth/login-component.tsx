@@ -58,10 +58,10 @@ export default function LoginComponent() {
           if (result.retry_after) {
             setRetryAfter(result.retry_after);
             setError(
-              `Too many failed attempts. Try again in ${result.retry_after} seconds.`
+              `失败次数过多，请在 ${result.retry_after} 秒后重试。`
             );
           } else {
-            setError(result.error || "Invalid password.");
+            setError(result.error || "密码错误。");
           }
         }
       } finally {
@@ -90,7 +90,7 @@ export default function LoginComponent() {
       {/* Offline session-loss banner */}
       {wasOffline && (
         <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Your session ended because the device was unreachable for too long.
+          由于设备长时间无法访问，当前会话已结束。
         </div>
       )}
 
@@ -100,23 +100,23 @@ export default function LoginComponent() {
             <div className="flex size-16 p-1 items-center justify-center rounded-md">
               <img
                 src="/qmanager-logo.svg"
-                alt="QManager Logo"
+                alt="QManager 标志"
                 className="size-full"
               />
             </div>
-            <h1 className="text-xl font-bold">Welcome to QManager</h1>
+            <h1 className="text-xl font-bold">欢迎使用 QManager</h1>
             <FieldDescription>
-              Enter your QManager password to continue.
+              请输入 QManager 密码以继续。
             </FieldDescription>
           </div>
 
           <Field>
-            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <FieldLabel htmlFor="password">密码</FieldLabel>
             <div className="relative">
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
+                placeholder="输入密码"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -131,7 +131,7 @@ export default function LoginComponent() {
                 className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "隐藏密码" : "显示密码"}
               >
                 {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
               </Button>
@@ -153,19 +153,19 @@ export default function LoginComponent() {
               {isSubmitting ? (
                 <>
                   <Spinner className="mr-2" />
-                  Logging in...
+                  登录中...
                 </>
               ) : retryAfter > 0 ? (
-                `Locked (${retryAfter}s)`
+                `已锁定（${retryAfter} 秒）`
               ) : (
-                "Login"
+                "登录"
               )}
             </Button>
           </Field>
         </FieldGroup>
       </form>
       <FieldDescription className="px-6 text-center">
-        QManager — Quectel Modem Management
+        QManager · Quectel 调制解调器管理
       </FieldDescription>
     </motion.div>
   );
