@@ -532,13 +532,13 @@ const ConnectionScenariosCard = () => {
 
           <DialogFooter className="gap-2">
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">取消</Button>
             </DialogClose>
             <Button
               onClick={handleAddScenario}
               disabled={!addName.trim() || isSaving}
             >
-              {isSaving ? "Creating…" : "Create Scenario"}
+              {isSaving ? "创建中…" : "创建场景"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -548,7 +548,7 @@ const ConnectionScenariosCard = () => {
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Configuration</DialogTitle>
+            <DialogTitle>编辑配置</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
@@ -679,10 +679,10 @@ const ConnectionScenariosCard = () => {
 
           <DialogFooter className="gap-2">
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline">取消</Button>
             </DialogClose>
             <Button onClick={handleSaveEdit} disabled={!editName.trim() || isSaving}>
-              {isSaving ? "Saving…" : "Save Changes"}
+              {isSaving ? "保存中…" : "保存更改"}
             </Button>
           </DialogFooter>
         </DialogContent>

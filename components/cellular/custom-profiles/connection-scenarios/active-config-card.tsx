@@ -83,7 +83,7 @@ export const ActiveConfigCard = ({
                 onClick={onActivate}
                 className="gap-1.5"
               >
-                Activate
+                激活
               </Button>
             )}
           </div>
