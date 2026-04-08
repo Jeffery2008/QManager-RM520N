@@ -87,22 +87,11 @@ export default function SSHPasswordCard() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-            <TerminalIcon className="size-4 shrink-0" />
-            <span>
-              SSH uses the system root password, separate from the web UI
-              password. Connect via{" "}
-              <code className="text-xs">ssh root@192.168.225.1</code>
-            </span>
-          </div>
 
           <Field>
             <FieldLabel htmlFor="ssh-current-password">
               Current Web UI Password
             </FieldLabel>
-            <FieldDescription>
-              Required to authorize SSH password changes.
-            </FieldDescription>
             <div className="relative">
               <Input
                 id="ssh-current-password"

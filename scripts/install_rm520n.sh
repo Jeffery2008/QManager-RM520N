@@ -334,6 +334,12 @@ RCEOF
         "$OPKG" update >/dev/null 2>&1
         if [ -x /opt/sbin/lighttpd ]; then
             info "lighttpd is already installed"
+            # Upgrade lighttpd + all modules together to prevent version mismatch
+            # (plugin-version must match lighttpd-version or modules fail to load)
+            "$OPKG" upgrade lighttpd lighttpd-mod-cgi lighttpd-mod-openssl \
+                lighttpd-mod-redirect lighttpd-mod-proxy >/dev/null 2>&1 \
+                && info "lighttpd packages synced" \
+                || true
         else
             "$OPKG" install lighttpd >/dev/null 2>&1 \
                 && info "lighttpd installed from Entware" \
@@ -491,6 +497,7 @@ install_backend() {
     mkdir -p "$LIB_DIR"
     if [ -d "$SRC_SCRIPTS/usr/lib/qmanager" ]; then
         cp "$SRC_SCRIPTS/usr/lib/qmanager"/* "$LIB_DIR/"
+        find "$LIB_DIR" -maxdepth 1 -name "*.sh" -exec sed -i 's/\r$//' {} \;
         find "$LIB_DIR" -maxdepth 1 -name "*.sh" -exec chmod 644 {} \;
         info "Libraries installed to $LIB_DIR"
     fi
@@ -502,6 +509,7 @@ install_backend() {
             [ -f "$f" ] || continue
             local fname; fname=$(basename "$f")
             cp "$f" "$BIN_DIR/$fname"
+            sed -i 's/\r$//' "$BIN_DIR/$fname"
             chmod +x "$BIN_DIR/$fname"
             bin_count=$(( bin_count + 1 ))
         done
@@ -513,6 +521,7 @@ install_backend() {
         rm -rf "$CGI_DIR"
         mkdir -p "$CGI_DIR"
         cp -r "$SRC_SCRIPTS/www/cgi-bin/quecmanager"/* "$CGI_DIR/"
+        find "$CGI_DIR" -name "*.sh" -exec sed -i 's/\r$//' {} \;
         find "$CGI_DIR" -name "*.sh" -exec chmod 755 {} \;
         find "$CGI_DIR" -name "*.json" -exec chmod 644 {} \;
         local cgi_count
@@ -533,6 +542,7 @@ install_backend() {
         for f in "$SRC_SCRIPTS/etc/systemd/system"/qmanager*.service; do
             [ -f "$f" ] || continue
             cp "$f" "$SYSTEMD_DIR/"
+            sed -i 's/\r$//' "$SYSTEMD_DIR/$(basename "$f")"
         done
 
         # Install lighttpd service file — ensures correct config path is used.
@@ -540,6 +550,7 @@ install_backend() {
         # instead of /usrdata/qmanager/lighttpd.conf where QManager's config lives.
         if [ -f "$SRC_SCRIPTS/etc/systemd/system/lighttpd.service" ]; then
             cp "$SRC_SCRIPTS/etc/systemd/system/lighttpd.service" "$SYSTEMD_DIR/lighttpd.service"
+            sed -i 's/\r$//' "$SYSTEMD_DIR/lighttpd.service"
             info "lighttpd.service installed (config: /usrdata/qmanager/lighttpd.conf)"
         fi
         sync
@@ -558,6 +569,7 @@ install_backend() {
             info "Added #includedir $SUDOERS_DIR to $SUDOERS_CONF"
         fi
         cp "$SRC_SCRIPTS/etc/sudoers.d/qmanager" "$SUDOERS_DIR/qmanager"
+        sed -i 's/\r$//' "$SUDOERS_DIR/qmanager"
         chmod 440 "$SUDOERS_DIR/qmanager"
         chown root:root "$SUDOERS_DIR/qmanager"
         info "Sudoers rules installed to $SUDOERS_DIR (440)"
