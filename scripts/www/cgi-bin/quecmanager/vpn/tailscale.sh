@@ -1,73 +1,62 @@
 #!/bin/sh
 . /usr/lib/qmanager/cgi_base.sh
-. /usr/lib/qmanager/vpn_firewall.sh
+. /usr/lib/qmanager/platform.sh
 # =============================================================================
 # tailscale.sh — CGI Endpoint: Tailscale VPN Management (GET + POST)
 # =============================================================================
 # GET:  Returns installation status, daemon state, connection info, and peers.
-# POST: Connect/disconnect, start/stop daemon, enable/disable on boot, logout.
+# POST: Connect/disconnect, start/stop daemon, enable/disable on boot,
+#       install/uninstall, install_status.
 #
-# Tailscale manages its own config in /var/lib/tailscale/ — we are a thin
-# control layer, not a service owner. No UCI config needed.
+# Tailscale binaries live at /usrdata/tailscale/ (persistent partition).
+# Service control via platform.sh (systemd). Privileged operations via
+# qmanager_tailscale_mgr helper (sudoers-whitelisted).
 #
-# Data sources:
-#   tailscale status --json   -> connection state, self info, peers, DNS
-#   tailscale version         -> installed version
-#   /etc/init.d/tailscale     -> daemon control (start/stop/enable/disable)
-#
-# POST body: { "action": "connect"|"disconnect"|"logout"|"start_service"|
-#                         "stop_service"|"set_boot_enabled" }
+# CRITICAL: NEVER pass --accept-routes to tailscale up. It disconnects the
+# device from the network entirely and requires a physical reboot to recover.
 #
 # Endpoint: GET/POST /cgi-bin/quecmanager/vpn/tailscale.sh
-# Install location: /www/cgi-bin/quecmanager/vpn/tailscale.sh
 # =============================================================================
 
 qlog_init "cgi_tailscale"
 cgi_headers
 cgi_handle_options
 
+TAILSCALE_DIR="/usrdata/tailscale"
+TAILSCALE_BIN="$TAILSCALE_DIR/tailscale"
+TAILSCALED_BIN="$TAILSCALE_DIR/tailscaled"
 AUTH_URL_FILE="/tmp/qmanager_tailscale_auth_url"
 TS_UP_OUTPUT="/tmp/qmanager_tailscale_up_output"
 TS_UP_PID_FILE="/tmp/qmanager_tailscale_up_pid"
+INSTALL_RESULT="/tmp/qmanager_tailscale_install.json"
+INSTALL_PID="/tmp/qmanager_tailscale_install.pid"
+WANTS_DIR="/lib/systemd/system/multi-user.target.wants"
+UNIT_DIR="/lib/systemd/system"
 
-# --- Helper: check if tailscale + tailscaled are installed -------------------
+# --- Helper: check if tailscale binaries exist --------------------------------
 is_installed() {
-    command -v tailscale >/dev/null 2>&1 && command -v tailscaled >/dev/null 2>&1
+    [ -x "$TAILSCALE_BIN" ] && [ -x "$TAILSCALED_BIN" ]
 }
 
-# --- Helper: check if tailscaled daemon is running ---------------------------
+# --- Helper: check if tailscaled daemon is running ----------------------------
 is_daemon_running() {
-    if [ -x /etc/init.d/tailscale ]; then
-        /etc/init.d/tailscale running >/dev/null 2>&1
-    else
-        pidof tailscaled >/dev/null 2>&1
-    fi
+    svc_is_running "tailscaled"
 }
 
-# --- Helper: check if tailscale is enabled on boot --------------------------
-# luci-app-tailscale uses UCI enabled flag as the authoritative control.
-# The init script's section_enabled() checks this, AND a WAN interface
-# trigger can fire reload even without the /etc/rc.d symlink.
+# --- Helper: check if tailscale is enabled on boot ---------------------------
 get_boot_enabled() {
-    local uci_enabled
-    uci_enabled=$(uci -q get tailscale.@tailscale[0].enabled 2>/dev/null)
-    if [ -n "$uci_enabled" ]; then
-        [ "$uci_enabled" = "1" ] && echo "true" || echo "false"
-        return
-    fi
-    # Fallback for non-luci-app installs: check init.d symlink
-    if [ -x /etc/init.d/tailscale ]; then
-        /etc/init.d/tailscale enabled && echo "true" || echo "false"
+    if [ -L "$WANTS_DIR/tailscaled.service" ]; then
+        echo "true"
     else
         echo "false"
     fi
 }
 
-# --- Helper: kill stale tailscale up process from previous connect attempt ---
+# --- Helper: kill stale tailscale up process from previous connect attempt ----
 kill_stale_ts_up() {
     if [ -f "$TS_UP_PID_FILE" ]; then
         old_pid=$(cat "$TS_UP_PID_FILE" 2>/dev/null | tr -d ' \n\r')
-        if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+        if [ -n "$old_pid" ] && pid_alive "$old_pid"; then
             kill "$old_pid" 2>/dev/null
         fi
         rm -f "$TS_UP_PID_FILE"
@@ -76,7 +65,28 @@ kill_stale_ts_up() {
 
 # --- Helper: get tailscale version string ------------------------------------
 get_ts_version() {
-    tailscale version 2>/dev/null | head -1 | awk '{print $1}'
+    $_SUDO "$TAILSCALE_BIN" version 2>/dev/null | head -1 | awk '{print $1}'
+}
+
+# --- Helper: run tailscale CLI with sudo -------------------------------------
+ts_cmd() {
+    $_SUDO "$TAILSCALE_BIN" "$@"
+}
+
+# --- Helper: add iptables rules for tailscale0 interface ---------------------
+ensure_firewall() {
+    # Allow HTTP/HTTPS/SSH on tailscale0 (matches qmanager_setup pattern)
+    for port in 80 443 22; do
+        run_iptables -C INPUT -i tailscale0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null || \
+            run_iptables -A INPUT -i tailscale0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null
+    done
+}
+
+# --- Helper: remove iptables rules for tailscale0 interface ------------------
+remove_firewall() {
+    for port in 80 443 22; do
+        run_iptables -D INPUT -i tailscale0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null || true
+    done
 }
 
 # =============================================================================
@@ -84,20 +94,14 @@ get_ts_version() {
 # =============================================================================
 if [ "$REQUEST_METHOD" = "GET" ]; then
 
-    other_vpn_installed=$(vpn_check_other_installed "netbird")
-
     # --- Tier 1: Not installed -----------------------------------------------
     if ! is_installed; then
         qlog_info "Tailscale not installed"
-        jq -n \
-            --argjson other_vpn_installed "$other_vpn_installed" \
-            '{
-                success: true,
-                installed: false,
-                install_hint: "opkg update && opkg install luci-app-tailscale",
-                other_vpn_installed: $other_vpn_installed,
-                other_vpn_name: "NetBird"
-            }'
+        jq -n '{
+            success: true,
+            installed: false,
+            install_hint: "Install via the button above or SSH: sudo qmanager_tailscale_mgr install"
+        }'
         exit 0
     fi
 
@@ -112,15 +116,12 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
             --argjson daemon_running false \
             --argjson enabled_on_boot "$boot_enabled" \
             --arg version "$ts_version" \
-            --argjson other_vpn_installed "$other_vpn_installed" \
             '{
                 success: true,
                 installed: $installed,
                 daemon_running: $daemon_running,
                 enabled_on_boot: $enabled_on_boot,
-                version: $version,
-                other_vpn_installed: $other_vpn_installed,
-                other_vpn_name: "NetBird"
+                version: $version
             }'
         exit 0
     fi
@@ -128,12 +129,7 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
     # --- Tier 3: Daemon running — fetch full status --------------------------
     qlog_info "Fetching tailscale status"
 
-    # Use timeout if available to prevent hangs
-    if command -v timeout >/dev/null 2>&1; then
-        status_json=$(timeout 5 tailscale status --json 2>/dev/null)
-    else
-        status_json=$(tailscale status --json 2>/dev/null)
-    fi
+    status_json=$(ts_cmd status --json 2>/dev/null)
 
     if [ -z "$status_json" ] || ! printf '%s' "$status_json" | jq -e . >/dev/null 2>&1; then
         qlog_error "Failed to get tailscale status JSON"
@@ -168,7 +164,7 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         auth_url=""
     fi
 
-    # Build self object from .Self
+    # Build self object
     self_json=$(printf '%s' "$status_json" | jq '{
         hostname: (.Self.HostName // ""),
         dns_name: (.Self.DNSName // ""),
@@ -178,14 +174,14 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         relay: (.Self.Relay // "")
     }' 2>/dev/null) || self_json='{}'
 
-    # Build tailnet object from .CurrentTailnet
+    # Build tailnet object
     tailnet_json=$(printf '%s' "$status_json" | jq '{
         name: (.CurrentTailnet.Name // ""),
         magic_dns_suffix: (.CurrentTailnet.MagicDNSSuffix // .MagicDNSSuffix // ""),
         magic_dns_enabled: (.CurrentTailnet.MagicDNSEnabled // false)
     }' 2>/dev/null) || tailnet_json='{}'
 
-    # Build peers array from .Peer (map keyed by public key)
+    # Build peers array
     peers_json=$(printf '%s' "$status_json" | jq '[
         (.Peer // {}) | to_entries[] | .value | {
             hostname: (.HostName // ""),
@@ -214,7 +210,6 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         --argjson tailnet "$tailnet_json" \
         --argjson peers "$peers_json" \
         --argjson health "$health_json" \
-        --argjson other_vpn_installed "$other_vpn_installed" \
         '{
             success: true,
             installed: $installed,
@@ -226,15 +221,13 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
             self: $self,
             tailnet: $tailnet,
             peers: $peers,
-            health: $health,
-            other_vpn_installed: $other_vpn_installed,
-            other_vpn_name: "NetBird"
+            health: $health
         }'
     exit 0
 fi
 
 # =============================================================================
-# POST — Actions: connect, disconnect, logout, start/stop service, boot toggle
+# POST — Actions
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
 
@@ -248,22 +241,17 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     fi
 
     # -------------------------------------------------------------------------
-    # action: install — install tailscale via opkg (background)
+    # action: install — install tailscale via helper script (background)
     # -------------------------------------------------------------------------
     if [ "$ACTION" = "install" ]; then
-        TS_INSTALL_RESULT="/tmp/qmanager_tailscale_install.json"
-        TS_INSTALL_PID="/tmp/qmanager_tailscale_install.pid"
-
-        # Mutual exclusion: refuse if other VPN is installed
-        if command -v netbird >/dev/null 2>&1; then
-            cgi_error "other_vpn_installed" "NetBird is already installed. Uninstall it before installing Tailscale."
-            exit 0
-        fi
 
         # Check if already running
-        if [ -f "$TS_INSTALL_PID" ] && kill -0 "$(cat "$TS_INSTALL_PID" 2>/dev/null)" 2>/dev/null; then
-            cgi_error "already_running" "Installation already in progress"
-            exit 0
+        if [ -f "$INSTALL_PID" ]; then
+            inst_pid=$(cat "$INSTALL_PID" 2>/dev/null | tr -d ' \n\r')
+            if [ -n "$inst_pid" ] && pid_alive "$inst_pid"; then
+                cgi_error "already_running" "Installation already in progress"
+                exit 0
+            fi
         fi
 
         # Already installed?
@@ -272,33 +260,10 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             exit 0
         fi
 
-        qlog_info "Starting Tailscale installation via opkg"
+        qlog_info "Starting Tailscale installation via helper"
 
-        # Spawn background installer
-        (
-            echo $$ > "$TS_INSTALL_PID"
-            trap 'rm -f "$TS_INSTALL_PID"' EXIT
-
-            printf '{"success":true,"status":"running","message":"Updating package lists..."}' > "$TS_INSTALL_RESULT"
-            if ! opkg update >/dev/null 2>&1; then
-                printf '{"success":false,"status":"error","message":"Failed to update package lists","detail":"Check internet connection and opkg feeds"}' > "$TS_INSTALL_RESULT"
-                exit 1
-            fi
-
-            printf '{"success":true,"status":"running","message":"Installing tailscale..."}' > "$TS_INSTALL_RESULT"
-            if ! opkg install luci-app-tailscale >/dev/null 2>&1; then
-                printf '{"success":false,"status":"error","message":"opkg install failed","detail":"Package may not be available for this architecture"}' > "$TS_INSTALL_RESULT"
-                exit 1
-            fi
-
-            # Verify
-            if command -v tailscale >/dev/null 2>&1; then
-                vpn_fw_ensure_zone "tailscale" "tailscale0"
-                printf '{"success":true,"status":"complete","message":"Tailscale installed successfully"}' > "$TS_INSTALL_RESULT"
-            else
-                printf '{"success":false,"status":"error","message":"Package installed but binary not found"}' > "$TS_INSTALL_RESULT"
-            fi
-        ) </dev/null >/dev/null 2>&1 &
+        # Spawn background installer — helper writes progress to INSTALL_RESULT
+        ( $_SUDO /usr/bin/qmanager_tailscale_mgr install ) </dev/null >/dev/null 2>&1 &
 
         cgi_success
         exit 0
@@ -308,9 +273,8 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     # action: install_status — poll install progress
     # -------------------------------------------------------------------------
     if [ "$ACTION" = "install_status" ]; then
-        TS_INSTALL_RESULT="/tmp/qmanager_tailscale_install.json"
-        if [ -f "$TS_INSTALL_RESULT" ]; then
-            cat "$TS_INSTALL_RESULT"
+        if [ -f "$INSTALL_RESULT" ]; then
+            cat "$INSTALL_RESULT"
         else
             printf '{"success":true,"status":"idle"}'
         fi
@@ -331,16 +295,14 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
         # Ensure daemon is running first
         if ! is_daemon_running; then
-            if [ -x /etc/init.d/tailscale ]; then
-                /etc/init.d/tailscale start >/dev/null 2>&1
-            else
-                tailscaled --state=/var/lib/tailscale/tailscaled.state >/dev/null 2>&1 &
-            fi
+            svc_start "tailscaled"
             # Wait for daemon to be ready (up to 5 seconds)
             attempts=0
             while [ "$attempts" -lt 5 ]; do
                 sleep 1
-                is_daemon_running && break
+                if is_daemon_running; then
+                    break
+                fi
                 attempts=$((attempts + 1))
             done
             if ! is_daemon_running; then
@@ -358,7 +320,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         # CRITICAL: NEVER use --accept-routes — it disconnects the device from
         # the network entirely and requires a physical reboot to recover.
         # Run tailscale up in background, capturing output for auth URL
-        ( tailscale up --accept-dns=false --json > "$TS_UP_OUTPUT" 2>&1 ) &
+        ( ts_cmd up --accept-dns=false --json > "$TS_UP_OUTPUT" 2>&1 ) &
         ts_up_pid=$!
         echo "$ts_up_pid" > "$TS_UP_PID_FILE"
 
@@ -372,7 +334,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
                 state=$(jq -r 'select(.BackendState == "Running") | .BackendState' "$TS_UP_OUTPUT" 2>/dev/null | head -1)
                 if [ "$state" = "Running" ]; then
                     rm -f "$AUTH_URL_FILE" "$TS_UP_PID_FILE"
-                    vpn_fw_ensure_zone "tailscale" "tailscale0"
+                    ensure_firewall
                     qlog_info "Tailscale already authenticated"
                     jq -n '{"success": true, "already_authenticated": true}'
                     exit 0
@@ -402,7 +364,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     # -------------------------------------------------------------------------
     if [ "$ACTION" = "disconnect" ]; then
         qlog_info "Disconnecting Tailscale"
-        result=$(tailscale down 2>&1)
+        result=$(ts_cmd down 2>&1)
         rc=$?
         if [ "$rc" -ne 0 ]; then
             qlog_error "tailscale down failed: $result"
@@ -421,7 +383,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     if [ "$ACTION" = "logout" ]; then
         qlog_info "Logging out of Tailscale"
         kill_stale_ts_up
-        result=$(tailscale logout 2>&1)
+        result=$(ts_cmd logout 2>&1)
         rc=$?
         if [ "$rc" -ne 0 ]; then
             qlog_error "tailscale logout failed: $result"
@@ -443,14 +405,10 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             exit 0
         fi
         qlog_info "Starting tailscale daemon"
-        if [ -x /etc/init.d/tailscale ]; then
-            /etc/init.d/tailscale start >/dev/null 2>&1
-        else
-            tailscaled --state=/var/lib/tailscale/tailscaled.state >/dev/null 2>&1 &
-        fi
+        svc_start "tailscaled"
         sleep 1
         if is_daemon_running; then
-            vpn_fw_ensure_zone "tailscale" "tailscale0"
+            ensure_firewall
             qlog_info "Tailscale daemon started"
             cgi_success
         else
@@ -465,11 +423,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     if [ "$ACTION" = "stop_service" ]; then
         qlog_info "Stopping tailscale daemon"
         kill_stale_ts_up
-        if [ -x /etc/init.d/tailscale ]; then
-            /etc/init.d/tailscale stop >/dev/null 2>&1
-        else
-            killall tailscaled 2>/dev/null
-        fi
+        svc_stop "tailscaled"
         rm -f "$AUTH_URL_FILE" "$TS_UP_OUTPUT" "$TS_UP_PID_FILE"
         qlog_info "Tailscale daemon stopped"
         cgi_success
@@ -485,26 +439,13 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             cgi_error "missing_field" "enabled field is required"
             exit 0
         fi
-        if [ ! -x /etc/init.d/tailscale ]; then
-            cgi_error "no_init_script" "Tailscale init script not found"
-            exit 0
-        fi
         case "$boot_enabled" in
             true)
-                # Toggle UCI flag (authoritative for luci-app-tailscale)
-                if uci -q get tailscale.@tailscale[0] >/dev/null 2>&1; then
-                    uci set tailscale.@tailscale[0].enabled='1'
-                    uci commit tailscale
-                fi
-                /etc/init.d/tailscale enable >/dev/null 2>&1
+                $_SUDO /bin/ln -sf "$UNIT_DIR/tailscaled.service" "$WANTS_DIR/tailscaled.service"
                 qlog_info "Tailscale enabled on boot"
                 ;;
             false)
-                if uci -q get tailscale.@tailscale[0] >/dev/null 2>&1; then
-                    uci set tailscale.@tailscale[0].enabled='0'
-                    uci commit tailscale
-                fi
-                /etc/init.d/tailscale disable >/dev/null 2>&1
+                $_SUDO /bin/rm -f "$WANTS_DIR/tailscaled.service"
                 qlog_info "Tailscale disabled on boot"
                 ;;
             *)
@@ -517,50 +458,30 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     fi
 
     # -------------------------------------------------------------------------
-    # action: uninstall — remove tailscale packages from the device
+    # action: uninstall — remove tailscale from the device
     # -------------------------------------------------------------------------
     if [ "$ACTION" = "uninstall" ]; then
-        qlog_info "Uninstalling Tailscale packages"
+        qlog_info "Uninstalling Tailscale"
 
         # Stop service if running
         if is_daemon_running; then
             qlog_info "Stopping Tailscale daemon before uninstall"
             kill_stale_ts_up
-            tailscale down >/dev/null 2>&1
-            if [ -x /etc/init.d/tailscale ]; then
-                /etc/init.d/tailscale stop >/dev/null 2>&1
-            else
-                killall tailscaled 2>/dev/null
-            fi
+            ts_cmd down >/dev/null 2>&1
+            svc_stop "tailscaled"
             sleep 1
         fi
 
-        # Disable boot entry if init script exists
-        [ -x /etc/init.d/tailscale ] && /etc/init.d/tailscale disable >/dev/null 2>&1
-
-        # Remove packages
-        opkg remove luci-app-tailscale tailscale tailscaled >/dev/null 2>&1
-
-        # Clean up state files
-        rm -rf /var/lib/tailscale/
-        rm -f /tmp/qmanager_tailscale_auth_url /tmp/qmanager_tailscale_up_output /tmp/qmanager_tailscale_up_pid
-
-        # Verify removal (check actual binary paths, not command -v which can be cached)
-        hash -r 2>/dev/null
-        if [ -x /usr/sbin/tailscale ] || [ -x /usr/bin/tailscale ]; then
-            qlog_error "Tailscale binary still present after opkg remove"
-            cgi_error "uninstall_failed" "Failed to remove Tailscale packages"
-            exit 0
-        fi
-
-        qlog_info "Tailscale uninstalled successfully"
+        # Send response before removing firewall (avoids killing HTTP connection)
         cgi_success
 
-        # Remove firewall zone in background AFTER response is sent.
-        # vpn_fw_remove_zone restarts the firewall which kills the HTTP
-        # connection — doing it after cgi_success ensures the frontend
-        # receives a clean JSON response.
-        ( vpn_fw_remove_zone "tailscale" ) </dev/null >/dev/null 2>&1 &
+        # Remove firewall rules and uninstall in background AFTER response
+        (
+            remove_firewall
+            $_SUDO /usr/bin/qmanager_tailscale_mgr uninstall
+        ) </dev/null >/dev/null 2>&1 &
+
+        qlog_info "Tailscale uninstall started"
         exit 0
     fi
 
