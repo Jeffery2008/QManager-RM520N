@@ -113,9 +113,9 @@ export default function SmsInboxCard({
     setIsDeleting(false);
     setDeleteTarget(null);
     if (success) {
-      toast.success("Message deleted");
+      toast.success("短信已删除");
     } else {
-      toast.error("Failed to delete message");
+      toast.error("删除短信失败");
     }
   };
 
@@ -126,9 +126,9 @@ export default function SmsInboxCard({
     setShowDeleteAll(false);
     setRowSelection({});
     if (success) {
-      toast.success("All messages deleted");
+      toast.success("已删除全部短信");
     } else {
-      toast.error("Failed to delete messages");
+      toast.error("删除短信失败");
     }
   };
 
@@ -145,10 +145,10 @@ export default function SmsInboxCard({
     setRowSelection({});
     if (success) {
       toast.success(
-        `${selectedRows.length} message${selectedRows.length !== 1 ? "s" : ""} deleted`,
+        `已删除 ${selectedRows.length} 条短信`,
       );
     } else {
-      toast.error("Failed to delete selected messages");
+      toast.error("删除所选短信失败");
     }
   };
 
@@ -168,7 +168,7 @@ export default function SmsInboxCard({
               onCheckedChange={(value) =>
                 t.toggleAllPageRowsSelected(!!value)
               }
-              aria-label="Select all"
+              aria-label="全选"
             />
           </div>
         ),
@@ -177,7 +177,7 @@ export default function SmsInboxCard({
             <Checkbox
               checked={row.getIsSelected()}
               onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="Select row"
+              aria-label="选择行"
             />
           </div>
         ),
@@ -186,7 +186,7 @@ export default function SmsInboxCard({
       },
       {
         accessorKey: "sender",
-        header: "From",
+        header: "发件人",
         cell: ({ row }) => (
           <div className="min-w-0">
             <div className="font-medium truncate">{row.original.sender}</div>
@@ -199,7 +199,7 @@ export default function SmsInboxCard({
       {
         accessorKey: "content",
         header: () => (
-          <span className="hidden @md/card:inline">Message</span>
+          <span className="hidden @md/card:inline">短信内容</span>
         ),
         cell: ({ row }) => (
           <div className="hidden @md/card:block max-w-xs truncate text-muted-foreground">
@@ -210,7 +210,7 @@ export default function SmsInboxCard({
       {
         id: "date",
         header: () => (
-          <span className="hidden @sm/card:inline">Date</span>
+          <span className="hidden @sm/card:inline">日期</span>
         ),
         cell: ({ row }) => (
           <span className="hidden @sm/card:inline text-muted-foreground text-sm whitespace-nowrap">
@@ -231,13 +231,13 @@ export default function SmsInboxCard({
                   size="icon"
                 >
                   <TbDotsVertical />
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">打开菜单</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">
                 <DropdownMenuItem onClick={() => setViewMessage(row.original)}>
                   <TbEye className="size-4" />
-                  View
+                  查看
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -245,7 +245,7 @@ export default function SmsInboxCard({
                   onClick={() => setDeleteTarget(row.original)}
                 >
                   <TbTrash className="size-4" />
-                  Delete
+                  删除
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -298,9 +298,9 @@ export default function SmsInboxCard({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Inbox</CardTitle>
+          <CardTitle>收件箱</CardTitle>
           <CardDescription>
-            View and manage your SMS messages
+            查看和管理你的短信。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -310,12 +310,12 @@ export default function SmsInboxCard({
           >
             <AlertCircleIcon className="size-8 text-destructive" />
             <div className="space-y-1">
-              <p className="text-sm font-medium">Failed to load messages</p>
+              <p className="text-sm font-medium">加载短信失败</p>
               <p className="text-xs text-muted-foreground">{error}</p>
             </div>
             <Button variant="outline" size="sm" onClick={onRefresh}>
               <TbRefresh className="size-4" />
-              Retry
+              重试
             </Button>
           </div>
         </CardContent>
@@ -330,11 +330,11 @@ export default function SmsInboxCard({
     <>
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Inbox</CardTitle>
+          <CardTitle>收件箱</CardTitle>
           <CardDescription>
-            View and manage your SMS messages
+            查看和管理你的短信。
             {storage
-              ? ` \u2014 ${storage.used}/${storage.total} messages stored`
+              ? `，当前已存储 ${storage.used}/${storage.total} 条短信`
               : ""}
           </CardDescription>
           <CardAction>
@@ -344,7 +344,7 @@ export default function SmsInboxCard({
                 size="sm"
                 onClick={onRefresh}
                 disabled={isSaving}
-                aria-label="Refresh inbox"
+                aria-label="刷新收件箱"
               >
                 <TbRefresh className="size-4" />
               </Button>
@@ -354,11 +354,11 @@ export default function SmsInboxCard({
                   size="sm"
                   onClick={() => setShowDeleteSelected(true)}
                   disabled={isSaving}
-                  aria-label={`Delete ${selectedCount} selected`}
+                  aria-label={`删除已选中的 ${selectedCount} 条短信`}
                 >
                   <Trash2 className="size-4" />
                   <span className="hidden @sm/card:inline">
-                    Delete ({selectedCount})
+                    删除（{selectedCount}）
                   </span>
                 </Button>
               )}
@@ -368,10 +368,10 @@ export default function SmsInboxCard({
                   size="sm"
                   onClick={() => setShowDeleteAll(true)}
                   disabled={isSaving}
-                  aria-label="Delete all messages"
+                  aria-label="删除全部短信"
                 >
                   <Trash2 className="size-4" />
-                  <span className="hidden @sm/card:inline">Delete All</span>
+                  <span className="hidden @sm/card:inline">删除全部</span>
                 </Button>
               )}
               <Button
@@ -380,7 +380,7 @@ export default function SmsInboxCard({
                 disabled={isSaving}
               >
                 <TbPlus className="size-4" />
-                <span className="hidden @xs/card:inline">New Message</span>
+                <span className="hidden @xs/card:inline">新短信</span>
               </Button>
             </div>
           </CardAction>
@@ -439,7 +439,7 @@ export default function SmsInboxCard({
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No messages found.
+                      未找到短信。
                     </TableCell>
                   </TableRow>
                 )}
@@ -450,7 +450,7 @@ export default function SmsInboxCard({
           {messages.length > 0 && (
             <div className="flex items-center justify-between px-2 pt-2">
               <span className="text-muted-foreground text-sm">
-                {messages.length} message{messages.length !== 1 ? "s" : ""}
+                共 {messages.length} 条短信
               </span>
               {table.getPageCount() > 1 && (
                 <div className="flex items-center gap-2">
@@ -460,7 +460,7 @@ export default function SmsInboxCard({
                     onClick={() => table.previousPage()}
                     disabled={!table.getCanPreviousPage()}
                   >
-                    Prev
+                    上一页
                   </Button>
                   <span className="text-sm text-muted-foreground whitespace-nowrap">
                     {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
@@ -471,7 +471,7 @@ export default function SmsInboxCard({
                     onClick={() => table.nextPage()}
                     disabled={!table.getCanNextPage()}
                   >
-                    Next
+                    下一页
                   </Button>
                 </div>
               )}
@@ -487,7 +487,7 @@ export default function SmsInboxCard({
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Message from {viewMessage?.sender}</DialogTitle>
+            <DialogTitle>来自 {viewMessage?.sender} 的短信</DialogTitle>
             <DialogDescription>{viewMessage?.timestamp}</DialogDescription>
           </DialogHeader>
           <div className="whitespace-pre-wrap wrap-break-word text-sm">
@@ -503,14 +503,13 @@ export default function SmsInboxCard({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Message</AlertDialogTitle>
+            <AlertDialogTitle>删除短信</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this message from{" "}
-              {deleteTarget?.sender}? This action cannot be undone.
+              确认删除来自 {deleteTarget?.sender} 的这条短信吗？此操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
@@ -519,10 +518,10 @@ export default function SmsInboxCard({
               {isDeleting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Deleting&hellip;
+                  删除中…
                 </>
               ) : (
-                "Delete"
+                "删除"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -536,14 +535,13 @@ export default function SmsInboxCard({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete All Messages</AlertDialogTitle>
+            <AlertDialogTitle>删除全部短信</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete all {messages.length} messages?
-              This action cannot be undone.
+              确认删除全部 {messages.length} 条短信吗？此操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteAll}
               disabled={isDeleting}
@@ -552,10 +550,10 @@ export default function SmsInboxCard({
               {isDeleting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Deleting&hellip;
+                  删除中…
                 </>
               ) : (
-                "Delete All"
+                "删除全部"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -569,14 +567,13 @@ export default function SmsInboxCard({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Selected Messages</AlertDialogTitle>
+            <AlertDialogTitle>删除所选短信</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {selectedCount} selected message
-              {selectedCount !== 1 ? "s" : ""}? This action cannot be undone.
+              确认删除所选的 {selectedCount} 条短信吗？此操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteSelected}
               disabled={isDeleting}
@@ -585,10 +582,10 @@ export default function SmsInboxCard({
               {isDeleting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Deleting&hellip;
+                  删除中…
                 </>
               ) : (
-                `Delete (${selectedCount})`
+                `删除（${selectedCount}）`
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

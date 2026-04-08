@@ -86,9 +86,9 @@ const ScheduledOperationsCard = ({
       rebootSaveTimerRef.current = setTimeout(async () => {
         const success = await saveScheduledReboot(payload);
         if (success) {
-          toast.success("Reboot schedule saved");
+          toast.success("重启计划已保存");
         } else {
-          toast.error("Failed to save reboot schedule");
+          toast.error("保存重启计划失败");
         }
       }, 800);
     },
@@ -114,12 +114,12 @@ const ScheduledOperationsCard = ({
     if (success) {
       toast.success(
         checked
-          ? "Scheduled reboot enabled"
-          : "Scheduled reboot disabled",
+          ? "已启用定时重启"
+          : "已停用定时重启",
       );
     } else {
       setRebootEnabled(!checked);
-      toast.error("Failed to update reboot schedule");
+      toast.error("更新重启计划失败");
     }
   };
 
@@ -159,9 +159,9 @@ const ScheduledOperationsCard = ({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Scheduled Operations</CardTitle>
+          <CardTitle>计划任务</CardTitle>
           <CardDescription>
-            Set up automated system tasks on a schedule.
+            按计划设置自动化系统任务。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -189,9 +189,9 @@ const ScheduledOperationsCard = ({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Scheduled Operations</CardTitle>
+          <CardTitle>计划任务</CardTitle>
           <CardDescription>
-            Set up automated system tasks on a schedule.
+            按计划设置自动化系统任务。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -207,9 +207,9 @@ const ScheduledOperationsCard = ({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Scheduled Operations</CardTitle>
+        <CardTitle>计划任务</CardTitle>
         <CardDescription>
-          Set up automated system tasks on a schedule.
+          按计划设置自动化系统任务。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -220,13 +220,13 @@ const ScheduledOperationsCard = ({
           animate="visible"
         >
           {/* ─── Section: Scheduled Reboot ─────────────────────────────── */}
-          <motion.p variants={itemVariants} className="font-semibold text-sm">Scheduled Reboot</motion.p>
+          <motion.p variants={itemVariants} className="font-semibold text-sm">定时重启</motion.p>
           <Separator />
 
           {/* Enable toggle */}
           <motion.div variants={itemVariants} className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              Enable Scheduled Reboot
+              启用定时重启
             </p>
             <div className="flex items-center space-x-2">
               <Switch
@@ -235,16 +235,16 @@ const ScheduledOperationsCard = ({
                 onCheckedChange={handleRebootEnabledChange}
               />
               <Label htmlFor="scheduled-reboot">
-                {rebootEnabled ? "Enabled" : "Disabled"}
+                {rebootEnabled ? "已启用" : "已停用"}
               </Label>
             </div>
           </motion.div>
           <Separator />
 
-          {/* Reboot Time */}
+          {/* 重启时间 */}
           <motion.div variants={itemVariants} className="flex items-center justify-between mt-4">
             <Label className="font-semibold text-muted-foreground text-sm">
-              Reboot Time
+              重启时间
             </Label>
             <Input
               type="time"
@@ -255,15 +255,15 @@ const ScheduledOperationsCard = ({
           </motion.div>
           <Separator />
 
-          {/* Repeat On */}
+          {/* 重复日期 */}
           <motion.fieldset variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
             <legend className="font-semibold text-muted-foreground text-sm">
-              Repeat On
+              重复日期
             </legend>
             <div
               className="flex flex-wrap gap-2"
               role="group"
-              aria-label="Reboot days of the week"
+              aria-label="重启的星期"
             >
               {DAY_LABELS.map((day, index) => (
                 <Toggle

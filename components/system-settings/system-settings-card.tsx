@@ -84,9 +84,9 @@ export default function SystemSettingsCard({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>System Settings</CardTitle>
+          <CardTitle>系统设置</CardTitle>
           <CardDescription>
-            Configure device preferences and display options.
+            配置设备偏好与显示选项。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -126,9 +126,9 @@ export default function SystemSettingsCard({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>System Settings</CardTitle>
+          <CardTitle>系统设置</CardTitle>
           <CardDescription>
-            Configure device preferences and display options.
+            配置设备偏好与显示选项。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -221,9 +221,9 @@ function SystemSettingsForm({
 
     if (success) {
       markSaved();
-      toast.success("Settings saved");
+      toast.success("设置已保存");
     } else {
-      toast.error(error || "Failed to save settings");
+      toast.error(error || "保存设置失败");
     }
   }, [
     canSave,
@@ -239,9 +239,9 @@ function SystemSettingsForm({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>System Settings</CardTitle>
+        <CardTitle>系统设置</CardTitle>
         <CardDescription>
-          Configure device preferences and display options.
+          配置设备偏好与显示选项。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -258,51 +258,51 @@ function SystemSettingsForm({
           initial="hidden"
           animate="visible"
         >
-          {/* ── Temperature Unit ──────────────────────────────────── */}
+          {/* ── 温度单位 ──────────────────────────────────── */}
           <Separator />
           <motion.div variants={itemVariants} className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              Temperature Unit
+              温度单位
             </p>
             <Select
               value={tempUnit}
               onValueChange={(v) => setTempUnit(v as "celsius" | "fahrenheit")}
             >
-              <SelectTrigger className="w-36" aria-label="Temperature unit">
+              <SelectTrigger className="w-36" aria-label="温度单位">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="celsius">Celsius</SelectItem>
-                <SelectItem value="fahrenheit">Fahrenheit</SelectItem>
+                <SelectItem value="celsius">摄氏度</SelectItem>
+                <SelectItem value="fahrenheit">华氏度</SelectItem>
               </SelectContent>
             </Select>
           </motion.div>
 
-          {/* ── Distance Unit ─────────────────────────────────────── */}
+          {/* ── 距离单位 ─────────────────────────────────────── */}
           <Separator />
           <motion.div variants={itemVariants} className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              Distance Unit
+              距离单位
             </p>
             <Select
               value={distanceUnit}
               onValueChange={(v) => setDistanceUnit(v as "km" | "miles")}
             >
-              <SelectTrigger className="w-36" aria-label="Distance unit">
+              <SelectTrigger className="w-36" aria-label="距离单位">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="km">Kilometers</SelectItem>
-                <SelectItem value="miles">Miles</SelectItem>
+                <SelectItem value="km">公里</SelectItem>
+                <SelectItem value="miles">英里</SelectItem>
               </SelectContent>
             </Select>
           </motion.div>
 
-          {/* ── Timezone ──────────────────────────────────────────── */}
+          {/* ── 时区 ──────────────────────────────────────────── */}
           <Separator />
           <motion.div variants={itemVariants} className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              Timezone
+              时区
             </p>
             <Popover open={tzOpen} onOpenChange={setTzOpen}>
               <PopoverTrigger asChild>
@@ -314,16 +314,16 @@ function SystemSettingsForm({
                 >
                   <span className="truncate">
                     {TIMEZONES.find((tz) => tz.zonename === zonename)?.label ??
-                      "Select timezone"}
+                      "选择时区"}
                   </span>
                   <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-64 p-0" align="end">
                 <Command>
-                  <CommandInput placeholder="Search timezone..." />
+                  <CommandInput placeholder="搜索时区..." />
                   <CommandList>
-                    <CommandEmpty>No timezone found.</CommandEmpty>
+                    <CommandEmpty>未找到时区。</CommandEmpty>
                     <CommandGroup>
                       {TIMEZONES.map((tz) => (
                         <CommandItem

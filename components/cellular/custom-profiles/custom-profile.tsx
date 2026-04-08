@@ -177,9 +177,9 @@ const CustomProfileComponent = () => {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Custom SIM Profile</h1>
+        <h1 className="text-3xl font-bold mb-2">自定义 SIM 配置</h1>
         <p className="text-muted-foreground">
-          Bundle APN, IMEI, and TTL/HL settings into one-click profiles.
+          将 APN、IMEI 和 TTL/HL 设置打包成可一键切换的配置。
         </p>
       </div>
       <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">
@@ -211,17 +211,16 @@ const CustomProfileComponent = () => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Activate Profile</AlertDialogTitle>
+            <AlertDialogTitle>激活配置</AlertDialogTitle>
             <AlertDialogDescription>
-              Apply &ldquo;{activateTarget?.name}&rdquo; to the modem? This will
-              update APN, TTL/HL, and IMEI settings as configured in the
-              profile. Unchanged settings will be skipped.
+              确认将 &ldquo;{activateTarget?.name}&rdquo; 应用到调制解调器吗？
+              这将按配置更新 APN、TTL/HL 和 IMEI 设置，未变更的设置会被跳过。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={handleActivateConfirm}>
-              Activate
+              激活
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -234,22 +233,21 @@ const CustomProfileComponent = () => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deactivate Profile</AlertDialogTitle>
+            <AlertDialogTitle>停用配置</AlertDialogTitle>
             <AlertDialogDescription>
-              Clear the active profile marker? The modem&apos;s current settings
-              (APN, IMEI, TTL) will not be reverted — only the &ldquo;Active&rdquo;
-              badge will be removed.
+              确认清除当前激活配置标记吗？调制解调器当前设置
+              （APN、IMEI、TTL）不会回退，只会移除 &ldquo;已激活&rdquo; 标记。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeactivating}>
-              Cancel
+              取消
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeactivateConfirm}
               disabled={isDeactivating}
             >
-              {isDeactivating ? "Deactivating…" : "Deactivate"}
+              {isDeactivating ? "停用中…" : "停用"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

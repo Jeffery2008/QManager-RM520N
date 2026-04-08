@@ -86,12 +86,12 @@ export default function CommandsPopover({
     const trimmedCommand = newCommand.trim();
 
     if (!trimmedLabel || !trimmedCommand) {
-      setAddError("Both fields are required.");
+      setAddError("两个字段都必须填写。");
       return;
     }
 
     if (!trimmedCommand.toUpperCase().startsWith("AT")) {
-      setAddError('Command must start with "AT".');
+      setAddError('命令必须以 "AT" 开头。');
       return;
     }
 
@@ -100,14 +100,14 @@ export default function CommandsPopover({
       (p) => p.command.toLowerCase() === trimmedCommand.toLowerCase()
     );
     if (isDuplicateCommand) {
-      setAddError("This command already exists.");
+      setAddError("该命令已存在。");
       return;
     }
     const isDuplicateLabel = allCommands.some(
       (p) => p.label.toLowerCase() === trimmedLabel.toLowerCase()
     );
     if (isDuplicateLabel) {
-      setAddError("A command with this label already exists.");
+      setAddError("该名称对应的命令已存在。");
       return;
     }
 
@@ -142,11 +142,11 @@ export default function CommandsPopover({
 
         <PopoverContent className="w-80 p-0" align="end">
           <Command>
-            <CommandInput placeholder="Search commands..." />
+            <CommandInput placeholder="搜索命令..." />
             <CommandList>
-              <CommandEmpty>No commands found.</CommandEmpty>
+              <CommandEmpty>未找到命令。</CommandEmpty>
 
-              <CommandGroup heading="Default">
+              <CommandGroup heading="默认">
                 {DEFAULT_AT_COMMANDS.map((preset) => (
                   <CommandItem
                     key={preset.command}
@@ -168,7 +168,7 @@ export default function CommandsPopover({
               </CommandGroup>
 
               {customCommands.length > 0 && (
-                <CommandGroup heading="Custom">
+                <CommandGroup heading="自定义">
                   {customCommands.map((preset) => (
                     <CommandItem
                       key={preset.command}
@@ -194,7 +194,7 @@ export default function CommandsPopover({
 
           {/* Footer */}
           <div className="flex items-center justify-between px-3 py-2 border-t text-xs text-muted-foreground">
-            <span>{totalCount} commands</span>
+            <span>{totalCount} 个命令</span>
             <button
               className="text-xs underline underline-offset-2 hover:text-foreground transition-colors"
               onClick={() => {
@@ -212,16 +212,16 @@ export default function CommandsPopover({
       <Dialog open={manageOpen} onOpenChange={setManageOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Manage Custom Commands</DialogTitle>
+            <DialogTitle>管理自定义命令</DialogTitle>
             <DialogDescription>
-              Add and remove custom AT command presets.
+              添加或删除自定义 AT 命令预设。
             </DialogDescription>
           </DialogHeader>
 
           {/* Custom command list */}
           {customCommands.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              No custom commands yet.
+              还没有自定义命令。
             </p>
           ) : (
             <ul className="space-y-1">
@@ -256,8 +256,8 @@ export default function CommandsPopover({
           {/* Add form */}
           <div className="flex gap-2">
             <Input
-              placeholder="Command name"
-              aria-label="Command name"
+              placeholder="命令名称"
+              aria-label="命令名称"
               value={newLabel}
               onChange={(e) => {
                 setNewLabel(e.target.value);
@@ -267,7 +267,7 @@ export default function CommandsPopover({
             />
             <Input
               placeholder="AT+..."
-              aria-label="AT command"
+              aria-label="AT 命令"
               value={newCommand}
               onChange={(e) => {
                 setNewCommand(e.target.value);

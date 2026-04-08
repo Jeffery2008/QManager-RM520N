@@ -52,12 +52,12 @@ export default function SmsComposeDialog({
 
     const success = await onSend(phone.trim(), message);
     if (success) {
-      toast.success("SMS sent successfully");
+      toast.success("短信发送成功");
       setPhone("");
       setMessage("");
       onOpenChange(false);
     } else {
-      toast.error("Failed to send SMS");
+      toast.error("发送短信失败");
     }
   };
 
@@ -73,14 +73,14 @@ export default function SmsComposeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New Message</DialogTitle>
+          <DialogTitle>新短信</DialogTitle>
           <DialogDescription>
-            Compose and send an SMS message.
+            编写并发送短信。
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSend} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="sms-phone">Phone Number</Label>
+            <Label htmlFor="sms-phone">电话号码</Label>
             <Input
               id="sms-phone"
               type="tel"
@@ -92,7 +92,7 @@ export default function SmsComposeDialog({
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="sms-message">Message</Label>
+              <Label htmlFor="sms-message">短信内容</Label>
               <span
                 className={`text-xs ${
                   isOverLimit
@@ -103,12 +103,12 @@ export default function SmsComposeDialog({
                 }`}
               >
                 {charCount}/{maxChars}
-                {isUcs2 && " (Unicode)"}
+                {isUcs2 && "（Unicode）"}
               </span>
             </div>
             <Textarea
               id="sms-message"
-              placeholder="Type your message..."
+              placeholder="输入短信内容..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               disabled={isSaving}
@@ -117,8 +117,7 @@ export default function SmsComposeDialog({
             />
             {isOverLimit && (
               <p className="text-xs text-destructive">
-                Message exceeds single SMS limit. It will be sent as multiple
-                parts.
+                内容超出单条短信长度限制，将分段发送。
               </p>
             )}
           </div>
@@ -129,16 +128,16 @@ export default function SmsComposeDialog({
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
-              Cancel
+              取消
             </Button>
             <Button type="submit" disabled={isSaving || !isValid}>
               {isSaving ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Sending&hellip;
+                  发送中…
                 </>
               ) : (
-                "Send"
+                "发送"
               )}
             </Button>
           </DialogFooter>

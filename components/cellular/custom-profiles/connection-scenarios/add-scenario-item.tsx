@@ -14,9 +14,9 @@ export const AddScenarioItem = ({ onClick }: AddScenarioItemProps) => (
       <div className="p-3 bg-background rounded-lg shadow-sm mb-2">
         <Plus size={22} />
       </div>
-      <h3 className="text-sm font-medium">Create Scenario</h3>
+      <h3 className="text-sm font-medium">创建场景</h3>
       <p className="text-xs text-muted-foreground/70 mt-0.5">
-        Add custom configuration
+        添加自定义配置
       </p>
     </div>
   </div>

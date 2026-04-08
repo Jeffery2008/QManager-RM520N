@@ -95,7 +95,7 @@ export function ProfileTable({
     () => [
       {
         accessorKey: "name",
-        header: "Profile",
+        header: "配置",
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
             <div>
@@ -112,7 +112,7 @@ export function ProfileTable({
       },
       {
         id: "status",
-        header: "Status",
+        header: "状态",
         cell: ({ row }) => {
           const isActive = row.original.id === activeProfileId;
           if (isActive) {
@@ -127,7 +127,7 @@ export function ProfileTable({
                   className="px-1.5 bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
                 >
                   <TriangleAlertIcon className="size-3" />
-                  SIM Mismatch
+                  SIM 不匹配
                 </Badge>
               );
             }
@@ -138,7 +138,7 @@ export function ProfileTable({
                 className="px-1.5 text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800"
               >
                 <TbCircleCheckFilled className="fill-blue-500 dark:fill-blue-400" />
-                Active
+                已激活
               </Badge>
             );
           }
@@ -147,14 +147,14 @@ export function ProfileTable({
               variant="outline"
               className="px-1.5 text-muted-foreground"
             >
-              Inactive
+              未激活
             </Badge>
           );
         },
       },
       {
         id: "updated",
-        header: "Last Updated",
+        header: "最后更新",
         cell: ({ row }) => (
           <span className="text-muted-foreground text-sm">
             {formatProfileDate(row.original.updated_at)}
@@ -173,26 +173,26 @@ export function ProfileTable({
                 size="icon"
               >
                 <TbDotsVertical />
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">打开菜单</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem onClick={() => onEdit(row.original.id)}>
-                <TbEdit className="size-4" />
-                Edit
-              </DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem onClick={() => onEdit(row.original.id)}>
+                  <TbEdit className="size-4" />
+                  编辑
+                </DropdownMenuItem>
               {onActivate && row.original.id !== activeProfileId && (
                 <DropdownMenuItem
                   onClick={() => onActivate(row.original.id)}
                 >
                   <TbPlayerPlay className="size-4" />
-                  Activate
+                  激活
                 </DropdownMenuItem>
               )}
               {onDeactivate && row.original.id === activeProfileId && (
                 <DropdownMenuItem onClick={onDeactivate}>
                   <TbPlayerStop className="size-4" />
-                  Deactivate
+                  停用
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -201,7 +201,7 @@ export function ProfileTable({
                 onClick={() => setDeleteTarget(row.original)}
               >
                 <TbTrash className="size-4" />
-                Delete
+                删除
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -266,7 +266,7 @@ export function ProfileTable({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No profiles yet. Create one to get started.
+                  还没有配置，请先创建一个。
                 </TableCell>
               </TableRow>
             )}
@@ -277,7 +277,7 @@ export function ProfileTable({
       {data.length > 0 && (
         <div className="flex items-center justify-between px-2 pt-2">
           <span className="text-muted-foreground text-sm">
-            {data.length} profile{data.length !== 1 ? "s" : ""} total
+            共 {data.length} 个配置
           </span>
           {table.getPageCount() > 1 && (
             <div className="flex items-center gap-2">
@@ -287,11 +287,10 @@ export function ProfileTable({
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                Previous
+                上一页
               </Button>
               <span className="text-sm">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
+                第 {table.getState().pagination.pageIndex + 1} / {table.getPageCount()} 页
               </span>
               <Button
                 variant="outline"
@@ -299,7 +298,7 @@ export function ProfileTable({
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                Next
+                下一页
               </Button>
             </div>
           )}
@@ -313,21 +312,20 @@ export function ProfileTable({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Profile</AlertDialogTitle>
+            <AlertDialogTitle>删除配置</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &ldquo;{deleteTarget?.name}
-              &rdquo;? This action cannot be undone. Deleting this profile
-              won&apos;t change your current modem configuration.
+              确认删除 &ldquo;{deleteTarget?.name}&rdquo; 吗？
+              此操作无法撤销。删除该配置不会改变当前调制解调器配置。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "Deleting…" : "Delete"}
+              {isDeleting ? "删除中…" : "删除"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

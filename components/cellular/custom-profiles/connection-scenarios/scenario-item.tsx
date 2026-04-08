@@ -110,7 +110,7 @@ export const ScenarioItem = ({
               </div>
               {isActive && (
                 <span className="px-2 py-0.5 bg-white/25 backdrop-blur-sm rounded-full text-xs font-medium">
-                  Active
+                  已激活
                 </span>
               )}
             </div>
@@ -136,19 +136,18 @@ export const ScenarioItem = ({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Scenario</AlertDialogTitle>
+            <AlertDialogTitle>删除场景</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{scenario.name}&quot;? This
-              action cannot be undone.
+              确认删除 &quot;{scenario.name}&quot; 吗？此操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              删除
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

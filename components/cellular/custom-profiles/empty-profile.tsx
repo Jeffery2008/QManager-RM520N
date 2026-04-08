@@ -34,9 +34,9 @@ const EmptyProfileViewComponent = ({ onRefresh }: EmptyProfileViewProps) => {
     >
     <Card className="@container/card h-full">
       <CardHeader>
-        <CardTitle>Saved Profiles</CardTitle>
+        <CardTitle>已保存配置</CardTitle>
         <CardDescription>
-          Manage your custom SIM profiles here.
+          在这里管理你的自定义 SIM 配置。
         </CardDescription>
       </CardHeader>
       <CardContent className="h-full flex items-center justify-center">
@@ -45,17 +45,16 @@ const EmptyProfileViewComponent = ({ onRefresh }: EmptyProfileViewProps) => {
             <EmptyMedia variant="icon">
               <SmartphoneIcon />
             </EmptyMedia>
-            <EmptyTitle>No Custom Profiles</EmptyTitle>
+            <EmptyTitle>暂无自定义配置</EmptyTitle>
             <EmptyDescription>
-              You have not created any custom SIM profiles yet. Use the form to
-              create your first profile.
+              你还没有创建任何自定义 SIM 配置。使用表单来创建你的第一个配置。
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
             {onRefresh && (
               <Button variant="outline" size="sm" onClick={onRefresh}>
                 <RefreshCcwIcon className="size-4" />
-                Refresh
+                刷新
               </Button>
             )}
           </EmptyContent>
