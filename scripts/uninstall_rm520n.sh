@@ -51,7 +51,7 @@ fi
 printf "\n  ${BOLD}QManager — RM520N-GL Uninstaller${NC}\n\n"
 
 # --- Stop and disable systemd services ---
-for svc in qmanager-firewall qmanager-poller qmanager-ping qmanager-watchcat \
+for svc in qmanager-console qmanager-firewall qmanager-poller qmanager-ping qmanager-watchcat \
            qmanager-tower-failover qmanager-ttl qmanager-mtu \
            qmanager-imei-check; do
     systemctl stop "$svc" 2>/dev/null || true
