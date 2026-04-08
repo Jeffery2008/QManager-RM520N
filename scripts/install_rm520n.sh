@@ -531,6 +531,18 @@ install_backend() {
         info "Libraries installed to $LIB_DIR"
     fi
 
+    # --- Tailscale systemd units (staged for on-demand install) ---
+    # These are NOT installed as active units — qmanager_tailscale_mgr copies
+    # them to /lib/systemd/system/ when the user clicks "Install Tailscale".
+    for f in tailscaled.service tailscaled.defaults; do
+        src="$SRC_SCRIPTS/etc/systemd/system/$f"
+        if [ -f "$src" ]; then
+            cp "$src" "$LIB_DIR/$f"
+            sed -i 's/\r$//' "$LIB_DIR/$f"
+            chmod 644 "$LIB_DIR/$f"
+        fi
+    done
+
     # --- Daemons and utilities ---
     local bin_count=0
     if [ -d "$SRC_SCRIPTS/usr/bin" ]; then
