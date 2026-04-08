@@ -107,6 +107,7 @@ QManager installs independently — no SimpleAdmin or RGMII toolkit required:
 - **Speedtest CLI:** Downloaded from `install.speedtest.net` (ookla-speedtest-1.2.0-linux-armhf.tgz) during install, placed at `/usrdata/root/bin/speedtest` with `/bin/speedtest` symlink. CGI scripts discover via `command -v speedtest`. Non-fatal if download fails.
 - **Cell scanner operator lookup:** `qmanager_cell_scanner` uses `operator-list.json` from `/usrdata/qmanager/www/cgi-bin/quecmanager/` for MCC/MNC → provider name resolution. The jq expression handles both `--slurpfile` (wrapped array) and `--argjson` (direct) operator input.
 - **Installer internet resilience:** `opkg update` failure is caught gracefully — all Entware package installs are skipped with clear warnings. The rest of the install (scripts, frontend, systemd units) continues normally.
+- **Tailscale VPN:** Installed on-demand via `qmanager_tailscale_mgr` helper — downloads ARM binary from `pkgs.tailscale.com`, stores at `/usrdata/tailscale/`. Service controlled via `tailscaled.service`. Boot persistence via symlink into `multi-user.target.wants/`. Firewall adds iptables rules for `tailscale0` interface. No dependency on SimpleAdmin.
 
 ## Removed/Deferred Features (dev-rm520 Branch)
 
@@ -114,7 +115,7 @@ The following features have been **completely removed** from the `dev-rm520` bra
 
 | Feature | Reason | Scope of Removal |
 |---------|--------|-----------------|
-| VPN Management (Tailscale + NetBird) | Third-party binaries, fw4/mwan3 dependencies | CGI, hooks, components, vpn_firewall.sh |
+| VPN Management (NetBird only) | Third-party binary, fw4/mwan3 dependencies | CGI, hooks, components for NetBird |
 | Video Optimizer / Traffic Masquerade (DPI) | nftables dependency, nfqws ARM32 not validated | CGI, hooks, components, types, dpi_helper.sh, installer |
 | Bandwidth Monitor | ARM64 binary not portable, websocat dependency | CGI, hooks, components, types, binary, systemd units |
 | Ethernet Status & Link Speed | Different NIC architecture (RGMII vs USB), ethtool differences | CGI, components, ethtool_helper.sh |
