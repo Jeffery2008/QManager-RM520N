@@ -10,6 +10,7 @@ import {
   LucideSignal,
   MessageCircleIcon,
   DogIcon,
+  GlobeIcon,
   RouterIcon,
   User2Icon,
   HeartIcon,
@@ -220,6 +221,11 @@ const data = {
       title: "Watchdog",
       url: "/monitoring/watchdog",
       icon: DogIcon,
+    },
+    {
+      title: "Tailscale VPN",
+      url: "/monitoring/tailscale",
+      icon: GlobeIcon,
     },
   ],
 };
