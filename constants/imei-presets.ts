@@ -21,14 +21,12 @@ export interface ImeiTacPreset {
  * Add new devices here — the Generator dropdown picks them up automatically.
  */
 export const IMEI_TAC_PRESETS: ImeiTacPreset[] = [
-  { id: "samsung_s24", label: "Samsung Galaxy S24", tac: "35367911" },
-  { id: "samsung_s23", label: "Samsung Galaxy S23", tac: "35232511" },
-  { id: "iphone_15", label: "Apple iPhone 15", tac: "35332310" },
-  { id: "iphone_14", label: "Apple iPhone 14", tac: "35349010" },
-  { id: "pixel_8", label: "Google Pixel 8", tac: "35269310" },
-  { id: "oneplus_12", label: "OnePlus 12", tac: "86839205" },
-  { id: "xiaomi_14", label: "Xiaomi 14", tac: "86826004" },
-  { id: "rm520n", label: "Quectel RM520N-GL (Modem)", tac: "86932904" },
+    { id: "iphone_16", label: "Apple iPhone 16", tac: "35995431" },
+  { id: "iphone_17_pro", label: "Apple iPhone 17 Pro", tac: "35122243" },
+  { id: "ipad_pro_12_9", label: "Apple iPad Pro 12.9-inch", tac: "35286992" },
+  { id: "ipad_pro_11", label: "Apple iPad Pro 11-inch", tac: "35164046" },
+  { id: "s25_ultra", label: "Samsung Galaxy S25 Ultra", tac: "35069390" },
+  { id: "pixel_10_pro", label: "Google Pixel 10 Pro", tac: "35744080" },
 ];
 
 /** Sentinel value for the custom prefix option in the Select dropdown */
