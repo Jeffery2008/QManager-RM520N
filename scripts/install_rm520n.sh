@@ -895,6 +895,8 @@ setup_ssh() {
 
     # Create systemd service (not Entware init.d — more reliable on RM520N-GL)
     if [ ! -f "$SYSTEMD_DIR/dropbear.service" ]; then
+        # Rootfs may have been remounted ro by qmanager_console_mgr
+        mount -o remount,rw / 2>/dev/null || true
         cat > "$SYSTEMD_DIR/dropbear.service" << 'SSHEOF'
 [Unit]
 Description=Dropbear SSH Server

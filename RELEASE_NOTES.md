@@ -1,8 +1,61 @@
+# 🚀 QManager RM520N BETA v0.1.4 (Draft)
+
+**Onboarding accuracy and install reliability** — the onboarding band picker now shows only the bands your modem actually supports, cell distance readings no longer lie when there's no signal, and the installer survives a read-only rootfs when enabling SSH.
+
+> Upgrading from v0.1.3? Go to **System Settings -> Software Update** or re-run the installer via ADB/SSH. All existing settings and profiles are preserved.
+
+---
+
+## ✨ What's New
+
+### 📡 Onboarding Band Preferences — Now Modem-Aware
+
+The band preferences step in the onboarding wizard previously offered a hardcoded list of 46 LTE and 59 NR5G bands carried over from the RM551E. Users could select bands the RM520N-GL doesn't support, silently failing when the AT command was applied. Now the step reads live supported bands from the poller and only shows what your hardware actually handles.
+
+- **Dynamic band lists** — LTE and 5G (NSA+SA combined) bands come straight from `useModemStatus()`, driven by the poller's `AT+QNWCFG="policy_band"` query at boot
+- **Filtered presets** — the Low-band and Mid-band preset options only include candidates your modem supports; unsupported bands are quietly removed from the preset string
+- **Hidden empty presets** — if a preset would have no bands after filtering, the option is hidden entirely from the radio group rather than shown as an empty choice
+- **Loading state** — a clean spinner is displayed while the poller data loads, preventing interaction with an empty band list
+- **Consistent with the main band-locking page** — the onboarding step now matches the behavior of **Cellular > Band Locking**, so users see the same band set in both places
+
+---
+
+## 🐛 Bug Fixes
+
+- **Fixed installer failing to enable SSH on read-only rootfs** — when the user opted in to SSH at the end of the install, the script tried to write `/lib/systemd/system/dropbear.service` but the rootfs had already been remounted read-only by `qmanager_console_mgr` earlier in `start_services`. The SSH setup function now explicitly remounts `rw` before writing the service file, matching the defensive pattern used elsewhere in the installer.
+- **Fixed LTE/NR cell distance showing "< 10 m" with no signal** — `calculateLteDistance()` and `calculateNrDistance()` previously treated `TA=0` as a valid "zero distance" result, displaying "< 10 m" even when there was no 5G connection at all (the modem reports stale `nr_ta=0` in that state). Both functions now treat `TA <= 0` as "no data" and return `null`, so the UI correctly shows `-`. The associated tooltip also switches to "Timing Advance value is not available" when TA is 0.
+
+---
+
+## 📥 Installation
+
+**No prerequisites required** — QManager is fully independent. The installer bootstraps Entware, installs lighttpd, and sets up everything from scratch. You only need ADB or SSH access and internet connectivity on the modem.
+
+ADB or SSH into the modem and run:
+
+```sh
+curl -fsSL -o /tmp/qmanager-installer.sh \
+  https://github.com/dr-dolomite/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
+  bash /tmp/qmanager-installer.sh
+```
+
+> **Note:** Use `scp -O` (legacy mode) when transferring files to the modem — dropbear lacks an SFTP subsystem.
+
+---
+
+## 💙 Thank You
+
+Thanks for using QManager! If you find it useful, consider [supporting the project on Ko-fi](https://ko-fi.com/drdolomite) or [PayPal](https://paypal.me/iamrusss). Bug reports and feature requests are always welcome.
+
+**License:** MIT + Commons Clause
+
+**Happy connecting!** 🎉
+
+---
+
 # 🚀 QManager RM520N BETA v0.1.3
 
 **Tailscale VPN, web console, email alerts, IMEI tools, and port firewall** — access your modem remotely via Tailscale, run commands in a browser-based terminal, get email notifications on connectivity events, generate and validate IMEIs, and protect the web UI from cellular-side access.
-
-> Upgrading from v0.1.2? Go to **System Settings -> Software Update** or re-run the installer via ADB/SSH. All existing settings and profiles are preserved.
 
 ---
 

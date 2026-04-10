@@ -581,11 +581,17 @@ export function formatBytes(bytes: number): string {
  * Calculates LTE cell distance from Timing Advance index.
  * Based on 3GPP TS 36.213: NTA = 16 × TA, TS = 1/(2048×15000).
  * Distance = (c × NTA × TS) / 2.
+ *
+ * NOTE: TA=0 is treated as "no data" rather than "zero distance". The modem
+ * reports 0 both when the radio isn't connected (e.g., no 5G link) and when
+ * TA reporting is unavailable — a genuine TA of 0 is physically meaningless
+ * at any real-world cell distance, so null is the correct signal for the UI.
+ *
  * @param ta - LTE TA index (0–1282)
- * @returns distance in km, or null if TA is unavailable/invalid
+ * @returns distance in km, or null if TA is unavailable/invalid/zero
  */
 export function calculateLteDistance(ta: number | null): number | null {
-  if (ta === null || ta === undefined || ta < 0 || ta > 1282) return null;
+  if (ta === null || ta === undefined || ta <= 0 || ta > 1282) return null;
   const NTA = 16 * ta;
   const TS = 1 / 30720000; // 1/(2048×15000)
   const SPEED_OF_LIGHT = 3e8;
@@ -596,11 +602,16 @@ export function calculateLteDistance(ta: number | null): number | null {
  * Calculates NR cell distance from NTA value.
  * Based on 3GPP TS 38.213: TC = 1/(480×10³×4096).
  * Distance = (c × NTA × TC) / 2.
+ *
+ * NOTE: NTA=0 is treated as "no data" — see calculateLteDistance for rationale.
+ * This is especially important for NR: when there's no 5G connection at all,
+ * the modem still reports nr_ta=0 (stale initial value).
+ *
  * @param nta - NR NTA value (already NTA, not TA index)
- * @returns distance in km, or null if NTA is unavailable/invalid
+ * @returns distance in km, or null if NTA is unavailable/invalid/zero
  */
 export function calculateNrDistance(nta: number | null): number | null {
-  if (nta === null || nta === undefined || nta < 0) return null;
+  if (nta === null || nta === undefined || nta <= 0) return null;
   const TC = 1 / (480 * 1000 * 4096);
   const SPEED_OF_LIGHT = 3e8;
   return (SPEED_OF_LIGHT * nta * TC) / 2 / 1000;

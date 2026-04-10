@@ -240,8 +240,7 @@ const DeviceMetricsComponent = ({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {/* Will show in Hexadecimal form */}
-                  {lteData?.ta !== null && lteData?.ta !== undefined ? (
+                  {lteData?.ta ? (
                     <p>
                       This is only an approximation based <br /> on the LTE
                       Timing Advance value of{" "}
@@ -272,8 +271,7 @@ const DeviceMetricsComponent = ({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {/* Will show in Hexadecimal form */}
-                  {nrData?.ta !== null && nrData?.ta !== undefined ? (
+                  {nrData?.ta ? (
                     <p>
                       This is only an approximation based <br /> on the NR
                       Timing Advance value of{" "}
