@@ -35,6 +35,9 @@ _SA_LOCK_FILE="/tmp/qmanager_at.lock"
 _SA_SMS_TOOL="/usr/bin/sms_tool"
 _SA_AT_DEVICE="/dev/smd11"
 _SA_MAX_LOG=100
+_SA_MAX_ATTEMPTS=3
+_SA_RETRY_DELAY_SECS=5
+_SA_MAX_SKIPS=3
 
 # --- State (populated by sms_alerts_init / _sa_read_config) ------------------
 _sa_enabled="false"
@@ -53,7 +56,7 @@ _sa_downtime_sms_status="none"
 # Usage: _sa_flock_wait <fd> <timeout_seconds>
 # Returns: 0 = lock acquired, non-zero = timed out
 _sa_flock_wait() {
-    _fd="$1"; _wait="$2"; _elapsed=0
+    local _fd="$1" _wait="$2" _elapsed=0
     while [ "$_elapsed" -lt "$_wait" ]; do
         if flock -x -n "$_fd" 2>/dev/null; then return 0; fi
         sleep 1
@@ -154,31 +157,56 @@ check_sms_alert() {
 
     elif [ "$conn_internet_available" = "true" ] && [ "$_sa_was_down" = "true" ]; then
         # RECOVERY PATH
-        local now duration dur_text body trigger
+        local now duration dur_text body trigger rc threshold_secs
         now=$(date +%s)
         duration=$((now - _sa_downtime_start))
         dur_text=$(_sa_format_duration "$duration")
+        threshold_secs=$((_sa_threshold_minutes * 60))
 
         qlog_info "SMS alerts: recovery detected — duration=${duration}s status=$_sa_downtime_sms_status"
+
+        # If the outage never crossed threshold and no downtime-start was
+        # ever queued (status "none"), stay silent — matches email_alerts behavior.
+        if [ "$_sa_downtime_sms_status" = "none" ] && [ "$duration" -lt "$threshold_secs" ]; then
+            qlog_info "SMS alerts: recovery under threshold (${duration}s < ${threshold_secs}s) — silent"
+            _sa_was_down="false"
+            _sa_downtime_start=0
+            _sa_downtime_sms_status="none"
+            return 0
+        fi
 
         if [ "$_sa_downtime_sms_status" = "sent" ]; then
             # Separate recovery SMS
             body="[QManager] Connection recovered (down ${dur_text})"
             trigger="Connection recovered (down ${dur_text})"
-            if _sa_do_send "$body"; then
+            _sa_do_send "$body"
+            rc=$?
+            if [ "$rc" -eq 0 ]; then
                 _sa_log_event "$trigger" "sent" "$_sa_recipient"
-            else
+            elif [ "$rc" -eq 1 ]; then
                 _sa_log_event "$trigger" "failed" "$_sa_recipient"
+            # rc=2: not attempted (no registration) — leave tracking state intact
             fi
         else
-            # Dedup path: "none" | "pending" | "failed"
+            # Dedup path: "none" (above threshold) | "pending" | "failed"
             body="[QManager] Connection was down for ${dur_text}, now restored"
             trigger="Connection was down for ${dur_text}, now restored"
-            if _sa_do_send "$body"; then
+            _sa_do_send "$body"
+            rc=$?
+            if [ "$rc" -eq 0 ]; then
                 _sa_log_event "$trigger" "sent" "$_sa_recipient"
-            else
+            elif [ "$rc" -eq 1 ]; then
                 _sa_log_event "$trigger" "failed" "$_sa_recipient"
+            # rc=2: not attempted (no registration) — leave tracking state intact
             fi
+        fi
+
+        # If the send couldn't be attempted (unlikely on recovery but possible
+        # during a brief re-registration window), leave tracking state intact
+        # so the next poll cycle retries.
+        if [ "$rc" -eq 2 ]; then
+            qlog_warn "SMS alerts: recovery send deferred — not registered"
+            return 0
         fi
 
         # Reset tracking
@@ -203,7 +231,7 @@ check_sms_alert() {
     # Step 5: if pending and registered, attempt send
     if [ "$_sa_was_down" = "true" ] && [ "$_sa_downtime_sms_status" = "pending" ]; then
         if _sa_is_registered; then
-            local now duration dur_text body trigger
+            local now duration dur_text body trigger rc
             now=$(date +%s)
             duration=$((now - _sa_downtime_start))
             dur_text=$(_sa_format_duration "$duration")
@@ -211,12 +239,15 @@ check_sms_alert() {
             trigger="Connection down ${dur_text}"
 
             qlog_info "SMS alerts: attempting downtime-start send (registered)"
-            if _sa_do_send "$body"; then
+            _sa_do_send "$body"
+            rc=$?
+            if [ "$rc" -eq 0 ]; then
                 _sa_downtime_sms_status="sent"
                 _sa_log_event "$trigger" "sent" "$_sa_recipient"
-            else
+            elif [ "$rc" -eq 1 ]; then
                 _sa_downtime_sms_status="failed"
                 _sa_log_event "$trigger" "failed" "$_sa_recipient"
+            # rc=2: not attempted — leave status as "pending" for next cycle
             fi
         else
             qlog_debug "SMS alerts: pending downtime send, modem not registered — waiting"
@@ -225,14 +256,20 @@ check_sms_alert() {
 }
 
 # =============================================================================
-# _sa_do_send — Send SMS with up to 3 attempts, re-checking registration
+# _sa_do_send — Send SMS with up to _SA_MAX_ATTEMPTS real attempts
 # =============================================================================
+# Return codes:
+#   0 — success (sms_tool exited 0 on at least one attempt)
+#   1 — failed: at least one real sms_tool call was made and all failed
+#   2 — not attempted: every iteration was skipped because the modem was
+#       not registered. Caller should leave state as "pending" and retry
+#       on the next poll cycle.
 _sa_do_send() {
     local body="$1"
     local phone="${_sa_recipient#+}"   # sms_tool send needs no + prefix
     local attempt=0
-    local max_attempts=3
-    local retry_delay=5
+    local attempted_real=0
+    local skips=0
     local rc
 
     if [ ! -x "$_SA_SMS_TOOL" ]; then
@@ -240,28 +277,41 @@ _sa_do_send() {
         return 1
     fi
 
-    while [ "$attempt" -lt "$max_attempts" ]; do
+    while [ "$attempt" -lt "$_SA_MAX_ATTEMPTS" ]; do
         attempt=$((attempt + 1))
         if [ "$attempt" -gt 1 ]; then
-            sleep "$retry_delay"
+            sleep "$_SA_RETRY_DELAY_SECS"
         fi
 
         # Re-check registration inside the loop — radio state can drop between
-        # attempts during a real outage.
+        # attempts during a real outage. Skips do NOT count against the retry
+        # budget; bail out after _SA_MAX_SKIPS consecutive skips so the caller
+        # can retry next poll cycle rather than blocking the poller indefinitely.
         if ! _sa_is_registered; then
-            qlog_warn "SMS alerts: attempt $attempt/$max_attempts skipped — not registered"
+            qlog_warn "SMS alerts: attempt $attempt skipped — not registered"
+            skips=$((skips + 1))
+            attempt=$((attempt - 1))
+            if [ "$skips" -ge "$_SA_MAX_SKIPS" ]; then
+                qlog_warn "SMS alerts: $_SA_MAX_SKIPS consecutive skips, deferring to next poll cycle"
+                break
+            fi
             continue
         fi
+        skips=0
 
+        attempted_real=$((attempted_real + 1))
         _sa_sms_locked send "$phone" "$body" >/dev/null 2>&1
         rc=$?
         if [ "$rc" -eq 0 ]; then
             qlog_info "SMS alerts: sms_tool send succeeded on attempt $attempt"
             return 0
         fi
-        qlog_warn "SMS alerts: sms_tool send failed on attempt $attempt/$max_attempts (rc=$rc)"
+        qlog_warn "SMS alerts: sms_tool send failed on attempt $attempt/$_SA_MAX_ATTEMPTS (rc=$rc)"
     done
 
+    if [ "$attempted_real" -eq 0 ]; then
+        return 2
+    fi
     return 1
 }
 
