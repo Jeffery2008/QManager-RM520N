@@ -114,8 +114,7 @@ const IMEIToolsCard = () => {
       <CardHeader>
         <CardTitle>IMEI 工具</CardTitle>
         <CardDescription>
-          Generate and validate IMEI numbers using the Luhn algorithm. For
-          educational purposes only.
+          使用 Luhn 算法生成并校验 IMEI。仅供学习和测试用途。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -146,7 +145,7 @@ const IMEIToolsCard = () => {
                       ))}
                       <SelectSeparator />
                       <SelectItem value={IMEI_CUSTOM_ID}>
-                        Custom Prefix
+                        自定义前缀
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -175,8 +174,7 @@ const IMEIToolsCard = () => {
                       </FieldError>
                     ) : (
                       <FieldDescription>
-                        The remaining digits and check digit are generated
-                        automatically.
+                        剩余数字和校验位会自动生成。
                       </FieldDescription>
                     )}
                   </Field>
@@ -219,8 +217,7 @@ const IMEIToolsCard = () => {
                     </InputGroup>
                   </div>
                   <FieldDescription>
-                    Luhn validation runs automatically at 15 digits. You can
-                    also type or paste any IMEI to validate it.
+                    输入满 15 位后会自动执行 Luhn 校验，也可以手动输入或粘贴任意 IMEI 进行校验。
                   </FieldDescription>
                 </Field>
               </FieldGroup>
@@ -237,12 +234,12 @@ const IMEIToolsCard = () => {
                     {isValid ? (
                       <>
                         <CheckCircle2Icon className="size-4 text-green-500" />
-                        Valid IMEI
+                        有效 IMEI
                       </>
                     ) : (
                       <>
                         <XCircleIcon className="size-4 text-red-500" />
-                        Invalid IMEI
+                        无效 IMEI
                       </>
                     )}
                   </p>
@@ -265,7 +262,7 @@ const IMEIToolsCard = () => {
 
           <div className="flex items-center gap-x-4">
             <Button type="submit" disabled={!isValidPrefix}>
-              Generate IMEI
+              生成 IMEI
             </Button>
 
             <Button
@@ -280,7 +277,7 @@ const IMEIToolsCard = () => {
               }
             >
               <ExternalLinkIcon className="size-4" />
-              Check IMEI Info
+              查询 IMEI 信息
             </Button>
           </div>
         </form>

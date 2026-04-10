@@ -74,7 +74,7 @@ function StatusBar({ connectionState, onReconnect }: StatusBarProps) {
               onClick={onReconnect}
             >
               <RefreshCwIcon />
-              Reconnect
+              重新连接
             </Button>
           </div>
         </>
@@ -189,13 +189,13 @@ export default function WebConsoleCard() {
       <div className="bg-muted flex items-center gap-2 border-b px-3 py-2">
         <TerminalSquareIcon className="text-muted-foreground size-4" />
         <span className="text-muted-foreground text-sm font-medium">
-          Web Console
+          Web 控制台
         </span>
 
         {/* Keyboard shortcut hints — hidden on narrow viewports */}
         <div className="ml-4 hidden items-center gap-3 lg:flex">
           <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            Copy
+            复制
             <KbdGroup>
               <Kbd>Ctrl</Kbd>
               <Kbd>Shift</Kbd>
@@ -203,7 +203,7 @@ export default function WebConsoleCard() {
             </KbdGroup>
           </span>
           <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            Paste
+            粘贴
             <KbdGroup>
               <Kbd>Ctrl</Kbd>
               <Kbd>Shift</Kbd>
@@ -220,7 +220,7 @@ export default function WebConsoleCard() {
             disabled={isUnavailable}
           >
             <Trash2Icon />
-            Clear
+            清空
           </Button>
           <Button variant="ghost" size="xs" onClick={toggleFullscreen}>
             {isFullscreen ? <MinimizeIcon /> : <MaximizeIcon />}
@@ -253,7 +253,7 @@ export default function WebConsoleCard() {
             </div>
             <Button variant="outline" size="sm" onClick={reconnect}>
               <RefreshCwIcon />
-              Retry
+              重试
             </Button>
           </div>
         )}

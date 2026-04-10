@@ -73,7 +73,7 @@ const SmsAlertsSettingsCard = ({ onTestSmsSent }: SmsAlertsSettingsCardProps) =>
   // --- Validation ------------------------------------------------------------
   const phoneError =
     recipientPhone && !PHONE_REGEX.test(recipientPhone)
-      ? "Include country code, e.g. +14155551234"
+      ? "请包含国家区号，并以 + 开头，例如 +14155551234"
       : null;
 
   const thresholdError =
@@ -81,7 +81,7 @@ const SmsAlertsSettingsCard = ({ onTestSmsSent }: SmsAlertsSettingsCardProps) =>
     (isNaN(Number(thresholdMinutes)) ||
       Number(thresholdMinutes) < 1 ||
       Number(thresholdMinutes) > 60)
-      ? "Duration must be 1\u201360 minutes"
+      ? "时长必须在 1–60 分钟之间"
       : null;
 
   const hasValidationErrors = !!(phoneError || thresholdError);
