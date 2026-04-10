@@ -30,8 +30,7 @@ RESULT_FILE="/tmp/qmanager_cell_scan_result.json"
 ERROR_FILE="/tmp/qmanager_cell_scan_error"
 RAW_FILE="/tmp/qmanager_cell_scan_raw.tmp"
 PARSED_FILE="/tmp/qmanager_cell_scan_parsed.tmp"
-OPERATOR_LIST="/www/cgi-bin/quecmanager/operator-list.json"
-[ ! -f "$OPERATOR_LIST" ] && OPERATOR_LIST="/usrdata/simpleadmin/www/cgi-bin/quecmanager/operator-list.json"
+OPERATOR_LIST="/usrdata/qmanager/www/cgi-bin/quecmanager/operator-list.json"
 
 # --- Cleanup on exit ---------------------------------------------------------
 cleanup() {
@@ -207,7 +206,8 @@ fi
 # shellcheck disable=SC2086
 jq -Rs $OPERATOR_ARG '
     # If operators was not loaded, default to empty array
-    (if $operators then $operators[0] else [] end) as $ops |
+    # --slurpfile wraps in [[...]], --argjson passes [] directly
+    (if ($operators[0] | type) == "array" then $operators[0] else $operators end) as $ops |
 
     split("\n") | map(select(length > 0) | split("\t")) |
     to_entries | map(

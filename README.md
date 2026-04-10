@@ -5,7 +5,7 @@
   <h3>A modern, custom GUI for Quectel modem management</h3>
   <p>Visualize, configure, and optimize your cellular modem's performance with an intuitive web interface</p>
 
-  ![Version](https://img.shields.io/badge/version-v0.1.1-blue?style=flat-square)
+  ![Version](https://img.shields.io/badge/version-v0.1.4-blue?style=flat-square)
   ![License](https://img.shields.io/badge/license-MIT%20%2B%20Commons%20Clause-green?style=flat-square)
   ![Platform](https://img.shields.io/badge/platform-RM520N--GL-orange?style=flat-square)
   ![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square)
@@ -39,7 +39,7 @@
 - **Cell Scanner** — Active and neighbor cell scanning with signal comparison
 - **Frequency Calculator** — EARFCN/ARFCN to frequency conversion tool
 - **SMS Center** — Send and receive SMS messages directly from the interface
-- **IMEI Settings** — Read, backup, and modify device IMEI
+- **IMEI Settings** — Read, backup, and modify device IMEI, plus IMEI Generator & Validator (Luhn algorithm, TAC presets, imei.info lookup)
 - **FPLMN Management** — View and manage the Forbidden PLMN list
 - **MBN Configuration** — Select and activate modem broadband configuration files
 
@@ -48,9 +48,14 @@
 - **MTU Configuration** — Dynamic MTU application for rmnet interfaces
 - **IP Passthrough** — Direct IP assignment to downstream devices
 
+### VPN & Remote Access
+- **Tailscale VPN** — One-click install, connect, and manage Tailscale mesh VPN directly from the UI; peer table, health warnings, boot persistence
+- **Port Firewall** — Built-in firewall restricting web UI (80/443) to trusted interfaces; Tailscale-aware, enabled by default
+
 ### Reliability & Monitoring
 - **Connection Watchdog** — 4-tier auto-recovery: AT+COPS deregister/reregister -> CFUN toggle -> SIM failover -> full reboot (with token bucket rate limiting)
 - **Email Alerts** — Downtime notifications via Gmail SMTP (msmtp), sent on recovery with duration details
+- **SMS Alerts** — Downtime and recovery notifications delivered over the cellular control channel via `sms_tool`; reaches you even while the data link is offline. Registration-guarded retry with dedup collapse, threshold-based suppression of transient blips, bounded failure logging
 - **Low Power Mode** — Scheduled CFUN power-down windows via cron
 - **Software Updates** — In-app OTA update checking, download, verification, installation, and rollback
 - **System Logs** — Centralized log viewer with search
@@ -59,6 +64,7 @@
 - **Dark/Light Mode** — Full theme support with OKLCH perceptual color system
 - **Responsive Design** — Works on desktop monitors and tablets in the field
 - **Cookie-Based Auth** — Secure session management with rate limiting
+- **Web Console** — Browser-based terminal (ttyd) integrated into the UI with connection status, fullscreen mode, and dark theme
 - **AT Terminal** — Direct AT command interface for advanced users
 - **Initial Setup Wizard** — Guided onboarding for first-time configuration
 
@@ -84,7 +90,7 @@ curl -fsSL -o /tmp/qmanager-installer.sh \
   bash /tmp/qmanager-installer.sh
 ```
 
-The interactive installer fetches the latest release, verifies the SHA-256 checksum, bootstraps Entware (if needed), installs lighttpd, deploys the QManager frontend and backend, configures systemd services, and optionally sets up SSH (dropbear). Bundled dependencies (`atcli_smd11`, `jq`, `dropbear`) are installed automatically. A reboot is triggered after installation.
+The interactive installer fetches the latest release, verifies the SHA-256 checksum, bootstraps Entware (if needed), installs lighttpd, deploys the QManager frontend and backend, configures systemd services, and optionally sets up SSH (dropbear). Bundled dependencies (`atcli_smd11`, `sms_tool`, `jq`, `dropbear`) are installed automatically. The SSH root password is automatically set to match the web UI password during first-time onboarding. A reboot is triggered after installation.
 
 ### Upgrading
 
@@ -104,7 +110,8 @@ bash /tmp/qmanager_install/uninstall_rm520n.sh --purge
 
 ## Additional Dependencies
 
-- **Bundled with installer:** `atcli_smd11` (ARM binary, AT command transport via `/dev/smd11`), `jq` (Entware package), `dropbear` (SSH server)
+- **Bundled with installer:** `atcli_smd11` (Rust reimplementation from [1alessandro1/atcli_rust](https://github.com/1alessandro1/atcli_rust), static ARMv7, AT command transport via `/dev/smd11`, works across RM502/RM520/RM521/RM551), `sms_tool` (ARM binary, SMS send/recv/delete with multi-part reassembly), `jq` (Entware package), `dropbear` (SSH server)
+- **Downloaded during install:** `speedtest` (Ookla Speedtest CLI, ARMv7 armhf — downloaded from `install.speedtest.net`)
 - **Installed from Entware:** `lighttpd` + `lighttpd-mod-openssl`, `sudo`, `coreutils-timeout`
 - **Optional:** `msmtp` (email alerts) -- can be installed from within the app
 
@@ -142,7 +149,7 @@ The frontend is a statically-exported Next.js app served by lighttpd from `/usrd
 **Key Data Flow:**
 
 - **Poller daemon** queries the modem via AT commands every 2-30s (3 tiers) and writes a JSON cache file
-- **CGI endpoints** (59 scripts) read the cache for GET requests, execute AT commands for POST requests
+- **CGI endpoints** (63 scripts) read the cache for GET requests, execute AT commands for POST requests
 - **React hooks** (31 custom hooks) poll the CGI layer and provide loading/error/staleness states
 - **AT transport** uses `atcli_smd11` on `/dev/smd11` directly (no socat PTY bridge needed)
 
@@ -226,11 +233,12 @@ QManager/
 │   ├── etc/qmanager/           # Default config files
 │   ├── usr/bin/                # Daemons & utilities (19)
 │   ├── usr/lib/qmanager/       # Shared shell libraries (12)
-│   ├── www/cgi-bin/            # CGI endpoints (59 scripts)
+│   ├── www/cgi-bin/            # CGI endpoints (63 scripts)
 │   ├── install_rm520n.sh       # Device installation script
 │   └── uninstall_rm520n.sh     # Clean removal script
 ├── dependencies/               # Bundled ARM binaries and packages
 │   ├── atcli_smd11             # ARM binary (AT command transport via /dev/smd11)
+│   ├── sms_tool                # ARM binary (SMS send/recv/delete)
 │   ├── jq.ipk                  # JSON processor
 │   └── dropbear_*.ipk          # SSH server
 ├── docs/                       # Documentation
@@ -241,13 +249,15 @@ QManager/
 
 ## Backend Services
 
-QManager runs 8 systemd services on the modem:
+QManager runs 10 systemd services on the modem:
 
 | Service | Purpose |
 |---------|---------|
-| `qmanager-setup` | One-shot boot setup — directories, permissions, iptables, config init |
+| `qmanager-firewall` | Port firewall — restricts 80/443 to trusted interfaces before lighttpd starts |
+| `qmanager-setup` | One-shot boot setup — directories, permissions, config init |
 | `qmanager-poller` | Main poller daemon — tiered AT polling, JSON cache, event detection |
 | `qmanager-ping` | Latency monitor — 5s ping cycle, NDJSON history (24h) |
+| `qmanager-console` | Web console — ttyd on localhost:8080, reverse-proxied by lighttpd |
 | `qmanager-watchcat` | Connection watchdog — 4-tier auto-recovery state machine |
 | `qmanager-ttl` | TTL/HL — applies iptables rules at boot |
 | `qmanager-mtu` | MTU — applies interface MTU settings at boot |

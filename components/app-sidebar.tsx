@@ -10,6 +10,7 @@ import {
   LucideSignal,
   MessageCircleIcon,
   DogIcon,
+  GlobeIcon,
   RouterIcon,
   User2Icon,
   HeartIcon,
@@ -17,7 +18,6 @@ import {
   SettingsIcon,
   TerminalIcon,
   DownloadIcon,
-  PackageOpenIcon,
   TerminalSquareIcon,
 } from "lucide-react";
 
@@ -80,7 +80,7 @@ const data = {
     },
     {
       title: "Web 控制台",
-      url: "/console",
+      url: "/system-settings/web-console",
       icon: TerminalSquareIcon,
     },
   ],
@@ -210,16 +210,25 @@ const data = {
           title: "延迟监控",
           url: "/monitoring/latency",
         },
-        // {
-        //   title: "Email Alerts",
-        //   url: "/monitoring/email-alerts",
-        // },
+        {
+          title: "邮件告警",
+          url: "/monitoring/email-alerts",
+        },
+        {
+          title: "短信告警",
+          url: "/monitoring/sms-alerts",
+        },
       ],
     },
     {
       title: "看门狗",
       url: "/monitoring/watchdog",
       icon: DogIcon,
+    },
+    {
+      title: "Tailscale VPN",
+      url: "/monitoring/tailscale",
+      icon: GlobeIcon,
     },
   ],
 };

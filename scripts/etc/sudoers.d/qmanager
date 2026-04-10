@@ -8,7 +8,7 @@ www-data ALL=(root) NOPASSWD: /bin/systemctl start *, /bin/systemctl stop *, /bi
 www-data ALL=(root) NOPASSWD: /bin/ln -sf /lib/systemd/system/qmanager*.service /lib/systemd/system/multi-user.target.wants/qmanager*.service
 www-data ALL=(root) NOPASSWD: /bin/rm -f /lib/systemd/system/multi-user.target.wants/qmanager*.service
 
-# Firewall rules (used by TTL, future DPI)
+# Firewall rules (used by TTL, VPN firewall)
 www-data ALL=(root) NOPASSWD: /usr/sbin/iptables, /usr/sbin/iptables-restore, /usr/sbin/ip6tables, /usr/sbin/ip6tables-restore
 
 # System reboot (used by system/reboot.sh, update installer)
@@ -16,3 +16,18 @@ www-data ALL=(root) NOPASSWD: /sbin/reboot
 
 # Crontab management (used by scheduled reboot, low power, auto-update)
 www-data ALL=(root) NOPASSWD: /usr/bin/crontab
+
+# SSH password management (reads password from stdin, updates /etc/shadow)
+www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_set_ssh_password
+
+# Tailscale VPN management
+www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_tailscale_mgr
+www-data ALL=(root) NOPASSWD: /usrdata/tailscale/tailscale
+www-data ALL=(root) NOPASSWD: /usrdata/tailscale/tailscaled --version
+
+# Tailscale boot persistence (symlink-based)
+www-data ALL=(root) NOPASSWD: /bin/ln -sf /lib/systemd/system/tailscaled.service /lib/systemd/system/multi-user.target.wants/tailscaled.service
+www-data ALL=(root) NOPASSWD: /bin/rm -f /lib/systemd/system/multi-user.target.wants/tailscaled.service
+
+# Web console management
+www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_console_mgr

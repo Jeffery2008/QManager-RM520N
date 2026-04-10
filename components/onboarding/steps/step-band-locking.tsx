@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { authFetch } from "@/lib/auth-fetch";
+import { useModemStatus } from "@/hooks/use-modem-status";
+import { parseBandString } from "@/types/band-locking";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Loader2Icon } from "lucide-react";
 
 // =============================================================================
 // StepBandLocking — Onboarding step 5: band presets (optional)
@@ -13,30 +16,31 @@ import { Label } from "@/components/ui/label";
 
 const BAND_LOCK_ENDPOINT = "/cgi-bin/quecmanager/bands/lock.sh";
 
-// Preset band strings (colon-delimited, sorted numerically)
-const LTE_PRESETS: Record<string, string> = {
-  low: "5:8:12:13:17:20:26:28:71",
-  mid: "1:2:3:4:7:25:66",
+// Preset band candidates — filtered at render time against modem-supported bands
+const LTE_PRESET_CANDIDATES: Record<string, number[]> = {
+  low: [5, 8, 12, 13, 17, 20, 26, 28, 71],
+  mid: [1, 2, 3, 4, 7, 25, 66],
 };
 
-const NR5G_PRESETS: Record<string, string> = {
-  low: "5:8:28:71",
-  mid: "41:77:78:79",
+const NR5G_PRESET_CANDIDATES: Record<string, number[]> = {
+  low: [5, 8, 28, 71],
+  mid: [41, 77, 78, 79],
 };
 
-// All known LTE bands for custom selector
-const ALL_LTE_BANDS = [
-  1, 2, 3, 4, 5, 7, 8, 12, 13, 14, 17, 18, 19, 20, 21, 25, 26, 28, 29, 30, 31,
-  32, 39, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 51, 52, 53, 54, 55, 56, 61,
-  71, 72, 73, 74, 75, 76,
-];
-
-// All known NR5G bands for custom selector
-const ALL_NR5G_BANDS = [
-  1, 2, 3, 5, 7, 8, 11, 12, 13, 14, 18, 20, 21, 25, 26, 28, 29, 30, 31, 32,
-  38, 39, 40, 41, 43, 46, 47, 48, 49, 50, 51, 53, 54, 55, 56, 57, 58, 59, 60,
-  61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
-];
+/** Filter preset candidates to only include modem-supported bands */
+function buildPresets(
+  candidates: Record<string, number[]>,
+  supported: Set<number>,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, bands] of Object.entries(candidates)) {
+    const filtered = bands.filter((b) => supported.has(b));
+    if (filtered.length > 0) {
+      result[key] = filtered.sort((a, b) => a - b).join(":");
+    }
+  }
+  return result;
+}
 
 type BandPreset = "all" | "low" | "mid" | "custom";
 
@@ -63,22 +67,26 @@ function BandPresetSection({
 }: BandPresetSectionProps) {
   const options: { id: BandPreset; label: string; detail?: string }[] = [
     { id: "all", label: "全部频段（默认）" },
-    {
-      id: "low",
-      label: "仅低频段",
-      detail: presets.low
-        .split(":")
-        .map((b) => `${prefix}${b}`)
-        .join(", "),
-    },
-    {
-      id: "mid",
-      label: "仅中频段",
-      detail: presets.mid
-        .split(":")
-        .map((b) => `${prefix}${b}`)
-        .join(", "),
-    },
+    ...(presets.low
+      ? [{
+          id: "low" as BandPreset,
+          label: "仅低频段",
+          detail: presets.low
+            .split(":")
+            .map((b) => `${prefix}${b}`)
+            .join(", "),
+        }]
+      : []),
+    ...(presets.mid
+      ? [{
+          id: "mid" as BandPreset,
+          label: "仅中频段",
+          detail: presets.mid
+            .split(":")
+            .map((b) => `${prefix}${b}`)
+            .join(", "),
+        }]
+      : []),
     { id: "custom", label: "自定义…" },
   ];
 
@@ -163,10 +171,34 @@ export function StepBandLocking({
   onLoadingChange,
   onSuccess,
 }: StepBandLockingProps) {
+  const { data, isLoading } = useModemStatus();
+
   const [ltePreset, setLtePreset] = useState<BandPreset>("all");
   const [nr5gPreset, setNr5gPreset] = useState<BandPreset>("all");
   const [lteCustom, setLteCustom] = useState<Set<number>>(new Set());
   const [nr5gCustom, setNr5gCustom] = useState<Set<number>>(new Set());
+
+  // Derive supported bands from poller boot data
+  const supportedLte = useMemo(
+    () => parseBandString(data?.device.supported_lte_bands),
+    [data?.device.supported_lte_bands],
+  );
+  const supportedNr5g = useMemo(() => {
+    // Combine NSA + SA for the unified 5G selector
+    const nsa = parseBandString(data?.device.supported_nsa_nr5g_bands);
+    const sa = parseBandString(data?.device.supported_sa_nr5g_bands);
+    return [...new Set([...nsa, ...sa])].sort((a, b) => a - b);
+  }, [data?.device.supported_nsa_nr5g_bands, data?.device.supported_sa_nr5g_bands]);
+
+  // Build presets filtered to modem-supported bands
+  const ltePresets = useMemo(
+    () => buildPresets(LTE_PRESET_CANDIDATES, new Set(supportedLte)),
+    [supportedLte],
+  );
+  const nr5gPresets = useMemo(
+    () => buildPresets(NR5G_PRESET_CANDIDATES, new Set(supportedNr5g)),
+    [supportedNr5g],
+  );
 
   const toggleBand = (
     set: Set<number>,
@@ -193,8 +225,8 @@ export function StepBandLocking({
   };
 
   const submit = useCallback(async () => {
-    const lteBands = getBandString(ltePreset, LTE_PRESETS, lteCustom);
-    const nr5gBands = getBandString(nr5gPreset, NR5G_PRESETS, nr5gCustom);
+    const lteBands = getBandString(ltePreset, ltePresets, lteCustom);
+    const nr5gBands = getBandString(nr5gPreset, nr5gPresets, nr5gCustom);
 
     if (!lteBands && !nr5gBands) {
       // No selection — skip
@@ -238,11 +270,20 @@ export function StepBandLocking({
       onLoadingChange(false);
       onSuccess();
     }
-  }, [ltePreset, nr5gPreset, lteCustom, nr5gCustom, onLoadingChange, onSuccess]);
+  }, [ltePreset, nr5gPreset, lteCustom, nr5gCustom, ltePresets, nr5gPresets, onLoadingChange, onSuccess]);
 
   useEffect(() => {
     onSubmitRef(submit);
   }, [submit, onSubmitRef]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-12">
+        <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Loading supported bands...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -257,8 +298,8 @@ export function StepBandLocking({
         <BandPresetSection
           title="LTE 频段"
           prefix="B"
-          allBands={ALL_LTE_BANDS}
-          presets={LTE_PRESETS}
+          allBands={supportedLte}
+          presets={ltePresets}
           selectedPreset={ltePreset}
           customBands={lteCustom}
           onPresetChange={setLtePreset}
@@ -270,8 +311,8 @@ export function StepBandLocking({
         <BandPresetSection
           title="5G 频段（NSA + SA）"
           prefix="N"
-          allBands={ALL_NR5G_BANDS}
-          presets={NR5G_PRESETS}
+          allBands={supportedNr5g}
+          presets={nr5gPresets}
           selectedPreset={nr5gPreset}
           customBands={nr5gCustom}
           onPresetChange={setNr5gPreset}

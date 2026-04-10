@@ -267,8 +267,14 @@ parse_serving_cell() {
 }
 
 # -----------------------------------------------------------------------------
-# Parse AT+QTEMP — Average temperature (excluding -273 unavailable sensors)
+# Parse AT+QTEMP — Average temperature across active sensors
 # Populates: t2_temperature
+#
+# Excludes two sentinel values from the average:
+#   -273  → unavailable sensor (e.g. modem-mmw0 when mmWave not present)
+#      0  → inactive sensor (e.g. SDR power amplifiers that aren't transmitting)
+# Including zero-readings from idle PAs drags the average down below reality
+# (e.g. 418/16 = 26°C instead of the correct 418/10 = 42°C).
 # -----------------------------------------------------------------------------
 parse_temperature() {
     local raw="$1"
@@ -277,6 +283,7 @@ parse_temperature() {
     result=$(printf '%s\n' "$raw" | grep '+QTEMP:' | \
         sed -n 's/.*,"\(-\{0,1\}[0-9]*\)".*/\1/p' | \
         grep -v '^\-273$' | \
+        grep -v '^0$' | \
         awk '{ sum += $1; count++ } END { if (count > 0) printf "%.0f", sum/count; }')
 
     if [ -n "$result" ]; then

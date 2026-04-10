@@ -51,7 +51,7 @@ fi
 printf "\n  ${BOLD}QManager — RM520N-GL Uninstaller${NC}\n\n"
 
 # --- Stop and disable systemd services ---
-for svc in qmanager-poller qmanager-ping qmanager-watchcat \
+for svc in qmanager-console qmanager-firewall qmanager-poller qmanager-ping qmanager-watchcat \
            qmanager-tower-failover qmanager-ttl qmanager-mtu \
            qmanager-imei-check; do
     systemctl stop "$svc" 2>/dev/null || true
@@ -83,7 +83,7 @@ systemctl daemon-reload
 info "Removed systemd units and boot symlinks"
 
 # --- Remove daemons and bundled binaries ---
-rm -f "$BIN_DIR/qcmd" "$BIN_DIR/qcmd_test" "$BIN_DIR/atcli_smd11"
+rm -f "$BIN_DIR/qcmd" "$BIN_DIR/qcmd_test" "$BIN_DIR/atcli_smd11" "$BIN_DIR/sms_tool"
 rm -f "$BIN_DIR"/qmanager_*
 info "Removed daemons and binaries from $BIN_DIR"
 
@@ -125,19 +125,22 @@ rmdir "$QMANAGER_ROOT" 2>/dev/null || true
 
 # --- Remove firewall rules ---
 rm -f /etc/firewall.user.ttl /etc/firewall.user.mtu 2>/dev/null || true
+# Firewall service was stopped above (runs ExecStop to remove rules).
+# Fallback: manually clean up if the service was already deleted or failed.
 if command -v iptables >/dev/null 2>&1; then
-    iptables -D INPUT -i lo -p tcp --dport 80 -j ACCEPT 2>/dev/null || true
-    iptables -D INPUT -i lo -p tcp --dport 443 -j ACCEPT 2>/dev/null || true
-    for port in 80 443 22; do
-        iptables -D INPUT -i bridge0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null || true
-        iptables -D INPUT -i eth0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null || true
+    for port in 80 443; do
+        iptables -D INPUT -p tcp --dport "$port" -j DROP 2>/dev/null || true
+        for iface in lo bridge0 eth0 tailscale0; do
+            iptables -D INPUT -i "$iface" -p tcp --dport "$port" -j ACCEPT 2>/dev/null || true
+        done
     done
 fi
 
 # --- Remove runtime state ---
 rm -f /tmp/qmanager_*.json /tmp/qmanager.log* 2>/dev/null || true
 rm -f /tmp/qmanager_*.pid /tmp/qmanager_*.lock 2>/dev/null || true
-rm -f /tmp/qmanager_email_reload /tmp/qmanager_imei_check_done 2>/dev/null || true
+rm -f /tmp/qmanager_speedtest_output /tmp/qmanager_speedtest_run.sh 2>/dev/null || true
+rm -f /tmp/qmanager_email_reload /tmp/qmanager_sms_reload /tmp/qmanager_imei_check_done 2>/dev/null || true
 rm -f /tmp/qmanager_low_power_active /tmp/qmanager_recovery_active 2>/dev/null || true
 rm -f /tmp/qmanager_staged.tar.gz /tmp/qmanager_staged_version 2>/dev/null || true
 rm -rf "$SESSION_DIR"

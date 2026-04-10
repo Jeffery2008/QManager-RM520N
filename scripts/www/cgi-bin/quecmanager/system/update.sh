@@ -25,7 +25,7 @@ cgi_handle_options
 
 # --- Configuration -----------------------------------------------------------
 
-GITHUB_REPO="dr-dolomite/QManager"
+GITHUB_REPO="dr-dolomite/QManager-RM520N"
 VERSION_FILE="/etc/qmanager/VERSION"
 UPDATES_DIR="/etc/qmanager/updates"
 STATUS_FILE="/tmp/qmanager_update.json"
@@ -71,23 +71,23 @@ check_lock() {
 }
 
 # Fetch URL to a file, capturing HTTP headers for rate-limit detection.
-# Tries uclient-fetch first (native OpenWRT HTTPS), then wget-ssl, then curl.
+# curl first — BusyBox wget on RM520N-GL lacks TLS support for HTTPS URLs.
 http_api_fetch() {
     local url="$1" out_file="$2" header_file="$3" timeout="${4:-15}"
 
-    # uclient-fetch — native OpenWRT HTTPS downloader (most reliable on device)
-    if command -v uclient-fetch >/dev/null 2>&1; then
-        uclient-fetch -qO "$out_file" --timeout="$timeout" "$url" 2>"$header_file" && return 0
-    fi
-
-    # curl (if installed — supports -D for headers)
+    # curl — supports HTTPS, -D captures response headers
     if command -v curl >/dev/null 2>&1; then
         curl -sL --max-time "$timeout" -o "$out_file" -D "$header_file" "$url" && return 0
     fi
 
-    # wget (full wget-ssl supports -S; BusyBox wget may not)
+    # wget (full wget-ssl supports -S; BusyBox wget may not handle HTTPS)
     if command -v wget >/dev/null 2>&1; then
         wget -qO "$out_file" -T "$timeout" -S "$url" 2>"$header_file" && return 0
+    fi
+
+    # uclient-fetch — OpenWRT only
+    if command -v uclient-fetch >/dev/null 2>&1; then
+        uclient-fetch -qO "$out_file" --timeout="$timeout" "$url" 2>"$header_file" && return 0
     fi
 
     return 1

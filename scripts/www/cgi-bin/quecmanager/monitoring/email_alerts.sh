@@ -204,13 +204,17 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         qlog_info "Config written: enabled=$new_enabled sender=$new_sender recipient=$new_recipient threshold=${new_threshold}m"
 
         # Generate msmtp config
+        # NOTE: No 'logfile' directive — msmtp returns rc=1 if it can't write
+        # its log, even when the email sends successfully. On RM520N-GL,
+        # fs.protected_regular=1 causes /tmp log files to flip ownership
+        # between www-data (CGI) and root (poller), breaking the other.
+        # QManager has its own logging via email_alerts.sh.
         cat > "$MSMTP_CONFIG" <<MSMTPEOF
 defaults
 auth           on
 tls            on
 tls_starttls   on
 tls_trust_file /etc/ssl/certs/ca-certificates.crt
-logfile        /tmp/msmtp.log
 
 account        default
 host           smtp.gmail.com

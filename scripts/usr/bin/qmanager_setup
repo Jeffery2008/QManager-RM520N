@@ -26,17 +26,25 @@ if [ -e /dev/smd11 ]; then
     chmod 660 /dev/smd11
 fi
 
-# Shared /tmp files — owned by www-data so CGI scripts can open them.
-# Root (daemons) can still open because root owns the /tmp directory.
-# CRITICAL: fs.protected_regular=1 on RM520N-GL means O_CREAT in sticky /tmp
-# is blocked unless file_owner==caller OR dir_owner==caller.
+# Shared /tmp files — pre-created with correct ownership for fs.protected_regular=1.
+# CRITICAL: RM520N-GL's sticky /tmp + protected_regular blocks O_CREAT and open-for-write
+# unless file_owner==caller OR dir_owner==caller (root owns /tmp).
 # Must match paths in /usr/bin/qcmd: LOCK_FILE and PID_FILE
-touch /tmp/qmanager_at.lock /tmp/qmanager_at.pid /tmp/qmanager.log \
+#
+# Strategy: files written by BOTH root (poller) and www-data (CGI) must be root-owned
+# with mode 666. Files written by www-data only are www-data-owned.
+touch /tmp/qmanager_at.lock /tmp/qmanager_at.pid \
       /tmp/qmanager_profile_apply.pid /tmp/qmanager_profile_state.json
-chown www-data:www-data /tmp/qmanager_at.lock /tmp/qmanager_at.pid /tmp/qmanager.log \
+chown www-data:www-data /tmp/qmanager_at.lock /tmp/qmanager_at.pid \
       /tmp/qmanager_profile_apply.pid /tmp/qmanager_profile_state.json
-chmod 666 /tmp/qmanager_at.lock /tmp/qmanager_at.pid /tmp/qmanager.log \
+chmod 666 /tmp/qmanager_at.lock /tmp/qmanager_at.pid \
       /tmp/qmanager_profile_apply.pid /tmp/qmanager_profile_state.json
+
+# Shared root-owned files — both root (poller/daemons) and www-data (CGI) write.
+# If www-data owned these, root would be blocked by fs.protected_regular=1.
+touch /tmp/qmanager.log
+chown root:root /tmp/qmanager.log
+chmod 666 /tmp/qmanager.log
 
 # Session directory — www-data needs write access (cleared on reboot since /tmp is tmpfs)
 mkdir -p /tmp/qmanager_sessions
@@ -57,26 +65,14 @@ for f in "$CGI_DIR"/*.sh "$CGI_DIR"/*/*.sh; do
     [ -f "$f" ] && chmod +x "$f"
 done
 
+# Tailscale directory — tailscaled resets its state dir to 700 on start;
+# www-data CGI needs traverse+read to check if binaries exist
+if [ -d /usrdata/tailscale ]; then
+    chmod 755 /usrdata/tailscale
+fi
+
 # Secure auth config
 [ -f /etc/qmanager/auth.json ] && chmod 600 /etc/qmanager/auth.json
-
-# iptables rules — allow access to web UI and SSH
-# Default RM520N-GL firewall drops non-bridge/eth traffic; replaces simplefirewall
-if command -v iptables >/dev/null 2>&1; then
-    # Loopback — CGI scripts need localhost access to lighttpd
-    iptables -C INPUT -i lo -p tcp --dport 80 -j ACCEPT 2>/dev/null || \
-        iptables -I INPUT 1 -i lo -p tcp --dport 80 -j ACCEPT
-    iptables -C INPUT -i lo -p tcp --dport 443 -j ACCEPT 2>/dev/null || \
-        iptables -I INPUT 1 -i lo -p tcp --dport 443 -j ACCEPT
-
-    # External access — HTTP, HTTPS, SSH on LAN interfaces (bridge0, eth0)
-    for port in 80 443 22; do
-        iptables -C INPUT -i bridge0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null || \
-            iptables -A INPUT -i bridge0 -p tcp --dport "$port" -j ACCEPT
-        iptables -C INPUT -i eth0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null || \
-            iptables -A INPUT -i eth0 -p tcp --dport "$port" -j ACCEPT
-    done
-fi
 
 # Create default long_commands.list if missing
 if [ ! -f /etc/qmanager/long_commands.list ]; then

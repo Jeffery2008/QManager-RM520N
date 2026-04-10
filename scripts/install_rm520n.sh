@@ -17,6 +17,7 @@
 #     usrdata/qmanager/     — lighttpd config
 #   dependencies/           — Bundled binaries and packages
 #     atcli_smd11           — ARM binary (AT command transport via /dev/smd11)
+#     sms_tool              — ARM binary (SMS send/recv/delete via /dev/smd11)
 #     jq.ipk                — JSON processor (Entware package)
 #     dropbear_*.ipk        — SSH server (Entware package)
 #   install_rm520n.sh       — This script
@@ -41,7 +42,7 @@ set -e
 
 # --- Configuration -----------------------------------------------------------
 
-VERSION="v0.1.1"
+VERSION="v0.1.4"
 INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Destinations
@@ -52,6 +53,7 @@ LIB_DIR="/usr/lib/qmanager"
 BIN_DIR="/usr/bin"
 SYSTEMD_DIR="/lib/systemd/system"
 WANTS_DIR="/lib/systemd/system/multi-user.target.wants"
+TAILSCALE_DIR="/usrdata/tailscale"
 # Detect Entware vs system sudo (called as function — must re-evaluate
 # after install_dependencies installs sudo on a fresh modem)
 detect_sudo() {
@@ -180,6 +182,17 @@ install_dependencies() {
         info "atcli_smd11 already installed"
     else
         die "atcli_smd11 not found in $SRC_DEPS and not installed on device"
+    fi
+
+    # --- sms_tool (SMS send/recv/delete — handles multi-part reassembly) ------
+    if [ -f "$SRC_DEPS/sms_tool" ]; then
+        cp "$SRC_DEPS/sms_tool" "$BIN_DIR/sms_tool"
+        chmod 755 "$BIN_DIR/sms_tool"
+        info "sms_tool installed to $BIN_DIR/sms_tool"
+    elif [ -x "$BIN_DIR/sms_tool" ]; then
+        info "sms_tool already installed"
+    else
+        warn "sms_tool not found — SMS features will not work"
     fi
 
     # --- Ensure /dev/smd11 is not locked by socat-at-bridge -------------------
@@ -317,11 +330,27 @@ RCEOF
     fi
 
     # --- Entware packages (requires opkg to be available) ---------------------
+    _opkg_ready=0
     if [ -x "$OPKG" ]; then
+        if "$OPKG" update >/dev/null 2>&1; then
+            _opkg_ready=1
+        else
+            warn "opkg update failed — no internet connection?"
+            warn "Skipping Entware package installs (lighttpd, sudo, jq, etc.)"
+            warn "Re-run the installer with internet to complete package setup"
+        fi
+    fi
+
+    if [ "$_opkg_ready" = "1" ]; then
         # lighttpd (web server + required modules)
-        "$OPKG" update >/dev/null 2>&1
         if [ -x /opt/sbin/lighttpd ]; then
             info "lighttpd is already installed"
+            # Upgrade lighttpd + all modules together to prevent version mismatch
+            # (plugin-version must match lighttpd-version or modules fail to load)
+            "$OPKG" upgrade lighttpd lighttpd-mod-cgi lighttpd-mod-openssl \
+                lighttpd-mod-redirect lighttpd-mod-proxy >/dev/null 2>&1 \
+                && info "lighttpd packages synced" \
+                || true
         else
             "$OPKG" install lighttpd >/dev/null 2>&1 \
                 && info "lighttpd installed from Entware" \
@@ -376,6 +405,25 @@ RCEOF
                 || warn "dropbear install failed (optional — SSH server)"
         else
             info "dropbear not bundled and not installed (optional)"
+        fi
+    fi
+
+    # --- Ookla Speedtest CLI (speed test from web UI) ---
+    if command -v speedtest >/dev/null 2>&1; then
+        info "speedtest CLI is already installed"
+    else
+        SPEEDTEST_URL="https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-linux-armhf.tgz"
+        SPEEDTEST_DIR="/usrdata/root/bin"
+        mkdir -p "$SPEEDTEST_DIR"
+        if wget -q "$SPEEDTEST_URL" -O /tmp/speedtest.tgz 2>/dev/null || \
+           curl -fsSL "$SPEEDTEST_URL" -o /tmp/speedtest.tgz 2>/dev/null; then
+            tar -xzf /tmp/speedtest.tgz -C "$SPEEDTEST_DIR" speedtest 2>/dev/null
+            rm -f /tmp/speedtest.tgz "$SPEEDTEST_DIR/speedtest.md"
+            chmod +x "$SPEEDTEST_DIR/speedtest"
+            ln -sf "$SPEEDTEST_DIR/speedtest" /bin/speedtest
+            info "speedtest CLI installed to $SPEEDTEST_DIR/speedtest"
+        else
+            warn "speedtest CLI download failed (optional — requires internet)"
         fi
     fi
 
@@ -479,8 +527,32 @@ install_backend() {
     mkdir -p "$LIB_DIR"
     if [ -d "$SRC_SCRIPTS/usr/lib/qmanager" ]; then
         cp "$SRC_SCRIPTS/usr/lib/qmanager"/* "$LIB_DIR/"
+        find "$LIB_DIR" -maxdepth 1 -name "*.sh" -exec sed -i 's/\r$//' {} \;
         find "$LIB_DIR" -maxdepth 1 -name "*.sh" -exec chmod 644 {} \;
         info "Libraries installed to $LIB_DIR"
+    fi
+
+    # --- Tailscale systemd units (staged for on-demand install) ---
+    # These are NOT installed as active units — qmanager_tailscale_mgr copies
+    # them to /lib/systemd/system/ when the user clicks "Install Tailscale".
+    for f in tailscaled.service tailscaled.defaults qmanager-console.service; do
+        src="$SRC_SCRIPTS/etc/systemd/system/$f"
+        if [ -f "$src" ]; then
+            cp "$src" "$LIB_DIR/$f"
+            sed -i 's/\r$//' "$LIB_DIR/$f"
+            chmod 644 "$LIB_DIR/$f"
+        fi
+    done
+
+    # --- Upgrade existing Tailscale deployment ---
+    # If Tailscale is already installed, update the live systemd unit and staged
+    # copy so service fixes (e.g. ExecStartPost chmod) take effect on next boot.
+    if [ -x "$TAILSCALE_DIR/tailscaled" ] && [ -f "$LIB_DIR/tailscaled.service" ]; then
+        cp -f "$LIB_DIR/tailscaled.service" "$SYSTEMD_DIR/tailscaled.service"
+        sed -i 's/\r$//' "$SYSTEMD_DIR/tailscaled.service"
+        mkdir -p "$TAILSCALE_DIR/systemd"
+        cp -f "$LIB_DIR/tailscaled.service" "$TAILSCALE_DIR/systemd/tailscaled.service"
+        info "Updated deployed tailscaled.service"
     fi
 
     # --- Daemons and utilities ---
@@ -490,6 +562,7 @@ install_backend() {
             [ -f "$f" ] || continue
             local fname; fname=$(basename "$f")
             cp "$f" "$BIN_DIR/$fname"
+            sed -i 's/\r$//' "$BIN_DIR/$fname"
             chmod +x "$BIN_DIR/$fname"
             bin_count=$(( bin_count + 1 ))
         done
@@ -501,11 +574,21 @@ install_backend() {
         rm -rf "$CGI_DIR"
         mkdir -p "$CGI_DIR"
         cp -r "$SRC_SCRIPTS/www/cgi-bin/quecmanager"/* "$CGI_DIR/"
+        find "$CGI_DIR" -name "*.sh" -exec sed -i 's/\r$//' {} \;
         find "$CGI_DIR" -name "*.sh" -exec chmod 755 {} \;
         find "$CGI_DIR" -name "*.json" -exec chmod 644 {} \;
         local cgi_count
         cgi_count=$(find "$CGI_DIR" -name "*.sh" -type f | wc -l | tr -d ' ')
         info "$cgi_count CGI scripts installed to $CGI_DIR"
+    fi
+
+    # --- Console startup script ---
+    if [ -d "$SRC_SCRIPTS/usrdata/qmanager/console" ]; then
+        mkdir -p "$QMANAGER_ROOT/console"
+        cp "$SRC_SCRIPTS/usrdata/qmanager/console"/* "$QMANAGER_ROOT/console/" 2>/dev/null || true
+        find "$QMANAGER_ROOT/console" -name "*.sh" -exec sed -i 's/\r$//' {} \;
+        find "$QMANAGER_ROOT/console" -name "*.sh" -exec chmod 755 {} \;
+        info "Console startup script installed"
     fi
 
     # --- Systemd unit files (SimpleAdmin pattern: /lib/systemd/system/) ---
@@ -521,6 +604,7 @@ install_backend() {
         for f in "$SRC_SCRIPTS/etc/systemd/system"/qmanager*.service; do
             [ -f "$f" ] || continue
             cp "$f" "$SYSTEMD_DIR/"
+            sed -i 's/\r$//' "$SYSTEMD_DIR/$(basename "$f")"
         done
 
         # Install lighttpd service file — ensures correct config path is used.
@@ -528,6 +612,7 @@ install_backend() {
         # instead of /usrdata/qmanager/lighttpd.conf where QManager's config lives.
         if [ -f "$SRC_SCRIPTS/etc/systemd/system/lighttpd.service" ]; then
             cp "$SRC_SCRIPTS/etc/systemd/system/lighttpd.service" "$SYSTEMD_DIR/lighttpd.service"
+            sed -i 's/\r$//' "$SYSTEMD_DIR/lighttpd.service"
             info "lighttpd.service installed (config: /usrdata/qmanager/lighttpd.conf)"
         fi
         sync
@@ -546,6 +631,7 @@ install_backend() {
             info "Added #includedir $SUDOERS_DIR to $SUDOERS_CONF"
         fi
         cp "$SRC_SCRIPTS/etc/sudoers.d/qmanager" "$SUDOERS_DIR/qmanager"
+        sed -i 's/\r$//' "$SUDOERS_DIR/qmanager"
         chmod 440 "$SUDOERS_DIR/qmanager"
         chown root:root "$SUDOERS_DIR/qmanager"
         info "Sudoers rules installed to $SUDOERS_DIR (440)"
@@ -681,8 +767,8 @@ enable_services() {
     fi
 
     # Always-on services — symlink directly into multi-user.target.wants
-    for svc in qmanager-setup qmanager-ping qmanager-poller qmanager-ttl \
-               qmanager-mtu qmanager-imei-check; do
+    for svc in qmanager-firewall qmanager-setup qmanager-ping qmanager-poller qmanager-ttl \
+               qmanager-mtu qmanager-imei-check qmanager-console; do
         if [ -f "$SYSTEMD_DIR/${svc}.service" ]; then
             ln -sf "$SYSTEMD_DIR/${svc}.service" "$WANTS_DIR/${svc}.service"
             info "Enabled $svc"
@@ -716,33 +802,14 @@ start_services() {
         info "Set /dev/smd11 permissions for dialout group"
     fi
 
-    # iptables rules — allow access to web UI and SSH
-    # Default RM520N-GL firewall drops non-bridge/eth traffic; replaces simplefirewall
-    if ! iptables -C INPUT -i lo -p tcp --dport 80 -j ACCEPT 2>/dev/null; then
-        iptables -I INPUT 1 -i lo -p tcp --dport 80 -j ACCEPT
-        info "Added iptables loopback rule for port 80"
-    fi
-    if ! iptables -C INPUT -i lo -p tcp --dport 443 -j ACCEPT 2>/dev/null; then
-        iptables -I INPUT 1 -i lo -p tcp --dport 443 -j ACCEPT
-        info "Added iptables loopback rule for port 443"
-    fi
-
-    # External access — HTTP, HTTPS, SSH on LAN interfaces (bridge0, eth0)
-    for port in 80 443 22; do
-        if ! iptables -C INPUT -i bridge0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null; then
-            iptables -A INPUT -i bridge0 -p tcp --dport "$port" -j ACCEPT
-        fi
-        if ! iptables -C INPUT -i eth0 -p tcp --dport "$port" -j ACCEPT 2>/dev/null; then
-            iptables -A INPUT -i eth0 -p tcp --dport "$port" -j ACCEPT
-        fi
-    done
-    info "Added iptables LAN access rules for ports 80, 443, 22"
+    # Start firewall before lighttpd (protects web UI before accepting connections)
+    systemctl start qmanager-firewall 2>/dev/null || true
 
     # Restart lighttpd to pick up new config
     systemctl restart lighttpd 2>/dev/null || warn "Could not restart lighttpd"
     info "lighttpd restarted with QManager config"
 
-    # Run setup oneshot first (creates lock files, session dirs, iptables rules)
+    # Run setup oneshot (creates lock files, session dirs, permissions)
     systemctl start qmanager-setup 2>/dev/null || true
 
     # Start always-on services with verification
@@ -751,9 +818,15 @@ start_services() {
     done
     sleep 2
 
+    # Download ttyd for web console (non-fatal — console is optional)
+    if [ ! -x /usrdata/qmanager/console/ttyd ]; then
+        info "Downloading ttyd for web console..."
+        /usr/bin/qmanager_console_mgr install 2>/dev/null || warn "ttyd download failed — web console unavailable"
+    fi
+
     # Verify critical services
     local svc_errors=0
-    for svc in lighttpd qmanager-setup qmanager-ping qmanager-poller; do
+    for svc in qmanager-firewall lighttpd qmanager-setup qmanager-ping qmanager-poller; do
         if systemctl is-active "$svc" >/dev/null 2>&1; then
             info "$svc is running"
         else
@@ -822,6 +895,8 @@ setup_ssh() {
 
     # Create systemd service (not Entware init.d — more reliable on RM520N-GL)
     if [ ! -f "$SYSTEMD_DIR/dropbear.service" ]; then
+        # Rootfs may have been remounted ro by qmanager_console_mgr
+        mount -o remount,rw / 2>/dev/null || true
         cat > "$SYSTEMD_DIR/dropbear.service" << 'SSHEOF'
 [Unit]
 Description=Dropbear SSH Server
@@ -855,10 +930,11 @@ SSHEOF
         fi
     fi
 
-    # Set root password if not already set
+    # SSH root password is set automatically during QManager onboarding
+    # (first-time setup syncs the web UI password to the system root password).
+    # It can also be changed later from System Settings > SSH Password.
     if grep -q '^root:[*!]:' /etc/shadow 2>/dev/null || grep -q '^root::' /etc/shadow 2>/dev/null; then
-        printf "\n  ${BOLD}Set a root password for SSH login:${NC}\n"
-        passwd root
+        info "Root password will be set during QManager onboarding"
     fi
 
     info "SSH setup complete — connect via: ssh root@192.168.225.1"

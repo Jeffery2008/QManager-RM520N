@@ -28,6 +28,16 @@ _EA_LOG_FILE="/tmp/qmanager_email_log.json"
 _EA_RELOAD_FLAG="/tmp/qmanager_email_reload"
 _EA_MAX_LOG=100
 
+# Detect msmtp binary — Entware installs to /opt/bin which is not in the
+# poller's PATH. Check common locations so both CGI and daemon contexts work.
+_EA_MSMTP_BIN=""
+for _p in /opt/bin/msmtp /usr/bin/msmtp; do
+    if [ -x "$_p" ]; then
+        _EA_MSMTP_BIN="$_p"
+        break
+    fi
+done
+
 # --- State (populated by email_alerts_init / _ea_read_config) ----------------
 _ea_enabled="false"
 _ea_sender=""
@@ -163,13 +173,16 @@ _ea_send_recovery_email() {
     local html
     html=$(_ea_build_recovery_html "$start_time" "$dur_text" "$_ea_threshold_minutes")
 
-    # Send with retry — DNS may not be ready immediately after recovery.
-    # Recovery emails fire at the moment connectivity returns, but the DNS
-    # resolver often needs a few more seconds to stabilize.
+    # Send with retry — DNS and SMTP are not ready immediately after recovery.
+    # Wait for the connection to stabilize before the first send attempt.
     local trigger_text="Connection recovered (down ${dur_text})"
     local attempt=0
     local max_attempts=3
-    local retry_delay=10
+    local retry_delay=15
+    local stabilize_delay=30
+
+    qlog_info "Email alerts: waiting ${stabilize_delay}s for connection to stabilize..."
+    sleep "$stabilize_delay"
 
     while [ "$attempt" -lt "$max_attempts" ]; do
         attempt=$((attempt + 1))
@@ -214,7 +227,7 @@ _ea_do_send() {
     local subject="$1"
     local html_body="$2"
 
-    if ! command -v msmtp >/dev/null 2>&1; then
+    if [ -z "$_EA_MSMTP_BIN" ] || [ ! -x "$_EA_MSMTP_BIN" ]; then
         qlog_error "Email alerts: msmtp not installed"
         return 1
     fi
@@ -232,7 +245,7 @@ _ea_do_send() {
         printf "Content-Type: text/html; charset=UTF-8\r\n"
         printf "\r\n"
         printf "%s" "$html_body"
-    } | msmtp -C "$_EA_MSMTP_CONFIG" "$_ea_recipient" 2>/tmp/msmtp_last_err.log
+    } | "$_EA_MSMTP_BIN" -C "$_EA_MSMTP_CONFIG" "$_ea_recipient" 2>/tmp/msmtp_last_err.log
 
     local rc=$?
     if [ $rc -eq 0 ]; then

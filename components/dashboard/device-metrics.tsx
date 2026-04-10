@@ -240,8 +240,7 @@ const DeviceMetricsComponent = ({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {/* Will show in Hexadecimal form */}
-                  {lteData?.ta !== null && lteData?.ta !== undefined ? (
+                  {lteData?.ta ? (
                     <p>
                       这是根据 LTE Timing Advance 值{" "}
                       <span className="font-semibold">{lteData.ta}</span>.
@@ -273,8 +272,7 @@ const DeviceMetricsComponent = ({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {/* Will show in Hexadecimal form */}
-                  {nrData?.ta !== null && nrData?.ta !== undefined ? (
+                  {nrData?.ta ? (
                     <p>
                       这是根据 NR Timing Advance 值{" "}
                       <span className="font-semibold">{nrData.ta}</span>.

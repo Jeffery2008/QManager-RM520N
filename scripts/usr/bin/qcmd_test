@@ -145,6 +145,17 @@ else
     pass
 fi
 
+# --- Test 11: timeout binary not required ------------------------------------
+echo "[11] timeout binary not required..."
+# qcmd no longer depends on the timeout binary. Verify it works even
+# if timeout were absent (we can't actually remove it, but we verify
+# qcmd's dependency list in its header no longer mentions it).
+if grep -q "Dependencies:.*timeout" /usr/bin/qcmd 2>/dev/null; then
+    warn "qcmd header still lists timeout as a dependency"
+else
+    pass
+fi
+
 # --- Summary -----------------------------------------------------------------
 echo ""
 echo "=== Results ==="
