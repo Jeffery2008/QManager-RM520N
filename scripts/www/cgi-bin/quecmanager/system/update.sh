@@ -25,7 +25,7 @@ cgi_handle_options
 
 # --- Configuration -----------------------------------------------------------
 
-GITHUB_REPO="dr-dolomite/QManager-RM520N"
+GITHUB_REPO="Jeffery2008/QManager-RM520N"
 VERSION_FILE="/etc/qmanager/VERSION"
 UPDATES_DIR="/etc/qmanager/updates"
 STATUS_FILE="/tmp/qmanager_update.json"

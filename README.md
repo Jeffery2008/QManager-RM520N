@@ -86,7 +86,7 @@ ADB or SSH into the modem and run:
 
 ```sh
 curl -fsSL -o /tmp/qmanager-installer.sh \
-  https://github.com/dr-dolomite/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
+  https://github.com/Jeffery2008/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
   bash /tmp/qmanager-installer.sh
 ```
 

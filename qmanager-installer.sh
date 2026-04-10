@@ -2,21 +2,23 @@
 # ==============================================================================
 # QManager — Installer Bootstrap for RM520N-GL
 # Quectel Modem Manager
-# https://github.com/dr-dolomite/QManager-RM520N
+# https://github.com/Jeffery2008/QManager-RM520N
 #
 # Usage:
 #   curl -fsSL -o /tmp/qmanager-installer.sh \
-#     https://github.com/dr-dolomite/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
+#     https://github.com/Jeffery2008/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
 #     bash /tmp/qmanager-installer.sh
 #
 # Environment variables:
 #   QMANAGER_VERSION  Pin a specific release version (default: latest including pre-releases)
+#   QMANAGER_REPO     Override release source repo (default: Jeffery2008/QManager-RM520N)
 #
 # ==============================================================================
 
 # --- Configuration -----------------------------------------------------------
 
-GITHUB_REPO="dr-dolomite/QManager-RM520N"
+DEFAULT_GITHUB_REPO="Jeffery2008/QManager-RM520N"
+GITHUB_REPO="${QMANAGER_REPO:-$DEFAULT_GITHUB_REPO}"
 GITHUB_API="https://api.github.com/repos/${GITHUB_REPO}/releases"
 ARCHIVE_PATH="/tmp/qmanager.tar.gz"
 CHECKSUM_PATH="/tmp/qmanager_sha256sum.txt"

@@ -66,7 +66,7 @@ ADB or SSH into the modem and run:
 
 ```sh
 curl -fsSL -o /tmp/qmanager-installer.sh \
-  https://github.com/dr-dolomite/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
+  https://github.com/Jeffery2008/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
   bash /tmp/qmanager-installer.sh
 ```
 
@@ -193,7 +193,7 @@ ADB or SSH into the modem and run:
 
 ```sh
 curl -fsSL -o /tmp/qmanager-installer.sh \
-  https://github.com/dr-dolomite/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
+  https://github.com/Jeffery2008/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
   bash /tmp/qmanager-installer.sh
 ```
 
@@ -227,7 +227,7 @@ The following RM551E features are deferred due to platform differences:
 
 ## ⚠️ Known Issues
 
-- This is a **pre-release** — please report bugs at [GitHub Issues](https://github.com/dr-dolomite/QManager-RM520N/issues).
+- This is a **pre-release** — please report bugs at [GitHub Issues](https://github.com/Jeffery2008/QManager-RM520N/issues).
 - Tailscale's `--accept-routes` flag must **never** be used — it disconnects the device from the network entirely and requires a physical reboot to recover.
 - BusyBox `flock` lacks `-w` (timeout flag) — all flock usage has been adapted to use non-blocking polling loops.
 
