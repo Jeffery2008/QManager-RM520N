@@ -49,7 +49,7 @@ function buildCsvRows(results: CellScanResult[]): string[] {
 }
 
 const CELL_SCAN_CSV_HEADER =
-  "Network,Provider,MCC,MNC,Band,EARFCN,PCI,Cell ID,TAC,Bandwidth,Signal (dBm)";
+  "网络类型,运营商,MCC,MNC,频段,EARFCN,PCI,小区ID,TAC,带宽,信号强度(dBm)";
 
 const FullScannerComponent = () => {
   const { status, results, error, elapsedSeconds, startScan } = useCellScanner();

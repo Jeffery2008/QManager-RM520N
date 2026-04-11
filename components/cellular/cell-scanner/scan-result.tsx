@@ -76,7 +76,7 @@ const createColumns = (
 ): ColumnDef<CellScanResult>[] => [
   {
     accessorKey: "networkType",
-    header: () => <div>Network</div>,
+    header: () => <div>网络类型</div>,
     cell: ({ row }) => (
       <div><NetworkTypeBadge type={row.getValue("networkType")} /></div>
     ),
@@ -88,7 +88,7 @@ const createColumns = (
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Provider
+        运营商
         <ArrowUpDown className="size-4" />
       </Button>
     ),
@@ -99,7 +99,7 @@ const createColumns = (
           <span className="font-semibold">{cell.provider}</span>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button type="button" className="inline-flex p-2 -m-2" aria-label="MCC/MNC details">
+              <button type="button" className="inline-flex p-2 -m-2" aria-label="查看 MCC/MNC 详情">
                 <Info className="size-3" />
               </button>
             </TooltipTrigger>
@@ -115,7 +115,7 @@ const createColumns = (
   },
   {
     accessorKey: "band",
-    header: "Band",
+    header: "频段",
     cell: ({ row }) => {
       const networkType = row.original.networkType;
       const band = row.getValue("band") as number;
@@ -144,7 +144,7 @@ const createColumns = (
   },
   {
     accessorKey: "cellID",
-    header: "Cell ID",
+    header: "小区 ID",
     cell: ({ row }) => (
       <div className="font-medium">{row.getValue("cellID")}</div>
     ),
@@ -156,7 +156,7 @@ const createColumns = (
   },
   {
     accessorKey: "bandwidth",
-    header: "BW",
+    header: "带宽",
     cell: ({ row }) => (
       <div className="font-medium">{row.getValue("bandwidth")} MHz</div>
     ),
@@ -168,7 +168,7 @@ const createColumns = (
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Signal
+        信号
         <ArrowUpDown className="size-4" />
       </Button>
     ),
@@ -197,13 +197,13 @@ const createColumns = (
               size="icon"
             >
               <MoreVertical className="size-4" />
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">打开菜单</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">
             <DropdownMenuItem onClick={() => onLockCell?.(cellData)}>
               <LockIcon className="size-4" />
-              Lock Cell
+              锁定小区
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -222,15 +222,15 @@ const NARROW_HIDDEN: VisibilityState = {
 const NARROW_BREAKPOINT = 640;
 
 const COLUMN_LABELS: Record<string, string> = {
-  networkType: "Network",
-  provider: "Provider",
-  band: "Band",
+  networkType: "网络类型",
+  provider: "运营商",
+  band: "频段",
   earfcn: "EARFCN",
   pci: "PCI",
-  cellID: "Cell ID",
+  cellID: "小区 ID",
   tac: "TAC",
-  bandwidth: "Bandwidth",
-  signalStrength: "Signal",
+  bandwidth: "带宽",
+  signalStrength: "信号",
 };
 
 const ScanResultView = ({ data, onLockCell }: ScanResultViewProps) => {
@@ -286,7 +286,7 @@ const ScanResultView = ({ data, onLockCell }: ScanResultViewProps) => {
     <div ref={containerRef} className="relative flex flex-col gap-4 overflow-hidden">
       <div className="flex flex-col @sm/card:flex-row items-start @sm/card:items-center gap-2">
         <Input
-          placeholder="Filter by provider..."
+          placeholder="按运营商筛选..."
           value={
             (table.getColumn("provider")?.getFilterValue() as string) ?? ""
           }
@@ -299,7 +299,7 @@ const ScanResultView = ({ data, onLockCell }: ScanResultViewProps) => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="@sm/card:ml-auto">
-              Columns <ChevronDown className="size-4" />
+              列显示 <ChevronDown className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -367,7 +367,7 @@ const ScanResultView = ({ data, onLockCell }: ScanResultViewProps) => {
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results found.
+                  未找到结果。
                 </TableCell>
               </TableRow>
             )}
@@ -379,10 +379,9 @@ const ScanResultView = ({ data, onLockCell }: ScanResultViewProps) => {
           {(() => {
             const filtered = table.getFilteredRowModel().rows.length;
             const total = data.length;
-            const label = filtered === 1 ? "cell" : "cells";
             return filtered < total
-              ? `${filtered} of ${total} ${label}`
-              : `${total} ${label} found`;
+              ? `显示 ${filtered} / ${total} 个小区`
+              : `共找到 ${total} 个小区`;
           })()}
         </div>
         <div className="space-x-2">
@@ -392,7 +391,7 @@ const ScanResultView = ({ data, onLockCell }: ScanResultViewProps) => {
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            Previous
+            上一页
           </Button>
           <Button
             variant="outline"
@@ -400,7 +399,7 @@ const ScanResultView = ({ data, onLockCell }: ScanResultViewProps) => {
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            Next
+            下一页
           </Button>
         </div>
       </div>

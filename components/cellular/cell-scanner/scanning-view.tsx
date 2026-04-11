@@ -26,7 +26,7 @@ export function ScanningView({ elapsedSeconds }: ScanningViewProps) {
         className="text-2xl font-semibold tabular-nums tracking-tight text-foreground"
         role="timer"
         aria-live="off"
-        aria-label={`Scan elapsed time: ${formatElapsed(elapsedSeconds)}`}
+        aria-label={`扫描已耗时：${formatElapsed(elapsedSeconds)}`}
       >
         {formatElapsed(elapsedSeconds)}
       </p>
@@ -34,17 +34,16 @@ export function ScanningView({ elapsedSeconds }: ScanningViewProps) {
       {/* Status copy */}
       <div className="max-w-xs space-y-1">
         <p className="text-sm font-medium text-foreground">
-          Scanning nearby towers...
+          正在扫描附近小区...
         </p>
         <p className="text-xs text-muted-foreground">
-          This usually takes 2-3 minutes. Other modem operations are paused
-          during the scan.
+          通常需要 2 到 3 分钟。扫描期间，其他调制解调器操作会暂时暂停。
         </p>
       </div>
 
       {/* Navigation warning */}
       <p className="text-xs text-muted-foreground/60">
-        Please don&apos;t close the tab or refresh the page.
+        请不要关闭标签页，也不要刷新页面。
       </p>
     </div>
   );
