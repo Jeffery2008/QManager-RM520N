@@ -39,19 +39,21 @@ jobs:
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
             echo "tag=${{ inputs.tag_name }}" >> "$GITHUB_OUTPUT"
             echo "name=${{ inputs.release_name || inputs.tag_name }}" >> "$GITHUB_OUTPUT"
-            echo "ref=${{ inputs.target_ref }}" >> "$GITHUB_OUTPUT"
+            echo "checkout_ref=${{ inputs.target_ref }}" >> "$GITHUB_OUTPUT"
+            echo "release_target=main" >> "$GITHUB_OUTPUT"
             echo "prerelease=${{ inputs.prerelease }}" >> "$GITHUB_OUTPUT"
           else
             echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
             echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-            echo "ref=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "checkout_ref=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "release_target=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
             echo "prerelease=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check out source
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.meta.outputs.ref }}
+          ref: ${{ steps.meta.outputs.checkout_ref }}
           fetch-depth: 0
 
       - name: Set up Bun
@@ -82,7 +84,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
-          target_commitish: ${{ steps.meta.outputs.ref }}
+          target_commitish: ${{ steps.meta.outputs.release_target }}
           name: ${{ steps.meta.outputs.name }}
           generate_release_notes: true
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
