@@ -18,7 +18,7 @@ const NrStatusComponent = ({ data, isLoading }: NrStatusComponentProps) => {
   };
 
   const rows = [
-    { label: "Band", value: data?.band || "-" },
+    { label: "频段", value: data?.band || "-" },
     { label: "ARFCN", value: data?.arfcn?.toString() ?? "-" },
     { label: "PCI", value: data?.pci?.toString() ?? "-" },
     {

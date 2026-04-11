@@ -128,9 +128,9 @@ const ActiveBandsComponent = ({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Active Cellular Bands</CardTitle>
+          <CardTitle>当前活跃频段</CardTitle>
           <CardDescription>
-            Detailed information about the currently active cellular bands.
+            查看当前活跃蜂窝频段的详细信息。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -149,15 +149,14 @@ const ActiveBandsComponent = ({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Active Cellular Bands</CardTitle>
+          <CardTitle>当前活跃频段</CardTitle>
           <CardDescription>
-            Detailed information about the currently active cellular bands.
+            查看当前活跃蜂窝频段的详细信息。
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-6">
-            No active carrier components detected. Carrier aggregation data
-            updates every ~30 seconds.
+            当前未检测到活跃的载波组件。载波聚合数据大约每 30 秒更新一次。
           </p>
         </CardContent>
       </Card>
@@ -167,10 +166,9 @@ const ActiveBandsComponent = ({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Active Cellular Bands</CardTitle>
+        <CardTitle>当前活跃频段</CardTitle>
         <CardDescription>
-          {components.length} active carrier{components.length !== 1 ? "s" : ""}
-          . Expand each band for detailed signal metrics.
+          当前有 {components.length} 个活跃载波。展开任一频段可查看更详细的信号指标。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -259,13 +257,13 @@ const ActiveBandsComponent = ({
                         {/* Static info */}
                         <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
                           <InfoRow
-                            label="Band Name"
+                            label="频段名称"
                             value={getBandName(cc.band, cc.technology)}
                           />
                         </motion.div>
                         <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
                           <InfoRow
-                            label="UL Frequency"
+                            label="上行频率"
                             value={
                               cc.earfcn !== null
                                 ? formatFrequency(
@@ -277,7 +275,7 @@ const ActiveBandsComponent = ({
                         </motion.div>
                         <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
                           <InfoRow
-                            label="DL Frequency"
+                            label="下行频率"
                             value={
                               cc.earfcn !== null
                                 ? formatFrequency(
@@ -289,7 +287,7 @@ const ActiveBandsComponent = ({
                         </motion.div>
                         <motion.div variants={{ hidden: { opacity: 0, x: -6 }, visible: { opacity: 1, x: 0 } }} transition={{ duration: 0.18, ease: "easeOut" }}>
                           <InfoRow
-                            label="Bandwidth"
+                            label="带宽"
                             value={
                               cc.bandwidth_mhz > 0 ? `${cc.bandwidth_mhz} MHz` : "-"
                             }

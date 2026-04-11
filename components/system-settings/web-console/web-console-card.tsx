@@ -189,7 +189,7 @@ export default function WebConsoleCard() {
       <div className="bg-muted flex items-center gap-2 border-b px-3 py-2">
         <TerminalSquareIcon className="text-muted-foreground size-4" />
         <span className="text-muted-foreground text-sm font-medium">
-          Web 控制台
+          网页控制台
         </span>
 
         {/* Keyboard shortcut hints — hidden on narrow viewports */}
@@ -246,7 +246,7 @@ export default function WebConsoleCard() {
           <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12">
             <WifiOffIcon className="text-muted-foreground size-10 opacity-50" />
             <div className="text-center">
-              <p className="text-sm font-medium">Web 控制台不可用</p>
+              <p className="text-sm font-medium">网页控制台不可用</p>
               <p className="text-muted-foreground text-xs">
                 `ttyd` 未安装或未运行。
               </p>

@@ -65,10 +65,9 @@ export default function AntennaAlignmentComponent() {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Antenna Alignment</h1>
+        <h1 className="text-3xl font-bold mb-2">天线校准</h1>
         <p className="text-muted-foreground">
-          Per-antenna signal strength for each receiver chain. Record and
-          compare positions to find the best aim or placement.
+          查看每条接收链路的逐天线信号强度。记录并比较不同位置，找到最佳朝向或摆放方式。
         </p>
       </div>
 
@@ -78,8 +77,8 @@ export default function AntennaAlignmentComponent() {
           className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive mb-4"
         >
           {error
-            ? "Unable to reach the modem. Data shown may be outdated."
-            : "Signal data is stale — modem may be unresponsive."}
+            ? "无法连接调制解调器，当前显示的数据可能已过期。"
+            : "信号数据已过期，调制解调器可能暂时无响应。"}
         </div>
       )}
 
@@ -106,10 +105,9 @@ export default function AntennaAlignmentComponent() {
             <EmptyMedia variant="icon">
               <SignalIcon />
             </EmptyMedia>
-            <EmptyTitle>No Antenna Data</EmptyTitle>
+            <EmptyTitle>暂无天线数据</EmptyTitle>
             <EmptyDescription className="max-w-xs text-pretty">
-              Antenna metrics will appear when the modem poller is running and
-              reporting per-antenna signal data.
+              当调制解调器轮询器开始上报逐天线信号数据后，这里会显示对应指标。
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

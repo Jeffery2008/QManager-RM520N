@@ -14,10 +14,9 @@ const EmailAlertsComponent = () => {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Email Alerts</h1>
+        <h1 className="text-3xl font-bold mb-2">邮件告警</h1>
         <p className="text-muted-foreground">
-          Get notified by email when your connection goes down for longer than a
-          set duration.
+          当连接中断超过设定时间后，通过电子邮件通知你。
         </p>
       </div>
       <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">

@@ -380,10 +380,10 @@ export interface SimSwapStatus {
  * Shared across antenna-statistics, antenna-alignment, and any future per-port UI.
  */
 export const ANTENNA_PORTS = [
-  { name: "Main", rx: "PRX", description: "Main transmit/receive antenna (ANT0)" },
-  { name: "Diversity", rx: "DRX", description: "Diversity / receive antenna (ANT1)" },
-  { name: "MIMO 3", rx: "RX2", description: "MIMO spatial stream 1 (ANT2)" },
-  { name: "MIMO 4", rx: "RX3", description: "MIMO spatial stream 2 (ANT3)" },
+  { name: "主天线", rx: "PRX", description: "主收发天线（ANT0）" },
+  { name: "分集天线", rx: "DRX", description: "分集 / 接收天线（ANT1）" },
+  { name: "MIMO 3", rx: "RX2", description: "MIMO 空间流 1（ANT2）" },
+  { name: "MIMO 4", rx: "RX3", description: "MIMO 空间流 2（ANT3）" },
 ] as const;
 
 /**

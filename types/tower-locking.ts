@@ -177,4 +177,4 @@ export const SCS_OPTIONS: { value: number; label: string }[] = [
 ];
 
 /** Day names for schedule UI (index matches days array: 0=Sun) */
-export const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export const DAY_LABELS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];

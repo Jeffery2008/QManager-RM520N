@@ -66,9 +66,9 @@ export function WatchdogSettingsCard({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Watchdog Settings</CardTitle>
+          <CardTitle>看门狗设置</CardTitle>
           <CardDescription>
-            Configure connection health monitoring and recovery.
+            配置连接健康检测与恢复策略。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -231,9 +231,9 @@ function WatchdogSettingsForm({
       const success = await saveSettings(payload);
       if (success) {
         markSaved();
-        toast.success("Watchdog settings saved");
+        toast.success("看门狗设置已保存");
       } else {
-        toast.error(error || "Failed to save watchdog settings");
+        toast.error(error || "保存看门狗设置失败");
       }
     },
     [
@@ -257,9 +257,9 @@ function WatchdogSettingsForm({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Watchdog Settings</CardTitle>
+        <CardTitle>看门狗设置</CardTitle>
         <CardDescription>
-          Configure connection health monitoring and recovery.
+          配置连接健康检测与恢复策略。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -267,8 +267,7 @@ function WatchdogSettingsForm({
           <Alert variant="destructive" className="mb-4">
             <AlertTriangleIcon className="size-4" />
             <AlertDescription>
-              Watchdog disabled itself after too many reboots in one hour.
-              Re-enable it below once your connection is stable.
+              看门狗因 1 小时内重启次数过多而自动关闭。待连接恢复稳定后，可在下方重新启用。
             </AlertDescription>
           </Alert>
         )}
@@ -279,7 +278,7 @@ function WatchdogSettingsForm({
               {/* Master toggle */}
               <Field orientation="horizontal" className="w-fit">
                 <FieldLabel htmlFor="watchdog-enabled">
-                  Enable Watchdog
+                  启用看门狗
                 </FieldLabel>
                 <Switch
                   id="watchdog-enabled"
@@ -292,7 +291,7 @@ function WatchdogSettingsForm({
                 {/* Max Failures */}
                 <Field>
                   <FieldLabel htmlFor="max-failures">
-                    Failure Threshold
+                    故障阈值
                   </FieldLabel>
                   <Input
                     id="max-failures"
@@ -317,8 +316,7 @@ function WatchdogSettingsForm({
                     </FieldError>
                   ) : (
                     <FieldDescription id="max-failures-desc">
-                      How many failed connectivity checks in a row before
-                      recovery begins.
+                      连续多少次连通性检查失败后开始执行恢复流程。
                     </FieldDescription>
                   )}
                 </Field>
@@ -326,7 +324,7 @@ function WatchdogSettingsForm({
                 {/* Check Interval */}
                 <Field>
                   <FieldLabel htmlFor="check-interval">
-                    Check Interval
+                    检查间隔
                   </FieldLabel>
                   <Select
                     value={checkInterval}
@@ -334,24 +332,24 @@ function WatchdogSettingsForm({
                     disabled={!isEnabled}
                   >
                     <SelectTrigger id="check-interval" className="max-w-sm">
-                      <SelectValue placeholder="Select interval" />
+                      <SelectValue placeholder="选择间隔" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="5">5 seconds</SelectItem>
-                      <SelectItem value="10">10 seconds</SelectItem>
-                      <SelectItem value="15">15 seconds</SelectItem>
-                      <SelectItem value="30">30 seconds</SelectItem>
+                      <SelectItem value="5">5 秒</SelectItem>
+                      <SelectItem value="10">10 秒</SelectItem>
+                      <SelectItem value="15">15 秒</SelectItem>
+                      <SelectItem value="30">30 秒</SelectItem>
                     </SelectContent>
                   </Select>
                   <FieldDescription>
-                    How often the watchdog checks your internet connection.
+                    看门狗检查互联网连接的频率。
                   </FieldDescription>
                 </Field>
 
                 {/* Cooldown */}
                 <Field>
                   <FieldLabel htmlFor="cooldown">
-                    Cooldown Period (seconds)
+                    冷却时间（秒）
                   </FieldLabel>
                   <Input
                     id="cooldown"
@@ -372,8 +370,7 @@ function WatchdogSettingsForm({
                     <FieldError id="cooldown-error">{cooldownError}</FieldError>
                   ) : (
                     <FieldDescription id="cooldown-desc">
-                      Wait time after each recovery step before checking
-                      connectivity again.
+                      每次恢复动作后等待多久再重新检查连通性。
                     </FieldDescription>
                   )}
                 </Field>
@@ -381,7 +378,7 @@ function WatchdogSettingsForm({
                 {tier4Enabled && (
                   <Field>
                     <FieldLabel htmlFor="max-reboots">
-                      Max Reboots Per Hour
+                      每小时最大重启次数
                     </FieldLabel>
                     <Input
                       id="max-reboots"
@@ -406,8 +403,7 @@ function WatchdogSettingsForm({
                       </FieldError>
                     ) : (
                       <FieldDescription id="max-reboots-desc">
-                        Safety limit. The watchdog disables itself if this many
-                        reboots happen in one hour.
+                        安全限制：如果 1 小时内达到该重启次数，看门狗会自动停用。
                       </FieldDescription>
                     )}
                   </Field>
@@ -417,7 +413,7 @@ function WatchdogSettingsForm({
                   {tier3Enabled && (
                     <Field>
                       <FieldLabel htmlFor="backup-sim-slot">
-                        Backup SIM Slot
+                        备用 SIM 卡槽
                       </FieldLabel>
                       <Select
                         value={backupSimSlot}
@@ -428,16 +424,15 @@ function WatchdogSettingsForm({
                           id="backup-sim-slot"
                           className="max-w-sm"
                         >
-                          <SelectValue placeholder="Select slot" />
+                          <SelectValue placeholder="选择卡槽" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="1">Slot 1</SelectItem>
-                          <SelectItem value="2">Slot 2</SelectItem>
+                          <SelectItem value="1">卡槽 1</SelectItem>
+                          <SelectItem value="2">卡槽 2</SelectItem>
                         </SelectContent>
                       </Select>
                       <FieldDescription>
-                        The SIM slot to switch to when the primary SIM loses
-                        connectivity. Must differ from the current active slot.
+                        当主 SIM 失去连通性时切换到的备用卡槽，必须与当前激活卡槽不同。
                       </FieldDescription>
                     </Field>
                   )}
@@ -446,16 +441,16 @@ function WatchdogSettingsForm({
 
               <Separator />
               <div className="grid gap-2">
-                <CardTitle>Recovery Steps</CardTitle>
+                <CardTitle>恢复步骤</CardTitle>
                 <CardDescription>
-                  Tried in order, from gentlest to most disruptive.
+                  按顺序依次尝试，从影响最小到影响最大。
                 </CardDescription>
               </div>
 
               <div className="grid grid-cols-1 @sm/card:grid-cols-2 gap-4">
                 <Field orientation="horizontal" className="w-fit">
                   <FieldLabel htmlFor="tier1-enabled">
-                    Restart Network Interface
+                    重启网络接口
                   </FieldLabel>
                   <Switch
                     id="tier1-enabled"
@@ -472,20 +467,20 @@ function WatchdogSettingsForm({
                         <button
                           type="button"
                           className="inline-flex"
-                          aria-label="More info"
+                          aria-label="更多信息"
                         >
                           <TbInfoCircleFilled className="size-5 text-info" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
-                          Automatically skipped when tower lock is active <br />{" "}
-                          to preserve your locked cells.
+                          当基站锁定启用时会自动跳过此步骤，<br />
+                          以避免破坏当前锁定的小区。
                         </p>
                       </TooltipContent>
                     </Tooltip>
                     <FieldLabel htmlFor="tier2-enabled">
-                      Restart Modem Radio
+                      重启调制解调器无线电
                     </FieldLabel>
                     <Switch
                       id="tier2-enabled"
@@ -499,7 +494,7 @@ function WatchdogSettingsForm({
 
                 <Field orientation="horizontal" className="w-fit">
                   <FieldLabel htmlFor="tier3-enabled">
-                    Switch to Backup SIM
+                    切换到备用 SIM
                   </FieldLabel>
                   <Switch
                     id="tier3-enabled"
@@ -510,7 +505,7 @@ function WatchdogSettingsForm({
                 </Field>
 
                 <Field orientation="horizontal" className="w-fit">
-                  <FieldLabel htmlFor="tier4-enabled">Reboot Device</FieldLabel>
+                  <FieldLabel htmlFor="tier4-enabled">重启设备</FieldLabel>
                   <Switch
                     id="tier4-enabled"
                     checked={tier4Enabled}

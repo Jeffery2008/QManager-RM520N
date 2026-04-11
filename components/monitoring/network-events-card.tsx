@@ -52,7 +52,11 @@ import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 
 import { useRecentActivities } from "@/hooks/use-recent-activities";
-import { EVENT_LABELS, EVENT_TAB_CATEGORIES } from "@/constants/network-events";
+import {
+  EVENT_LABELS,
+  EVENT_TAB_CATEGORIES,
+  translateEventMessage,
+} from "@/constants/network-events";
 import type { NetworkEvent, EventSeverity } from "@/types/modem-status";
 
 // --- Constants ---------------------------------------------------------------
@@ -60,9 +64,9 @@ import type { NetworkEvent, EventSeverity } from "@/types/modem-status";
 type SortOrder = "newest" | "oldest" | "type";
 
 const LIMIT_OPTIONS = [
-  { label: "All Events", value: 50 },
-  { label: "10 Events", value: 10 },
-  { label: "25 Events", value: 25 },
+  { label: "全部事件", value: 50 },
+  { label: "10 条事件", value: 10 },
+  { label: "25 条事件", value: 25 },
 ] as const;
 
 // --- Local helpers -----------------------------------------------------------
@@ -108,10 +112,10 @@ function EventsTable({
     <>
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead className="hidden @md/card:table-cell">Event Type</TableHead>
-            <TableHead>Message</TableHead>
-            <TableHead>Date & Time</TableHead>
+            <TableRow>
+            <TableHead className="hidden @md/card:table-cell">事件类型</TableHead>
+            <TableHead>内容</TableHead>
+            <TableHead>日期与时间</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -159,7 +163,9 @@ function EventsTable({
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-md">{event.message}</TableCell>
+                  <TableCell className="max-w-md">
+                    {translateEventMessage(event.message)}
+                  </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col">
                       <span className="text-sm">{date}</span>
@@ -176,13 +182,13 @@ function EventsTable({
       </Table>
       <div className="flex justify-between items-center pt-4">
         <div className="text-xs text-muted-foreground">
-          Showing <strong>{events.length}</strong> of{" "}
-          <strong>{totalCount}</strong> event{totalCount !== 1 ? "s" : ""}
+          显示 <strong>{events.length}</strong> /{" "}
+          <strong>{totalCount}</strong> 条事件
         </div>
         {lastUpdate && (
           <div className="flex items-center text-xs text-muted-foreground">
             <Clock className="h-3 w-3 mr-1" />
-            Last updated: {lastUpdate.toLocaleTimeString()}
+            最后更新：{lastUpdate.toLocaleTimeString("zh-CN")}
           </div>
         )}
       </div>
@@ -238,10 +244,9 @@ const NetworkEventsCard = () => {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Network Events</CardTitle>
+        <CardTitle>网络事件</CardTitle>
         <CardDescription>
-          Recent network events including band changes, connection drops, and
-          signal changes.
+          最近的网络事件，包括频段变化、连接中断和信号变化。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -251,7 +256,7 @@ const NetworkEventsCard = () => {
               <FieldGroup>
                 <Field orientation="horizontal" className="w-fit">
                   <FieldLabel htmlFor="event-monitoring-setting">
-                    Auto-refresh
+                    自动刷新
                   </FieldLabel>
                   <Switch
                     id="event-monitoring-setting"
@@ -268,7 +273,7 @@ const NetworkEventsCard = () => {
               <BellOff className="size-4" />
               <AlertTitle>
                 Auto-refresh paused — displaying events as of{" "}
-                {lastUpdate ? lastUpdate.toLocaleTimeString() : "last fetch"}.
+                {lastUpdate ? lastUpdate.toLocaleTimeString("zh-CN") : "上次获取"}。
               </AlertTitle>
             </Alert>
           )}
@@ -278,17 +283,17 @@ const NetworkEventsCard = () => {
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <div className="flex items-center">
                   <TabsList>
-                    <TabsTrigger value="all">All</TabsTrigger>
+                    <TabsTrigger value="all">全部</TabsTrigger>
                     <TabsTrigger value="bandChanges">
-                      <span className="hidden @sm/card:inline">Band Changes</span>
+                      <span className="hidden @sm/card:inline">频段变化</span>
                       <Radio className="@sm/card:hidden" />
                     </TabsTrigger>
                     <TabsTrigger value="networkMode">
-                      <span className="hidden @sm/card:inline">Network Mode</span>
+                      <span className="hidden @sm/card:inline">网络模式</span>
                       <Signal className="@sm/card:hidden" />
                     </TabsTrigger>
                     <TabsTrigger value="dataConnection">
-                      <span className="hidden @sm/card:inline">Data Connection</span>
+                      <span className="hidden @sm/card:inline">数据连接</span>
                       <Wifi className="@sm/card:hidden" />
                     </TabsTrigger>
                   </TabsList>
@@ -302,30 +307,30 @@ const NetworkEventsCard = () => {
                         >
                           <ArrowUpDown className="h-3.5 w-3.5" />
                           <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                            Sort
+                            排序
                           </span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                        <DropdownMenuLabel>排序方式</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuCheckboxItem
                           checked={sortOrder === "newest"}
                           onCheckedChange={() => setSortOrder("newest")}
                         >
-                          Newest first
+                          最新优先
                         </DropdownMenuCheckboxItem>
                         <DropdownMenuCheckboxItem
                           checked={sortOrder === "oldest"}
                           onCheckedChange={() => setSortOrder("oldest")}
                         >
-                          Oldest first
+                          最早优先
                         </DropdownMenuCheckboxItem>
                         <DropdownMenuCheckboxItem
                           checked={sortOrder === "type"}
                           onCheckedChange={() => setSortOrder("type")}
                         >
-                          Event type
+                          按事件类型
                         </DropdownMenuCheckboxItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -338,12 +343,12 @@ const NetworkEventsCard = () => {
                         >
                           <ListFilter className="h-3.5 w-3.5" />
                           <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                            Limit
+                            数量
                           </span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Max Events</DropdownMenuLabel>
+                        <DropdownMenuLabel>最大事件数</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         {LIMIT_OPTIONS.map((opt) => (
                           <DropdownMenuCheckboxItem
@@ -367,7 +372,7 @@ const NetworkEventsCard = () => {
                         className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
                       />
                       <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                        Refresh
+                        刷新
                       </span>
                     </Button>
                   </div>
@@ -378,7 +383,7 @@ const NetworkEventsCard = () => {
                     <div className="flex items-center gap-x-2">
                       <AlertCircle className="size-5" />
                       <AlertTitle>
-                        Failed to load network events: {error}
+                        加载网络事件失败：{error}
                       </AlertTitle>
                     </div>
                   </Alert>
@@ -391,7 +396,7 @@ const NetworkEventsCard = () => {
                     emptyIcon={
                       <Activity className="h-8 w-8 text-muted-foreground" />
                     }
-                    emptyMessage="No network events found"
+                    emptyMessage="未找到网络事件"
                     totalCount={filteredEvents.length}
                     lastUpdate={lastUpdate}
                   />
@@ -399,10 +404,9 @@ const NetworkEventsCard = () => {
 
                 <TabsContent value="bandChanges">
                   <div className="grid gap-1.5 mb-4">
-                    <h3 className="text-sm font-medium">Band Changes</h3>
+                    <h3 className="text-sm font-medium">频段变化</h3>
                     <p className="text-sm text-muted-foreground">
-                      Band changes, cell handoffs, 5G anchor transitions, and
-                      carrier aggregation events.
+                      频段变化、小区切换、5G 锚点切换和载波聚合事件。
                     </p>
                   </div>
                   <EventsTable
@@ -411,7 +415,7 @@ const NetworkEventsCard = () => {
                     emptyIcon={
                       <Radio className="h-8 w-8 text-muted-foreground" />
                     }
-                    emptyMessage="No band change events found"
+                    emptyMessage="未找到频段变化事件"
                     totalCount={filteredEvents.length}
                     lastUpdate={lastUpdate}
                   />
@@ -419,9 +423,9 @@ const NetworkEventsCard = () => {
 
                 <TabsContent value="networkMode">
                   <div className="grid gap-1.5 mb-4">
-                    <h3 className="text-sm font-medium">Network Mode</h3>
+                    <h3 className="text-sm font-medium">网络模式</h3>
                     <p className="text-sm text-muted-foreground">
-                      Signal quality changes and network mode transitions.
+                      信号质量变化和网络模式切换。
                     </p>
                   </div>
                   <EventsTable
@@ -430,7 +434,7 @@ const NetworkEventsCard = () => {
                     emptyIcon={
                       <Signal className="h-8 w-8 text-muted-foreground" />
                     }
-                    emptyMessage="No network mode events found"
+                    emptyMessage="未找到网络模式事件"
                     totalCount={filteredEvents.length}
                     lastUpdate={lastUpdate}
                   />
@@ -438,9 +442,9 @@ const NetworkEventsCard = () => {
 
                 <TabsContent value="dataConnection">
                   <div className="grid gap-1.5 mb-4">
-                    <h3 className="text-sm font-medium">Data Connection</h3>
+                    <h3 className="text-sm font-medium">数据连接</h3>
                     <p className="text-sm text-muted-foreground">
-                      Internet connectivity, latency, and packet loss events.
+                      互联网连接、延迟和丢包相关事件。
                     </p>
                   </div>
                   <EventsTable
@@ -449,7 +453,7 @@ const NetworkEventsCard = () => {
                     emptyIcon={
                       <Wifi className="h-8 w-8 text-muted-foreground" />
                     }
-                    emptyMessage="No data connection events found"
+                    emptyMessage="未找到数据连接事件"
                     totalCount={filteredEvents.length}
                     lastUpdate={lastUpdate}
                   />

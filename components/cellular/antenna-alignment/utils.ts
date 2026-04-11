@@ -45,7 +45,7 @@ export const RADIO_MODE_LABELS: Record<RadioMode, string> = {
 };
 
 export const DEFAULT_ANGLES = ["0°", "45°", "90°"];
-export const DEFAULT_POSITIONS = ["Position A", "Position B", "Position C"];
+export const DEFAULT_POSITIONS = ["位置 A", "位置 B", "位置 C"];
 
 export const EMPTY_SNAPSHOT_ARRAYS = {
   lte_rsrp: [null, null, null, null] as (number | null)[],

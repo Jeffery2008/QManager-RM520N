@@ -113,9 +113,9 @@ const BandSettingsComponent = ({
   const handleFailoverToggle = async (checked: boolean) => {
     const success = await onToggleFailover(checked);
     if (success) {
-      toast.success(`Band failover ${checked ? "enabled" : "disabled"}`);
+      toast.success(`频段故障切换已${checked ? "启用" : "禁用"}`);
     } else {
-      toast.error("Failed to update band failover");
+      toast.error("更新频段故障切换状态失败");
     }
   };
 
@@ -130,7 +130,7 @@ const BandSettingsComponent = ({
           className="bg-muted/50 text-muted-foreground border-muted-foreground/30"
         >
           <MinusCircleIcon className="h-3 w-3" />
-          Disabled
+          已禁用
         </Badge>
       );
     }
@@ -142,7 +142,7 @@ const BandSettingsComponent = ({
           className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
         >
           <TriangleAlertIcon className="h-3 w-3" />
-          Fallback Active
+          已切换到兜底频段
         </Badge>
       );
     }
@@ -154,7 +154,7 @@ const BandSettingsComponent = ({
           className="bg-info/15 text-info hover:bg-info/20 border-info/30"
         >
           <Loader2Icon className="h-3 w-3 animate-spin" />
-          Monitoring
+          监控中
         </Badge>
       );
     }
@@ -165,7 +165,7 @@ const BandSettingsComponent = ({
         className="bg-success/15 text-success hover:bg-success/20 border-success/30"
       >
         <CheckCircle2Icon className="h-3 w-3" />
-        Ready
+        就绪
       </Badge>
     );
   };
@@ -173,9 +173,9 @@ const BandSettingsComponent = ({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Band Locking Settings</CardTitle>
+        <CardTitle>频段锁定设置</CardTitle>
         <CardDescription>
-          Restrict the modem to specific LTE and 5G bands. Enable failover to fall back to all bands if locked bands lose signal.
+          将调制解调器限制在指定的 LTE 和 5G 频段上；启用故障切换后，当锁定频段失去信号时会自动回退到全部频段。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -187,21 +187,21 @@ const BandSettingsComponent = ({
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="inline-flex" aria-label="More info">
+                  <button type="button" className="inline-flex" aria-label="更多信息">
                     <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
                     When enabled, the device will automatically switch to the
-                    default
+                    默认
                     <br />
-                    bands if the locked bands are unavailable after 15 seconds.
+                    频段；如果锁定频段连续 15 秒不可用，则会自动回退。
                   </p>
                 </TooltipContent>
               </Tooltip>
               <p className="font-semibold text-muted-foreground text-sm">
-                Band Failover
+                频段故障切换
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -216,7 +216,7 @@ const BandSettingsComponent = ({
                     disabled={isScenarioControlled}
                   />
                   <Label htmlFor="band-failover">
-                    {failover.enabled ? "Enabled" : "Disabled"}
+                    {failover.enabled ? "已启用" : "已禁用"}
                   </Label>
                 </>
               )}
@@ -227,7 +227,7 @@ const BandSettingsComponent = ({
           {/* Failover Status */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-muted-foreground">
-              Band Failover Status
+              频段故障切换状态
             </p>
             <div className="flex items-center gap-1.5">
               {renderFailoverStatus()}
@@ -238,7 +238,7 @@ const BandSettingsComponent = ({
           {/* Active LTE Bands */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-muted-foreground">
-              Active LTE Bands
+              当前 LTE 频段
             </p>
             <div className="flex items-center gap-1.5">
               {isLoading ? (
@@ -253,7 +253,7 @@ const BandSettingsComponent = ({
           {/* Active LTE EARFCNs */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-muted-foreground">
-              Active LTE Channels
+              当前 LTE 信道
             </p>
             <div className="flex items-center gap-1.5">
               {isLoading ? (
@@ -268,7 +268,7 @@ const BandSettingsComponent = ({
           {/* Active NR Bands */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-muted-foreground">
-              Active 5G Bands
+              当前 5G 频段
             </p>
             <div className="flex items-center gap-1.5">
               {isLoading ? (
@@ -283,7 +283,7 @@ const BandSettingsComponent = ({
           {/* Active NR ARFCNs */}
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-muted-foreground">
-              Active 5G Channels
+              当前 5G 信道
             </p>
             <div className="flex items-center gap-1.5">
               {isLoading ? (

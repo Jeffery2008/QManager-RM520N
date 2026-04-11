@@ -181,7 +181,7 @@ const SmsAlertsSettingsCard = ({ onTestSmsSent }: SmsAlertsSettingsCardProps) =>
               <span>{error}</span>
               <Button variant="outline" size="sm" onClick={() => refresh()}>
                 <RefreshCcwIcon className="size-3.5" />
-                Retry
+                重试
               </Button>
             </AlertDescription>
           </Alert>
@@ -274,8 +274,7 @@ const SmsAlertsSettingsCard = ({ onTestSmsSent }: SmsAlertsSettingsCardProps) =>
                   </FieldError>
                 ) : (
                   <FieldDescription id="sms-threshold-desc">
-                    How long the connection must be down before an alert is
-                    sent. Prevents alerts for brief, transient outages.
+                    连接中断持续多久后才发送告警，可避免因短暂抖动而频繁触发短信。
                   </FieldDescription>
                 )}
               </Field>

@@ -208,7 +208,7 @@ export function TailscalePeersCard({
                             className="text-xs shrink-0"
                           >
                             <ShieldIcon className="size-3 mr-1" />
-                            Exit Node
+                            出口节点
                           </Badge>
                         )}
                       </div>
@@ -229,12 +229,12 @@ export function TailscalePeersCard({
                     {peer.online ? (
                       <Badge variant="outline" className="bg-success/15 text-success hover:bg-success/20 border-success/30">
                         <CheckCircle2Icon className="h-3 w-3" />
-                        Online
+                        在线
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-muted-foreground/30">
                         <MinusCircleIcon className="h-3 w-3" />
-                        Offline
+                        离线
                       </Badge>
                     )}
                   </TableCell>
@@ -249,8 +249,7 @@ export function TailscalePeersCard({
       </CardContent>
       <CardFooter className="flex justify-between items-center">
         <div className="text-xs text-muted-foreground">
-          Showing <strong>{peers.length}</strong>{" "}
-          {peers.length === 1 ? "peer" : "peers"}
+          共显示 <strong>{peers.length}</strong> 个节点
         </div>
         {hasExitNode && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">

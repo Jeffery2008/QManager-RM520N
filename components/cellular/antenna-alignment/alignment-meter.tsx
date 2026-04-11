@@ -329,7 +329,7 @@ function RecordingSlotCard({
         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10">
           <Badge className="gap-1 text-[10px]">
             <TrophyIcon className="size-3" />
-            Best
+            最佳
           </Badge>
         </div>
       )}
@@ -346,7 +346,7 @@ function RecordingSlotCard({
           disabled={isRecording || !!snapshot}
           className="h-7 text-sm font-medium px-2"
           placeholder={
-            antennaType === "directional" ? "Angle…" : "Location…"
+            antennaType === "directional" ? "角度…" : "位置…"
           }
         />
       </div>
@@ -357,7 +357,7 @@ function RecordingSlotCard({
           <div className="flex items-center justify-center gap-2 py-1" aria-live="polite">
             <Loader2Icon className="size-4 text-info animate-spin" aria-hidden="true" />
             <span className="text-xs text-muted-foreground">
-              Sample {samplesCollected} of {SAMPLES_PER_RECORDING}
+              正在采样：{samplesCollected} / {SAMPLES_PER_RECORDING}
             </span>
           </div>
           <div className="flex items-center justify-center gap-1.5">
@@ -379,7 +379,7 @@ function RecordingSlotCard({
             onClick={onCancel}
             className="w-full h-7 text-xs"
           >
-            Cancel
+            取消
           </Button>
         </div>
       )}
@@ -455,7 +455,7 @@ function RecordingSlotCard({
           )}
           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <CheckCircle2Icon className="h-3 w-3 text-success" />
-            Recorded {new Date(snapshot.ts).toLocaleTimeString()}
+            已记录于 {new Date(snapshot.ts).toLocaleTimeString("zh-CN")}
           </div>
         </div>
       )}
@@ -465,14 +465,14 @@ function RecordingSlotCard({
         <div className="space-y-2">
           <div className="flex items-center gap-2 py-3 justify-center">
             <CircleDotIcon className="h-4 w-4 text-muted-foreground/50" />
-            <span className="text-xs text-muted-foreground">Not recorded</span>
+            <span className="text-xs text-muted-foreground">尚未记录</span>
           </div>
           <Button
             size="sm"
             onClick={() => onRecord(label)}
             className="w-full h-7 text-xs"
           >
-            Record {antennaType === "directional" ? "Angle" : "Position"}
+            记录{antennaType === "directional" ? "角度" : "位置"}
           </Button>
         </div>
       )}
@@ -508,13 +508,11 @@ export default function AlignmentMeterSection({
       <CardHeader>
         <div className="flex flex-col gap-3 @lg/main:flex-row @lg/main:items-center @lg/main:justify-between">
           <div>
-            <CardTitle className="text-base">Alignment Meter</CardTitle>
+            <CardTitle className="text-base">校准记录仪</CardTitle>
             <CardDescription className="text-xs">
-              Record{" "}
-              {antennaType === "directional" ? "3 angles" : "3 positions"} to
-              find the best{" "}
-              {antennaType === "directional" ? "aim" : "placement"}. Each
-              recording averages {SAMPLES_PER_RECORDING} samples.
+              记录
+              {antennaType === "directional" ? " 3 个角度" : " 3 个位置"}，
+              找出最佳{antennaType === "directional" ? "朝向" : "摆放点"}。每次记录会对 {SAMPLES_PER_RECORDING} 次采样取平均值。
             </CardDescription>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -532,14 +530,14 @@ export default function AlignmentMeterSection({
                 className="gap-1 text-xs h-7 px-2"
               >
                 <CompassIcon className="h-3 w-3" />
-                Directional
+                定向
               </ToggleGroupItem>
               <ToggleGroupItem
                 value="omni"
                 className="gap-1 text-xs h-7 px-2"
               >
                 <MapPinIcon className="h-3 w-3" />
-                Omni
+                全向
               </ToggleGroupItem>
             </ToggleGroup>
             <Button
@@ -550,7 +548,7 @@ export default function AlignmentMeterSection({
               disabled={activeSlot !== null}
             >
               <RotateCcwIcon className="h-3 w-3" />
-              Reset
+              重置
             </Button>
           </div>
         </div>
@@ -561,7 +559,7 @@ export default function AlignmentMeterSection({
         {/* Live signal preview */}
         <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Live Signal (Primary Antenna)
+            实时信号（主天线）
           </p>
           <LiveSignalOverview spa={spa} mode={mode} />
         </div>
@@ -597,17 +595,17 @@ export default function AlignmentMeterSection({
                 <TrophyIcon className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <p className="text-sm font-semibold">
-                    Recommended:{" "}
+                    推荐：{" "}
                     <span className="text-primary">
                       {slots[bestSlot]!.label}
                     </span>
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {antennaType === "directional"
-                      ? "This angle produced the strongest composite signal across your recorded positions."
-                      : "This location produced the strongest composite signal across your recorded positions."}
+                      ? "这个角度在你已记录的位置中得到的综合信号最强。"
+                      : "这个位置在你已记录的位置中得到的综合信号最强。"}
                     {filledCount < SLOT_COUNT &&
-                      ` Record the remaining ${SLOT_COUNT - filledCount} slot${SLOT_COUNT - filledCount > 1 ? "s" : ""} for a more complete comparison.`}
+                      ` 继续记录剩余 ${SLOT_COUNT - filledCount} 个位置，可获得更完整的对比结果。`}
                   </p>
                 </div>
               </div>

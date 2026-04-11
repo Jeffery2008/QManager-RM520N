@@ -10,7 +10,7 @@ const TailscaleComponent = () => {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Tailscale VPN</h1>
+        <h1 className="text-3xl font-bold mb-2">Tailscale 网络</h1>
         <p className="text-muted-foreground">
           管理你的 Tailscale Mesh VPN 连接与网络节点。
         </p>

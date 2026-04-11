@@ -149,7 +149,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-muted/50 text-muted-foreground border-muted-foreground/30"
         >
           <Loader2 className="h-3 w-3 animate-spin" />
-          Loading
+          加载中
         </Badge>
       );
     }
@@ -161,7 +161,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-muted/50 text-muted-foreground border-muted-foreground/30"
         >
           <MinusCircleIcon className="h-3 w-3" />
-          Unknown
+          未知
         </Badge>
       );
     }
@@ -173,7 +173,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-success/15 text-success hover:bg-success/20 border-success/30"
         >
           <CheckCircle2Icon className="h-3 w-3" />
-          Monitoring
+          监控中
         </Badge>
       );
     }
@@ -185,7 +185,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
         >
           <TriangleAlertIcon className="h-3 w-3" />
-          Unlocked due to Poor Signal
+          因信号较差已解锁
         </Badge>
       );
     }
@@ -197,7 +197,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-muted/50 text-muted-foreground border-muted-foreground/30"
         >
           <MinusCircleIcon className="h-3 w-3" />
-          Disabled
+          已禁用
         </Badge>
       );
     }
@@ -208,7 +208,7 @@ const TowerLockingSettingsComponent = ({
         className="bg-success/15 text-success hover:bg-success/20 border-success/30"
       >
         <CheckCircle2Icon className="h-3 w-3" />
-        Ready
+        就绪
       </Badge>
     );
   };
@@ -223,7 +223,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-muted/50 text-muted-foreground border-muted-foreground/30"
         >
           <Loader2 className="h-3 w-3 animate-spin" />
-          Loading
+          加载中
         </Badge>
       );
     }
@@ -235,7 +235,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-muted/50 text-muted-foreground border-muted-foreground/30"
         >
           <MinusCircleIcon className="h-3 w-3" />
-          Unknown
+          未知
         </Badge>
       );
     }
@@ -247,7 +247,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-success/15 text-success hover:bg-success/20 border-success/30"
         >
           <CheckCircle2Icon className="h-3 w-3" />
-          Active
+          已启用
         </Badge>
       );
     }
@@ -258,7 +258,7 @@ const TowerLockingSettingsComponent = ({
         className="bg-muted/50 text-muted-foreground border-muted-foreground/30"
       >
         <MinusCircleIcon className="h-3 w-3" />
-        Inactive
+        未启用
       </Badge>
     );
   };
@@ -274,7 +274,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-muted/50 text-muted-foreground border-muted-foreground/30"
         >
           <Loader2 className="h-3 w-3 animate-spin" />
-          Loading
+          加载中
         </Badge>
       );
     }
@@ -286,7 +286,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-muted/50 text-muted-foreground border-muted-foreground/30"
         >
           <MinusCircleIcon className="h-3 w-3" />
-          Unknown
+          未知
         </Badge>
       );
     }
@@ -300,7 +300,7 @@ const TowerLockingSettingsComponent = ({
             className="bg-success/15 text-success hover:bg-success/20 border-success/30"
           >
             <CheckCircle2Icon className="h-3 w-3" />
-            Connected
+            已连接
           </Badge>
         );
       case "limited":
@@ -310,7 +310,7 @@ const TowerLockingSettingsComponent = ({
             className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
           >
             <TriangleAlertIcon className="h-3 w-3" />
-            Limited Service
+            服务受限
           </Badge>
         );
       case "searching":
@@ -320,7 +320,7 @@ const TowerLockingSettingsComponent = ({
             className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
           >
             <TriangleAlertIcon className="h-3 w-3" />
-            Searching
+            搜索中
           </Badge>
         );
       case "no_service":
@@ -330,7 +330,7 @@ const TowerLockingSettingsComponent = ({
             className="bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30"
           >
             <XCircleIcon className="h-3 w-3" />
-            No Service
+            无服务
           </Badge>
         );
       default:
@@ -420,9 +420,9 @@ const TowerLockingSettingsComponent = ({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Tower Locking Settings</CardTitle>
+        <CardTitle>基站锁定设置</CardTitle>
         <CardDescription>
-          Lock the modem to a specific cell tower. Keeps your connection stable instead of roaming between towers. Not compatible with 5G NSA.
+          将调制解调器锁定到指定的小区基站，避免在不同基站之间频繁切换。与 5G NSA 不兼容。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -432,19 +432,18 @@ const TowerLockingSettingsComponent = ({
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="inline-flex" aria-label="Keep Lock After Reboot info">
+                  <button type="button" className="inline-flex" aria-label="重启后保持锁定说明">
                     <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    When enabled, tower lock is restored automatically
-                    after a reboot.
+                    启用后，设备重启时会自动恢复基站锁定。
                   </p>
                 </TooltipContent>
               </Tooltip>
               <span className="font-semibold text-muted-foreground text-sm">
-                Keep Lock After Reboot
+                重启后保持锁定
               </span>
             </div>
             <div className="flex items-center space-x-2">
@@ -455,7 +454,7 @@ const TowerLockingSettingsComponent = ({
                 onCheckedChange={onPersistChange}
               />
               <Label htmlFor="tower-persist">
-                {config?.persist ? "Enabled" : "Disabled"}
+                {config?.persist ? "已启用" : "已禁用"}
               </Label>
             </div>
           </div>
@@ -464,21 +463,20 @@ const TowerLockingSettingsComponent = ({
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="inline-flex" aria-label="Signal Failover info">
+                  <button type="button" className="inline-flex" aria-label="信号故障切换说明">
                     <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    When enabled, the device will unlock from the tower if
-                    signal quality
+                    启用后，当信号质量低于设定阈值或信号不可用时，
                     <br />
-                    degrades below a certain threshold or becomes unavailable.
+                    设备会自动解除当前基站锁定。
                   </p>
                 </TooltipContent>
               </Tooltip>
               <span className="font-semibold text-muted-foreground text-sm">
-                Signal Failover
+                信号故障切换
               </span>
             </div>
             <div className="flex items-center space-x-2">
@@ -489,16 +487,16 @@ const TowerLockingSettingsComponent = ({
                 onCheckedChange={(checked) => {
                   onFailoverChange(checked);
                   if (!checked) {
-                    toast.warning("Failover disabled");
+                    toast.warning("已禁用故障切换");
                   }
                 }}
               />
               <Label htmlFor="tower-failover">
                 {!hasActiveLock
-                  ? "No active lock"
+                  ? "当前无锁定"
                   : (config?.failover?.enabled ?? false)
-                    ? "Enabled"
-                    : "Disabled"}
+                    ? "已启用"
+                    : "已禁用"}
               </Label>
             </div>
           </div>
@@ -507,16 +505,15 @@ const TowerLockingSettingsComponent = ({
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="inline-flex" aria-label="Failover Threshold info">
+                  <button type="button" className="inline-flex" aria-label="故障切换阈值说明">
                     <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    This will only take effect if Failover is enabled. Set the
-                    signal quality
+                    仅在启用故障切换后生效。设置一个信号质量阈值，
                     <br />
-                    threshold below which the device will unlock from the tower.
+                    当低于该阈值时，设备会自动解除基站锁定。
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -524,7 +521,7 @@ const TowerLockingSettingsComponent = ({
                 htmlFor="failover-threshold"
                 className="font-semibold text-muted-foreground text-sm"
               >
-                Failover Threshold (%)
+                故障切换阈值（%）
               </label>
             </div>
             <div className="flex items-center space-x-2">
@@ -532,7 +529,7 @@ const TowerLockingSettingsComponent = ({
                 <InputGroupInput
                   id="failover-threshold"
                   type="text"
-                  placeholder="Enter threshold"
+                  placeholder="输入阈值"
                   className="w-10 h-6"
                   value={thresholdInput}
                   onChange={(e) => setThresholdInput(e.target.value)}
@@ -550,7 +547,7 @@ const TowerLockingSettingsComponent = ({
                   className="h-8"
                   isSaving={isSavingThreshold}
                   saved={thresholdSaved}
-                  label="Update"
+                  label="更新"
                   disabled={thresholdInput !== "" && (isNaN(Number(thresholdInput)) || Number(thresholdInput) < 0 || Number(thresholdInput) > 100)}
                   onClick={handleThresholdSave}
                 />
@@ -558,14 +555,14 @@ const TowerLockingSettingsComponent = ({
             </div>
             {thresholdInput !== "" && (isNaN(Number(thresholdInput)) || Number(thresholdInput) < 0 || Number(thresholdInput) > 100) && (
               <p className="text-sm text-destructive" role="alert">
-                Threshold must be between 0 and 100
+                阈值必须在 0 到 100 之间
               </p>
             )}
           </div>
           <Separator />
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-muted-foreground">
-              Current Signal Quality
+              当前信号质量
             </span>
             <div className="flex items-center gap-1.5">
               <Badge
@@ -573,14 +570,14 @@ const TowerLockingSettingsComponent = ({
                 className={qualityBadgeStyles[qualityLvl]}
               >
                 {qualityIcons[qualityLvl]}
-                {activeRsrp !== null ? `${signalQualityPct}%` : "N/A"}
+                {activeRsrp !== null ? `${signalQualityPct}%` : "不适用"}
               </Badge>
             </div>
           </div>
           <Separator />
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-muted-foreground">
-              Failover Status
+              故障切换状态
             </span>
             <div className="flex items-center gap-1.5">
               {renderFailoverBadge()}
@@ -589,7 +586,7 @@ const TowerLockingSettingsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-muted-foreground">
-              Connection State
+              连接状态
             </span>
             <div className="flex items-center gap-1.5">
               {renderConnectionStateBadge()}
@@ -598,7 +595,7 @@ const TowerLockingSettingsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-muted-foreground">
-              Schedule Locking Status
+              定时锁定状态
             </span>
             <div className="flex items-center gap-1.5">
               {renderScheduleBadge()}
@@ -607,7 +604,7 @@ const TowerLockingSettingsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-muted-foreground">
-              Current Channel (EARFCN)
+              当前信道（EARFCN）
             </span>
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-semibold">
@@ -618,7 +615,7 @@ const TowerLockingSettingsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-muted-foreground">
-              Current Cell ID (PCI)
+              当前小区 ID（PCI）
             </span>
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-semibold">

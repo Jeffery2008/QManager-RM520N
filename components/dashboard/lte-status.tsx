@@ -18,7 +18,7 @@ const LTEStatusComponent = ({ data, isLoading }: LTEStatusComponentProps) => {
   };
 
   const rows = [
-    { label: "Band", value: data?.band || "-" },
+    { label: "频段", value: data?.band || "-" },
     { label: "EARFCN", value: data?.earfcn?.toString() ?? "-" },
     { label: "PCI", value: data?.pci?.toString() ?? "-" },
     {

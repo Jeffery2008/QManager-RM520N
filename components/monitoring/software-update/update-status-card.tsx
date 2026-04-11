@@ -74,11 +74,11 @@ const itemVariants: Variants = {
 function formatRelativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return "刚刚";
+  if (mins < 60) return `${mins} 分钟前`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return `${hrs} 小时前`;
+  return `${Math.floor(hrs / 24)} 天前`;
 }
 
 // ─── Props ──────────────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ export function UpdateStatusCard({
     try {
       await downloadUpdate();
     } catch {
-      toast.error("Failed to start download");
+      toast.error("启动下载失败");
     }
   }, [downloadUpdate]);
 
@@ -130,7 +130,7 @@ export function UpdateStatusCard({
     try {
       await installStaged();
     } catch {
-      toast.error("Failed to start installation");
+      toast.error("启动安装失败");
     }
   }, [installStaged]);
 
@@ -139,9 +139,9 @@ export function UpdateStatusCard({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Update Status</CardTitle>
+          <CardTitle>更新状态</CardTitle>
           <CardDescription>
-            Current version and available updates.
+            当前版本与可用更新。
           </CardDescription>
           <CardAction>
             <Skeleton className="h-5 w-24 rounded-full" />
@@ -172,9 +172,9 @@ export function UpdateStatusCard({
     <>
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Update Status</CardTitle>
+          <CardTitle>更新状态</CardTitle>
           <CardDescription>
-            Current version and available updates.
+            当前版本与可用更新。
           </CardDescription>
           {updateInfo && (
             <CardAction>
@@ -209,7 +209,7 @@ export function UpdateStatusCard({
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Installed
+                      已安装
                     </span>
                     <span className="text-sm font-medium">
                       {updateInfo.current_version}
@@ -218,7 +218,7 @@ export function UpdateStatusCard({
                   <ArrowRightIcon className="size-4 text-muted-foreground" />
                   <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Available
+                      可更新
                     </span>
                     <span className="text-sm font-medium text-primary">
                       {updateInfo.latest_version}
@@ -234,10 +234,10 @@ export function UpdateStatusCard({
             ) : (
               <motion.div variants={itemVariants} className="flex items-center justify-between">
                 <p className="font-semibold text-muted-foreground text-sm">
-                  Installed Version
+                  当前版本
                 </p>
                 <span className="text-sm font-medium">
-                  {updateInfo?.current_version ?? "Unknown"}
+                  {updateInfo?.current_version ?? "未知"}
                 </span>
               </motion.div>
             )}
@@ -254,7 +254,7 @@ export function UpdateStatusCard({
                   <motion.div variants={itemVariants} className="flex flex-col gap-2 min-w-0">
                     <div className="flex items-center justify-between">
                       <p className="font-semibold text-sm">
-                        {updateAvailable ? "Release Notes" : "Current Release Notes"}
+                        {updateAvailable ? "发布说明" : "当前版本说明"}
                       </p>
                       <Button
                         variant="ghost"
@@ -263,7 +263,7 @@ export function UpdateStatusCard({
                         onClick={() => setShowChangelog(true)}
                       >
                         <FileTextIcon className="size-3.5" />
-                        View full
+                        查看全文
                       </Button>
                     </div>
                     <div
@@ -288,7 +288,7 @@ export function UpdateStatusCard({
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">
-                          {downloadState.status === "downloading" ? "Downloading qmanager.tar.gz..." : "Verifying SHA-256..."}
+                          {downloadState.status === "downloading" ? "正在下载 qmanager.tar.gz..." : "正在验证 SHA-256..."}
                         </span>
                         {downloadState.size && (
                           <span className="text-xs text-muted-foreground">{downloadState.size}</span>
@@ -297,7 +297,7 @@ export function UpdateStatusCard({
                       <div
                         className="h-1.5 rounded-full bg-muted overflow-hidden"
                         role="progressbar"
-                        aria-label={downloadState.status === "downloading" ? "Downloading update" : "Verifying integrity"}
+                        aria-label={downloadState.status === "downloading" ? "下载更新中" : "校验完整性中"}
                         aria-valuemin={0}
                         aria-valuemax={100}
                       >
@@ -309,7 +309,7 @@ export function UpdateStatusCard({
                     <div className="flex items-center gap-2 rounded-lg border border-success/20 bg-success/5 p-2.5">
                       <CheckCircle2Icon className="size-4 text-success shrink-0" />
                       <span className="text-xs text-success">
-                        Downloaded & SHA-256 verified{downloadState.size ? ` (${downloadState.size})` : ""}
+                        下载完成并已通过 SHA-256 校验{downloadState.size ? `（${downloadState.size}）` : ""}
                       </span>
                     </div>
                   )}
@@ -317,7 +317,7 @@ export function UpdateStatusCard({
                     <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-2.5">
                       <AlertTriangleIcon className="size-4 text-destructive shrink-0" />
                       <span className="text-xs text-destructive">
-                        {downloadState.message || "Download failed"}
+                        {downloadState.message || "下载失败"}
                       </span>
                     </div>
                   )}
@@ -330,8 +330,8 @@ export function UpdateStatusCard({
             <motion.div variants={itemVariants} className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground">
                 {lastChecked
-                  ? `Last checked ${formatRelativeTime(lastChecked)}`
-                  : "Never checked"}
+                  ? `上次检查：${formatRelativeTime(lastChecked)}`
+                  : "从未检查"}
               </span>
               {updateAvailable ? (
                 downloadState?.status === "ready" ? (
@@ -340,7 +340,7 @@ export function UpdateStatusCard({
                     disabled={isUpdating}
                   >
                     <DownloadIcon className="size-4" />
-                    Install Update
+                    安装更新
                   </Button>
                 ) : (
                   <Button
@@ -350,17 +350,17 @@ export function UpdateStatusCard({
                     {isDownloading ? (
                       <>
                         <LoaderCircle className="size-4 animate-spin" />
-                        Downloading...
+                        下载中...
                       </>
                     ) : downloadState?.status === "error" ? (
                       <>
                         <RefreshCwIcon className="size-4" />
-                        Retry Download
+                        重新下载
                       </>
                     ) : (
                       <>
                         <DownloadIcon className="size-4" />
-                        Download Update
+                        下载更新
                       </>
                     )}
                   </Button>
@@ -374,12 +374,12 @@ export function UpdateStatusCard({
                   {isChecking ? (
                     <>
                       <LoaderCircle className="size-4 animate-spin" />
-                      Checking...
+                      检查中...
                     </>
                   ) : (
                     <>
                       <RefreshCwIcon className="size-4" />
-                      Check for Updates
+                      检查更新
                     </>
                   )}
                 </Button>
@@ -394,7 +394,7 @@ export function UpdateStatusCard({
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              Release Notes — {updateAvailable ? updateInfo?.latest_version : updateInfo?.current_version}
+              发布说明 — {updateAvailable ? updateInfo?.latest_version : updateInfo?.current_version}
             </DialogTitle>
           </DialogHeader>
           <div
@@ -418,27 +418,23 @@ export function UpdateStatusCard({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Install Update</AlertDialogTitle>
+            <AlertDialogTitle>安装更新</AlertDialogTitle>
             <AlertDialogDescription>
-              This will update QManager from{" "}
+              这会将 QManager 从{" "}
               <strong>{updateInfo?.current_version}</strong> to{" "}
               <strong>{updateInfo?.latest_version}</strong>.
               {updateInfo?.download_size && (
                 <>
-                  {" "}
-                  Download size:{" "}
-                  <strong>{updateInfo.download_size}</strong>.
+                  下载大小：<strong>{updateInfo.download_size}</strong>。
                 </>
-              )}{" "}
-              The device will reboot automatically after installation. Do not
-              power off the device during the update.
+              )} 安装完成后设备会自动重启。更新期间请勿断电。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={handleInstall}>
               <DownloadIcon className="size-4" />
-              Install Now
+              立即安装
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

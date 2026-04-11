@@ -52,3 +52,11 @@ RELEASE_NOTE.md
 
 # simpleadmin source
 /simpleadmin-source
+
+# playwright cache
+.playwright*/
+
+.tmp/
+.npm-cache/
+output/
+qmanager-offline-install.ps1

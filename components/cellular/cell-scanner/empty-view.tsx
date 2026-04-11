@@ -21,15 +21,15 @@ const ScannerEmptyView = ({ onStartScan }: ScannerEmptyViewProps) => {
         <EmptyMedia variant="icon">
           <ScanSearchIcon />
         </EmptyMedia>
-        <EmptyTitle>No Scan Results</EmptyTitle>
+        <EmptyTitle>暂无扫描结果</EmptyTitle>
         <EmptyDescription>
-          Discover nearby towers across all carriers and bands.
+          扫描附近各运营商与频段下可见的基站。
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
         <Button onClick={onStartScan}>
           <RefreshCcwIcon />
-          Start New Scan
+          开始新扫描
         </Button>
       </EmptyContent>
     </Empty>

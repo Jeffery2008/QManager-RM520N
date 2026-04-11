@@ -183,10 +183,9 @@ function TechCard({
               <EmptyMedia variant="icon">
                 <SignalIcon />
               </EmptyMedia>
-              <EmptyTitle>No {title.split(" ")[0]} Signal</EmptyTitle>
+              <EmptyTitle>暂无 {title.startsWith("LTE") ? "LTE" : "NR5G"} 信号</EmptyTitle>
               <EmptyDescription className="max-w-xs text-pretty">
-                Antenna metrics will appear when{" "}
-                {prefix === "lte" ? "4G LTE" : "5G NR"} is active.
+                当{prefix === "lte" ? "4G LTE" : "5G NR"}处于激活状态时，这里会显示天线指标。
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -293,8 +292,8 @@ export default function AntennaStatistics() {
 
   const lteCard = (
     <TechCard
-      title="LTE Signal"
-      description="Per-antenna metrics for 4G LTE"
+      title="LTE 信号"
+      description="4G LTE 的逐天线信号指标"
       signal={signal}
       prefix="lte"
     />
@@ -302,8 +301,8 @@ export default function AntennaStatistics() {
 
   const nrCard = (
     <TechCard
-      title="NR5G Signal"
-      description="Per-antenna metrics for 5G NR"
+      title="NR5G 信号"
+      description="5G NR 的逐天线信号指标"
       signal={signal}
       prefix="nr"
     />
@@ -312,10 +311,9 @@ export default function AntennaStatistics() {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Antenna Statistics</h1>
+        <h1 className="text-3xl font-bold mb-2">天线统计</h1>
         <p className="text-muted-foreground">
-          Per-antenna signal metrics for each receiver chain. Compare signal
-          quality across Main, Diversity, and MIMO antenna ports.
+          展示每条接收链路的逐天线信号指标，便于比较主天线、分集天线和 MIMO 端口的信号质量。
         </p>
       </div>
       {isLoading ? (

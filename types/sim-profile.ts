@@ -155,9 +155,9 @@ export interface ProfileApiResponse {
 
 /** Human-readable labels for PDP types */
 export const PDP_TYPE_LABELS: Record<PdpType, string> = {
-  IP: "IPv4 Only",
-  IPV6: "IPv6 Only",
-  IPV4V6: "IPv4 + IPv6 (Dual Stack)",
+  IP: "仅 IPv4",
+  IPV6: "仅 IPv6",
+  IPV4V6: "IPv4 + IPv6（双栈）",
 };
 
 /** Human-readable labels for apply step statuses */

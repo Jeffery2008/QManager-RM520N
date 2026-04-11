@@ -114,16 +114,16 @@ const LTELockingComponent = ({
 
   const handleToggle = (checked: boolean) => {
     if (checked && isWatcherRunning) {
-      toast.warning("Failover check in progress", {
-        description: "Signal quality check is running, please wait.",
-      });
+        toast.warning("故障切换检查进行中", {
+          description: "当前正在执行信号质量检查，请稍后再试。",
+        });
       return;
     }
     if (checked) {
       const cells = buildCells();
       if (cells.length === 0) {
-        toast.warning("No cell targets", {
-          description: "Enter a channel and cell ID first.",
+        toast.warning("未填写小区目标", {
+          description: "请先输入信道和小区 ID。",
         });
         return;
       }
@@ -139,9 +139,9 @@ const LTELockingComponent = ({
     setShowLockDialog(false);
     const success = await onLock(pendingCells);
     if (success) {
-      toast.success("LTE tower lock applied");
+      toast.success("LTE 基站锁定已应用");
     } else {
-      toast.error("Failed to lock tower — check modem connection");
+      toast.error("基站锁定失败，请检查调制解调器连接");
     }
   };
 
@@ -149,9 +149,9 @@ const LTELockingComponent = ({
     setShowUnlockDialog(false);
     const success = await onUnlock();
     if (success) {
-      toast.success("LTE tower lock cleared");
+      toast.success("LTE 基站锁定已解除");
     } else {
-      toast.error("Failed to remove tower lock");
+      toast.error("移除基站锁定失败");
     }
   };
 
@@ -162,9 +162,9 @@ const LTELockingComponent = ({
     if (earfcn != null && pci != null) {
       setEarfcn1(String(earfcn));
       setPci1(String(pci));
-      toast.info("Filled from current connected tower");
+      toast.info("已填入当前连接基站的参数");
     } else {
-      toast.warning("No active LTE connection");
+      toast.warning("当前没有活动的 LTE 连接");
     }
   };
 
@@ -175,9 +175,9 @@ const LTELockingComponent = ({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>LTE Tower Locking</CardTitle>
+          <CardTitle>LTE 基站锁定</CardTitle>
           <CardDescription>
-            Lock to a specific LTE cell tower by entering its channel and cell ID.
+            通过输入信道和小区 ID 锁定到指定的 LTE 小区基站。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -230,9 +230,9 @@ const LTELockingComponent = ({
     <>
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>LTE Tower Locking</CardTitle>
+          <CardTitle>LTE 基站锁定</CardTitle>
           <CardDescription>
-            Lock to a specific LTE cell tower by entering its channel and cell ID.
+            通过输入信道和小区 ID 锁定到指定的 LTE 小区基站。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -242,7 +242,7 @@ const LTELockingComponent = ({
               <div className="flex items-center gap-1.5">
                 <TbInfoCircleFilled className="size-5 text-info" />
                 <p className="font-semibold text-muted-foreground text-sm">
-                  LTE Tower Locking Enabled
+                  启用 LTE 基站锁定
                 </p>
               </div>
               <div className="flex items-center space-x-2">
@@ -256,7 +256,7 @@ const LTELockingComponent = ({
                   disabled={isLocking}
                 />
                 <Label htmlFor="lte-tower-locking">
-                  {isEnabled ? "Enabled" : "Disabled"}
+                  {isEnabled ? "已启用" : "已禁用"}
                 </Label>
               </div>
             </div>
@@ -271,7 +271,7 @@ const LTELockingComponent = ({
                     <div className="grid grid-cols-2 gap-4">
                       <Field>
                         <div className="flex items-center justify-between">
-                          <FieldLabel htmlFor="earfcn1">Channel (EARFCN)</FieldLabel>
+                          <FieldLabel htmlFor="earfcn1">信道（EARFCN）</FieldLabel>
                           <Button
                             type="button"
                             size="sm"
@@ -279,24 +279,24 @@ const LTELockingComponent = ({
                             onClick={handleUseCurrent}
                             disabled={isLocking || !hasActiveLteCell}
                           >
-                            Use Current
+                            使用当前值
                           </Button>
                         </div>
                         <Input
                           id="earfcn1"
                           type="text"
-                          placeholder="Enter EARFCN"
+                          placeholder="输入 EARFCN"
                           value={earfcn1}
                           onChange={(e) => setEarfcn1(e.target.value)}
                           disabled={isLocking}
                         />
                       </Field>
                       <Field>
-                        <FieldLabel htmlFor="pci1">Cell ID (PCI)</FieldLabel>
+                        <FieldLabel htmlFor="pci1">小区 ID（PCI）</FieldLabel>
                         <Input
                           id="pci1"
                           type="text"
-                          placeholder="Enter PCI"
+                          placeholder="输入 PCI"
                           value={pci1}
                           onChange={(e) => setPci1(e.target.value)}
                           disabled={isLocking}
@@ -306,22 +306,22 @@ const LTELockingComponent = ({
                     {/* Optional locking entry 2 */}
                     <div className="grid grid-cols-2 gap-4">
                       <Field>
-                        <FieldLabel htmlFor="earfcn2">Channel (EARFCN) 2</FieldLabel>
+                        <FieldLabel htmlFor="earfcn2">信道（EARFCN）2</FieldLabel>
                         <Input
                           id="earfcn2"
                           type="text"
-                          placeholder="Enter EARFCN 2"
+                          placeholder="输入 EARFCN 2"
                           value={earfcn2}
                           onChange={(e) => setEarfcn2(e.target.value)}
                           disabled={isLocking}
                         />
                       </Field>
                       <Field>
-                        <FieldLabel htmlFor="pci2">Cell ID (PCI) 2</FieldLabel>
+                        <FieldLabel htmlFor="pci2">小区 ID（PCI）2</FieldLabel>
                         <Input
                           id="pci2"
                           type="text"
-                          placeholder="Enter PCI 2"
+                          placeholder="输入 PCI 2"
                           value={pci2}
                           onChange={(e) => setPci2(e.target.value)}
                           disabled={isLocking}
@@ -331,22 +331,22 @@ const LTELockingComponent = ({
                     {/* Optional locking entry 3 */}
                     <div className="grid grid-cols-2 gap-4">
                       <Field>
-                        <FieldLabel htmlFor="earfcn3">Channel (EARFCN) 3</FieldLabel>
+                        <FieldLabel htmlFor="earfcn3">信道（EARFCN）3</FieldLabel>
                         <Input
                           id="earfcn3"
                           type="text"
-                          placeholder="Enter EARFCN 3"
+                          placeholder="输入 EARFCN 3"
                           value={earfcn3}
                           onChange={(e) => setEarfcn3(e.target.value)}
                           disabled={isLocking}
                         />
                       </Field>
                       <Field>
-                        <FieldLabel htmlFor="pci3">Cell ID (PCI) 3</FieldLabel>
+                        <FieldLabel htmlFor="pci3">小区 ID（PCI）3</FieldLabel>
                         <Input
                           id="pci3"
                           type="text"
-                          placeholder="Enter PCI 3"
+                          placeholder="输入 PCI 3"
                           value={pci3}
                           onChange={(e) => setPci3(e.target.value)}
                           disabled={isLocking}

@@ -146,9 +146,9 @@ const ScheduleTowerLockingComponent = ({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Schedule Tower Locking</CardTitle>
+        <CardTitle>定时基站锁定</CardTitle>
         <CardDescription>
-          Set specific times to enable or disable tower locking.
+          在指定时间自动启用或禁用基站锁定。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -158,19 +158,18 @@ const ScheduleTowerLockingComponent = ({
             <div className="flex items-center gap-1.5">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="inline-flex" aria-label="More info">
+                  <button type="button" className="inline-flex" aria-label="更多信息">
                     <TbInfoCircleFilled className="size-5 text-info" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    Schedule tower locking to automatically enable or disable at
-                    specified times.
+                    让基站锁定在指定时间自动启用或关闭。
                   </p>
                 </TooltipContent>
               </Tooltip>
               <p className="font-semibold text-muted-foreground text-sm">
-                Enable Scheduled Locking
+                启用定时锁定
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -180,7 +179,7 @@ const ScheduleTowerLockingComponent = ({
                 onCheckedChange={handleEnabledChange}
               />
               <Label htmlFor="schedule-locking">
-                {enabled ? "Enabled" : "Disabled"}
+                {enabled ? "已启用" : "已禁用"}
               </Label>
             </div>
           </div>
@@ -188,7 +187,7 @@ const ScheduleTowerLockingComponent = ({
           <div className="flex flex-col gap-4 mt-4">
             <div className="flex items-center justify-between">
               <Label className="font-semibold text-muted-foreground text-sm">
-                Start Time
+                开始时间
               </Label>
               <Input
                 type="time"
@@ -199,7 +198,7 @@ const ScheduleTowerLockingComponent = ({
             </div>
             <div className="flex items-center justify-between">
               <Label className="font-semibold text-muted-foreground text-sm">
-                End Time
+                结束时间
               </Label>
               <Input
                 type="time"
@@ -212,7 +211,7 @@ const ScheduleTowerLockingComponent = ({
           <Separator />
           <fieldset className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
             <legend className="font-semibold text-muted-foreground text-sm">
-              Repeat On
+              重复星期
             </legend>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Days of the week">
               {DAY_LABELS.map((day, index) => (

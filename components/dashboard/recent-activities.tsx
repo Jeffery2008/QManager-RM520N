@@ -10,7 +10,7 @@ import { TbCircleCheckFilled, TbCircleXFilled } from "react-icons/tb";
 import type { NetworkEvent, EventSeverity } from "@/types/modem-status";
 import { formatTimeAgo } from "@/types/modem-status";
 import { useRecentActivities } from "@/hooks/use-recent-activities";
-import { EVENT_LABELS } from "@/constants/network-events";
+import { EVENT_LABELS, translateEventMessage } from "@/constants/network-events";
 
 import {
   Empty,
@@ -57,7 +57,9 @@ function EventRow({ event }: { event: NetworkEvent }) {
           <Label className="text-muted-foreground text-xs">
             {label} — {timeAgo}
           </Label>
-          <p className="text-sm font-medium leading-snug">{event.message}</p>
+          <p className="text-sm font-medium leading-snug">
+            {translateEventMessage(event.message)}
+          </p>
         </div>
       </div>
     </motion.div>

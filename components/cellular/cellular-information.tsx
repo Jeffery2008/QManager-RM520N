@@ -12,12 +12,10 @@ const CellularInformationComponent = () => {
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">
-          Cellular and Radio Information
+          蜂窝与射频信息
         </h1>
         <p className="text-muted-foreground">
-          View detailed information about your device&apos;s cellular radio
-          status, including signal strength, network type, and connection
-          status.
+          查看设备蜂窝射频状态的详细信息，包括信号强度、网络类型和连接状态。
         </p>
       </div>
       <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">

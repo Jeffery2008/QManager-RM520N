@@ -163,7 +163,7 @@ const calculateFrequency = (
   const earfcnNum = parseInt(earfcn);
 
   if (isNaN(earfcnNum)) {
-    return { error: "Please enter a valid number" };
+    return { error: "请输入有效的数字" };
   }
 
   if (
@@ -220,7 +220,7 @@ const FrequencyCalculator = () => {
 
   const handleCalculate = (): void => {
     if (!earfcn) {
-      setError("Please enter an E/ARFCN value");
+      setError("请输入一个 E/ARFCN 值");
       setResult(null);
       return;
     }
@@ -244,12 +244,12 @@ const FrequencyCalculator = () => {
         setError(calculationResult.error);
         setResult(null);
       } else {
-        setError("Could not identify band for this E/ARFCN value");
+        setError("无法识别该 E/ARFCN 值对应的频段");
         setResult(null);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      setError("Calculation error: " + errorMessage);
+      const errorMessage = err instanceof Error ? err.message : "未知错误";
+      setError("计算出错：" + errorMessage);
       setResult(null);
     }
   };
@@ -273,9 +273,9 @@ const FrequencyCalculator = () => {
       {/* Calculator Card */}
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>E/ARFCN Calculator</CardTitle>
+          <CardTitle>E/ARFCN 计算器</CardTitle>
           <CardDescription>
-            Enter a channel number to calculate frequency and band information.
+            输入信道编号以计算频率和频段信息。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -286,7 +286,7 @@ const FrequencyCalculator = () => {
             }
           >
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="auto">Auto</TabsTrigger>
+              <TabsTrigger value="auto">自动</TabsTrigger>
               <TabsTrigger value="lte">LTE</TabsTrigger>
               <TabsTrigger value="nr">NR</TabsTrigger>
             </TabsList>
@@ -298,18 +298,18 @@ const FrequencyCalculator = () => {
                 ? "E-ARFCN"
                 : activeTab === "nr"
                 ? "NR-ARFCN"
-                : "E/ARFCN Value"}
+                : "E/ARFCN 值"}
             </Label>
             <div className="flex gap-2">
               <Input
                 id="earfcn"
                 type="number"
-                placeholder="Enter channel number"
+                placeholder="输入信道编号"
                 value={earfcn}
                 onChange={(e) => setEarfcn(e.target.value)}
                 onKeyDown={handleKeyDown}
               />
-              <Button onClick={handleCalculate}>Calculate</Button>
+              <Button onClick={handleCalculate}>计算</Button>
             </div>
           </div>
 
@@ -323,9 +323,9 @@ const FrequencyCalculator = () => {
             <div className="space-y-4">
               <Separator />
               <div className="space-y-3">
-                <h3 className="font-semibold">Result</h3>
+                <h3 className="font-semibold">计算结果</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-muted-foreground font-semibold">Network Type</div>
+                  <div className="text-muted-foreground font-semibold">网络类型</div>
                   <div className="font-medium">
                     <Badge variant="default">{result.networkType}</Badge>
                   </div>
@@ -335,7 +335,7 @@ const FrequencyCalculator = () => {
                   </div>
                   <div className="font-medium">{result.earfcn}</div>
 
-                  <div className="text-muted-foreground font-semibold">Frequency</div>
+                  <div className="text-muted-foreground font-semibold">频率</div>
                   <div className="font-medium">{result.frequency} MHz</div>
                 </div>
               </div>
@@ -343,7 +343,7 @@ const FrequencyCalculator = () => {
               <Separator />
 
               <div className="space-y-3">
-                <h4 className="font-semibold">Possible Operating Bands</h4>
+                <h4 className="font-semibold">可能的工作频段</h4>
                 <div className="space-y-4">
                   {result.possibleBands.map((band, index) => (
                     <div key={index} className="space-y-2">
@@ -357,11 +357,11 @@ const FrequencyCalculator = () => {
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-1 text-sm">
-                        <div className="text-muted-foreground font-semibold">Duplex Mode</div>
+                        <div className="text-muted-foreground font-semibold">双工模式</div>
                         <div className="font-medium">{band.duplexType}</div>
 
                         <div className="text-muted-foreground font-semibold">
-                          Downlink Range
+                          下行范围
                         </div>
                         <div className="font-medium">
                           {band.dlLow} - {band.dlHigh} MHz
@@ -370,7 +370,7 @@ const FrequencyCalculator = () => {
                         {band.duplexType === "FDD" && (
                           <>
                             <div className="text-muted-foreground font-semibold">
-                              Uplink Range
+                              上行范围
                             </div>
                             <div className="font-medium">
                               {band.ulLow} - {band.ulHigh} MHz
@@ -380,8 +380,8 @@ const FrequencyCalculator = () => {
 
                         <div className="text-muted-foreground font-semibold">
                           {result.networkType === "LTE"
-                            ? "EARFCN Range"
-                            : "NR-ARFCN Range"}
+                            ? "EARFCN 范围"
+                            : "NR-ARFCN 范围"}
                         </div>
                         <div className="font-medium">
                           {"earfcnRange" in band
@@ -390,7 +390,7 @@ const FrequencyCalculator = () => {
                         </div>
 
                         <div className="text-muted-foreground font-semibold">
-                          DL Frequency
+                          下行频率
                         </div>
                         <div className="font-medium">
                           {band.dlFrequency} MHz
@@ -399,7 +399,7 @@ const FrequencyCalculator = () => {
                         {band.duplexType !== "SDL" && (
                           <>
                             <div className="text-muted-foreground font-semibold">
-                              UL Frequency
+                              上行频率
                             </div>
                             <div className="font-medium">
                               {band.ulFrequency} MHz
@@ -410,10 +410,10 @@ const FrequencyCalculator = () => {
                         {band.duplexType === "SDL" && (
                           <>
                             <div className="text-muted-foreground font-semibold">
-                              UL Frequency
+                              上行频率
                             </div>
                             <div className="font-medium text-muted-foreground">
-                              Downlink Only
+                              仅下行
                             </div>
                           </>
                         )}
@@ -422,7 +422,7 @@ const FrequencyCalculator = () => {
                           band.duplexType === "FDD" && (
                             <>
                               <div className="text-muted-foreground font-semibold">
-                                UL EARFCN
+                                上行 EARFCN
                               </div>
                               <div className="font-medium">
                                 {(band as LTEMatchingBand).ulEarfcn}
@@ -436,7 +436,7 @@ const FrequencyCalculator = () => {
               </div>
 
               <div className="text-xs text-muted-foreground">
-                Calculation method:{" "}
+                计算依据：{" "}
                 {result.networkType === "NR"
                   ? "3GPP TS 38.104 Section 5.4.2.1"
                   : "3GPP TS 36.101 Section 5.7"}
@@ -451,15 +451,15 @@ const FrequencyCalculator = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Calculation History</CardTitle>
+              <CardTitle>计算历史</CardTitle>
               <CardDescription>
-                Your recent calculations are saved locally.
+                最近的计算结果会保存在本地。
               </CardDescription>
             </div>
             {history.length > 0 && (
               <Button variant="destructive" size="sm" onClick={clearHistory}>
                 <Trash2 className="size-4" />
-                Clear
+                清空
               </Button>
             )}
           </div>
@@ -467,7 +467,7 @@ const FrequencyCalculator = () => {
         <CardContent>
           {history.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No calculation history yet.
+              暂无计算历史。
             </div>
           ) : (
             <div className="space-y-2">
@@ -486,7 +486,7 @@ const FrequencyCalculator = () => {
                     </div>
                     {entry.possibleBands && (
                       <div className="text-sm font-semibold">
-                        Bands:{" "}
+                        频段：{" "}
                         {entry.possibleBands
                           .map((band) =>
                             entry.networkType === "NR"
@@ -499,14 +499,14 @@ const FrequencyCalculator = () => {
                     <div className="text-xs text-muted-foreground">
                       {entry.timestamp
                         ? new Date(entry.timestamp).toLocaleString()
-                        : "No timestamp"}
+                        : "没有时间戳"}
                     </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => deleteHistoryEntry(entry.id)}
-                    aria-label="Delete history entry"
+                    aria-label="删除历史记录"
                     className="h-8 w-8 text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-4" />

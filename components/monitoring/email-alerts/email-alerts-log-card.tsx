@@ -102,14 +102,14 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
           setTotal(data.total);
           setLastFetched(new Date());
         } else {
-          const msg = data.error || "Failed to load email log";
+          const msg = data.error || "加载邮件日志失败";
           setFetchError(msg);
           if (mode !== "silent") toast.error(msg);
         }
       } catch (err) {
         if (controller.signal.aborted) return;
         const msg =
-          err instanceof Error ? err.message : "Failed to load email alert log";
+          err instanceof Error ? err.message : "加载邮件告警日志失败";
         setFetchError(msg);
         if (mode !== "silent") toast.error(msg);
       } finally {
@@ -138,9 +138,9 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Alert Log</CardTitle>
+          <CardTitle>告警日志</CardTitle>
           <CardDescription>
-            History of sent and failed email alerts.
+            已发送和发送失败的邮件告警记录。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -172,15 +172,15 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Alert Log</CardTitle>
+          <CardTitle>告警日志</CardTitle>
           <CardDescription>
-            History of sent and failed email alerts.
+            已发送和发送失败的邮件告警记录。
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert variant="destructive">
             <AlertCircle className="size-4" />
-            <AlertTitle>Failed to load alert log</AlertTitle>
+            <AlertTitle>加载告警日志失败</AlertTitle>
             <AlertDescription>
               <p>{fetchError}</p>
               <Button
@@ -190,7 +190,7 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
                 onClick={() => fetchLog("initial")}
               >
                 <RefreshCcwIcon className="size-3.5" />
-                Retry
+                重试
               </Button>
             </AlertDescription>
           </Alert>
@@ -205,15 +205,15 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Alert Log</CardTitle>
+            <CardTitle>告警日志</CardTitle>
             <CardDescription>
-              History of sent and failed email alerts.
+              已发送和发送失败的邮件告警记录。
             </CardDescription>
           </div>
           <Button
             variant="outline"
             size="icon"
-            aria-label="Refresh alert log"
+            aria-label="刷新告警日志"
             disabled={isRefreshing}
             onClick={() => fetchLog("refresh")}
           >
@@ -229,14 +229,14 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
             <TableHeader>
               <TableRow>
                 <TableHead scope="col" className="whitespace-nowrap">
-                  Timestamp
+                  时间戳
                 </TableHead>
-                <TableHead scope="col">Trigger</TableHead>
+                <TableHead scope="col">触发原因</TableHead>
                 <TableHead scope="col" className="w-20">
-                  Status
+                  状态
                 </TableHead>
                 <TableHead scope="col" className="hidden @md/card:table-cell">
-                  Recipient
+                  收件人
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -247,15 +247,14 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
                     <div className="flex flex-col items-center gap-2">
                       <MailIcon className="size-8 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">
-                        No alerts sent yet
+                        暂无已发送告警
                       </p>
                       <div className="grid gap-1">
                         <p className="text-xs text-muted-foreground/70 ">
-                          Alerts appear here when your connection drops past the
-                          configured threshold.
+                          当连接中断超过设定阈值后，告警会显示在这里。
                         </p>
                         <p className="text-xs text-muted-foreground/70">
-                          Use Send Test Email to verify your setup.
+                          可先发送测试邮件验证配置。
                         </p>
                       </div>
                     </div>
@@ -286,12 +285,12 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
                       {entry.status === "sent" ? (
                         <Badge variant="outline" className="bg-success/15 text-success hover:bg-success/20 border-success/30">
                           <CheckCircle2Icon className="h-3 w-3" />
-                          Sent
+                          已发送
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30">
                           <XCircleIcon className="h-3 w-3" />
-                          Failed
+                          失败
                         </Badge>
                       )}
                     </TableCell>
@@ -308,13 +307,13 @@ const EmailAlertsLogCard = ({ refreshKey }: EmailAlertsLogCardProps) => {
       {entries.length > 0 && (
         <CardFooter className="flex flex-col gap-1 @xs/card:flex-row @xs/card:justify-between @xs/card:items-center">
           <div className="text-xs text-muted-foreground">
-            Showing <strong>{entries.length}</strong> of{" "}
-            <strong>{total}</strong> entries
+            显示 <strong>{entries.length}</strong> /{" "}
+            <strong>{total}</strong> 条记录
           </div>
           {lastFetched && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Clock className="size-3 shrink-0" />
-              Last updated: {lastFetched.toLocaleTimeString()}
+              最后更新：{lastFetched.toLocaleTimeString("zh-CN")}
             </div>
           )}
         </CardFooter>

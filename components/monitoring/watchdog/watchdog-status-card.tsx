@@ -52,37 +52,37 @@ const STATE_BADGE_CONFIG: Record<
   { label: string; variant: "outline"; className: string; icon: React.ReactNode }
 > = {
   monitor: {
-    label: "Monitoring",
+    label: "监控中",
     variant: "outline",
     className: "bg-success/15 text-success hover:bg-success/20 border-success/30",
     icon: <CheckCircle2Icon className="h-3 w-3" />,
   },
   suspect: {
-    label: "Detecting Issue",
+    label: "正在检测问题",
     variant: "outline",
     className: "bg-warning/15 text-warning hover:bg-warning/20 border-warning/30",
     icon: <TriangleAlertIcon className="h-3 w-3" />,
   },
   recovery: {
-    label: "Recovering",
+    label: "恢复中",
     variant: "outline",
     className: "bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30 animate-pulse motion-reduce:animate-none",
     icon: <AlertCircleIcon className="h-3 w-3" />,
   },
   cooldown: {
-    label: "Cooldown",
+    label: "冷却中",
     variant: "outline",
     className: "bg-info/15 text-info hover:bg-info/20 border-info/30",
     icon: <ClockIcon className="h-3 w-3" />,
   },
   locked: {
-    label: "Locked",
+    label: "已锁定",
     variant: "outline",
     className: "bg-muted/50 text-muted-foreground border-muted-foreground/30",
     icon: <LockIcon className="h-3 w-3" />,
   },
   disabled: {
-    label: "Disabled",
+    label: "已禁用",
     variant: "outline",
     className: "bg-muted/50 text-muted-foreground border-muted-foreground/30",
     icon: <MinusCircleIcon className="h-3 w-3" />,
@@ -197,35 +197,35 @@ export function WatchdogStatusCard({
   const tierLabel = TIER_LABELS[watchcat.current_tier] || TIER_LABELS[0];
 
   const statusRows: { label: string; value: React.ReactNode }[] = [
-    { label: "Current Step", value: tierLabel },
+    { label: "当前步骤", value: tierLabel },
     {
-      label: "Failed Checks",
+      label: "失败检查次数",
       value: <span className="font-mono">{watchcat.failure_count}</span>,
     },
     ...(watchcat.cooldown_remaining > 0
       ? [
           {
-            label: "Cooldown",
+            label: "冷却时间",
             value: (
               <span className="font-mono">
-                {watchcat.cooldown_remaining}s remaining
+                剩余 {watchcat.cooldown_remaining} 秒
               </span>
             ),
           },
         ]
       : []),
     {
-      label: "Total Recoveries",
+      label: "累计恢复次数",
       value: <span className="font-mono">{watchcat.total_recoveries}</span>,
     },
     {
-      label: "Reboots This Hour",
+      label: "本小时重启次数",
       value: <span className="font-mono">{watchcat.reboots_this_hour}</span>,
     },
     ...(watchcat.last_recovery_time != null
       ? [
           {
-            label: "Last Recovery",
+            label: "上次恢复",
             value: (
               <span>
                 {TIER_LABELS[watchcat.last_recovery_tier ?? 0]}{" "}

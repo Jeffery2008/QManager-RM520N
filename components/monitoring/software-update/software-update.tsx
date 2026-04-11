@@ -45,32 +45,32 @@ export function StatusBadge({
 }) {
   if (isUpdating && updateStatus.status !== "error") {
     return (
-      <Badge variant="outline" className="bg-info/15 text-info hover:bg-info/20 border-info/30">
-        <DownloadIcon className="h-3 w-3" />
-        Updating
-      </Badge>
+        <Badge variant="outline" className="bg-info/15 text-info hover:bg-info/20 border-info/30">
+          <DownloadIcon className="h-3 w-3" />
+        更新中
+        </Badge>
     );
   }
   if (isDownloading) {
     return (
-      <Badge variant="outline" className="bg-info/15 text-info hover:bg-info/20 border-info/30">
-        <DownloadIcon className="h-3 w-3" />
-        Downloading
-      </Badge>
+        <Badge variant="outline" className="bg-info/15 text-info hover:bg-info/20 border-info/30">
+          <DownloadIcon className="h-3 w-3" />
+        下载中
+        </Badge>
     );
   }
   if (updateAvailable) {
     return (
-      <Badge variant="outline" className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
+        <Badge variant="outline" className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
         <TriangleAlertIcon className="h-3 w-3" />
-        Update available
+        有可用更新
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="bg-success/15 text-success hover:bg-success/20 border-success/30">
+      <Badge variant="outline" className="bg-success/15 text-success hover:bg-success/20 border-success/30">
       <CheckCircle2Icon className="h-3 w-3" />
-      Up to date
+      已是最新版本
     </Badge>
   );
 }
@@ -268,7 +268,7 @@ const SoftwareUpdateComponent = () => {
                 ) : (
                   <>
                     <RefreshCwIcon className="size-4" />
-                    Retry
+                    重试
                   </>
                 )}
               </Button>

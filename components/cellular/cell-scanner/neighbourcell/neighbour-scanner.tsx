@@ -87,11 +87,11 @@ const NeighbourCellScanner = () => {
 
       if (data.success) {
         toast.success("小区已锁定", {
-          description: `Locked to LTE PCI ${lockTarget.pci} on EARFCN ${lockTarget.frequency}`,
+          description: `已锁定到 LTE PCI ${lockTarget.pci}（EARFCN ${lockTarget.frequency}）`,
         });
       } else {
         toast.error("锁定失败", {
-          description: data.detail || data.error || "Unknown error",
+          description: data.detail || data.error || "未知错误",
         });
       }
     } catch {
@@ -123,11 +123,10 @@ const NeighbourCellScanner = () => {
                 </div>
                 <div className="max-w-xs space-y-1">
                   <p className="text-sm font-medium text-foreground">
-                    {error || "Scan failed"}
+                    {error || "扫描失败"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    The modem may be busy or unreachable. Check your connection
-                    and try again.
+                    调制解调器可能正忙或暂时不可达。请检查连接后重试。
                   </p>
                 </div>
                 <Button onClick={startScan} variant="outline" size="sm">
@@ -142,7 +141,7 @@ const NeighbourCellScanner = () => {
           {(hasScanResults || isScanning) && (
             <div className="mt-4 flex items-center gap-x-2">
               <Button onClick={startScan} disabled={isScanning}>
-                {isScanning ? "Scanning..." : "Start New Scan"}
+                {isScanning ? "扫描中..." : "开始新扫描"}
               </Button>
               {hasScanResults && (
                 <Button
@@ -173,8 +172,7 @@ const NeighbourCellScanner = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>锁定到该小区？</AlertDialogTitle>
             <AlertDialogDescription>
-              This will lock the modem to the following cell. It will only
-              connect to this specific cell until the lock is removed.
+              这会将调制解调器锁定到以下小区。在解除锁定前，它只会连接这个指定小区。
             </AlertDialogDescription>
             {lockTarget && (
               <p className="font-mono text-xs text-muted-foreground">
@@ -184,12 +182,12 @@ const NeighbourCellScanner = () => {
             )}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLocking}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isLocking}>取消</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmLockCell(); }} disabled={isLocking}>
               {isLocking ? (
                 <>
                   <LoaderCircleIcon className="size-4 animate-spin" />
-                  Locking...
+                  锁定中...
                 </>
               ) : (
                 "锁定小区"

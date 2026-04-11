@@ -16,9 +16,9 @@ const TowerLockingComponent = () => {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Tower Locking</h1>
+        <h1 className="text-3xl font-bold mb-2">基站锁定</h1>
         <p className="text-muted-foreground">
-          Lock onto specific cell towers by PCI and EARFCN.
+          通过 PCI 和 EARFCN 锁定到指定的小区基站。
         </p>
       </div>
       <div className="grid grid-cols-1 gap-4">

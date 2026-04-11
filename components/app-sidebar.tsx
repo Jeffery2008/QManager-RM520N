@@ -79,7 +79,7 @@ const data = {
       icon: TerminalIcon,
     },
     {
-      title: "Web 控制台",
+      title: "网页控制台",
       url: "/system-settings/web-console",
       icon: TerminalSquareIcon,
     },
@@ -226,7 +226,7 @@ const data = {
       icon: DogIcon,
     },
     {
-      title: "Tailscale VPN",
+      title: "Tailscale 网络",
       url: "/monitoring/tailscale",
       icon: GlobeIcon,
     },

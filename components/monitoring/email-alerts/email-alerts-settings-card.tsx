@@ -96,12 +96,12 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
   // --- Validation ------------------------------------------------------------
   const senderEmailError =
     senderEmail && !EMAIL_REGEX.test(senderEmail)
-      ? "Enter a valid email address"
+      ? "请输入有效的电子邮箱地址"
       : null;
 
   const recipientEmailError =
     recipientEmail && !EMAIL_REGEX.test(recipientEmail)
-      ? "Enter a valid email address"
+      ? "请输入有效的电子邮箱地址"
       : null;
 
   const thresholdError =
@@ -109,7 +109,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
     (isNaN(Number(thresholdMinutes)) ||
       Number(thresholdMinutes) < 1 ||
       Number(thresholdMinutes) > 60)
-      ? "Duration must be 1\u201360 minutes"
+      ? "时长必须在 1–60 分钟之间"
       : null;
 
   const hasValidationErrors = !!(
@@ -154,18 +154,18 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
     const success = await saveSettings(payload);
     if (success) {
       markSaved();
-      toast.success("Email alert settings saved");
+      toast.success("邮件告警设置已保存");
     } else {
-      toast.error(error || "Failed to save email alert settings");
+      toast.error(error || "保存邮件告警设置失败");
     }
   };
 
   const handleSendTest = async () => {
     const success = await sendTestEmail();
     if (success) {
-      toast.success("Test email sent successfully");
+      toast.success("测试邮件发送成功");
     } else {
-      toast.error("Failed to send test email — check your configuration");
+      toast.error("发送测试邮件失败，请检查配置");
     }
     // Refresh log on both success and failure — backend logs both outcomes
     onTestEmailSent?.();
@@ -185,9 +185,9 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Email Alert Settings</CardTitle>
+          <CardTitle>邮件告警设置</CardTitle>
           <CardDescription>
-            Sends via Gmail SMTP using an app password.
+            通过 Gmail SMTP 和应用专用密码发送邮件。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -212,15 +212,15 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Email Alert Settings</CardTitle>
+          <CardTitle>邮件告警设置</CardTitle>
           <CardDescription>
-            Sends via Gmail SMTP using an app password.
+            通过 Gmail SMTP 和应用专用密码发送邮件。
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Alert variant="destructive">
             <AlertCircle className="size-4" />
-            <AlertTitle>Failed to load settings</AlertTitle>
+            <AlertTitle>加载设置失败</AlertTitle>
             <AlertDescription className="flex items-center justify-between">
               <span>{error}</span>
               <Button
@@ -229,7 +229,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
                 onClick={() => refresh()}
               >
                 <RefreshCcwIcon className="size-3.5" />
-                Retry
+                重试
               </Button>
             </AlertDescription>
           </Alert>
@@ -243,9 +243,9 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Email Alert Settings</CardTitle>
+          <CardTitle>邮件告警设置</CardTitle>
           <CardDescription>
-            Sends via Gmail SMTP using an app password.
+            通过 Gmail SMTP 和应用专用密码发送邮件。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -253,10 +253,10 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
             <PackageIcon className="size-10 text-muted-foreground" />
             <div className="text-center space-y-1.5">
               <p className="text-sm font-medium">
-                <code>msmtp</code> is not installed on this device.
+                此设备尚未安装 <code>msmtp</code>。
               </p>
               <p className="text-xs text-muted-foreground">
-                Install automatically or run the command manually.
+                可自动安装，也可手动执行命令安装。
               </p>
             </div>
 
@@ -293,12 +293,12 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
                 {installResult.status === "running" ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    {installResult.message || "Installing..."}
+                    {installResult.message || "安装中..."}
                   </>
                 ) : (
                   <>
                     <PackageIcon className="size-4" />
-                    Install msmtp
+                    安装 msmtp
                   </>
                 )}
               </Button>
@@ -309,13 +309,13 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
                 disabled={installResult.status === "running"}
               >
                 <RefreshCcwIcon className="size-3.5" />
-                Check Again
+                重新检查
               </Button>
             </div>
 
             <div className="w-full flex items-center gap-3 text-xs text-muted-foreground">
               <div className="h-px flex-1 bg-border" />
-              <span>or install manually</span>
+              <span>或手动安装</span>
               <div className="h-px flex-1 bg-border" />
             </div>
 
@@ -330,9 +330,9 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Email Alert Settings</CardTitle>
+        <CardTitle>邮件告警设置</CardTitle>
         <CardDescription>
-          Sends via Gmail SMTP using an app password.
+          通过 Gmail SMTP 和应用专用密码发送邮件。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -342,7 +342,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
               {/* Enable toggle */}
               <Field orientation="horizontal" className="w-fit">
                 <FieldLabel htmlFor="email-alerts-enabled">
-                  Enable Email Alerts
+                  启用邮件告警
                 </FieldLabel>
                 <Switch
                   id="email-alerts-enabled"
@@ -353,7 +353,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
 
               {/* Sender email */}
               <Field>
-                <FieldLabel htmlFor="sender-email">Sender Email</FieldLabel>
+                <FieldLabel htmlFor="sender-email">发件邮箱</FieldLabel>
                 <Input
                   id="sender-email"
                   type="email"
@@ -375,7 +375,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
                   </FieldError>
                 ) : (
                   <FieldDescription id="sender-email-desc">
-                    The Gmail account that will send the alert.
+                    用于发送告警的 Gmail 账号。
                   </FieldDescription>
                 )}
               </Field>
@@ -383,7 +383,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
               {/* Recipient email */}
               <Field>
                 <FieldLabel htmlFor="recipient-email">
-                  Recipient Email
+                  收件邮箱
                 </FieldLabel>
                 <Input
                   id="recipient-email"
@@ -408,7 +408,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
                   </FieldError>
                 ) : (
                   <FieldDescription id="recipient-email-desc">
-                    Where alerts will be delivered.
+                    告警邮件将发送到这个地址。
                   </FieldDescription>
                 )}
               </Field>
@@ -416,7 +416,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
               {/* Gmail App Password */}
               <Field>
                 <FieldLabel htmlFor="app-password">
-                  Gmail App Password
+                  Gmail 应用专用密码
                 </FieldLabel>
                 <div className="relative max-w-sm">
                   <Input
@@ -433,7 +433,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
                   />
                   <button
                     type="button"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? "隐藏密码" : "显示密码"}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
                     onClick={() => setShowPassword((v) => !v)}
                   >
@@ -445,23 +445,23 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
                   </button>
                 </div>
                 <FieldDescription id="app-password-desc">
-                  Generate an{" "}
+                  在 Google 账号中生成{" "}
                   <a
                     href="https://myaccount.google.com/apppasswords"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-info underline underline-offset-2 hover:text-info/80"
                   >
-                    App Password
+                    应用专用密码
                   </a>{" "}
-                  in your Google Account.
+                  以供此处使用。
                 </FieldDescription>
               </Field>
 
               {/* Threshold duration */}
               <Field>
                 <FieldLabel htmlFor="threshold-minutes">
-                  Alert After (minutes)
+                  告警触发时间（分钟）
                 </FieldLabel>
                 <Input
                   id="threshold-minutes"
@@ -483,8 +483,7 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
                   <FieldError id="threshold-error">{thresholdError}</FieldError>
                 ) : (
                   <FieldDescription id="threshold-desc">
-                    How long the connection must be down before an alert is sent.
-                    Prevents alerts for brief, transient outages.
+                    连接中断持续多久后才发送告警，可避免因短暂抖动而误报。
                   </FieldDescription>
                 )}
               </Field>
@@ -508,19 +507,19 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
                     {isSendingTest ? (
                       <>
                         <Loader2 className="size-4 animate-spin" />
-                        Sending…
+                        发送中…
                       </>
                     ) : (
                       <>
                         <SendIcon className="size-4" />
-                        Send Test Email
+                        发送测试邮件
                       </>
                     )}
                   </Button>
                 </div>
                 {isDirty && !canSendTest && isEnabled && (
                   <p className="text-xs text-muted-foreground">
-                    Save your changes before sending a test email.
+                    请先保存更改，再发送测试邮件。
                   </p>
                 )}
               </div>
@@ -533,9 +532,9 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
             <Separator className="mt-4" />
             <div className="flex items-center justify-between pt-4">
               <div>
-                <p className="text-sm font-medium">Remove msmtp</p>
+                <p className="text-sm font-medium">移除 msmtp</p>
                 <p className="text-xs text-muted-foreground">
-                  Uninstall the msmtp package from this device.
+                  从此设备中卸载 msmtp 软件包。
                 </p>
               </div>
               <AlertDialog>
@@ -548,12 +547,12 @@ const EmailAlertsSettingsCard = ({ onTestEmailSent }: EmailAlertsSettingsCardPro
                     {isUninstalling ? (
                       <>
                         <Loader2 className="size-4 animate-spin" />
-                        Removing…
+                        移除中…
                       </>
                     ) : (
                       <>
                         <Trash2Icon className="size-4" />
-                        Uninstall
+                        卸载
                       </>
                     )}
                   </Button>

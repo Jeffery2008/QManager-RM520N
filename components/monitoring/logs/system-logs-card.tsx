@@ -58,6 +58,7 @@ import {
   Trash2Icon,
   LogsIcon,
 } from "lucide-react";
+import { translateEventMessage } from "@/constants/network-events";
 
 const CGI_ENDPOINT = "/cgi-bin/quecmanager/system/logs.sh";
 
@@ -101,6 +102,127 @@ const getLevelBadgeVariant = (
       return "secondary";
   }
 };
+
+function translateLogMessage(message: string): string {
+  const rules: Array<{
+    pattern: RegExp;
+    translate: (match: RegExpExecArray) => string;
+  }> = [
+    { pattern: /^Tailscale not installed$/, translate: () => "Tailscale 未安装" },
+    { pattern: /^Successful login$/, translate: () => "登录成功" },
+    { pattern: /^Fetching system settings$/, translate: () => "正在获取系统设置" },
+    { pattern: /^Fetching email alert settings$/, translate: () => "正在获取邮件告警设置" },
+    { pattern: /^Fetching watchdog settings$/, translate: () => "正在获取看门狗设置" },
+    { pattern: /^Fetching SMS alert settings$/, translate: () => "正在获取短信告警设置" },
+    { pattern: /^Fetching IP Passthrough settings$/, translate: () => "正在获取 IP 透传设置" },
+    {
+      pattern: /^QManager Ping Daemon starting \(PID (\d+)\)$/,
+      translate: ([, pid]) => `QManager Ping 守护进程启动中（PID ${pid}）`,
+    },
+    {
+      pattern: /^QManager Poller starting$/,
+      translate: () => "QManager 轮询器启动中",
+    },
+    {
+      pattern: /^Targets: (.+)$/,
+      translate: ([, targets]) => `检测目标：${targets}`,
+    },
+    {
+      pattern: /^Interval: (.+), Fail threshold: (.+), Recover threshold: (.+)$/,
+      translate: ([, interval, fail, recover]) =>
+        `间隔：${interval}，失败阈值：${fail}，恢复阈值：${recover}`,
+    },
+    {
+      pattern: /^History size: (.+), Timeout: (.+)$/,
+      translate: ([, size, timeout]) => `历史容量：${size}，超时：${timeout}`,
+    },
+    {
+      pattern: /^Config: interval=(.+) tier2_every=(.+) iface=(.+)$/,
+      translate: ([, interval, tier2, iface]) =>
+        `配置：轮询间隔=${interval}，二级采集间隔=${tier2}，接口=${iface}`,
+    },
+    {
+      pattern: /^Log level: (.+)$/,
+      translate: ([, level]) => `日志级别：${level}`,
+    },
+    {
+      pattern: /^Collecting boot-only data\.\.\.$/,
+      translate: () => "正在采集仅启动时获取的数据...",
+    },
+    {
+      pattern: /^Loaded supported bands from RAM cache$/,
+      translate: () => "已从 RAM 缓存加载支持频段",
+    },
+    {
+      pattern: /^Boot data: FW=(.+) BUILD=(.+) MFG=(.+) MODEL=(.+)$/,
+      translate: ([, fw, build, mfg, model]) =>
+        `启动信息：固件=${fw}，构建日期=${build}，厂商=${mfg}，型号=${model}`,
+    },
+    {
+      pattern: /^Boot data: IMEI=(.+) IMSI=(.+) ICCID=(.+)$/,
+      translate: ([, imei, imsi, iccid]) =>
+        `启动信息：IMEI=${imei}，IMSI=${imsi}，ICCID=${iccid}`,
+    },
+    {
+      pattern: /^Boot data: PHONE=(.+) CAT=(.+) MIMO=(.*)$/,
+      translate: ([, phone, cat, mimo]) =>
+        `启动信息：电话号码=${phone}，类别=${cat}，MIMO=${mimo || "-"}`,
+    },
+    {
+      pattern: /^Boot data: IPPT mode=(.+) nat=(.+) usb=(.+) dns=(.+)$/,
+      translate: ([, mode, nat, usb, dns]) =>
+        `启动信息：IP 透传模式=${mode}，NAT=${nat}，USB=${usb}，DNS=${dns}`,
+    },
+    {
+      pattern: /^Email alerts disabled or not configured$/,
+      translate: () => "邮件告警未启用或未配置",
+    },
+    {
+      pattern: /^SMS alerts disabled or not configured$/,
+      translate: () => "短信告警未启用或未配置",
+    },
+    {
+      pattern: /^Boot data collected, entering poll loop$/,
+      translate: () => "启动信息采集完成，进入轮询循环",
+    },
+    {
+      pattern: /^Internet unreachable after (\d+) consecutive failures$/,
+      translate: ([, count]) => `连续 ${count} 次失败后互联网不可达`,
+    },
+    {
+      pattern: /^Connection uptime timer reset \(internet lost after (\d+)s\)$/,
+      translate: ([, seconds]) => `连接时长计时器已重置（互联网在 ${seconds} 秒后中断）`,
+    },
+    {
+      pattern: /^GET: mode=(.+) nat=(.+) usb=(.+) dns=(.+)$/,
+      translate: ([, mode, nat, usb, dns]) =>
+        `当前设置：模式=${mode}，NAT=${nat}，USB=${usb}，DNS=${dns}`,
+    },
+    {
+      pattern: /^STATE: ([^:]+): (.*) → (.*)$/,
+      translate: ([, field, from, to]) => {
+        const labels: Record<string, string> = {
+          network_type: "网络类型",
+          lte_state: "LTE 状态",
+          nr_state: "NR 状态",
+          reachable: "可达性",
+        };
+        return `状态变化：${labels[field] ?? field}：${from || "空"} → ${to || "空"}`;
+      },
+    },
+    {
+      pattern: /^EVENT \[[^\]]+\] (.+)$/,
+      translate: ([, eventMessage]) => `事件：${translateEventMessage(eventMessage)}`,
+    },
+  ];
+
+  for (const rule of rules) {
+    const match = rule.pattern.exec(message);
+    if (match) return rule.translate(match);
+  }
+
+  return message;
+}
 
 const SystemLogsCard = () => {
   // Data state
@@ -171,7 +293,7 @@ const SystemLogsCard = () => {
         }
       } catch {
         if (mountedRef.current && !silent) {
-          toast.error("Failed to load system logs");
+          toast.error("加载系统日志失败");
         }
       } finally {
         if (mountedRef.current && !silent) {
@@ -224,15 +346,15 @@ const SystemLogsCard = () => {
       if (!mountedRef.current) return;
 
       if (data.success) {
-        toast.success("Log files cleared");
+        toast.success("日志文件已清除");
         setShowClearDialog(false);
         await fetchLogs(true);
       } else {
-        toast.error(data.detail || "Failed to clear log files");
+        toast.error(data.detail || "清除日志文件失败");
       }
     } catch {
       if (mountedRef.current) {
-        toast.error("Failed to clear log files");
+        toast.error("清除日志文件失败");
       }
     } finally {
       if (mountedRef.current) {
@@ -248,9 +370,9 @@ const SystemLogsCard = () => {
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>System Logs</CardTitle>
+          <CardTitle>系统日志</CardTitle>
           <CardDescription>
-            QManager application logs from all components.
+            来自各个组件的 QManager 应用日志。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -282,9 +404,9 @@ const SystemLogsCard = () => {
     <>
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>System Logs</CardTitle>
+          <CardTitle>系统日志</CardTitle>
           <CardDescription>
-            QManager application logs from all components.
+            来自各个组件的 QManager 应用日志。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -294,10 +416,10 @@ const SystemLogsCard = () => {
             <div className="grid grid-cols-2 @md/card:flex @md/card:flex-wrap items-center gap-2">
               <Select value={level} onValueChange={setLevel}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Levels" />
+                  <SelectValue placeholder="所有级别" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Levels</SelectItem>
+                  <SelectItem value="all">所有级别</SelectItem>
                   <SelectItem value="DEBUG">DEBUG</SelectItem>
                   <SelectItem value="INFO">INFO</SelectItem>
                   <SelectItem value="WARN">WARN</SelectItem>
@@ -307,10 +429,10 @@ const SystemLogsCard = () => {
 
               <Select value={component} onValueChange={setComponent}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All Components" />
+                  <SelectValue placeholder="所有组件" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Components</SelectItem>
+                  <SelectItem value="all">所有组件</SelectItem>
                   {availableComponents.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
@@ -321,12 +443,12 @@ const SystemLogsCard = () => {
 
               <div className="relative col-span-2 @md/card:flex-1 @md/card:min-w-48">
                 <label htmlFor="log-search" className="sr-only">
-                  Search logs
+                  搜索日志
                 </label>
                 <SearchIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
                 <Input
                   id="log-search"
-                  placeholder="Search logs..."
+                  placeholder="搜索日志..."
                   value={searchInput}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-8"
@@ -358,7 +480,7 @@ const SystemLogsCard = () => {
                   htmlFor="include-rotated"
                   className="text-sm text-muted-foreground whitespace-nowrap"
                 >
-                  Include archived
+                  包含归档
                 </label>
               </div>
 
@@ -366,7 +488,7 @@ const SystemLogsCard = () => {
                 <Button
                   variant="outline"
                   size="icon"
-                  aria-label="Refresh system logs"
+                  aria-label="刷新系统日志"
                   onClick={() => fetchLogs()}
                 >
                   <RefreshCcwIcon className="size-4" />
@@ -378,7 +500,7 @@ const SystemLogsCard = () => {
                   onClick={() => setShowClearDialog(true)}
                 >
                   <Trash2Icon className="size-4 mr-1" />
-                  Clear
+                  清空
                 </Button>
               </div>
             </div>
@@ -389,12 +511,12 @@ const SystemLogsCard = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-44">Timestamp</TableHead>
-                  <TableHead className="w-20">Level</TableHead>
+                  <TableHead className="w-44">时间戳</TableHead>
+                  <TableHead className="w-20">级别</TableHead>
                   <TableHead className="w-32 hidden @md/card:table-cell">
-                    Component
+                    组件
                   </TableHead>
-                  <TableHead>Message</TableHead>
+                  <TableHead>消息</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -404,7 +526,7 @@ const SystemLogsCard = () => {
                       <div className="flex flex-col items-center gap-2">
                         <LogsIcon className="h-8 w-8 text-muted-foreground" />
                         <p className="text-sm text-muted-foreground">
-                          No log entries found
+                          未找到日志记录
                         </p>
                       </div>
                     </TableCell>
@@ -433,7 +555,7 @@ const SystemLogsCard = () => {
                         </code>
                       </TableCell>
                       <TableCell className="wrap-break-word text-sm">
-                        {entry.message}
+                        {translateLogMessage(entry.message)}
                       </TableCell>
                     </MotionTableRow>
                   ))
@@ -444,19 +566,18 @@ const SystemLogsCard = () => {
         </CardContent>
         <CardFooter className="flex justify-between items-center">
           <div className="text-xs text-muted-foreground">
-            Showing <strong>{entries.length}</strong> of{" "}
-            <strong>{totalEntries}</strong> entries
+            显示 <strong>{entries.length}</strong> /{" "}
+            <strong>{totalEntries}</strong> 条记录
             {stats && (
               <span className="ml-2">
-                ({stats.current_size_kb}KB, {stats.rotated_files} rotated file
-                {stats.rotated_files !== 1 ? "s" : ""})
+                （{stats.current_size_kb}KB，{stats.rotated_files} 个归档文件）
               </span>
             )}
           </div>
           {lastFetched && (
             <div className="flex items-center text-xs text-muted-foreground">
               <Clock className="h-3 w-3 mr-1" />
-              Last updated: {lastFetched.toLocaleTimeString()}
+              最后更新：{lastFetched.toLocaleTimeString("zh-CN")}
             </div>
           )}
         </CardFooter>
@@ -466,14 +587,13 @@ const SystemLogsCard = () => {
       <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Clear System Logs</AlertDialogTitle>
+            <AlertDialogTitle>清空系统日志</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete all log entries including rotated
-              files. This action cannot be undone.
+              这会永久删除所有日志条目及归档文件，且无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isClearing}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isClearing}>取消</AlertDialogCancel>
             <AlertDialogAction
               disabled={isClearing}
               onClick={handleClearLogs}
@@ -482,10 +602,10 @@ const SystemLogsCard = () => {
               {isClearing ? (
                 <>
                   <Loader2 className="size-4 animate-spin mr-1" />
-                  Clearing...
+                  清空中...
                 </>
               ) : (
-                "Clear All Logs"
+                "清空全部日志"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

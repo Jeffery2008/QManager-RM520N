@@ -11,16 +11,16 @@ const CellularSettingsComponent = () => {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Cellular Basic Settings</h1>
+        <h1 className="text-3xl font-bold mb-2">蜂窝基础设置</h1>
         <p className="text-muted-foreground">
-          SIM slot, radio state, and network mode preferences.
+          配置 SIM 卡槽、无线电状态和网络模式偏好。
         </p>
       </div>
       {error && !isLoading && (
         <div role="alert" className="mb-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Failed to load cellular settings. Displayed values may be outdated.
+          加载蜂窝设置失败，当前显示的值可能已过期。
           <button type="button" className="ml-2 underline" onClick={refresh}>
-            Retry
+            重试
           </button>
         </div>
       )}

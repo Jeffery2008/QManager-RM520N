@@ -111,9 +111,9 @@ const NRSALockingComponent = ({
 
   const handleToggle = (checked: boolean) => {
     if (checked && isWatcherRunning) {
-      toast.warning("Failover check in progress", {
-        description: "Signal quality check is running, please wait.",
-      });
+        toast.warning("故障切换检查进行中", {
+          description: "当前正在执行信号质量检查，请稍后再试。",
+        });
       return;
     }
     if (checked) {
@@ -128,8 +128,8 @@ const NRSALockingComponent = ({
         isNaN(parsedBand) ||
         isNaN(parsedScs)
       ) {
-        toast.warning("Incomplete fields", {
-          description: "Please fill in all required tower fields before locking.",
+        toast.warning("字段未填写完整", {
+          description: "锁定前请先填写所有必要的基站参数。",
         });
         return;
       }
@@ -152,9 +152,9 @@ const NRSALockingComponent = ({
     if (pendingCell) {
       const success = await onLock(pendingCell);
       if (success) {
-        toast.success("NR-SA tower lock applied");
+        toast.success("NR-SA 基站锁定已应用");
       } else {
-        toast.error("Failed to lock tower — check modem connection");
+        toast.error("基站锁定失败，请检查调制解调器连接");
       }
     }
   };
@@ -163,9 +163,9 @@ const NRSALockingComponent = ({
     setShowUnlockDialog(false);
     const success = await onUnlock();
     if (success) {
-      toast.success("NR-SA tower lock cleared");
+      toast.success("NR-SA 基站锁定已解除");
     } else {
-      toast.error("Failed to remove tower lock");
+      toast.error("移除基站锁定失败");
     }
   };
 
@@ -181,9 +181,9 @@ const NRSALockingComponent = ({
       setPci(String(nrPci));
       if (nrBandNum != null) setBand(String(nrBandNum));
       if (nrScs != null) setScs(String(nrScs));
-      toast.info("Filled from current connected tower");
+      toast.info("已填入当前连接基站的参数");
     } else {
-      toast.warning("No active 5G SA connection");
+      toast.warning("当前没有活动的 5G SA 连接");
     }
   };
 
@@ -194,9 +194,9 @@ const NRSALockingComponent = ({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>NR-SA Tower Locking</CardTitle>
+          <CardTitle>NR-SA 基站锁定</CardTitle>
           <CardDescription>
-            Lock to a specific 5G SA cell tower by entering its channel, cell ID, band, and subcarrier spacing.
+            通过输入信道、小区 ID、频段和子载波间隔，锁定到指定的 5G SA 小区基站。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -239,11 +239,11 @@ const NRSALockingComponent = ({
     <>
       <Card className={`@container/card ${isCardDisabled ? "opacity-60" : ""}`}>
         <CardHeader>
-          <CardTitle>NR-SA Tower Locking</CardTitle>
+          <CardTitle>NR-SA 基站锁定</CardTitle>
           <CardDescription>
-            Lock to a specific 5G SA cell tower by entering its channel, cell ID, band, and subcarrier spacing.
-            {isNsaMode && " Not compatible with NR5G-NSA mode."}
-            {isLteOnly && " No NR connection available."}
+            通过输入信道、小区 ID、频段和子载波间隔，锁定到指定的 5G SA 小区基站。
+            {isNsaMode && " 当前与 NR5G-NSA 模式不兼容。"}
+            {isLteOnly && " 当前没有可用的 NR 连接。"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -253,7 +253,7 @@ const NRSALockingComponent = ({
               <div className="flex items-center gap-1.5">
                 <TbInfoCircleFilled className="size-5 text-info" />
                 <p className="font-semibold text-muted-foreground text-sm">
-                  NR Tower Locking Enabled
+                  启用 NR 基站锁定
                 </p>
               </div>
               <div className="flex items-center space-x-2">
@@ -267,7 +267,7 @@ const NRSALockingComponent = ({
                   disabled={isDisabled}
                 />
                 <Label htmlFor="nr-sa-tower-locking">
-                  {isEnabled ? "Enabled" : "Disabled"}
+                  {isEnabled ? "已启用" : "已禁用"}
                 </Label>
               </div>
             </div>
@@ -282,7 +282,7 @@ const NRSALockingComponent = ({
                     <div className="grid grid-cols-2 gap-4">
                       <Field>
                         <div className="flex items-center justify-between">
-                          <FieldLabel htmlFor="nrarfcn1">Channel (ARFCN)</FieldLabel>
+                          <FieldLabel htmlFor="nrarfcn1">信道（ARFCN）</FieldLabel>
                           <Button
                             type="button"
                             size="sm"
@@ -290,24 +290,24 @@ const NRSALockingComponent = ({
                             onClick={handleUseCurrent}
                             disabled={isDisabled || !hasActiveNrCell}
                           >
-                            Use Current
+                            使用当前值
                           </Button>
                         </div>
                         <Input
                           id="nrarfcn1"
                           type="text"
-                          placeholder="Enter ARFCN"
+                          placeholder="输入 ARFCN"
                           value={arfcn}
                           onChange={(e) => setArfcn(e.target.value)}
                           disabled={isDisabled}
                         />
                       </Field>
                       <Field>
-                        <FieldLabel htmlFor="nrpci">Cell ID (PCI)</FieldLabel>
+                        <FieldLabel htmlFor="nrpci">小区 ID（PCI）</FieldLabel>
                         <Input
                           id="nrpci"
                           type="text"
-                          placeholder="Enter PCI"
+                          placeholder="输入 PCI"
                           value={pci}
                           onChange={(e) => setPci(e.target.value)}
                           disabled={isDisabled}
@@ -316,25 +316,25 @@ const NRSALockingComponent = ({
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <Field>
-                        <FieldLabel htmlFor="nr-band">NR Band</FieldLabel>
+                        <FieldLabel htmlFor="nr-band">NR 频段</FieldLabel>
                         <Input
                           id="nr-band"
                           type="text"
-                          placeholder="Enter NR Band"
+                          placeholder="输入 NR 频段"
                           value={band}
                           onChange={(e) => setBand(e.target.value)}
                           disabled={isDisabled}
                         />
                       </Field>
                       <Field>
-                        <FieldLabel htmlFor="scs">Subcarrier Spacing</FieldLabel>
+                        <FieldLabel htmlFor="scs">子载波间隔</FieldLabel>
                         <Select
                           value={scs}
                           onValueChange={setScs}
                           disabled={isDisabled}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="SCS" />
+                            <SelectValue placeholder="选择 SCS" />
                           </SelectTrigger>
                           <SelectContent>
                             {SCS_OPTIONS.map((opt) => (
@@ -361,18 +361,15 @@ const NRSALockingComponent = ({
       <AlertDialog open={showLockDialog} onOpenChange={setShowLockDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Lock to NR-SA Tower?</AlertDialogTitle>
+            <AlertDialogTitle>锁定到 NR-SA 基站？</AlertDialogTitle>
             <AlertDialogDescription>
-              This will lock your modem to NR ARFCN {pendingCell?.arfcn}, PCI{" "}
-              {pendingCell?.pci} (Band {pendingCell?.band}). The modem will only
-              connect to this tower and may briefly disconnect during the
-              switch.
+              这会将调制解调器锁定到 NR ARFCN {pendingCell?.arfcn}、PCI {pendingCell?.pci}（Band {pendingCell?.band}）。切换期间设备可能会短暂断线，之后只会连接此基站。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={confirmLock}>
-              Lock Tower
+              锁定基站
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -382,17 +379,15 @@ const NRSALockingComponent = ({
       <AlertDialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Unlock NR-SA Tower?</AlertDialogTitle>
+            <AlertDialogTitle>解除 NR-SA 基站锁定？</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the NR-SA tower lock. The modem will be free to
-              select any available tower and may briefly disconnect during the
-              switch.
+              这会移除 NR-SA 基站锁定。之后调制解调器可以自由选择任意可用基站，并可能在切换时短暂断线。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={confirmUnlock}>
-              Remove Lock
+              解除锁定
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

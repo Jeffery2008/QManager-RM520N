@@ -48,6 +48,13 @@ function MetricRow({
   const normalized = normalizeValue(rawValue ?? value ?? null);
   const quality = getSignalQuality(normalized, thresholds);
   const isNull = normalized === null;
+  const qualityLabels: Record<string, string> = {
+    excellent: "极佳",
+    good: "良好",
+    fair: "一般",
+    poor: "较差",
+    none: "无数据",
+  };
 
   return (
     <div className="flex items-center justify-between py-1.5">
@@ -69,7 +76,7 @@ function MetricRow({
               getQualityBadgeClasses(quality)
             )}
           >
-            {quality.charAt(0).toUpperCase() + quality.slice(1)}
+            {qualityLabels[quality] ?? quality}
           </Badge>
         )}
       </div>
@@ -128,7 +135,7 @@ export function AntennaCard({
             ) : (
               <MinusCircleIcon className="size-3" />
             )}
-            {active ? "Active" : "Inactive"}
+            {active ? "活跃" : "未活跃"}
           </Badge>
         </div>
       </CardHeader>
@@ -137,7 +144,7 @@ export function AntennaCard({
         {showLte && (
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-              4G / LTE{mode === "endc" && " (Anchor)"}
+              4G / LTE{mode === "endc" && "（锚点）"}
             </p>
             <div
               className={cn(
@@ -170,7 +177,7 @@ export function AntennaCard({
         {showNr && (
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-              5G / NR{mode === "endc" && " (Secondary)"}
+              5G / NR{mode === "endc" && "（辅载波）"}
             </p>
             <div
               className={cn(

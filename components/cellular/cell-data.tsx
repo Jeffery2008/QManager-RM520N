@@ -79,7 +79,7 @@ function formatCarrierAggregation(network: NetworkStatus): string {
     parts.push("NR");
   }
 
-  if (parts.length === 0) return "Inactive";
+  if (parts.length === 0) return "未激活";
   return parts.join(" + ");
 }
 
@@ -243,7 +243,7 @@ const CellDataComponent = ({
             variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            <p className="text-sm font-semibold text-muted-foreground">ISP</p>
+            <p className="text-sm font-semibold text-muted-foreground">运营商</p>
             <p className="text-sm font-semibold">{network?.carrier || "-"}</p>
           </motion.div>
 

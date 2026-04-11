@@ -117,15 +117,14 @@ export function TailscaleConnectionCard({
     }}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Reboot Required</AlertDialogTitle>
+          <AlertDialogTitle>需要重启</AlertDialogTitle>
           <AlertDialogDescription>
-            Tailscale has been removed. A reboot is recommended to clean up
-            firewall rules and other artifacts. Would you like to reboot now?
+            Tailscale 已被移除。建议重启设备以清理防火墙规则和其他残留项。是否现在重启？
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isRebooting}>
-            Reboot Later
+            稍后重启
           </AlertDialogCancel>
           <AlertDialogAction
             disabled={isRebooting}
@@ -134,10 +133,10 @@ export function TailscaleConnectionCard({
             {isRebooting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Rebooting…
+                重启中…
               </>
             ) : (
-              "Reboot Now"
+              "立即重启"
             )}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -150,9 +149,9 @@ export function TailscaleConnectionCard({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Tailscale Connection</CardTitle>
+          <CardTitle>Tailscale 连接</CardTitle>
           <CardDescription>
-            Manage your Tailscale VPN connection.
+            管理你的 Tailscale VPN 连接。
           </CardDescription>
         </CardHeader>
         <CardContent aria-live="polite">
@@ -173,20 +172,20 @@ export function TailscaleConnectionCard({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Tailscale Connection</CardTitle>
+          <CardTitle>Tailscale 连接</CardTitle>
           <CardDescription>
-            Manage your Tailscale VPN connection.
+            管理你的 Tailscale VPN 连接。
           </CardDescription>
         </CardHeader>
         <CardContent aria-live="polite">
           <Alert variant="destructive">
             <AlertCircle className="size-4" />
-            <AlertTitle>Failed to load Tailscale status</AlertTitle>
+            <AlertTitle>加载 Tailscale 状态失败</AlertTitle>
             <AlertDescription className="flex items-center justify-between">
               <span>{error}</span>
               <Button variant="outline" size="sm" onClick={() => refresh()}>
                 <RefreshCcwIcon className="size-3.5" />
-                Retry
+                重试
               </Button>
             </AlertDescription>
           </Alert>
@@ -203,9 +202,9 @@ export function TailscaleConnectionCard({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Tailscale Connection</CardTitle>
+          <CardTitle>Tailscale 连接</CardTitle>
           <CardDescription>
-            Manage your Tailscale VPN connection.
+            管理你的 Tailscale VPN 连接。
           </CardDescription>
         </CardHeader>
         <CardContent aria-live="polite">
@@ -213,10 +212,10 @@ export function TailscaleConnectionCard({
             <PackageIcon className="size-10 text-muted-foreground" />
             <div className="text-center space-y-1.5">
               <p className="text-sm font-medium">
-                Tailscale is not installed on this device.
+                此设备尚未安装 Tailscale。
               </p>
               <p className="text-xs text-muted-foreground">
-                Install automatically or run the command manually.
+                可自动安装，也可手动执行命令安装。
               </p>
             </div>
 
@@ -253,12 +252,12 @@ export function TailscaleConnectionCard({
                 {installResult.status === "running" ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    {installResult.message || "Installing..."}
+                    {installResult.message || "安装中..."}
                   </>
                 ) : (
                   <>
                     <PackageIcon className="size-4" />
-                    Install Tailscale
+                    安装 Tailscale
                   </>
                 )}
               </Button>
@@ -269,17 +268,22 @@ export function TailscaleConnectionCard({
                 disabled={installResult.status === "running"}
               >
                 <RefreshCcwIcon className="size-3.5" />
-                Check Again
+                重新检查
               </Button>
             </div>
 
             <div className="w-full flex items-center gap-3 text-xs text-muted-foreground">
               <div className="h-px flex-1 bg-border" />
-              <span>or install manually</span>
+              <span>或手动安装</span>
               <div className="h-px flex-1 bg-border" />
             </div>
 
-            <CopyableCommand command={installCmd} />
+            <div className="w-full grid gap-2">
+              <p className="text-xs text-muted-foreground">
+                可直接点击上方按钮安装，或通过 SSH 手动执行以下命令：
+              </p>
+              <CopyableCommand command={installCmd} />
+            </div>
           </div>
           {rebootDialog}
         </CardContent>
@@ -295,7 +299,7 @@ export function TailscaleConnectionCard({
         <span className="text-xs">{error}</span>
         <Button variant="outline" size="sm" onClick={() => refresh()}>
           <RefreshCcwIcon className="size-3.5" />
-          Retry
+          重试
         </Button>
       </AlertDescription>
     </Alert>
@@ -319,11 +323,11 @@ export function TailscaleConnectionCard({
     if (success) {
       toast.success(
         checked
-          ? "Tailscale will start on boot"
-          : "Tailscale will not start on boot",
+          ? "Tailscale 将在开机时自动启动"
+          : "Tailscale 不会在开机时自动启动",
       );
     } else {
-      toast.error("Failed to update boot setting");
+      toast.error("更新开机启动设置失败");
     }
   };
 
@@ -333,12 +337,12 @@ export function TailscaleConnectionCard({
       <Separator />
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-muted-foreground">
-          Start on Boot
+          开机启动
         </p>
         <Switch
           checked={bootEnabled}
           onCheckedChange={handleBootToggle}
-          aria-label="Enable Tailscale on boot"
+          aria-label="启用 Tailscale 开机启动"
         />
       </div>
     </>
@@ -350,9 +354,9 @@ export function TailscaleConnectionCard({
       <Separator className="mt-4" />
       <div className="flex items-center justify-between pt-4">
         <div>
-          <p className="text-sm font-medium">Remove Tailscale</p>
-          <p className="text-xs text-muted-foreground">
-            Uninstall the Tailscale packages and firewall rules from this device.
+              <p className="text-sm font-medium">移除 Tailscale</p>
+              <p className="text-xs text-muted-foreground">
+            从此设备中卸载 Tailscale 软件包及其防火墙规则。
           </p>
         </div>
         <AlertDialog>
@@ -365,40 +369,38 @@ export function TailscaleConnectionCard({
               {isUninstalling ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Removing…
+                  移除中…
                 </>
               ) : (
                 <>
                   <Trash2Icon className="size-4" />
-                  Uninstall
+                  卸载
                 </>
               )}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Uninstall Tailscale?</AlertDialogTitle>
+              <AlertDialogTitle>卸载 Tailscale？</AlertDialogTitle>
               <AlertDialogDescription>
-                This will remove the Tailscale packages, firewall rules, and
-                all connection state from this device. The device will reboot
-                to clean up any remaining artifacts.
+                这会从设备中移除 Tailscale 软件包、防火墙规则以及所有连接状态。设备随后会重启以清理残留项。
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>取消</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={async () => {
                   const success = await uninstall();
                   if (success) {
-                    toast.success("Tailscale uninstalled");
+                    toast.success("Tailscale 已卸载");
                     setShowRebootDialog(true);
                   } else {
-                    toast.error("Failed to uninstall Tailscale");
+                    toast.error("卸载 Tailscale 失败");
                   }
                 }}
               >
-                Uninstall
+                卸载
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -412,10 +414,9 @@ export function TailscaleConnectionCard({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Tailscale Connection</CardTitle>
+          <CardTitle>Tailscale 连接</CardTitle>
           <CardDescription>
-            {version ? `Tailscale v${version} · ` : ""}Manage your Tailscale VPN
-            connection.
+            {version ? `Tailscale v${version} · ` : ""}管理你的 Tailscale VPN 连接。
           </CardDescription>
         </CardHeader>
         <CardContent aria-live="polite">
@@ -423,11 +424,11 @@ export function TailscaleConnectionCard({
             {staleWarning}
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-muted-foreground">
-                Service
+                服务
               </p>
               <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-muted-foreground/30">
                 <MinusCircleIcon className="size-3" />
-                Stopped
+                已停止
               </Badge>
             </div>
             {bootToggle}
@@ -437,9 +438,9 @@ export function TailscaleConnectionCard({
                 onClick={async () => {
                   const success = await startService();
                   if (success) {
-                    toast.success("Tailscale service started");
+                    toast.success("Tailscale 服务已启动");
                   } else {
-                    toast.error("Failed to start Tailscale service");
+                    toast.error("启动 Tailscale 服务失败");
                   }
                 }}
                 disabled={isTogglingService}
@@ -447,10 +448,10 @@ export function TailscaleConnectionCard({
                 {isTogglingService ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Starting…
+                    启动中…
                   </>
                 ) : (
-                  "Start Service"
+                  "启动服务"
                 )}
               </Button>
             </div>
@@ -467,10 +468,9 @@ export function TailscaleConnectionCard({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Tailscale Connection</CardTitle>
+          <CardTitle>Tailscale 连接</CardTitle>
           <CardDescription>
-            {version ? `Tailscale v${version} · ` : ""}Manage your Tailscale VPN
-            connection.
+            {version ? `Tailscale v${version} · ` : ""}管理你的 Tailscale VPN 连接。
           </CardDescription>
         </CardHeader>
         <CardContent aria-live="polite">
@@ -478,11 +478,11 @@ export function TailscaleConnectionCard({
             {staleWarning}
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-muted-foreground">
-                Status
+                状态
               </p>
               <Badge variant="outline" className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30">
                 <LogInIcon className="size-3" />
-                Needs Login
+                需要登录
               </Badge>
             </div>
 
@@ -493,8 +493,8 @@ export function TailscaleConnectionCard({
                   <AlertCircle className="size-4" />
                   <AlertDescription className="space-y-3">
                     <p>
-                      Visit the link below to authenticate with your Tailscale
-                      account (Google, Microsoft, etc.).
+                      访问下方链接，使用你的 Tailscale 账号完成认证
+                      （Google、Microsoft 等）。
                     </p>
                     <Button
                       variant="outline"
@@ -502,10 +502,10 @@ export function TailscaleConnectionCard({
                       onClick={() => window.open(authUrl, "_blank", "noopener,noreferrer")}
                     >
                       <ExternalLinkIcon className="size-3.5" />
-                      Open Login Page
+                      打开登录页面
                     </Button>
                     <p className="text-xs text-muted-foreground animate-pulse motion-reduce:animate-none">
-                      Waiting for authentication…
+                      正在等待认证…
                     </p>
                   </AlertDescription>
                 </Alert>
@@ -518,7 +518,7 @@ export function TailscaleConnectionCard({
                     onClick={async () => {
                       const success = await connect();
                       if (!success) {
-                        toast.error("Failed to initiate connection");
+                        toast.error("发起连接失败");
                       }
                     }}
                     disabled={isConnecting}
@@ -526,10 +526,10 @@ export function TailscaleConnectionCard({
                     {isConnecting ? (
                       <>
                         <Loader2 className="size-4 animate-spin" />
-                        Connecting…
+                        连接中…
                       </>
                     ) : (
-                      "Connect"
+                      "连接"
                     )}
                   </Button>
                 </div>
@@ -545,9 +545,9 @@ export function TailscaleConnectionCard({
                 onClick={async () => {
                   const success = await stopService();
                   if (success) {
-                    toast.success("Tailscale service stopped");
+                    toast.success("Tailscale 服务已停止");
                   } else {
-                    toast.error("Failed to stop Tailscale service");
+                    toast.error("停止 Tailscale 服务失败");
                   }
                 }}
                 disabled={isTogglingService}
@@ -555,10 +555,10 @@ export function TailscaleConnectionCard({
                 {isTogglingService ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Stopping…
+                    停止中…
                   </>
                 ) : (
-                  "Stop Service"
+                  "停止服务"
                 )}
               </Button>
             </div>
@@ -578,7 +578,7 @@ export function TailscaleConnectionCard({
       : "";
 
     const infoRows: { label: string; value: React.ReactNode }[] = [
-      { label: "Hostname", value: self?.hostname || "—" },
+      { label: "主机名", value: self?.hostname || "—" },
       {
         label: "IPv4",
         value: <span className="font-mono">{ipv4}</span>,
@@ -596,7 +596,7 @@ export function TailscaleConnectionCard({
       ...(dnsName
         ? [
             {
-              label: "DNS Name",
+              label: "DNS 名称",
               value: <span className="break-all">{dnsName}</span>,
             },
           ]
@@ -613,7 +613,7 @@ export function TailscaleConnectionCard({
       ...(self?.relay
         ? [
             {
-              label: "DERP Relay",
+              label: "DERP 中继",
               value: self.relay.toUpperCase(),
             },
           ]
@@ -623,10 +623,9 @@ export function TailscaleConnectionCard({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Tailscale Connection</CardTitle>
+          <CardTitle>Tailscale 连接</CardTitle>
           <CardDescription>
-            {version ? `Tailscale v${version} · ` : ""}Manage your Tailscale VPN
-            connection.
+            {version ? `Tailscale v${version} · ` : ""}管理你的 Tailscale VPN 连接。
           </CardDescription>
         </CardHeader>
         <CardContent aria-live="polite">
@@ -640,7 +639,7 @@ export function TailscaleConnectionCard({
                 <Separator />
                 <Alert variant="destructive">
                   <AlertTriangleIcon className="size-4" />
-                  <AlertTitle>Health Warnings</AlertTitle>
+                  <AlertTitle>健康状态警告</AlertTitle>
                   <AlertDescription>
                     <ul className="list-disc pl-4 text-xs space-y-1">
                       {health.map((msg, i) => (
@@ -657,11 +656,11 @@ export function TailscaleConnectionCard({
             {/* Status badge */}
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-muted-foreground">
-                Status
+                状态
               </p>
               <Badge variant="outline" className="bg-success/15 text-success hover:bg-success/20 border-success/30">
                 <CheckCircle2Icon className="size-3" />
-                Connected
+                已连接
               </Badge>
             </div>
 
@@ -694,9 +693,9 @@ export function TailscaleConnectionCard({
                 onClick={async () => {
                   const success = await disconnect();
                   if (success) {
-                    toast.success("Tailscale disconnected");
+                    toast.success("Tailscale 已断开连接");
                   } else {
-                    toast.error("Failed to disconnect");
+                    toast.error("断开 Tailscale 失败");
                   }
                 }}
                 disabled={isDisconnecting}
@@ -704,10 +703,10 @@ export function TailscaleConnectionCard({
                 {isDisconnecting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Disconnecting…
+                    断开中…
                   </>
                 ) : (
-                  "Disconnect"
+                  "断开连接"
                 )}
               </Button>
 
@@ -718,30 +717,30 @@ export function TailscaleConnectionCard({
                     size="sm"
                     disabled={isDisconnecting}
                   >
-                    Logout
+                    登出
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Logout from Tailscale?</AlertDialogTitle>
+                    <AlertDialogTitle>要从 Tailscale 登出吗？</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will remove this device from your Tailscale network.
-                      You will need to re-authenticate to reconnect.
+                      这会将当前设备从你的 Tailscale 网络中移除。
+                      重新连接时需要再次认证。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>取消</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={async () => {
                         const success = await logout();
                         if (success) {
-                          toast.success("Logged out from Tailscale");
+                          toast.success("已从 Tailscale 登出");
                         } else {
-                          toast.error("Failed to logout");
+                          toast.error("从 Tailscale 登出失败");
                         }
                       }}
                     >
-                      Logout
+                      登出
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -757,10 +756,9 @@ export function TailscaleConnectionCard({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Tailscale Connection</CardTitle>
+          <CardTitle>Tailscale 连接</CardTitle>
         <CardDescription>
-          {version ? `Tailscale v${version} · ` : ""}Manage your Tailscale VPN
-          connection.
+          {version ? `Tailscale v${version} · ` : ""}管理你的 Tailscale VPN 连接。
         </CardDescription>
       </CardHeader>
       <CardContent aria-live="polite">
@@ -768,11 +766,11 @@ export function TailscaleConnectionCard({
           {staleWarning}
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-muted-foreground">
-              Status
+              状态
             </p>
             <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-muted-foreground/30">
               <MinusCircleIcon className="size-3" />
-              Disconnected
+              已断开
             </Badge>
           </div>
 
@@ -784,7 +782,7 @@ export function TailscaleConnectionCard({
               onClick={async () => {
                 const success = await connect();
                 if (!success) {
-                  toast.error("Failed to connect");
+                  toast.error("连接 Tailscale 失败");
                 }
               }}
               disabled={isConnecting}
@@ -792,10 +790,10 @@ export function TailscaleConnectionCard({
               {isConnecting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Connecting…
+                  连接中…
                 </>
               ) : (
-                "Connect"
+                "连接"
               )}
             </Button>
 
@@ -806,30 +804,30 @@ export function TailscaleConnectionCard({
                   size="sm"
                   disabled={isDisconnecting}
                 >
-                  Logout
+                  登出
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Logout from Tailscale?</AlertDialogTitle>
+                  <AlertDialogTitle>要从 Tailscale 登出吗？</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will remove this device from your Tailscale network.
-                    You will need to re-authenticate to reconnect.
+                    这会将当前设备从你的 Tailscale 网络中移除。
+                    重新连接时需要再次认证。
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>取消</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={async () => {
                       const success = await logout();
                       if (success) {
-                        toast.success("Logged out from Tailscale");
+                        toast.success("已从 Tailscale 登出");
                       } else {
-                        toast.error("Failed to logout");
+                        toast.error("从 Tailscale 登出失败");
                       }
                     }}
-                  >
-                    Logout
+                    >
+                    登出
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

@@ -131,27 +131,25 @@ const BandCardsComponent = ({
   const handleLock = async () => {
     const bands = [...checkedBands].sort((a, b) => a - b);
     if (bands.length === 0) {
-      toast.error("Select at least one band to lock");
+      toast.error("请至少选择一个要锁定的频段");
       return;
     }
 
     const success = await onLock(bands);
     if (success) {
       markSaved();
-      toast.success(
-        `${title.replace(" Locking", "")} bands locked successfully`,
-      );
+      toast.success(`${title.replace("频段锁定", "").trim()}频段已锁定`);
     } else {
-      toast.error(error || "Failed to apply band lock");
+      toast.error(error || "应用频段锁定失败");
     }
   };
 
   const handleUnlockAll = async () => {
     const success = await onUnlockAll();
     if (success) {
-      toast.success(`${title.replace(" Locking", "")} bands unlocked`);
+      toast.success(`${title.replace("频段锁定", "").trim()}频段已解锁`);
     } else {
-      toast.error(error || "Failed to unlock bands");
+      toast.error(error || "解锁频段失败");
     }
   };
 
@@ -188,7 +186,7 @@ const BandCardsComponent = ({
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            No supported bands reported by the modem for this category.
+            调制解调器未上报该类别的可用频段。
           </p>
         </CardContent>
       </Card>
@@ -212,7 +210,7 @@ const BandCardsComponent = ({
               className="bg-info/15 text-info hover:bg-info/20 border-info/30"
             >
               <ShieldIcon className="h-3 w-3" />
-              Scenario Controlled
+              场景接管
             </Badge>
           ) : isAllUnlocked ? (
             <Badge
@@ -220,7 +218,7 @@ const BandCardsComponent = ({
               className="bg-success/15 text-success hover:bg-success/20 border-success/30"
             >
               <LockOpenIcon className="h-3 w-3" />
-              All Unlocked
+              全部解锁
             </Badge>
           ) : (
             <Badge
@@ -228,7 +226,7 @@ const BandCardsComponent = ({
               className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
             >
               <LockIcon className="h-3 w-3" />
-              {currentLockedBands.length} / {supportedBands.length} Bands
+              {currentLockedBands.length} / {supportedBands.length} 个频段
             </Badge>
           )}
         </div>
@@ -281,7 +279,7 @@ const BandCardsComponent = ({
 
       {/* Screen reader live region for operation results */}
       <div className="sr-only" aria-live="polite" aria-atomic="true">
-        {isLocking ? `Applying ${title.replace(" Locking", "")} band lock…` : ""}
+        {isLocking ? `正在应用${title.replace("频段锁定", "").trim()}频段锁定…` : ""}
       </div>
 
       <CardFooter className="flex flex-wrap items-center justify-between gap-2 mt-4">
@@ -290,7 +288,7 @@ const BandCardsComponent = ({
             onClick={handleLock}
             isSaving={isLocking}
             saved={saved}
-            label="Lock Selected Bands"
+            label="锁定所选频段"
             disabled={isDisabled || noneSelected || !hasChanges}
           />
           <Button
@@ -298,8 +296,8 @@ const BandCardsComponent = ({
             size="icon"
             onClick={handleUnlockAll}
             disabled={isDisabled || isAllUnlocked}
-            aria-label="Unlock all bands"
-            title="Unlock all bands (reset)"
+            aria-label="解锁全部频段"
+            title="解锁全部频段（重置）"
           >
             <RotateCcwIcon />
           </Button>
@@ -311,14 +309,14 @@ const BandCardsComponent = ({
             onClick={handleSelectAll}
             disabled={isDisabled}
           >
-            Select All
+            全选
           </Button>
           <Button
             variant="outline"
             onClick={handleSelectNone}
             disabled={isDisabled}
           >
-            Deselect All
+            取消全选
           </Button>
         </div>
       </CardFooter>

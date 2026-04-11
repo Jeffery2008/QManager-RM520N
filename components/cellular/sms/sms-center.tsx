@@ -18,9 +18,9 @@ const SmsCenterComponent = () => {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">SMS Center</h1>
+        <h1 className="text-3xl font-bold mb-2">短信中心</h1>
         <p className="text-muted-foreground">
-          View, manage, and send SMS messages from your modem.
+          查看、管理并发送调制解调器中的短信。
         </p>
       </div>
       <div className="grid grid-cols-1 grid-flow-row gap-4">

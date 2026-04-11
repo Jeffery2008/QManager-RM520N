@@ -12,9 +12,9 @@ const FrequencyLockingComponent = () => {
   return (
     <div className="@container/main mx-auto p-2">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Frequency Locking</h1>
+        <h1 className="text-3xl font-bold mb-2">频点锁定</h1>
         <p className="text-muted-foreground">
-          Lock to specific EARFCNs/NR-ARFCNs. Experimental — use with caution.
+          锁定到指定的 EARFCN / NR-ARFCN。实验性功能，请谨慎使用。
         </p>
       </div>
       <div className="grid grid-cols-1 @3xl/main:grid-cols-2 grid-flow-row gap-4">

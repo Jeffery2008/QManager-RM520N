@@ -135,7 +135,7 @@ export default function CommandsPopover({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="xs" aria-expanded={open}>
-            Commands
+            命令
             <ChevronDownIcon />
           </Button>
         </PopoverTrigger>
@@ -202,7 +202,7 @@ export default function CommandsPopover({
                 setOpen(false);
               }}
             >
-              Manage Commands
+              管理命令
             </button>
           </div>
         </PopoverContent>
@@ -241,7 +241,7 @@ export default function CommandsPopover({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    aria-label={`Delete ${preset.label}`}
+                    aria-label={`删除 ${preset.label}`}
                     onClick={() => handleDelete(index)}
                   >
                     <Trash2Icon />
@@ -279,7 +279,7 @@ export default function CommandsPopover({
               }}
             />
             <Button size="sm" onClick={handleAdd}>
-              Add
+              添加
             </Button>
           </div>
 

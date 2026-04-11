@@ -41,15 +41,15 @@ interface Warning {
 const BLOCKED_COMMANDS = [
   {
     pattern: /\bQSCANFREQ\b/i,
-    message: "Use the Cell Scanner page for frequency scanning.",
+    message: "频点扫描请使用“小区扫描”页面。",
   },
   {
     pattern: /\bQSCAN\b/i,
-    message: "Use the Cell Scanner page for network scanning.",
+    message: "网络扫描请使用“小区扫描”页面。",
   },
   {
     pattern: /QCFG\s*=\s*"resetfactory"/i,
-    message: "Factory reset is not allowed from the terminal.",
+    message: "AT 终端不允许执行恢复出厂设置。",
   },
 ];
 
@@ -57,7 +57,7 @@ const WARNING_COMMANDS = [
   {
     pattern: /CFUN\s*=\s*[04]\b/i,
     message:
-      "This will disable the modem radio. If connected via Tailscale, you may lose access to this UI.",
+      "这会关闭调制解调器无线电。如果你当前通过 Tailscale 连接，可能会失去此界面的访问权限。",
   },
 ];
 
@@ -188,7 +188,7 @@ export default function ATTerminalCard() {
         } else {
           appendEntry({
             command,
-            response: json.detail ?? json.error ?? "Command failed",
+            response: json.detail ?? json.error ?? "命令执行失败",
             status: "error",
           });
         }
@@ -197,8 +197,8 @@ export default function ATTerminalCard() {
           command,
           response:
             err instanceof TypeError
-              ? "Network error — could not reach modem backend"
-              : "Unexpected error — check backend logs",
+              ? "网络错误，无法连接调制解调器后端"
+              : "发生异常，请检查后端日志",
           status: "error",
         });
       } finally {
@@ -220,7 +220,7 @@ export default function ATTerminalCard() {
       if (trimmed.toUpperCase() === "AT+GAME") {
         appendEntry({
           command: trimmed,
-          response: "Initializing Signal Storm...",
+          response: "正在初始化 Signal Storm...",
           status: "success",
         });
         setInput("");
@@ -325,23 +325,23 @@ export default function ATTerminalCard() {
       <div className="bg-muted flex items-center gap-2 border-b px-3 py-2">
         <TerminalIcon className="text-muted-foreground size-4" />
         <span className="text-muted-foreground text-sm font-medium">
-          AT Terminal
+          AT 终端
         </span>
         <div className="ml-auto flex gap-1">
           {gameActive ? (
             <span className="text-muted-foreground text-xs italic">
-              Playing Signal Storm... (Esc to exit)
+              正在运行 Signal Storm...（按 Esc 退出）
             </span>
           ) : (
             <>
               <CommandsPopover onSelect={setInput} inputRef={inputRef} />
               <Button variant="ghost" size="xs" onClick={handleClear} disabled={isEmpty}>
                 <Trash2Icon />
-                Clear
+                清空
               </Button>
               <Button variant="ghost" size="xs" onClick={handleExport} disabled={isEmpty}>
                 <DownloadIcon />
-                Export
+                导出
               </Button>
             </>
           )}
@@ -359,7 +359,7 @@ export default function ATTerminalCard() {
           >
             {isEmpty ? (
               <div className="text-muted-foreground flex h-40 items-center justify-center text-sm">
-                No commands yet. Type an AT command below.
+                还没有命令记录，请在下方输入 AT 命令。
               </div>
             ) : (
               <div className="space-y-3">
@@ -388,7 +388,7 @@ export default function ATTerminalCard() {
             <div className="mx-3 mb-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
               <div className="text-warning mb-1 flex items-center gap-1.5 text-sm font-semibold">
                 <TriangleAlertIcon className="size-4" />
-                Warning
+                警告
               </div>
               <p className="text-muted-foreground mb-2 text-sm">
                 <code className="bg-warning/10 rounded px-1 py-0.5 text-xs">
@@ -402,10 +402,10 @@ export default function ATTerminalCard() {
                   className="bg-warning text-warning-foreground hover:bg-warning/90"
                   onClick={handleSendAnyway}
                 >
-                  Send Anyway
+                  仍然发送
                 </Button>
                 <Button variant="outline" size="xs" onClick={handleCancelWarning}>
-                  Cancel
+                  取消
                 </Button>
               </div>
             </div>
@@ -444,7 +444,7 @@ export default function ATTerminalCard() {
             ) : (
               <ChevronRightIcon />
             )}
-            Send
+            发送
           </InputGroupButton>
         </InputGroup>
       </form>
