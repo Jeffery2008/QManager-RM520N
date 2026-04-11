@@ -1,13 +1,15 @@
 # QManager
 
 > **中文汉化版说明：** 这是 `Jeffery2008` 维护的中文汉化版 fork，主要在不改业务逻辑的前提下补充中文界面与本地安装辅助。原始仓库：<https://github.com/dr-dolomite/QManager-RM520N>
+>
+> **版本策略：** 汉化发布统一使用 `vX.Y.Z-cn.N` 形式，详细说明见 [docs/localized-versioning.md](docs/localized-versioning.md)。
 
 <div align="center">
   <img src="public/qmanager-logo.svg" alt="QManager Logo" width="120" />
   <h3>A modern, custom GUI for Quectel modem management</h3>
   <p>Visualize, configure, and optimize your cellular modem's performance with an intuitive web interface</p>
 
-  ![Version](https://img.shields.io/badge/version-v0.1.6-blue?style=flat-square)
+  ![Version](https://img.shields.io/badge/version-v0.1.5--cn.1-blue?style=flat-square)
   ![License](https://img.shields.io/badge/license-MIT%20%2B%20Commons%20Clause-green?style=flat-square)
   ![Platform](https://img.shields.io/badge/platform-RM520N--GL-orange?style=flat-square)
   ![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square)

@@ -118,6 +118,20 @@ EOF
     [ "$a3" -gt "$b3" ] 2>/dev/null && return 0
     [ "$a3" -lt "$b3" ] 2>/dev/null && return 2
 
+    # Localized fork revision scheme:
+    #   v0.1.5-cn.1 < v0.1.5-cn.2 and both are newer than plain v0.1.5
+    local a_cn="" b_cn=""
+    case "$a_pre" in cn.*) a_cn="${a_pre#cn.}" ;; esac
+    case "$b_pre" in cn.*) b_cn="${b_pre#cn.}" ;; esac
+
+    if [ -n "$a_cn" ] || [ -n "$b_cn" ]; then
+        a_cn=${a_cn:-0}
+        b_cn=${b_cn:-0}
+        [ "$a_cn" -gt "$b_cn" ] 2>/dev/null && return 0
+        [ "$a_cn" -lt "$b_cn" ] 2>/dev/null && return 2
+        return 1
+    fi
+
     # Equal major.minor.patch — no pre-release > any pre-release
     [ -z "$a_pre" ] && [ -n "$b_pre" ] && return 0
     [ -n "$a_pre" ] && [ -z "$b_pre" ] && return 2
