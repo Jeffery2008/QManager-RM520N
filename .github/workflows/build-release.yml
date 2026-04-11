@@ -83,6 +83,7 @@ jobs:
           name: ${{ steps.meta.outputs.name }}
           generate_release_notes: true
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
+          token: ${{ secrets.RELEASE_TOKEN }}
           files: |
             qmanager-build/qmanager.tar.gz
             qmanager-build/sha256sum.txt
