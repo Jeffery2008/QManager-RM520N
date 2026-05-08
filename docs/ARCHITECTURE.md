@@ -150,7 +150,7 @@ Auth endpoints use `_SKIP_AUTH=1` to bypass the automatic auth check in `cgi_bas
 | `/tmp/qmanager_pci_state.json` | poller (events) | JSON | SCC PCI tracking |
 | `/tmp/qmanager_email_log.json` | poller (email) | NDJSON | Email alert log (max 100) |
 | `/tmp/qmanager_low_power_active` | low_power | Timestamp | Low power mode flag (suppresses events + alerts) |
-| `/tmp/qmanager_watchcat.lock` | low_power | Empty | Watchdog pause lock (forces LOCKED state) |
+| `/tmp/qmanager_watchcat.lock` | low_power / installer | Empty | Watchdog pause lock (forces LOCKED state during low power mode or install window) |
 | `/etc/qmanager/` | CGI scripts | Various | Persistent configuration |
 
 ---
@@ -353,55 +353,47 @@ QManager is being extended to support the Quectel RM520N-GL, which runs internal
 ┌──────────────────────────────────────────────────────────┐
 │          RM520N-GL Modem (Vanilla Linux, systemd)         │
 │  ┌──────────────────────────────────────────────────────┐│
-│  │  lighttpd → /usrdata/www/cgi-bin/ (CGI)             ││
+│  │  lighttpd → /usrdata/qmanager/www/cgi-bin/ (CGI)    ││
 │  │  ┌──────────────────────────────────────────────────┐│
-│  │  │ cgi_base.sh (adapted for vanilla Linux)         │││
+│  │  │ cgi_base.sh + platform.sh (systemd/sudo/flock)  │││
 │  │  └──────────────────────────────────────────────────┘│
 │  │       │ reads cache      │ executes AT               ││
 │  │       ▼                  ▼                            ││
-│  │  /tmp/qmanager_    microcom + flock                   ││
-│  │  status.json       → /dev/ttyOUT ──┐                 ││
-│  │       ▲                             │                 ││
-│  │       │ writes every 2s             ▼                 ││
-│  │  ┌──────────────┐    socat PTY bridge                ││
-│  │  │  qmanager    │    ┌──────────┐  ┌──────────┐     ││
-│  │  │  poller      │    │/dev/smd11│  │/dev/smd7 │     ││
-│  │  │  (systemd)   │    └──────────┘  └──────────┘     ││
-│  │  └──────────────┘         └────────┬───────┘         ││
-│  │                              Modem AT Processor       ││
+│  │  /tmp/qmanager_    qcmd → atcli_smd11                 ││
+│  │  status.json            → /dev/smd11 (direct)        ││
+│  │       ▲                        │                      ││
+│  │       │ writes every 2s        ▼                      ││
+│  │  ┌──────────────┐       Modem AT Processor            ││
+│  │  │  qmanager    │                                     ││
+│  │  │  poller      │                                     ││
+│  │  │  (systemd)   │                                     ││
+│  │  └──────────────┘                                     ││
 │  └──────────────────────────────────────────────────────┘│
 └──────────────────────────────────────────────────────────┘
 ```
 
-### AT Command Transport Comparison
+### AT Command Transport
 
-| Aspect | RM551E (OpenWRT) | RM520N-GL (Vanilla Linux) |
-|--------|------------------|---------------------------|
-| Tool | `qcmd` (wraps `sms_tool`) | `microcom -t <ms>` + `flock` |
-| Device | USB CDC ACM (host-side) | `/dev/ttyOUT` (smd11), `/dev/ttyOUT2` (smd7) |
-| Bridge | None needed | socat PTY pair + `cat` pipes (7 systemd services) |
-| Locking | Implicit per-process | Explicit `flock /var/lock/atcmd.lock` required |
-| Compound cmds | Semicolon batching via `qcmd` | Supported through same PTY interface |
-| Timeout | Configurable via `sms_tool` | `microcom -t <ms>` (millisecond precision) |
+| Aspect | RM520N-GL |
+|--------|-----------|
+| Tool | `qcmd` wrapping `atcli_smd11` |
+| Device | `/dev/smd11` (direct, no PTY bridge) |
+| Locking | `flock` with read-only FD (`9<`) in `qcmd` — handles `fs.protected_regular=1` |
+| Timeout | Handled natively by `atcli_smd11` (no fixed limit needed) |
+| Long commands | Handled natively — no `_run_long_at()` workaround |
+| Exit code | Always 0 — error detection by parsing response text for OK/ERROR |
 
-### Platform Abstraction Strategy
+### Key Filesystem Layout (RM520N-GL)
 
-The AT command layer will be abstracted so both platforms can share the same CGI scripts and poller logic:
+| Purpose | Path |
+|---------|------|
+| Persistent config | `/etc/qmanager/` (rootfs, remounted rw at install/boot) |
+| Installed version | `/etc/qmanager/VERSION` (finalized) / `VERSION.pending` (mid-install) |
+| Temp/runtime | `/tmp/` |
+| CGI scripts | `/usrdata/qmanager/www/cgi-bin/quecmanager/` |
+| Systemd units | `/lib/systemd/system/qmanager-*.service` |
+| Shared libs | `/usr/lib/qmanager/` |
+| Frontend | `/usrdata/qmanager/www/` |
+| Sudoers | `/etc/sudoers.d/qmanager` |
 
-1. **`qcmd` wrapper** — Each platform provides its own `/usr/bin/qcmd` (or equivalent) that accepts the same interface: `qcmd 'AT+COMMAND'`
-2. **Config abstraction** — UCI calls wrapped in helper functions that dispatch to file-based config on RM520N-GL
-3. **Init system** — procd init.d scripts have systemd `.service` counterparts
-4. **Shared frontend** — The React frontend is platform-agnostic; only backend scripts differ
-
-### Key Filesystem Differences
-
-| Purpose | RM551E (OpenWRT) | RM520N-GL |
-|---------|------------------|-----------|
-| Persistent config | `/etc/qmanager/` | `/usrdata/qmanager/` |
-| Temp/runtime | `/tmp/` | `/tmp/` (same) |
-| CGI scripts | `/www/cgi-bin/quecmanager/` | `/usrdata/www/cgi-bin/quecmanager/` |
-| Init scripts | `/etc/init.d/` | `/lib/systemd/system/` |
-| Shared libs | `/usr/lib/qmanager/` | `/usrdata/usr/lib/qmanager/` |
-| Frontend | `/www/` | `/usrdata/www/` |
-
-> **See also:** [RM520N-GL Architecture Report](rm520n-gl-architecture.md) for the complete platform analysis including socat bridge internals, systemd service graph, and porting strategy.
+> **See also:** [RM520N-GL Architecture Report](rm520n-gl-architecture.md) for the complete platform analysis including systemd service graph, Entware bootstrap, and platform internals.

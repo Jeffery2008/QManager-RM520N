@@ -66,6 +66,10 @@ const data = {
           title: "日志",
           url: "/system-settings/logs",
         },
+        {
+          title: "系统健康检查",
+          url: "/system-settings/system-health-check",
+        },
       ],
     },
     {

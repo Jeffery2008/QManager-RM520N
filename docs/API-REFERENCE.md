@@ -24,15 +24,13 @@ All endpoints return JSON with a consistent structure:
 
 ### RM520N-GL Variant
 
-On the RM520N-GL, CGI endpoints are served by lighttpd instead of uhttpd, and AT commands go through the socat PTY bridge instead of `sms_tool`. The API contract (request/response format) remains the same — only the transport layer differs.
+On the RM520N-GL, CGI endpoints are served by lighttpd instead of uhttpd, and AT commands go through `atcli_smd11` on `/dev/smd11` directly via the `qcmd` wrapper — no socat PTY bridge. The API contract (request/response format) is the same across platforms.
 
 Key differences:
-- **Base URL**: Same (`/cgi-bin/quecmanager/`), but served from `/usrdata/www/cgi-bin/quecmanager/`
-- **Auth**: Same cookie-based session mechanism (adapted for lighttpd)
-- **AT execution**: `microcom` + `flock` instead of `qcmd`/`sms_tool`
-- **UCI-dependent endpoints**: Features that read/write UCI config (watchdog, system settings, DPI, bandwidth monitor) require adaptation to file-based config on RM520N-GL
-
-Endpoints marked with "(OpenWRT only)" in the reference below are not available on the RM520N-GL variant.
+- **Base URL**: Same (`/cgi-bin/quecmanager/`), served from `/usrdata/qmanager/www/cgi-bin/quecmanager/`
+- **Auth**: Same cookie-based session mechanism
+- **AT execution**: `qcmd` wrapping `atcli_smd11` on `/dev/smd11`
+- **Config**: File-based (`/etc/qmanager/`) instead of UCI
 
 ---
 
@@ -884,6 +882,68 @@ Triggers a device reboot. POST-only, no request body required.
 ```
 
 The HTTP response is flushed before the device reboots asynchronously. The connection will drop shortly after.
+
+### GET `/system/update.sh`
+
+Check current version, update availability, and update worker status.
+
+**Response:**
+```json
+{
+  "success": true,
+  "current_version": "0.1.5",
+  "latest_version": "0.1.6",
+  "update_available": true,
+  "status": "idle",
+  "previous_install_failed": false,
+  "pending_version": null
+}
+```
+
+- `status`: one of `idle`, `checking`, `update_available`, `downloading`, `verifying`, `ready`, `installing`, `rebooting`, `error`
+- `previous_install_failed`: `true` when `/etc/qmanager/VERSION.pending` exists after a reboot, indicating the last install did not finalize. The UI should offer rollback.
+- `pending_version`: the version string from `VERSION.pending` when `previous_install_failed` is `true`, otherwise `null`
+
+### POST `/system/update.sh`
+
+Control the OTA update worker. All install/rollback actions invoke `/usr/bin/qmanager_update` via `sudo -n` so the worker runs as root.
+
+**Check for updates:**
+```json
+{ "action": "check" }
+```
+
+**Download update:**
+```json
+{ "action": "download", "url": "https://github.com/.../qmanager-0.1.6.tar.gz" }
+```
+
+**Install (direct URL):**
+```json
+{ "action": "install", "url": "https://github.com/.../qmanager-0.1.6.tar.gz" }
+```
+
+**Install staged (already downloaded):**
+```json
+{ "action": "install_staged" }
+```
+
+**Rollback to previous version:**
+```json
+{ "action": "rollback" }
+```
+
+**Cancel:**
+```json
+{ "action": "cancel" }
+```
+
+During installation the worker tails `=== Step N/M: <label> ===` lines from `/tmp/qmanager_install.log` and mirrors them as `status: "installing", message: "<label>"` in the status JSON. Poll GET to track progress.
+
+**Error response** (worker could not be started):
+```json
+{ "success": false, "error": "worker_error", "detail": "..." }
+```
 
 ---
 

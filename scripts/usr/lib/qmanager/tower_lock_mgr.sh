@@ -43,7 +43,7 @@ TOWER_FAILOVER_SCRIPT="/usr/bin/qmanager_tower_failover"
 mkdir -p /etc/qmanager 2>/dev/null
 
 # --- Default config as a constant (used by init and validation) ---------------
-TOWER_DEFAULT_CONFIG='{"lte":{"enabled":false,"cells":[null,null,null]},"nr_sa":{"enabled":false,"pci":null,"arfcn":null,"scs":null,"band":null},"persist":false,"failover":{"enabled":true,"threshold":20},"schedule":{"enabled":false,"start_time":"08:00","end_time":"22:00","days":[1,2,3,4,5]}}'
+TOWER_DEFAULT_CONFIG='{"lte":{"enabled":false,"cells":[null,null,null]},"nr_sa":{"enabled":false,"pci":null,"arfcn":null,"scs":null,"band":null},"persist":false,"failover":{"enabled":false,"threshold":20},"schedule":{"enabled":false,"start_time":"08:00","end_time":"22:00","days":[1,2,3,4,5]}}'
 
 # =============================================================================
 # Config File Operations (all use jq for guaranteed valid JSON)

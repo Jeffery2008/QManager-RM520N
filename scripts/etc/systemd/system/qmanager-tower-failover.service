@@ -15,6 +15,7 @@ ExecStartPre=/bin/sh -c '\
     [ "$lte" = "true" ] || [ "$nr" = "true" ] || exit 1'
 ExecStart=/usr/bin/qmanager_tower_failover
 ExecStopPost=/bin/sh -c 'rm -f /tmp/qmanager_tower_failover.pid /tmp/qmanager_tower_failover'
+TimeoutStopSec=10
 Restart=no
 
 [Install]

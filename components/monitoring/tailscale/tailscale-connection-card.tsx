@@ -43,6 +43,7 @@ import {
   LogInIcon,
   Trash2Icon,
 } from "lucide-react";
+import { InstallLogViewer } from "@/components/monitoring/tailscale/install-log-viewer";
 import type { UseTailscaleReturn } from "@/hooks/use-tailscale";
 
 // =============================================================================
@@ -242,6 +243,17 @@ export function TailscaleConnectionCard({
                   </p>
                 </AlertDescription>
               </Alert>
+            )}
+
+            {(installResult.status === "running" ||
+              ((installResult.status === "complete" ||
+                installResult.status === "error") &&
+                !!installResult.log &&
+                installResult.log.length > 0)) && (
+              <InstallLogViewer
+                log={installResult.log ?? ""}
+                isRunning={installResult.status === "running"}
+              />
             )}
 
             <div className="flex items-center gap-2">

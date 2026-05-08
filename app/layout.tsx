@@ -4,6 +4,7 @@ import "./globals.css";
 import Euclid from "next/font/local";
 import { Manrope } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { MotionProvider } from "@/components/motion-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 // Google Fonts can be imported from remote
@@ -68,8 +69,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster />
+          <MotionProvider>
+            {children}
+            <Toaster />
+          </MotionProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -52,6 +52,8 @@ export interface UseTowerLockingReturn {
   isLteLocking: boolean;
   /** True while an NR-SA lock/unlock operation is in progress */
   isNrLocking: boolean;
+  /** True while a failover enable/disable save is in progress */
+  isSavingFailover: boolean;
   /** Error message from the last operation */
   error: string | null;
 
@@ -97,6 +99,7 @@ export function useTowerLocking(): UseTowerLockingReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [isLteLocking, setIsLteLocking] = useState(false);
   const [isNrLocking, setIsNrLocking] = useState(false);
+  const [isSavingFailover, setIsSavingFailover] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const mountedRef = useRef(true);
@@ -285,8 +288,8 @@ export function useTowerLocking(): UseTowerLockingReturn {
           failoverPollRef.current = null;
         }
 
-        // If failover is armed (watcher spawned), update state + start polling.
-        // lock.sh auto-enables failover in config, so sync frontend state.
+        // If failover is armed (user enabled it before locking and the
+        // watcher was spawned), sync frontend state + start polling.
         if (data.failover_armed) {
           setConfig((prev) =>
             prev
@@ -380,6 +383,14 @@ export function useTowerLocking(): UseTowerLockingReturn {
     ): Promise<boolean> => {
       setError(null);
 
+      const isTogglingFailover = failover.enabled !== config?.failover?.enabled;
+      const isDisablingFailover =
+        isTogglingFailover && failover.enabled === false;
+
+      if (isTogglingFailover) {
+        setIsSavingFailover(true);
+      }
+
       try {
         const resp = await authFetch(`${CGI_BASE}/settings.sh`, {
           method: "POST",
@@ -440,6 +451,15 @@ export function useTowerLocking(): UseTowerLockingReturn {
           );
         }
 
+        // On disable: clear any stale poll and re-sync with backend
+        if (isDisablingFailover) {
+          if (failoverPollRef.current) {
+            clearInterval(failoverPollRef.current);
+            failoverPollRef.current = null;
+          }
+          await fetchStatus();
+        }
+
         return true;
       } catch (err) {
         if (!mountedRef.current) return false;
@@ -447,9 +467,13 @@ export function useTowerLocking(): UseTowerLockingReturn {
           err instanceof Error ? err.message : "Failed to update settings"
         );
         return false;
+      } finally {
+        if (mountedRef.current && isTogglingFailover) {
+          setIsSavingFailover(false);
+        }
       }
     },
-    [startFailoverPolling]
+    [startFailoverPolling, fetchStatus, config?.failover?.enabled]
   );
 
   // ---------------------------------------------------------------------------
@@ -510,6 +534,7 @@ export function useTowerLocking(): UseTowerLockingReturn {
     isLoading,
     isLteLocking,
     isNrLocking,
+    isSavingFailover,
     isWatcherRunning,
     error,
     lockLte,

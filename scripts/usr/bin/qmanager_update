@@ -12,18 +12,24 @@
 # =============================================================================
 
 LOG_FILE="/tmp/qmanager_update.log"
+INSTALL_LOG="/tmp/qmanager_install.log"
 STATUS_FILE="/tmp/qmanager_update.json"
 PID_FILE="/tmp/qmanager_update.pid"
 VERSION_FILE="/etc/qmanager/VERSION"
+PENDING_FILE="/etc/qmanager/VERSION.pending"
 UPDATES_DIR="/etc/qmanager/updates"
 
 # Platform abstraction (systemd support)
 [ -f /usr/lib/qmanager/platform.sh ] && . /usr/lib/qmanager/platform.sh
 
+# Forward-compat: load shared semver helpers if available
+[ -f /usr/lib/qmanager/semver.sh ] && . /usr/lib/qmanager/semver.sh
+
 # --- Helpers -----------------------------------------------------------------
 
 log() { printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" >> "$LOG_FILE"; }
 
+# Atomic write — prevents readers from seeing partial JSON during the write
 write_status() {
     local status="$1" msg="$2" version="$3" size="$4"
     jq -n \
@@ -32,7 +38,7 @@ write_status() {
         --arg version "$version" \
         --arg size "$size" \
         '{status: $status, message: $message, version: $version, size: $size}' \
-        > "$STATUS_FILE"
+        > "${STATUS_FILE}.tmp" && mv "${STATUS_FILE}.tmp" "$STATUS_FILE"
 }
 
 get_current_version() {
@@ -57,6 +63,92 @@ http_download() {
     fi
 }
 
+# Validate a tarball URL against the GitHub origin whitelist.
+# Mode "strict" (2nd arg = "strict") allows only the releases path;
+# default allows both releases and raw/qmanager-build paths (install mode).
+validate_url() {
+    local url="$1" strict="${2:-}"
+    case "$url" in
+        https://github.com/Jeffery2008/QManager-RM520N/releases/download/*/qmanager.tar.gz)
+            return 0
+            ;;
+        https://github.com/Jeffery2008/QManager-RM520N/raw/*/qmanager-build/qmanager.tar.gz)
+            # raw/qmanager-build path is only permitted for the one-step install mode
+            if [ "$strict" = "strict" ]; then
+                return 1
+            fi
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+# Verify that a tarball is readable and contains the expected installer entry.
+verify_archive() {
+    local path="$1"
+    tar tzf "$path" >/dev/null 2>&1 || return 1
+    tar tzf "$path" 2>/dev/null | grep -q "install_rm520n.sh" || return 1
+    return 0
+}
+
+# Run install_rm520n.sh with step-streaming progress updates to the UI.
+# Installer stdout/stderr go to INSTALL_LOG (separate from the worker LOG_FILE)
+# so we can poll it cleanly; the install log is appended to LOG_FILE on exit.
+# Returns the installer's exit code.
+run_install_with_progress() {
+    local version="$1"
+    local last_label="" current_label="" step_line="" rc=0
+
+    : > "$INSTALL_LOG"
+    sh install_rm520n.sh --skip-packages --no-reboot >> "$INSTALL_LOG" 2>&1 &
+    local install_pid=$!
+
+    while pid_alive "$install_pid"; do
+        sleep 2
+
+        # Installer's _log_raw() emits "[timestamp] === Step N/M: <label> ===" —
+        # this is the documented tail-target contract. Plain ASCII, no ANSI noise.
+        step_line=$(grep '=== Step ' "$INSTALL_LOG" 2>/dev/null | tail -1)
+        if [ -n "$step_line" ]; then
+            current_label=$(printf '%s' "$step_line" \
+                | sed -n 's/.*=== Step [0-9]*\/[0-9]*: \(.*\) ===.*/\1/p')
+        fi
+
+        if [ -n "$current_label" ] && [ "$current_label" != "$last_label" ]; then
+            write_status "installing" "$current_label" "$version" ""
+            log "Install step: $current_label"
+            last_label="$current_label"
+        fi
+    done
+
+    wait "$install_pid"
+    rc=$?
+
+    # Merge install output into the main worker log for a single audit trail
+    cat "$INSTALL_LOG" >> "$LOG_FILE" 2>/dev/null
+    rm -f "$INSTALL_LOG"
+
+    return $rc
+}
+
+# Verify the installed VERSION matches what was expected.
+# A VERSION.pending file means the installer died mid-flight.
+post_install_check() {
+    local expected="$1" actual=""
+
+    if [ -f "$PENDING_FILE" ]; then
+        die "Install appears to have crashed mid-flight (VERSION.pending exists). Check $LOG_FILE."
+    fi
+
+    if [ -f "$VERSION_FILE" ]; then
+        actual=$(tr -d '[:space:]' < "$VERSION_FILE")
+    fi
+
+    if [ "$actual" != "$expected" ]; then
+        die "Install completed but VERSION not stamped (expected $expected, got ${actual:-<missing>}). Check $LOG_FILE."
+    fi
+}
+
 cleanup() {
     rm -f "$PID_FILE"
     rm -rf /tmp/qmanager_install
@@ -71,6 +163,10 @@ die() {
 
 # --- Lock & setup ------------------------------------------------------------
 
+# fs.protected_regular=1 prevents root from truncating files owned by other
+# users in sticky /tmp dirs. Prior failed CGI attempts may have left these
+# files owned by www-data, so rm-then-create instead of plain truncate.
+rm -f "$LOG_FILE" "$PID_FILE" 2>/dev/null || true
 echo $$ > "$PID_FILE"
 trap cleanup EXIT INT TERM
 : > "$LOG_FILE"
@@ -78,24 +174,22 @@ trap cleanup EXIT INT TERM
 MODE="$1"
 log "Starting qmanager_update mode=$MODE"
 
-# Stop watchdog early to prevent interference during download/install
+# Stop watchdog early to prevent interference during download/install.
+# svc_stop translates underscores to dashes, so this maps to qmanager-watchcat.service
 svc_stop qmanager_watchcat
 log "Watchdog stopped"
 
 # =============================================================================
-# INSTALL mode
+# INSTALL mode — download, verify, install, reboot in one step
 # =============================================================================
 if [ "$MODE" = "install" ]; then
     URL="$2"
     VERSION="$3"
     SIZE="$4"
 
-    # Validate URL origin (prevent SSRF)
-    case "$URL" in
-        https://github.com/Jeffery2008/QManager-RM520N/releases/download/*/qmanager.tar.gz) ;;
-        https://github.com/Jeffery2008/QManager-RM520N/raw/*/qmanager-build/qmanager.tar.gz) ;;
-        *) die "Invalid download URL" ;;
-    esac
+    if ! validate_url "$URL"; then
+        die "Invalid download URL"
+    fi
 
     # 1. Download
     write_status "downloading" "Downloading update..." "$VERSION" "$SIZE"
@@ -109,14 +203,10 @@ if [ "$MODE" = "install" ]; then
     log "Download complete"
 
     # 2. Verify archive integrity
-    if ! tar tzf "$download_path" >/dev/null 2>&1; then
+    write_status "verifying" "Verifying archive..." "$VERSION" ""
+    if ! verify_archive "$download_path"; then
         rm -f "$download_path"
-        die "Downloaded file is corrupt. Please try again."
-    fi
-
-    if ! tar tzf "$download_path" | grep -q "install_rm520n.sh"; then
-        rm -f "$download_path"
-        die "Invalid update package — missing install_rm520n.sh."
+        die "Downloaded file is corrupt or missing install_rm520n.sh."
     fi
     log "Archive verified"
 
@@ -127,19 +217,22 @@ if [ "$MODE" = "install" ]; then
     echo "$current_ver" > "$UPDATES_DIR/previous_version"
     log "Saved previous version ($current_ver) for rollback"
 
-    # 4. Extract and install
+    # 4. Extract and run installer with step-streaming progress
     rm -rf /tmp/qmanager_install
     tar xzf "$download_path" -C /tmp/
     rm -f "$download_path"
     cd /tmp/qmanager_install || die "Extraction failed — /tmp/qmanager_install not found"
 
     log "Running install_rm520n.sh --skip-packages --no-reboot"
-    if ! sh install_rm520n.sh --skip-packages --no-reboot >> "$LOG_FILE" 2>&1; then
-        die "Installation failed. Check /tmp/qmanager_update.log for details."
+    if ! run_install_with_progress "$VERSION"; then
+        die "Installation failed. Check $LOG_FILE for details."
     fi
     log "Install complete"
 
-    # 5. Cleanup and reboot
+    # 5. Verify the VERSION file was stamped correctly
+    post_install_check "$VERSION"
+
+    # 6. Cleanup and reboot
     rm -rf /tmp/qmanager_install
     write_status "rebooting" "Rebooting device..." "$VERSION" ""
     log "Rebooting"
@@ -161,11 +254,10 @@ if [ "$MODE" = "download" ]; then
     STAGED_TARBALL="/tmp/qmanager_staged.tar.gz"
     STAGED_VERSION="/tmp/qmanager_staged_version"
 
-    # Validate URL origin (prevent SSRF)
-    case "$URL" in
-        https://github.com/Jeffery2008/QManager-RM520N/releases/download/*/qmanager.tar.gz) ;;
-        *) die "Invalid download URL" ;;
-    esac
+    # Strict validation — only releases path is accepted for staged downloads
+    if ! validate_url "$URL" "strict"; then
+        die "Invalid download URL"
+    fi
 
     # 1. Download tarball
     write_status "downloading" "Downloading QManager ${VERSION}..." "$VERSION" ""
@@ -177,15 +269,10 @@ if [ "$MODE" = "download" ]; then
     fi
     log "Download complete"
 
-    # 2. Verify archive integrity (tar check)
-    if ! tar tzf "$STAGED_TARBALL" >/dev/null 2>&1; then
+    # 2. Verify archive integrity
+    if ! verify_archive "$STAGED_TARBALL"; then
         rm -f "$STAGED_TARBALL"
-        die "Downloaded file is corrupt. Please try again."
-    fi
-
-    if ! tar tzf "$STAGED_TARBALL" | grep -q "install_rm520n.sh"; then
-        rm -f "$STAGED_TARBALL"
-        die "Invalid update package — missing install_rm520n.sh."
+        die "Downloaded file is corrupt or missing install_rm520n.sh."
     fi
     log "Archive integrity verified"
 
@@ -240,26 +327,29 @@ if [ "$MODE" = "install_staged" ]; then
     VERSION=$(cat "$STAGED_VERSION" 2>/dev/null)
     log "Installing staged version: $VERSION"
 
-    # 1. Save current version for tracking
+    # 1. Save current version for rollback tracking
     write_status "installing" "Installing QManager ${VERSION}..." "$VERSION" ""
     current_ver=$(get_current_version)
     mkdir -p "$UPDATES_DIR"
     echo "$current_ver" > "$UPDATES_DIR/previous_version"
     log "Saved previous version ($current_ver)"
 
-    # 2. Extract and install
+    # 2. Extract and run installer with step-streaming progress
     rm -rf /tmp/qmanager_install
     tar xzf "$STAGED_TARBALL" -C /tmp/
     rm -f "$STAGED_TARBALL" "$STAGED_VERSION"
     cd /tmp/qmanager_install || die "Extraction failed — /tmp/qmanager_install not found"
 
     log "Running install_rm520n.sh --skip-packages --no-reboot"
-    if ! sh install_rm520n.sh --skip-packages --no-reboot >> "$LOG_FILE" 2>&1; then
-        die "Installation failed. Check /tmp/qmanager_update.log for details."
+    if ! run_install_with_progress "$VERSION"; then
+        die "Installation failed. Check $LOG_FILE for details."
     fi
     log "Install complete"
 
-    # 3. Cleanup and reboot
+    # 3. Verify the VERSION file was stamped correctly
+    post_install_check "$VERSION"
+
+    # 4. Cleanup and reboot
     rm -rf /tmp/qmanager_install
     write_status "rebooting" "Rebooting device..." "$VERSION" ""
     log "Rebooting"
@@ -281,11 +371,10 @@ if [ "$MODE" = "rollback" ]; then
         die "Rollback requires URL and version arguments"
     fi
 
-    # Validate URL origin (prevent SSRF)
-    case "$URL" in
-        https://github.com/Jeffery2008/QManager-RM520N/releases/download/*/qmanager.tar.gz) ;;
-        *) die "Invalid rollback URL" ;;
-    esac
+    # Strict validation — rollback only downloads from official releases
+    if ! validate_url "$URL" "strict"; then
+        die "Invalid rollback URL"
+    fi
 
     # 1. Download rollback archive
     write_status "downloading" "Downloading previous version..." "$VERSION" ""
@@ -299,14 +388,9 @@ if [ "$MODE" = "rollback" ]; then
     log "Rollback download complete"
 
     # 2. Verify archive integrity
-    if ! tar tzf "$download_path" >/dev/null 2>&1; then
+    if ! verify_archive "$download_path"; then
         rm -f "$download_path"
-        die "Rollback archive is corrupt."
-    fi
-
-    if ! tar tzf "$download_path" | grep -q "install_rm520n.sh"; then
-        rm -f "$download_path"
-        die "Invalid rollback package — missing install_rm520n.sh."
+        die "Rollback archive is corrupt or missing install_rm520n.sh."
     fi
     log "Rollback archive verified"
 
@@ -317,19 +401,22 @@ if [ "$MODE" = "rollback" ]; then
     echo "$current_ver" > "$UPDATES_DIR/previous_version"
     log "Saved current version ($current_ver) before rollback"
 
-    # 4. Extract and install
+    # 4. Extract and run installer with step-streaming progress
     rm -rf /tmp/qmanager_install
     tar xzf "$download_path" -C /tmp/
     rm -f "$download_path"
     cd /tmp/qmanager_install || die "Extraction failed"
 
     log "Running install_rm520n.sh --skip-packages --no-reboot"
-    if ! sh install_rm520n.sh --skip-packages --no-reboot >> "$LOG_FILE" 2>&1; then
-        die "Rollback installation failed. Check /tmp/qmanager_update.log"
+    if ! run_install_with_progress "$VERSION"; then
+        die "Rollback installation failed. Check $LOG_FILE"
     fi
     log "Rollback install complete"
 
-    # 5. Cleanup and reboot
+    # 5. Verify the VERSION file was stamped correctly
+    post_install_check "$VERSION"
+
+    # 6. Cleanup and reboot
     rm -rf /tmp/qmanager_install
     write_status "rebooting" "Rebooting device..." "$VERSION" ""
     log "Rebooting"

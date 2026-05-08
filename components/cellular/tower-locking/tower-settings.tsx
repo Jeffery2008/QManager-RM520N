@@ -51,7 +51,8 @@ interface TowerLockingSettingsProps {
   modemData: ModemStatus | null;
   isLoading: boolean;
   onPersistChange: (persist: boolean) => void;
-  onFailoverChange: (enabled: boolean) => void;
+  onFailoverChange: (enabled: boolean) => Promise<boolean>;
+  isFailoverSaving: boolean;
   onThresholdChange: (threshold: number) => Promise<boolean>;
 }
 
@@ -62,6 +63,7 @@ const TowerLockingSettingsComponent = ({
   isLoading,
   onPersistChange,
   onFailoverChange,
+  isFailoverSaving,
   onThresholdChange,
 }: TowerLockingSettingsProps) => {
   // Whether any tower lock is active (from config — matches what failover daemon checks)
@@ -97,7 +99,7 @@ const TowerLockingSettingsComponent = ({
     setIsSavingThreshold(false);
     if (ok) {
       markThresholdSaved();
-      toast.success("Failover threshold updated");
+      toast.success("故障切换阈值已更新");
     }
   }, [thresholdInput, onThresholdChange, markThresholdSaved]);
 
@@ -185,7 +187,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
         >
           <TriangleAlertIcon className="h-3 w-3" />
-          因信号较差已解锁
+          信号较差，已解除锁定
         </Badge>
       );
     }
@@ -247,7 +249,7 @@ const TowerLockingSettingsComponent = ({
           className="bg-success/15 text-success hover:bg-success/20 border-success/30"
         >
           <CheckCircle2Icon className="h-3 w-3" />
-          已启用
+          活动
         </Badge>
       );
     }
@@ -349,9 +351,9 @@ const TowerLockingSettingsComponent = ({
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Tower Locking Settings</CardTitle>
+          <CardTitle>基站锁定设置</CardTitle>
           <CardDescription>
-            Lock the modem to a specific cell tower. Keeps your connection stable instead of roaming between towers.
+            将调制解调器锁定到指定小区基站，避免在基站间漫游，让连接更稳定。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -422,7 +424,7 @@ const TowerLockingSettingsComponent = ({
       <CardHeader>
         <CardTitle>基站锁定设置</CardTitle>
         <CardDescription>
-          将调制解调器锁定到指定的小区基站，避免在不同基站之间频繁切换。与 5G NSA 不兼容。
+          将调制解调器锁定到指定小区基站，避免在基站间漫游，让连接更稳定。与 5G NSA 不兼容。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -438,7 +440,7 @@ const TowerLockingSettingsComponent = ({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    启用后，设备重启时会自动恢复基站锁定。
+                    启用后，重启后会自动恢复基站锁定。
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -483,11 +485,17 @@ const TowerLockingSettingsComponent = ({
               <Switch
                 id="tower-failover"
                 checked={config?.failover?.enabled ?? false}
-                disabled={!config || !hasActiveLock}
-                onCheckedChange={(checked) => {
-                  onFailoverChange(checked);
-                  if (!checked) {
-                    toast.warning("已禁用故障切换");
+                disabled={!config || !hasActiveLock || isFailoverSaving}
+                onCheckedChange={async (checked) => {
+                  const ok = await onFailoverChange(checked);
+                  if (ok) {
+                    if (checked) {
+                      toast.success("已启用信号故障切换");
+                    } else {
+                      toast.warning("已禁用信号故障切换");
+                    }
+                  } else {
+                    toast.error(checked ? "启用信号故障切换失败" : "禁用信号故障切换失败");
                   }
                 }}
               />
@@ -513,7 +521,7 @@ const TowerLockingSettingsComponent = ({
                   <p>
                     仅在启用故障切换后生效。设置一个信号质量阈值，
                     <br />
-                    当低于该阈值时，设备会自动解除基站锁定。
+                    低于该阈值时设备会自动解除基站锁定。
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -570,7 +578,7 @@ const TowerLockingSettingsComponent = ({
                 className={qualityBadgeStyles[qualityLvl]}
               >
                 {qualityIcons[qualityLvl]}
-                {activeRsrp !== null ? `${signalQualityPct}%` : "不适用"}
+                {activeRsrp !== null ? `${signalQualityPct}%` : "N/A"}
               </Badge>
             </div>
           </div>

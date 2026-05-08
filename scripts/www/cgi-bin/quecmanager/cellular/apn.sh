@@ -1,6 +1,8 @@
 #!/bin/sh
 . /usr/lib/qmanager/cgi_base.sh
 . /usr/lib/qmanager/cgi_at.sh
+. /usr/lib/qmanager/platform.sh
+. /usr/lib/qmanager/ttl_state.sh
 # =============================================================================
 # apn.sh — CGI Endpoint: APN Management (GET + POST)
 # =============================================================================
@@ -28,7 +30,6 @@ cgi_handle_options
 
 # --- Configuration -----------------------------------------------------------
 CMD_GAP=0.2
-TTL_FILE="/etc/firewall.user.ttl"
 
 # =============================================================================
 # GET — Fetch carrier profiles and active CID
@@ -168,40 +169,17 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     if [ "$has_ttl" = "true" ] || [ "$has_hl" = "true" ]; then
         qlog_info "Applying TTL=$TTL, HL=$HL"
 
-        # Read current values from firewall rules file
-        current_ttl=0
-        current_hl=0
-        if [ -s "$TTL_FILE" ]; then
-            current_ttl=$(grep 'iptables.*--ttl-set' "$TTL_FILE" 2>/dev/null | awk '{for(i=1;i<=NF;i++){if($i=="--ttl-set"){print $(i+1)}}}' | head -1)
-            current_hl=$(grep 'ip6tables.*--hl-set' "$TTL_FILE" 2>/dev/null | awk '{for(i=1;i<=NF;i++){if($i=="--hl-set"){print $(i+1)}}}' | head -1)
-        fi
-        [ -z "$current_ttl" ] && current_ttl=0
-        [ -z "$current_hl" ] && current_hl=0
+        # Compare to live state — only re-apply if values actually changed
+        set -- $(ttl_state_read_live)
+        current_ttl="${1:-0}"
+        current_hl="${2:-0}"
 
-        # Only apply if values actually changed
         if [ "$current_ttl" != "$TTL" ] || [ "$current_hl" != "$HL" ]; then
-            # Clear existing rules
-            if [ "$current_ttl" -gt 0 ] 2>/dev/null; then
-                iptables -t mangle -D POSTROUTING -o rmnet+ -j TTL --ttl-set "$current_ttl" 2>/dev/null
+            if ttl_state_apply "$TTL" "$HL" && ttl_state_write_persisted "$TTL" "$HL"; then
+                qlog_info "TTL/HL applied: TTL=$TTL HL=$HL"
+            else
+                qlog_warn "TTL/HL apply or persist failed (TTL=$TTL HL=$HL); rules may be partial"
             fi
-            if [ "$current_hl" -gt 0 ] 2>/dev/null; then
-                ip6tables -t mangle -D POSTROUTING -o rmnet+ -j HL --hl-set "$current_hl" 2>/dev/null
-            fi
-
-            # Write new rules file (atomic: temp + mv)
-            TTL_TMP="${TTL_FILE}.tmp"
-            > "$TTL_TMP"
-            if [ "$TTL" -gt 0 ] 2>/dev/null; then
-                echo "iptables -t mangle -A POSTROUTING -o rmnet+ -j TTL --ttl-set $TTL" >> "$TTL_TMP"
-                iptables -t mangle -A POSTROUTING -o rmnet+ -j TTL --ttl-set "$TTL"
-            fi
-            if [ "$HL" -gt 0 ] 2>/dev/null; then
-                echo "ip6tables -t mangle -A POSTROUTING -o rmnet+ -j HL --hl-set $HL" >> "$TTL_TMP"
-                ip6tables -t mangle -A POSTROUTING -o rmnet+ -j HL --hl-set "$HL"
-            fi
-            mv "$TTL_TMP" "$TTL_FILE"
-
-            qlog_info "TTL/HL applied: TTL=$TTL, HL=$HL"
         else
             qlog_info "TTL/HL unchanged (TTL=$TTL, HL=$HL)"
         fi

@@ -10,6 +10,7 @@ ExecStartPre=/bin/sh -c '[ -f /usr/lib/qmanager/config.sh ] && . /usr/lib/qmanag
 ExecStart=/usr/bin/qmanager_watchcat
 EnvironmentFile=-/etc/qmanager/environment
 ExecStopPost=/bin/sh -c 'rm -f /tmp/qmanager_watchcat.pid /tmp/qmanager_watchcat.lock /tmp/qmanager_recovery_active'
+TimeoutStopSec=10
 Restart=on-failure
 RestartSec=5s
 StartLimitIntervalSec=3600

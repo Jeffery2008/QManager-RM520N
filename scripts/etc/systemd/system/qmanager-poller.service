@@ -9,6 +9,7 @@ Type=simple
 ExecStartPre=/bin/sh -c '[ -e /dev/smd11 ] || { echo "AT device /dev/smd11 not found"; exit 1; }'
 ExecStart=/usr/bin/qmanager_poller
 EnvironmentFile=-/etc/qmanager/environment
+TimeoutStopSec=10
 Restart=on-failure
 RestartSec=5s
 StartLimitIntervalSec=3600

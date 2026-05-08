@@ -353,7 +353,13 @@ www-data ALL = (root) NOPASSWD: /usr/sbin/iptables, /usr/sbin/ip6tables, \
     /usrdata/simplefirewall/ttl-override, /bin/echo, /bin/cat
 ```
 
-QManager extends this with its own sudoers file (`/opt/etc/sudoers.d/qmanager`) covering systemctl, reboot, crontab, ln, rm, and iptables-restore — all with full absolute paths due to Entware's `secure_path` restriction (see [Web Server: lighttpd](#web-server-lighttpd)).
+QManager installs its own sudoers file at `/etc/sudoers.d/qmanager` (not `/opt/etc/sudoers.d/`) covering systemctl, reboot, crontab, ln, rm, iptables-restore, `qmanager_set_ssh_password`, and — critically for OTA updates — `qmanager_update`. All entries use full absolute paths due to Entware's `secure_path` restriction (see [Web Server: lighttpd](#web-server-lighttpd)).
+
+The `qmanager_update` rule deserves special mention:
+```
+www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_update
+```
+This allows the `update.sh` CGI to invoke the OTA update worker as root via `sudo -n`. The CGI spawn-line redirects to `/dev/null 2>&1` — the worker creates `/tmp/qmanager_update.log` as root, sidestepping `fs.protected_regular=1` which would block root from truncating a www-data-owned log file.
 
 ### Console and TTY Architecture (ttyd)
 
@@ -664,6 +670,31 @@ ln -sf "$UNIT_DIR/qmanager-ping.service" "$WANTS_DIR/qmanager-ping.service"
 > **WARNING:** Do not rely on `systemctl enable` for boot persistence on the RM520N-GL. Always use `svc_enable`/`svc_disable` from `platform.sh` (or direct symlink creation in install scripts). `systemctl start/stop/restart` works fine for runtime control; only enable/disable is broken.
 
 > **NOTE:** Service files are installed to `/lib/systemd/system/` (persistent rootfs), NOT `/etc/systemd/system/` (which is tmpfs and does not survive reboots on this platform). The wants directory is `/lib/systemd/system/multi-user.target.wants/`.
+
+### `/dev/smd11` Permissions — udev Rule
+
+QManager owns `/etc/udev/rules.d/99-qmanager-smd11.rules`, which fires on
+every kernel `add` event for `smd11` and runs
+`/usr/lib/qmanager/qmanager_smd11_udev.sh`. The helper sets the device to
+`root:dialout` mode `660` so `www-data` (member of `dialout`) can open it
+via `atcli_smd11`.
+
+Why udev instead of a one-shot at boot:
+
+- On PRAIRE-derived platforms (e.g. RG502Q / RM502Q), the modem subsystem
+  re-creates `/dev/smd11` *after* `qmanager-setup.service` runs, so the
+  one-shot's `if [ -e /dev/smd11 ]` guard returns false and permissions are
+  never set. udev fires the moment the device node exists.
+- The rule also fires on in-session modem resets (firmware update,
+  watchcat-triggered modem-only restart), restoring permissions without
+  requiring a full system reboot.
+
+The `qmanager_setup` one-shot retains the same `chown`/`chmod` as a
+fallback in case udev hasn't loaded the rule yet. The two paths are
+idempotent and never conflict.
+
+The rule is removed by the uninstaller, which also reloads udev so the
+removal takes effect immediately.
 
 ---
 
@@ -1254,9 +1285,12 @@ The RM520N-GL uses lighttpd (from Entware) instead of OpenWRT's uhttpd. Key conf
 | Reverse proxy | Not used | `/console` → ttyd on 127.0.0.1:8080 |
 | Process user | root (typically) | `www-data:dialout` |
 
-**Process permissions:** lighttpd runs as `www-data:dialout`. The `dialout` group grants access to serial devices (`/dev/ttyOUT`, `/dev/ttyOUT2`). For operations requiring root (iptables, service management), sudoers rules in `/opt/etc/sudoers.d/qmanager` allow specific commands:
+**Process permissions:** lighttpd runs as `www-data:dialout`. The `dialout` group grants access to `/dev/smd11` (AT transport device). For operations requiring root (iptables, service management, OTA updates), sudoers rules in `/etc/sudoers.d/qmanager` allow specific commands:
 
 ```
+# OTA update worker (CGI invokes via sudo -n; worker creates log as root)
+www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_update
+
 # Service control (platform.sh svc_* functions)
 www-data ALL=(root) NOPASSWD: /bin/systemctl start *, /bin/systemctl stop *, /bin/systemctl restart *, /bin/systemctl is-active *
 
@@ -1264,10 +1298,11 @@ www-data ALL=(root) NOPASSWD: /bin/systemctl start *, /bin/systemctl stop *, /bi
 www-data ALL=(root) NOPASSWD: /bin/ln -sf /lib/systemd/system/qmanager*.service ...
 www-data ALL=(root) NOPASSWD: /bin/rm -f /lib/systemd/system/multi-user.target.wants/qmanager*.service
 
-# Firewall, reboot, crontab
+# Firewall, reboot, crontab, SSH password
 www-data ALL=(root) NOPASSWD: /usr/sbin/iptables, /usr/sbin/iptables-restore, /usr/sbin/ip6tables, /usr/sbin/ip6tables-restore
 www-data ALL=(root) NOPASSWD: /sbin/reboot
 www-data ALL=(root) NOPASSWD: /usr/bin/crontab
+www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_set_ssh_password
 ```
 
 > **WARNING: Entware sudo `secure_path` restriction.** Entware's sudo has a restricted `secure_path` that does NOT include `/sbin/` or `/usr/sbin/`. All `$_SUDO` commands in `platform.sh` **must use full absolute paths** — bare command names (`systemctl`, `reboot`, `iptables`) will fail silently from CGI context. Key paths: `systemctl` is at `/bin/systemctl` (not `/usr/bin/systemctl`), `reboot` is at `/sbin/reboot`, `iptables` is at `/usr/sbin/iptables`. The `$_SYSTEMCTL` variable in `platform.sh` centralizes the systemctl path.
@@ -1276,40 +1311,15 @@ QManager's `platform.sh` provides wrapper functions (`svc_start`, `svc_stop`, `r
 
 ### CGI AT Command Execution
 
-The existing RM520N-GL firmware uses two approaches for AT commands in CGI scripts. QManager should standardize on microcom.
-
-#### Approach A: microcom (Recommended)
+QManager standardizes on `qcmd` for all AT command execution in CGI scripts and daemons:
 
 ```bash
-# Adaptive wait with millisecond granularity
-wait_time=200
-while true; do
-    runcmd=$(echo -en "${command}\r\n" | microcom -t "$wait_time" /dev/ttyOUT2)
-    if echo "$runcmd" | grep -q "OK\|ERROR"; then
-        break
-    fi
-    wait_time=$((wait_time + 1))
-done
+result=$(qcmd 'AT+QENG="servingcell"')
 ```
 
-Advantages over `atcmd`:
-- Millisecond timeout resolution (vs. 1-second polling)
-- No background processes spawned
-- No tmpfile management
-- No ANSI escape codes to strip
+`qcmd` wraps `atcli_smd11` on `/dev/smd11` directly with `flock` serialization. Never use `microcom`, `atcmd`, or direct `/dev/smd11` access from CGI scripts — always go through `qcmd`.
 
-#### Approach B: atcmd wrapper (Not Recommended)
-
-```bash
-runcmd=$(atcmd '$x' | awk '{ gsub(/\x1B\[[0-9;]*[mG]/, "") }1')
-```
-
-Problems:
-- Single-quoted `'$x'` prevents variable expansion (bug)
-- 1-second polling granularity
-- No timeout (can hang forever)
-- ANSI codes require stripping
-- No concurrent access protection
+> **Historical note:** The original RM520N-GL firmware used `microcom` on `/dev/ttyOUT` (socat PTY bridge) and a broken `atcmd` wrapper. QManager replaces both with `atcli_smd11` + `qcmd`, eliminating the socat bridge dependency entirely.
 
 ### Existing CGI Endpoints
 
@@ -1548,13 +1558,13 @@ Poller network interface detection (wwan0 → rmnet_ipa0 on RM520N-GL). Email al
 2. **End-to-end deployment test** — full install, service startup, frontend access, auth flow
 3. **Network interface confirmation** — verify `rmnet_ipa0` is the correct interface for traffic stats
 
-### Deferred Features (Not Ported)
+### Removed Features (Not Ported)
 
-The following features have been removed from the `dev-rm520` branch and are not planned for the initial RM520N-GL release:
+The following features have been removed from the `dev-rm520` branch:
 
 | Feature | Reason |
 |---------|--------|
-| VPN Management (Tailscale + NetBird) | Depends on fw4 zones, mwan3 ipset, nftables — no equivalent on RM520N-GL |
+| VPN Management (NetBird only) | Third-party binary, fw4/mwan3 dependencies — Tailscale is implemented |
 | Video Optimizer / Traffic Masquerade (DPI) | Depends on nftables NFQUEUE; nfqws ARM32 binary not validated |
 | Bandwidth Monitor | ARM64 binary not portable to ARM32; websocat WSS dependency |
 | Ethernet Status & Link Speed | RM520N-GL uses RGMII (bridge0/eth0) vs USB Ethernet — different management model |

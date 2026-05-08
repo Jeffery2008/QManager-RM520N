@@ -1,23 +1,22 @@
 #!/bin/sh
 . /usr/lib/qmanager/cgi_base.sh
 . /usr/lib/qmanager/platform.sh
+. /usr/lib/qmanager/ttl_state.sh
 # =============================================================================
 # ttl.sh — CGI Endpoint: TTL / Hop Limit Configuration (GET + POST)
 # =============================================================================
-# GET:  Reads current TTL and HL values from the firewall rules file.
-# POST: Applies new TTL/HL via iptables/ip6tables and persists to file.
+# GET:  Returns live iptables state (not the persisted file) so the UI always
+#       reflects what is actually in the kernel.
+# POST: Validates input, applies via ttl_state_apply, persists via
+#       ttl_state_write_persisted, then re-reads live state for the response.
+#       Explicit cgi_error on apply or persist failure — no silent success.
 #
-# Files:
-#   /etc/firewall.user.ttl          — Persistent firewall rules (iptables cmds)
-#   /etc/init.d/quecmanager_ttl     — Boot persistence init script
+# State file: /etc/qmanager/ttl_state  (writable by www-data, plain key=value)
+# Boot persistence: /lib/systemd/system/qmanager_ttl.service
 #
 # POST body: { "ttl": 64, "hl": 64 }
 #   - ttl: 0-255  (0 = disable / use default)
 #   - hl:  0-255  (0 = disable / use default)
-#
-# This endpoint is the standalone TTL/HL manager. The same firewall rules
-# file is shared with the Custom SIM Profile apply script
-# (qmanager_profile_apply), so both paths write the same canonical format.
 #
 # Endpoint: GET/POST /cgi-bin/quecmanager/network/ttl.sh
 # Install location: /www/cgi-bin/quecmanager/network/ttl.sh
@@ -29,24 +28,7 @@ cgi_headers
 cgi_handle_options
 
 # --- Configuration -----------------------------------------------------------
-TTL_FILE="/etc/firewall.user.ttl"
 TTL_INIT="qmanager_ttl"
-
-# --- Helper: parse current values from the firewall rules file ----------------
-get_current_values() {
-    local ttl=0 hl=0
-    if [ -s "$TTL_FILE" ]; then
-        ttl=$(grep 'iptables.*--ttl-set' "$TTL_FILE" 2>/dev/null \
-            | awk '{for(i=1;i<=NF;i++){if($i=="--ttl-set"){print $(i+1)}}}' \
-            | head -1)
-        hl=$(grep 'ip6tables.*--hl-set' "$TTL_FILE" 2>/dev/null \
-            | awk '{for(i=1;i<=NF;i++){if($i=="--hl-set"){print $(i+1)}}}' \
-            | head -1)
-    fi
-    [ -z "$ttl" ] && ttl=0
-    [ -z "$hl" ] && hl=0
-    echo "$ttl $hl"
-}
 
 # =============================================================================
 # GET — Read current TTL/HL configuration
@@ -54,24 +36,21 @@ get_current_values() {
 if [ "$REQUEST_METHOD" = "GET" ]; then
     qlog_info "Reading TTL/HL configuration"
 
-    # Parse current values
-    read cur_ttl cur_hl <<EOF
-$(get_current_values)
-EOF
+    set -- $(ttl_state_read_live)
+    cur_ttl="$1"
+    cur_hl="$2"
 
-    # Determine enabled status
     is_enabled="false"
     if [ "$cur_ttl" -gt 0 ] 2>/dev/null || [ "$cur_hl" -gt 0 ] 2>/dev/null; then
         is_enabled="true"
     fi
 
-    # Check autostart status
     autostart="false"
     if svc_is_enabled "$TTL_INIT"; then
         autostart="true"
     fi
 
-    qlog_info "Current: TTL=$cur_ttl HL=$cur_hl enabled=$is_enabled autostart=$autostart"
+    qlog_info "Current (live): TTL=$cur_ttl HL=$cur_hl enabled=$is_enabled autostart=$autostart"
 
     jq -n \
         --argjson is_enabled "$is_enabled" \
@@ -92,75 +71,58 @@ fi
 # POST — Apply TTL/HL configuration
 # =============================================================================
 if [ "$REQUEST_METHOD" = "POST" ]; then
-
     cgi_read_post
 
-    new_ttl=$(printf '%s' "$POST_DATA" | jq -r '.ttl // "0"')
-    new_hl=$(printf '%s' "$POST_DATA" | jq -r '.hl // "0"')
+    new_ttl=$(printf '%s' "$POST_DATA" | jq -r '.ttl // 0')
+    new_hl=$(printf '%s' "$POST_DATA" | jq -r '.hl // 0')
 
-    # --- Validate TTL ---
+    # Validate (lib also validates, but giving the user a clean error message
+    # at the CGI layer is friendlier than relying on lib return codes)
     case "$new_ttl" in
-        ''|*[!0-9]*)
-            cgi_error "invalid_ttl" "TTL must be a number between 0 and 255"
-            exit 0
-            ;;
+        ''|*[!0-9]*) cgi_error "invalid_ttl" "TTL must be a number between 0 and 255"; exit 0 ;;
     esac
     if [ "$new_ttl" -gt 255 ] 2>/dev/null; then
-        cgi_error "invalid_ttl" "TTL must be between 0 and 255"
-        exit 0
+        cgi_error "invalid_ttl" "TTL must be between 0 and 255"; exit 0
     fi
-
-    # --- Validate HL ---
     case "$new_hl" in
-        ''|*[!0-9]*)
-            cgi_error "invalid_hl" "HL must be a number between 0 and 255"
-            exit 0
-            ;;
+        ''|*[!0-9]*) cgi_error "invalid_hl" "HL must be a number between 0 and 255"; exit 0 ;;
     esac
     if [ "$new_hl" -gt 255 ] 2>/dev/null; then
-        cgi_error "invalid_hl" "HL must be between 0 and 255"
-        exit 0
+        cgi_error "invalid_hl" "HL must be between 0 and 255"; exit 0
     fi
 
     qlog_info "Applying TTL=$new_ttl HL=$new_hl"
 
-    # --- Clear existing iptables rules ---
-    read cur_ttl cur_hl <<EOF
-$(get_current_values)
-EOF
-
-    if [ "$cur_ttl" -gt 0 ] 2>/dev/null; then
-        run_iptables -t mangle -D POSTROUTING -o rmnet+ -j TTL --ttl-set "$cur_ttl" 2>/dev/null
-    fi
-    if [ "$cur_hl" -gt 0 ] 2>/dev/null; then
-        run_ip6tables -t mangle -D POSTROUTING -o rmnet+ -j HL --hl-set "$cur_hl" 2>/dev/null
+    # Apply to kernel first; if iptables fails, surface it before persisting
+    if ! ttl_state_apply "$new_ttl" "$new_hl"; then
+        qlog_error "ttl_state_apply failed for TTL=$new_ttl HL=$new_hl"
+        cgi_error "apply_failed" "Failed to apply iptables rules"
+        exit 0
     fi
 
-    # --- Write new rules file (atomic: temp + mv) ---
-    TTL_TMP="${TTL_FILE}.tmp"
-    > "$TTL_TMP"
-    if [ "$new_ttl" -gt 0 ] 2>/dev/null; then
-        echo "iptables -t mangle -A POSTROUTING -o rmnet+ -j TTL --ttl-set $new_ttl" >> "$TTL_TMP"
-        run_iptables -t mangle -A POSTROUTING -o rmnet+ -j TTL --ttl-set "$new_ttl"
+    # Persist; if write fails, surface it (rules are live but won't survive reboot)
+    if ! ttl_state_write_persisted "$new_ttl" "$new_hl"; then
+        qlog_error "ttl_state_write_persisted failed for TTL=$new_ttl HL=$new_hl"
+        cgi_error "persist_failed" "Rules applied but failed to persist to disk"
+        exit 0
     fi
-    if [ "$new_hl" -gt 0 ] 2>/dev/null; then
-        echo "ip6tables -t mangle -A POSTROUTING -o rmnet+ -j HL --hl-set $new_hl" >> "$TTL_TMP"
-        run_ip6tables -t mangle -A POSTROUTING -o rmnet+ -j HL --hl-set "$new_hl"
-    fi
-    mv "$TTL_TMP" "$TTL_FILE"
 
-    # Determine new enabled state
+    # Re-read LIVE state so response reflects reality (not what client sent)
+    set -- $(ttl_state_read_live)
+    cur_ttl="$1"
+    cur_hl="$2"
+
     is_enabled="false"
-    if [ "$new_ttl" -gt 0 ] 2>/dev/null || [ "$new_hl" -gt 0 ] 2>/dev/null; then
+    if [ "$cur_ttl" -gt 0 ] 2>/dev/null || [ "$cur_hl" -gt 0 ] 2>/dev/null; then
         is_enabled="true"
     fi
 
-    qlog_info "TTL/HL applied: TTL=$new_ttl HL=$new_hl enabled=$is_enabled"
+    qlog_info "TTL/HL applied & persisted: TTL=$cur_ttl HL=$cur_hl enabled=$is_enabled"
 
     jq -n \
         --argjson is_enabled "$is_enabled" \
-        --argjson ttl "$new_ttl" \
-        --argjson hl "$new_hl" \
+        --argjson ttl "$cur_ttl" \
+        --argjson hl "$cur_hl" \
         '{
             success: true,
             is_enabled: $is_enabled,

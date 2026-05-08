@@ -8,6 +8,7 @@ interface InstallResult {
   status: "idle" | "running" | "complete" | "error";
   message?: string;
   detail?: string;
+  log?: string;
 }
 
 // =============================================================================

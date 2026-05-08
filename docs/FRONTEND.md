@@ -105,7 +105,7 @@ constants/                      # Static configuration data
 | `/cellular/settings/network-priority` | NetworkPriority | LTE/NR mode preferences |
 | `/cellular/settings/fplmn-settings` | FPLMNSettings | Forbidden network cleanup |
 | `/cellular/cell-locking` | BandLocking | LTE/NR band selection |
-| `/cellular/cell-locking/tower-locking` | TowerLocking | PCI-based tower lock |
+| `/cellular/cell-locking/tower-locking` | TowerLocking | PCI-based tower lock (with Simple Mode dropdowns sourced from live QCAINFO) |
 | `/cellular/cell-locking/frequency-locking` | FrequencyLocking | EARFCN/ARFCN lock |
 | `/cellular/cell-scanner` | CellScanner | Active cell scanning |
 | `/cellular/cell-scanner/neighbourcell-scanner` | NeighbourScanner | Neighbor cells |

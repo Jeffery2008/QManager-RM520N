@@ -46,10 +46,11 @@ MAX_EVENTS=50
 
 # --- Source profile manager library ------------------------------------------
 [ -f /usr/lib/qmanager/profile_mgr.sh ] && . /usr/lib/qmanager/profile_mgr.sh
+[ -f /usr/lib/qmanager/platform.sh ] && . /usr/lib/qmanager/platform.sh
+[ -f /usr/lib/qmanager/ttl_state.sh ] && . /usr/lib/qmanager/ttl_state.sh
 
 # --- Configuration -----------------------------------------------------------
 STATE_FILE="/tmp/qmanager_profile_state.json"
-TTL_FILE="/etc/firewall.user.ttl"
 
 # Sip-don't-gulp gap between AT commands (seconds)
 CMD_GAP=0.3
@@ -279,16 +280,12 @@ apply_apn() {
 apply_ttl_hl() {
     mark_step_running "ttl_hl" "Checking TTL/HL settings..."
 
-    # Read current values from the firewall rules file
-    local current_ttl="" current_hl=""
-    if [ -s "$TTL_FILE" ]; then
-        current_ttl=$(grep 'iptables.*--ttl-set' "$TTL_FILE" 2>/dev/null | awk '{for(i=1;i<=NF;i++){if($i=="--ttl-set"){print $(i+1)}}}' | head -1)
-        current_hl=$(grep 'ip6tables.*--hl-set' "$TTL_FILE" 2>/dev/null | awk '{for(i=1;i<=NF;i++){if($i=="--hl-set"){print $(i+1)}}}' | head -1)
-    fi
+    # Read live kernel state for comparison
+    local current_ttl current_hl
+    set -- $(ttl_state_read_live)
+    current_ttl="${1:-0}"
+    current_hl="${2:-0}"
 
-    # Normalize empties to 0 for comparison
-    [ -z "$current_ttl" ] && current_ttl=0
-    [ -z "$current_hl" ] && current_hl=0
     local new_ttl="${p_ttl:-0}"
     local new_hl="${p_hl:-0}"
 
@@ -299,26 +296,11 @@ apply_ttl_hl() {
 
     mark_step_running "ttl_hl" "Applying TTL=$new_ttl, HL=$new_hl..."
 
-    # Clear existing rules
-    if [ "$current_ttl" -gt 0 ] 2>/dev/null; then
-        iptables -t mangle -D POSTROUTING -o rmnet+ -j TTL --ttl-set "$current_ttl" 2>/dev/null
+    if ttl_state_apply "$new_ttl" "$new_hl" && ttl_state_write_persisted "$new_ttl" "$new_hl"; then
+        mark_step_done "ttl_hl" "Applied TTL=$new_ttl, HL=$new_hl"
+    else
+        mark_step_failed "ttl_hl" "Failed to apply or persist TTL=$new_ttl, HL=$new_hl"
     fi
-    if [ "$current_hl" -gt 0 ] 2>/dev/null; then
-        ip6tables -t mangle -D POSTROUTING -o rmnet+ -j HL --hl-set "$current_hl" 2>/dev/null
-    fi
-
-    # Write new rules file
-    > "$TTL_FILE"
-    if [ "$new_ttl" -gt 0 ] 2>/dev/null; then
-        echo "iptables -t mangle -A POSTROUTING -o rmnet+ -j TTL --ttl-set $new_ttl" >> "$TTL_FILE"
-        iptables -t mangle -A POSTROUTING -o rmnet+ -j TTL --ttl-set "$new_ttl"
-    fi
-    if [ "$new_hl" -gt 0 ] 2>/dev/null; then
-        echo "ip6tables -t mangle -A POSTROUTING -o rmnet+ -j HL --hl-set $new_hl" >> "$TTL_FILE"
-        ip6tables -t mangle -A POSTROUTING -o rmnet+ -j HL --hl-set "$new_hl"
-    fi
-
-    mark_step_done "ttl_hl" "Applied TTL=$new_ttl, HL=$new_hl"
 }
 
 # =============================================================================

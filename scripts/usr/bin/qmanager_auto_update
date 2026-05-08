@@ -16,6 +16,7 @@
 }
 
 [ -f /usr/lib/qmanager/config.sh ] && . /usr/lib/qmanager/config.sh
+[ -f /usr/lib/qmanager/semver.sh ] && . /usr/lib/qmanager/semver.sh
 
 qlog_init "auto_update"
 
@@ -82,51 +83,6 @@ if [ -z "$latest_tag" ]; then
     qlog_info "No releases found"
     exit 0
 fi
-
-# --- Semver comparison -------------------------------------------------------
-# Exit codes: 0 = $1 newer, 1 = same, 2 = $1 older
-# Duplicated from update.sh — kept self-contained per project convention.
-
-semver_compare() {
-    local a="$1" b="$2"
-    a="${a#v}"; b="${b#v}"
-    local a_ver="${a%%-*}" a_pre="" b_ver="${b%%-*}" b_pre=""
-    case "$a" in *-*) a_pre="${a#*-}" ;; esac
-    case "$b" in *-*) b_pre="${b#*-}" ;; esac
-
-    local a1 a2 a3 b1 b2 b3
-    IFS='.' read a1 a2 a3 <<EOF
-$a_ver
-EOF
-    IFS='.' read b1 b2 b3 <<EOF
-$b_ver
-EOF
-    a1=${a1:-0}; a2=${a2:-0}; a3=${a3:-0}
-    b1=${b1:-0}; b2=${b2:-0}; b3=${b3:-0}
-
-    [ "$a1" -gt "$b1" ] 2>/dev/null && return 0
-    [ "$a1" -lt "$b1" ] 2>/dev/null && return 2
-    [ "$a2" -gt "$b2" ] 2>/dev/null && return 0
-    [ "$a2" -lt "$b2" ] 2>/dev/null && return 2
-    [ "$a3" -gt "$b3" ] 2>/dev/null && return 0
-    [ "$a3" -lt "$b3" ] 2>/dev/null && return 2
-
-    # Equal major.minor.patch — no pre-release > any pre-release
-    [ -z "$a_pre" ] && [ -n "$b_pre" ] && return 0
-    [ -n "$a_pre" ] && [ -z "$b_pre" ] && return 2
-    [ -z "$a_pre" ] && [ -z "$b_pre" ] && return 1
-
-    # Both have pre-release — lexical comparison
-    if [ "$a_pre" != "$b_pre" ]; then
-        _lesser=$(printf '%s\n%s\n' "$a_pre" "$b_pre" | sort | head -1)
-        if [ "$_lesser" = "$a_pre" ]; then
-            return 2
-        else
-            return 0
-        fi
-    fi
-    return 1
-}
 
 # --- Check + install ---------------------------------------------------------
 

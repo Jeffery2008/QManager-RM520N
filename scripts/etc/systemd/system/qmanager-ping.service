@@ -7,6 +7,7 @@ After=network.target qmanager-setup.service
 Type=simple
 ExecStart=/usr/bin/qmanager_ping
 EnvironmentFile=-/etc/qmanager/environment
+TimeoutStopSec=10
 Restart=on-failure
 RestartSec=5s
 StartLimitIntervalSec=3600

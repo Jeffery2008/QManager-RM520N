@@ -1,41 +1,49 @@
 # QManager Deployment Guide
 
-This document covers building, installing, and deploying QManager to an OpenWRT device.
+This document covers building, installing, and deploying QManager to the Quectel RM520N-GL modem.
 
 ---
 
 ## Quick Install (Recommended)
 
-QManager includes an automated installation script. Build the archive on your dev machine, transfer it, and run the installer:
+ADB or SSH into the modem and run the one-liner installer:
 
 ```bash
-# 1. Build the frontend
-bun run build
+curl -fsSL -o /tmp/qmanager-installer.sh \
+  https://github.com/dr-dolomite/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
+  bash /tmp/qmanager-installer.sh
+```
 
-# 2. Create the archive (from the project root)
-mkdir -p /tmp/qmanager_install
-cp -r out /tmp/qmanager_install/
-cp -r scripts /tmp/qmanager_install/
-cp scripts/install.sh /tmp/qmanager_install/
-tar czf qmanager.tar.gz -C /tmp qmanager_install
+The interactive installer fetches the latest release tarball, verifies the SHA-256 checksum, bootstraps Entware (if needed), installs lighttpd and required modules, deploys the frontend and backend, configures systemd services, and optionally sets up SSH (dropbear). A reboot is triggered after installation.
 
-# 3. Transfer to device
-scp qmanager.tar.gz root@192.168.224.1:/tmp/
+See `install_rm520n.sh --help` for all flags (`--skip-packages`, `--force`, etc.)
 
-# 4. Install on device
-ssh root@192.168.224.1
-cd /tmp && tar xzf qmanager.tar.gz
-cd qmanager_install && sh install.sh
+### Manual / Offline Install
+
+If internet access is unavailable on the modem, build and transfer the tarball from your dev machine:
+
+```bash
+# 1. Build the package (frontend + backend + dependencies)
+bun run package
+
+# 2. Transfer to device (use -O for RM520N-GL dropbear, which lacks sftp-server)
+scp -O qmanager-*.tar.gz root@192.168.225.1:/tmp/
+
+# 3. Extract and install on device
+ssh root@192.168.225.1
+cd /tmp && tar xzf qmanager-*.tar.gz
+cd qmanager_install && bash install_rm520n.sh
 ```
 
 The installer will:
-- Install required packages (`jq`) and optional packages (`msmtp`, `tailscale`, `ethtool`)
-- Backup the original `index.html` before replacing it
-- Deploy frontend, backend scripts, CGI endpoints, and init.d services
-- Fix any CRLF line endings
-- Enable and start all services
+- Bootstrap Entware from `bin.entware.net` if not present
+- Install lighttpd + modules, sudo, jq, and coreutils-timeout from Entware
+- Deploy frontend, backend scripts, CGI endpoints, and systemd service units
+- Strip CRLF from all deployed shell scripts, systemd units, and sudoers rules
+- Configure sudoers rules for `www-data` privilege escalation
+- Enable and start all QManager systemd services
 
-See `sh install.sh --help` for all options (`--frontend-only`, `--backend-only`, `--skip-packages`, `--uninstall`, etc.)
+See `bash install_rm520n.sh --help` for all options (`--skip-packages`, `--force`, etc.)
 
 ---
 
@@ -49,15 +57,10 @@ See `sh install.sh --help` for all options (`--frontend-only`, `--backend-only`,
 
 ### Target Device
 
-- OpenWRT router with:
-  - Quectel modem (RM520N-GL, RM551E-GL, RM500Q, or similar)
-  - AT command access via serial port (`/dev/smd7` or similar)
-  - uhttpd web server (standard on OpenWRT)
-  - BusyBox standard utilities
-  - `jq` package installed (`opkg install jq`)
-  - `msmtp` package (for email alerts feature) — optional
-  - `ethtool` package (for ethernet link speed control) — optional
-  - `tailscale` package (for VPN feature) — optional
+- Quectel RM520N-GL modem with RGMII Ethernet connectivity
+- ADB or SSH access to the modem's internal Linux OS (SDXLEMUR, ARMv7l)
+- Internet access on the modem (for Entware bootstrap and package install — non-fatal if offline, packages are skipped with warnings)
+- Writable `/usrdata/` partition (persistent storage)
 
 ---
 
@@ -119,96 +122,27 @@ out/
 
 ---
 
-## Deploying to OpenWRT
+## Deploying to the RM520N-GL
 
-### Frontend Deployment
-
-Copy the `out/` directory contents to the device's web root:
-
-```bash
-# From your development machine
-scp -r out/* root@192.168.224.1:/www/
-```
-
-Or via SSH:
-
-```bash
-ssh root@192.168.224.1
-# Clear old frontend files (be careful not to delete cgi-bin/)
-rm -rf /www/_next /www/dashboard /www/cellular /www/monitoring /www/local-network
-# Copy new files
-scp -r out/* root@192.168.224.1:/www/
-```
-
-### Backend Deployment
-
-Copy each script directory to its target location on the device:
-
-```bash
-# CGI endpoints
-scp -r scripts/www/cgi-bin/quecmanager/* root@192.168.224.1:/www/cgi-bin/quecmanager/
-
-# Shared libraries
-scp scripts/usr/lib/qmanager/* root@192.168.224.1:/usr/lib/qmanager/
-
-# Daemons and utilities
-scp scripts/usr/bin/* root@192.168.224.1:/usr/bin/
-
-# Init.d services
-scp scripts/etc/init.d/* root@192.168.224.1:/etc/init.d/
-```
-
-### Setting Permissions
-
-```bash
-ssh root@192.168.224.1
-
-# Make daemons executable
-chmod +x /usr/bin/qcmd
-chmod +x /usr/bin/qmanager_*
-
-# Make CGI scripts executable
-find /www/cgi-bin/quecmanager -name "*.sh" -exec chmod +x {} \;
-
-# Make init.d scripts executable
-chmod +x /etc/init.d/qmanager*
-
-# Libraries should be readable (sourced, not executed)
-chmod 644 /usr/lib/qmanager/*.sh
-
-# Create config directory
-mkdir -p /etc/qmanager/profiles
-```
-
-### Enabling Services
-
-```bash
-# Enable and start the main service
-/etc/init.d/qmanager enable
-/etc/init.d/qmanager start
-
-# Enable boot services
-/etc/init.d/qmanager_eth_link enable
-/etc/init.d/qmanager_ttl enable
-/etc/init.d/qmanager_mtu enable
-/etc/init.d/qmanager_wan_guard enable
-/etc/init.d/qmanager_imei_check enable
-```
+The installer (`install_rm520n.sh`) handles all deployment steps. Manual file-by-file deployment is not recommended. Use `bun run package` to produce the tarball, then run the installer on the device as described in [Quick Install](#quick-install-recommended).
 
 ### Verifying Installation
 
 ```bash
-# Check main processes are running
-ps | grep qmanager
+# Check all QManager services are running
+systemctl list-units 'qmanager-*'
 
 # Check the poller is producing data
-cat /tmp/qmanager_status.json | jq .timestamp
+jq .timestamp /tmp/qmanager_status.json
 
 # Check CGI endpoints are accessible
-curl http://localhost/cgi-bin/quecmanager/at_cmd/fetch_data.sh
+curl -k https://localhost/cgi-bin/quecmanager/at_cmd/fetch_data.sh
 
-# Check logs
-cat /tmp/qmanager.log | tail -20
+# Check installer log (if install just ran)
+tail -50 /tmp/qmanager_install.log
+
+# Check installed version
+cat /etc/qmanager/VERSION
 ```
 
 ---
@@ -216,7 +150,7 @@ cat /tmp/qmanager.log | tail -20
 ## Directory Structure on Device
 
 ```
-/www/
+/usrdata/qmanager/www/
 ├── index.html              # Frontend entry point
 ├── _next/                  # Frontend assets (JS, CSS, fonts)
 ├── dashboard/              # Frontend pages
@@ -244,6 +178,8 @@ cat /tmp/qmanager.log | tail -20
 
 /usr/bin/
 ├── qcmd                    # AT command wrapper
+├── qmanager_update         # OTA update worker (runs as root via sudoers)
+├── qmanager_auto_update    # Automatic update checker daemon
 ├── qmanager_poller         # Main data collector
 ├── qmanager_ping           # Ping daemon
 ├── qmanager_watchcat       # Connection watchdog
@@ -255,39 +191,47 @@ cat /tmp/qmanager.log | tail -20
 ├── qmanager_tower_schedule
 ├── qmanager_mtu_apply
 ├── qmanager_imei_check
-├── qmanager_wan_guard
-├── qmanager_reset_password
+├── qmanager_setup          # Boot one-shot (permissions, pre-create /tmp files)
 └── qmanager_logread
 
 /usr/lib/qmanager/
-├── cgi_base.sh             # CGI boilerplate
+├── cgi_base.sh             # CGI boilerplate (sources platform.sh)
 ├── cgi_auth.sh             # Session management
 ├── cgi_at.sh               # AT command helpers
+├── platform.sh             # systemd/sudo abstraction (svc_*, pid_alive, etc.)
 ├── qlog.sh                 # Logging library
 ├── parse_at.sh             # AT response parsers
+├── semver.sh               # Shared semver_compare() — sourced by update CGI and auto_update
 ├── events.sh               # Event detection
 ├── profile_mgr.sh          # Profile CRUD
 ├── tower_lock_mgr.sh       # Tower lock management
 ├── email_alerts.sh         # Email alert logic
-└── ethtool_helper.sh       # Ethernet helpers
+└── sms_alerts.sh           # SMS alert logic
 
-/etc/init.d/
-├── qmanager               # Main service
-├── qmanager_eth_link      # Ethernet link speed
-├── qmanager_ttl           # TTL/HL rules
-├── qmanager_mtu           # MTU daemon
-├── qmanager_imei_check    # IMEI backup check
-├── qmanager_wan_guard     # WAN profile guard
-└── qmanager_tower_failover # Tower failover
+/lib/systemd/system/
+├── qmanager-firewall.service
+├── qmanager-setup.service
+├── qmanager-poller.service
+├── qmanager-ping.service
+├── qmanager-console.service
+├── qmanager-watchcat.service
+├── qmanager-ttl.service
+├── qmanager-mtu.service
+├── qmanager-imei-check.service
+└── qmanager-tower-failover.service
 
 /etc/qmanager/             # Persistent configuration
+├── VERSION                # Installed version (written atomically at install end)
+├── VERSION.pending        # Present during install; mv'd to VERSION on success
 ├── shadow                 # Password hash
 ├── profiles/              # Custom SIM profiles
 ├── tower_lock.json
 ├── band_lock.json
 ├── imei_backup.json
 ├── last_iccid
-└── msmtprc                # Email SMTP config
+└── msmtprc                # Email SMTP config (no logfile directive)
+
+/etc/sudoers.d/qmanager    # www-data privilege escalation rules (includes qmanager_update)
 
 /tmp/                      # Runtime state (lost on reboot)
 ├── qmanager_status.json
@@ -296,6 +240,9 @@ cat /tmp/qmanager.log | tail -20
 ├── qmanager_events.json
 ├── qmanager_ping.json
 ├── qmanager_watchcat.json
+├── qmanager_watchcat.lock # Touched during install/low-power to pause watchdog
+├── qmanager_update.log    # OTA update worker log (root-owned)
+├── qmanager_install.log   # Installer log (step progress for UI streaming)
 ├── qmanager_sessions/
 └── qmanager.log
 ```
@@ -391,94 +338,173 @@ which ethtool   # Optional (ethernet only)
 
 ## Updating
 
-### Frontend Only
+### OTA Update (v0.1.5+)
+
+From v0.1.5 onward, updates are fully self-contained via the web UI: **System Settings → Software Update**. The UI checks for new releases, downloads and verifies the tarball, runs the installer, and reboots — no SSH required.
+
+**Update worker flow:**
+
+1. The `update.sh` CGI invokes `/usr/bin/qmanager_update` via `sudo -n` (sudoers rule: `www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_update`)
+2. The worker downloads, verifies (`tar tzf` + grep for `install_rm520n.sh`), and runs the installer
+3. The CGI's spawn-line redirects to `/dev/null 2>&1` — the worker creates `/tmp/qmanager_update.log` as root, avoiding `fs.protected_regular=1` blocking root from truncating a www-data-owned log file
+4. The installer writes `=== Step N/M: <label> ===` lines to `/tmp/qmanager_install.log`; the worker tails this file and mirrors progress into the status JSON for UI step-streaming
+5. On completion, `finalize_version()` moves `/etc/qmanager/VERSION.pending` → `/etc/qmanager/VERSION`
+
+**OTA status values:** `idle` → `checking` → `update_available` → `downloading` → `verifying` → `ready` → `installing` → `rebooting` / `error`
+
+**Rollback:** If `/etc/qmanager/VERSION.pending` exists after reboot, the previous install did not finalize. The update CGI GET response includes `previous_install_failed: true` and `pending_version: "<version>"` when this file is present, allowing the UI to offer rollback.
+
+> **Bootstrap caveat:** The v0.1.4 → v0.1.5 upgrade requires ADB or SSH because v0.1.4's CGI has no sudo and v0.1.4's sudoers has no `qmanager_update` rule. From v0.1.5 onward, OTA works via the UI.
+
+### Manual Update (SSH)
 
 ```bash
-bun run build
-scp -r out/* root@192.168.224.1:/www/
+# Transfer updated tarball
+scp -O qmanager-*.tar.gz root@192.168.225.1:/tmp/
+
+# Extract and run installer (handles stop/deploy/start/cleanup)
+ssh root@192.168.225.1
+cd /tmp && tar xzf qmanager-*.tar.gz
+cd qmanager_install && bash install_rm520n.sh
 ```
 
-### Backend Only
+The installer is idempotent — re-running updates rather than duplicates. It handles:
+- Stopping existing services (filesystem-driven scan of `/lib/systemd/system/qmanager-*.service`, batched into a single `systemctl stop` call so systemd shuts them down in parallel; long-running daemons set `TimeoutStopSec=10` so a wedged service caps the wait at 10s instead of systemd's 90s default)
+- Removing orphaned daemons/units/libs not present in the current source tree (`cleanup_legacy_scripts`)
+- Removing conflicting packages (`socat`, `socat-at-bridge`) even with `--skip-packages`
+- Re-enabling services (UCI-gated services only re-enabled if their `multi-user.target.wants/` symlink existed pre-upgrade)
+- AT stack health check (3× `qcmd 'ATI'` retries, warn-only) and poller health check after completion
+
+---
+
+## Uninstalling
 
 ```bash
-# Stop services
-ssh root@192.168.224.1 '/etc/init.d/qmanager stop'
+# Interactive (prompts for confirmation)
+bash /tmp/qmanager_install/uninstall_rm520n.sh
 
-# Deploy updated scripts
-scp -r scripts/usr/bin/* root@192.168.224.1:/usr/bin/
-scp -r scripts/usr/lib/qmanager/* root@192.168.224.1:/usr/lib/qmanager/
-scp -r scripts/www/cgi-bin/quecmanager/* root@192.168.224.1:/www/cgi-bin/quecmanager/
-scp -r scripts/etc/init.d/* root@192.168.224.1:/etc/init.d/
+# Skip confirmation prompt (non-interactive / scripted)
+bash /tmp/qmanager_install/uninstall_rm520n.sh --force
 
-# Set permissions and restart
-ssh root@192.168.224.1 'chmod +x /usr/bin/qmanager_* /usr/bin/qcmd && find /www/cgi-bin/quecmanager -name "*.sh" -exec chmod +x {} \; && /etc/init.d/qmanager start'
+# Skip automatic reboot after uninstall
+bash /tmp/qmanager_install/uninstall_rm520n.sh --no-reboot
+
+# Also remove config/profiles/passwords and Tailscale
+bash /tmp/qmanager_install/uninstall_rm520n.sh --purge
 ```
 
-### Full Update
+The uninstaller:
+- Scans `/lib/systemd/system/qmanager-*.service` and `/usr/bin/qmanager_*` at runtime — no hardcoded service list
+- Stops and disables all discovered QManager services
+- Removes frontend, CGI scripts, daemons, shared libraries, systemd units, sudoers rules, and udev rules
+- Removes the web console (`/usrdata/qmanager/console/`) by default
+- With `--purge`: also tears down Tailscale (stops `tailscaled`, removes unit, removes `/usrdata/tailscale/` and symlinks)
+- Cleans up `/etc/qmanager/VERSION.pending` and `/etc/qmanager/updates/previous_version`
+- **Entware (`/opt/`) is always preserved** even with `--purge` — remove it manually if needed
 
-Combine both frontend and backend steps above, then restart:
+---
+
+## Troubleshooting
+
+### Installer / Update Failures
+
+**`VERSION.pending` exists after reboot:**
+The installer writes `/etc/qmanager/VERSION.pending` early and only moves it to `/etc/qmanager/VERSION` at the very end. If the modem rebooted mid-install, `VERSION.pending` survives. The update CGI GET response will include `"previous_install_failed": true` and `"pending_version": "<version>"`. Use the UI rollback option or re-run the installer manually.
+
+**`fs.protected_regular=1` — log truncation failures:**
+The kernel's sticky directory protection (`fs.protected_regular=1`) blocks a process from truncating a file in `/tmp` that was created by a different user. The OTA worker (`qmanager_update`) works around this by doing `rm -f $LOG_FILE` before creating a fresh log — never truncating an existing file. CGI scripts that need to write `/tmp` files should pre-create them with the correct ownership in `qmanager_setup` (boot one-shot).
+
+**Socat conflict blocks AT transport:**
+If `socat` or `socat-at-bridge` services are running, `atcli_smd11` cannot open `/dev/smd11`. The installer actively removes these packages (`opkg remove socat socat-at-bridge`) with retry through `--force-removal-of-dependent-packages`. This runs even with `--skip-packages`.
+
+### CGI Returns Empty Response
+
+1. Check line endings — CRLF causes silent CGI failures (installer strips `\r` automatically; check manually with `file /usr/lib/qmanager/*.sh`)
+2. Check permissions — CGI scripts need `chmod +x`
+3. Check PATH — lighttpd CGI has a minimal PATH; `cgi_base.sh` exports the full PATH including `/opt/bin`
+4. Check logs — `tail -50 /tmp/qmanager.log`
+
+### Poller Not Producing Data
 
 ```bash
-ssh root@192.168.224.1 'reboot'
+# Check if poller is running
+systemctl status qmanager-poller
+
+# Test AT command directly
+qcmd 'ATI'
+
+# Check /dev/smd11 permissions (should be crw-rw---- root:dialout)
+ls -la /dev/smd11
+
+# Check poller logs
+grep "poller" /tmp/qmanager.log
+```
+
+### Service Won't Start
+
+```bash
+# Check systemd status and journal
+systemctl status qmanager-poller
+journalctl -u qmanager-poller --no-pager -n 50
+
+# Verify dependencies
+command -v qcmd
+command -v jq
+ls /usr/lib/qmanager/cgi_base.sh
+```
+
+### Authentication Issues
+
+```bash
+# Reset password (run on device as root)
+/usr/bin/qmanager_reset_password
+
+# Check session directory
+ls /tmp/qmanager_sessions/
 ```
 
 ---
 
-## RM520N-GL Deployment
+## Sudoers Rules
 
-The RM520N-GL is a fundamentally different deployment target — QManager runs directly on the modem's internal Linux OS instead of on an external OpenWRT router.
-
-### Prerequisites (RM520N-GL)
-
-The RM520N-GL must have the following pre-installed (via the RGMII Toolkit):
-- **Entware** — Package manager at `/opt` (bind-mounted from `/usrdata/opt`)
-- **socat-at-bridge** — AT command transport layer (7 systemd services)
-- **lighttpd** — Web server with CGI and SSL support
-- **sudo** — For privileged operations from the `www-data` user
-
-These are installed by the [RGMII Toolkit](https://github.com/iamromulan/quectel-rgmii-toolkit) setup script.
-
-### Target Device Requirements
-
-| Requirement | Details |
-|------------|---------|
-| Platform | Quectel RM520N-GL (SDXLEMUR, ARMv7l) |
-| Kernel | 5.4.180+ |
-| Init system | systemd |
-| Package manager | Entware opkg |
-| Writable partition | `/usrdata/` (persistent) |
-| Web server | lighttpd (from Entware) |
-| AT bridge | socat-at-bridge running (smd11 and/or smd7) |
-| Shell | `/bin/bash` (native) |
-
-### Filesystem Layout
-
-All QManager files deploy to `/usrdata/` since the root filesystem is read-only:
+QManager's sudoers file (`/etc/sudoers.d/qmanager`) grants `www-data` the following:
 
 ```
-/usrdata/
-├── qmanager/                       # Persistent config
-│   ├── config.json                 # Main configuration (replaces UCI)
-│   ├── profiles/                   # Custom SIM profiles
-│   └── ...
-├── www/                            # lighttpd document root
-│   ├── cgi-bin/quecmanager/        # CGI endpoints
-│   └── (Next.js static export)
-├── usr/
-│   ├── bin/                        # Daemons (qmanager_poller, etc.)
-│   └── lib/qmanager/              # Shared shell libraries
-└── opt/                            # Entware packages (bind-mount → /opt)
+# OTA update worker
+www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_update
+
+# Service control
+www-data ALL=(root) NOPASSWD: /bin/systemctl start *, /bin/systemctl stop *, /bin/systemctl restart *, /bin/systemctl is-active *
+
+# Boot persistence (symlink-based — systemctl enable doesn't work)
+www-data ALL=(root) NOPASSWD: /bin/ln -sf /lib/systemd/system/qmanager*.service ...
+www-data ALL=(root) NOPASSWD: /bin/rm -f /lib/systemd/system/multi-user.target.wants/qmanager*.service
+
+# Firewall, reboot, crontab, SSH password
+www-data ALL=(root) NOPASSWD: /usr/sbin/iptables, /usr/sbin/iptables-restore, /usr/sbin/ip6tables, /usr/sbin/ip6tables-restore
+www-data ALL=(root) NOPASSWD: /sbin/reboot
+www-data ALL=(root) NOPASSWD: /usr/bin/crontab
+www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_set_ssh_password
 ```
 
-### Key Differences from OpenWRT Deployment
+> **Note:** All sudoers commands use full absolute paths — Entware's sudo has a restricted `secure_path` that excludes `/sbin/` and `/usr/bin/`. Bare command names will fail silently from CGI context.
 
-| Aspect | OpenWRT (RM551E) | RM520N-GL |
-|--------|------------------|-----------|
-| Deploy target | `/www/`, `/etc/init.d/`, `/usr/bin/` | `/usrdata/www/`, systemd units, `/usrdata/usr/bin/` |
-| Service management | `service X enable && service X start` | `systemctl enable X && systemctl start X` |
-| Root filesystem | Writable | Read-only (`mount -o remount,rw /` for systemd unit install) |
-| Package install | `opkg install jq` | `opkg install jq` (Entware) |
-| Web server | uhttpd (built-in) | lighttpd (Entware, separate config) |
-| CGI config | uhttpd built-in | lighttpd `cgi.assign` in conf |
+---
 
-> **See also:** [RM520N-GL Architecture Report](rm520n-gl-architecture.md) for the complete platform analysis and porting strategy.
+## RM520N-GL Platform Summary
+
+QManager runs directly on the modem's internal Linux OS — no external OpenWRT router required. Key platform facts:
+
+| Concern | Value |
+|---------|-------|
+| Platform | Quectel RM520N-GL (SDXLEMUR, ARMv7l, kernel 5.4.180) |
+| Init system | systemd (units in `/lib/systemd/system/`) |
+| Root filesystem | Read-only by default (`mount -o remount,rw /` when needed) |
+| Persistent storage | `/usrdata/` partition |
+| Web server | lighttpd (Entware) |
+| AT transport | `atcli_smd11` on `/dev/smd11` directly (no socat bridge) |
+| Config store | Files in `/etc/qmanager/` (rootfs, remounted rw) |
+| Firewall | iptables direct |
+| `systemctl enable` | Does NOT work — use direct symlinks into `multi-user.target.wants/` |
+
+> **See also:** [RM520N-GL Architecture Report](rm520n-gl-architecture.md) for the complete platform analysis.

@@ -1,15 +1,11 @@
 # QManager
 
-> **中文汉化版说明：** 这是 `Jeffery2008` 维护的中文汉化版 fork，主要在不改业务逻辑的前提下补充中文界面与本地安装辅助。原始仓库：<https://github.com/dr-dolomite/QManager-RM520N>
->
-> **版本策略：** 汉化发布统一使用 `vX.Y.Z-cn.N` 形式，详细说明见 [docs/localized-versioning.md](docs/localized-versioning.md)。
-
 <div align="center">
   <img src="public/qmanager-logo.svg" alt="QManager Logo" width="120" />
   <h3>A modern, custom GUI for Quectel modem management</h3>
   <p>Visualize, configure, and optimize your cellular modem's performance with an intuitive web interface</p>
 
-  ![Version](https://img.shields.io/badge/version-v0.1.5--cn.3-blue?style=flat-square)
+  ![Version](https://img.shields.io/badge/version-v0.1.6--cn.1-blue?style=flat-square)
   ![License](https://img.shields.io/badge/license-MIT%20%2B%20Commons%20Clause-green?style=flat-square)
   ![Platform](https://img.shields.io/badge/platform-RM520N--GL-orange?style=flat-square)
   ![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square)
@@ -98,7 +94,9 @@ The interactive installer fetches the latest release, verifies the SHA-256 check
 
 ### Upgrading
 
-From v0.1.1+, go to **System Settings -> Software Update** and use the built-in update flow -- download, verify, and install without SSH. Rollback to the previous version is available if needed.
+From v0.1.5+, go to **System Settings → Software Update** and use the built-in OTA update flow — download, verify, and install without SSH. Rollback to the previous version is available if needed.
+
+> **Note:** The v0.1.4 → v0.1.5 hop requires ADB or SSH because v0.1.4's CGI lacks the sudo rule needed to invoke the update worker as root. From v0.1.5 onward, all future updates work via the UI.
 
 ### Uninstalling
 
@@ -106,9 +104,17 @@ From v0.1.1+, go to **System Settings -> Software Update** and use the built-in 
 # SSH into the modem
 bash /tmp/qmanager_install/uninstall_rm520n.sh
 
-# To also remove config/profiles/passwords:
+# Skip the confirmation prompt (non-interactive / scripted use):
+bash /tmp/qmanager_install/uninstall_rm520n.sh --force
+
+# Skip automatic reboot after uninstall:
+bash /tmp/qmanager_install/uninstall_rm520n.sh --no-reboot
+
+# Also remove config/profiles/passwords and Tailscale:
 bash /tmp/qmanager_install/uninstall_rm520n.sh --purge
 ```
+
+Entware (`/opt/`) is always preserved even with `--purge` — remove it manually if needed.
 
 ---
 
@@ -276,13 +282,11 @@ QManager runs 10 systemd services on the modem:
   <h3>Support QManager's Development</h3>
   <p>Your contribution helps maintain the project and fund continued development, testing on new cellular networks, and hardware costs.</p>
   <br/>
-  <a href="https://ko-fi.com/drdolomite" target="_blank">
-    <img height="64" style="border:0;height:64px;" src="https://storage.ko-fi.com/cdn/kofi1.png?v=3" alt="Buy Me a Coffee at ko-fi.com" />
+  <a href="https://github.com/sponsors/dr-dolomite" target="_blank">
+    <img height="40" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub" />
   </a>
   <br/><br/>
-  <a href="https://paypal.me/iamrusss" target="_blank">
-    <img height="40" src="https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal" />
-  </a>
+  <p><strong>GCash via Remitly</strong><br/>Name: Russel Yasol<br/>Number: +639544817486</p>
 </div>
 
 ---
