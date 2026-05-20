@@ -15,6 +15,8 @@ LOG_FILE="/tmp/qmanager_update.log"
 INSTALL_LOG="/tmp/qmanager_install.log"
 STATUS_FILE="/tmp/qmanager_update.json"
 PID_FILE="/tmp/qmanager_update.pid"
+REBOOT_ACK_FILE="/tmp/qmanager_reboot_ack"
+REBOOT_ACK_TIMEOUT=12
 VERSION_FILE="/etc/qmanager/VERSION"
 PENDING_FILE="/etc/qmanager/VERSION.pending"
 UPDATES_DIR="/etc/qmanager/updates"
@@ -51,16 +53,12 @@ get_current_version() {
 
 http_download() {
     local url="$1" dest="$2" timeout="${3:-120}"
-    # curl first — BusyBox wget on RM520N-GL lacks TLS support for HTTPS URLs
-    if command -v curl >/dev/null 2>&1; then
-        curl -fSL --max-time "$timeout" -o "$dest" "$url"
-    elif command -v wget >/dev/null 2>&1; then
-        wget -qO "$dest" -T "$timeout" "$url"
-    elif command -v uclient-fetch >/dev/null 2>&1; then
-        uclient-fetch -qO "$dest" --timeout="$timeout" "$url"
-    else
+    # curl is the only supported transport (TLS, redirects, fail-on-4xx/5xx).
+    if ! command -v curl >/dev/null 2>&1; then
+        log "ERROR: curl not found — cannot download $url"
         return 1
     fi
+    curl -fSL --max-time "$timeout" -o "$dest" "$url"
 }
 
 # Validate a tarball URL against the GitHub origin whitelist.
@@ -100,7 +98,10 @@ run_install_with_progress() {
     local last_label="" current_label="" step_line="" rc=0
 
     : > "$INSTALL_LOG"
-    sh install_rm520n.sh --skip-packages --no-reboot >> "$INSTALL_LOG" 2>&1 &
+    # --force skips the firmware-detection prompt; OTA only ever targets an
+    # already-running QManager device, and the installer's stdin is closed in
+    # this CGI-spawned context (read would EOF and abort under set -e).
+    sh install_rm520n.sh --force --skip-packages --no-reboot >> "$INSTALL_LOG" 2>&1 &
     local install_pid=$!
 
     while pid_alive "$install_pid"; do
@@ -154,6 +155,27 @@ cleanup() {
     rm -rf /tmp/qmanager_install
 }
 
+# Wait for the /reboot/ page to confirm it has loaded by writing
+# REBOOT_ACK_FILE (via update.sh action=reboot_ack), then proceed with the
+# reboot syscall. Bounded by REBOOT_ACK_TIMEOUT so a closed tab, auto-update,
+# or any other UI-less invocation never blocks the reboot indefinitely.
+wait_for_reboot_ack() {
+    rm -f "$REBOOT_ACK_FILE" 2>/dev/null
+    log "Waiting up to ${REBOOT_ACK_TIMEOUT}s for /reboot/ ack..."
+    local i=0
+    while [ $i -lt "$REBOOT_ACK_TIMEOUT" ]; do
+        if [ -f "$REBOOT_ACK_FILE" ]; then
+            log "Reboot ack received after ${i}s — UI confirmed /reboot/ loaded"
+            rm -f "$REBOOT_ACK_FILE" 2>/dev/null
+            return 0
+        fi
+        sleep 1
+        i=$((i + 1))
+    done
+    log "Reboot ack timeout (${REBOOT_ACK_TIMEOUT}s) — proceeding without UI confirmation"
+    return 0
+}
+
 die() {
     log "ERROR: $1"
     write_status "error" "$1" "${VERSION:-}" ""
@@ -166,7 +188,7 @@ die() {
 # fs.protected_regular=1 prevents root from truncating files owned by other
 # users in sticky /tmp dirs. Prior failed CGI attempts may have left these
 # files owned by www-data, so rm-then-create instead of plain truncate.
-rm -f "$LOG_FILE" "$PID_FILE" 2>/dev/null || true
+rm -f "$LOG_FILE" "$PID_FILE" "$REBOOT_ACK_FILE" 2>/dev/null || true
 echo $$ > "$PID_FILE"
 trap cleanup EXIT INT TERM
 : > "$LOG_FILE"
@@ -223,7 +245,7 @@ if [ "$MODE" = "install" ]; then
     rm -f "$download_path"
     cd /tmp/qmanager_install || die "Extraction failed — /tmp/qmanager_install not found"
 
-    log "Running install_rm520n.sh --skip-packages --no-reboot"
+    log "Running install_rm520n.sh --force --skip-packages --no-reboot"
     if ! run_install_with_progress "$VERSION"; then
         die "Installation failed. Check $LOG_FILE for details."
     fi
@@ -238,7 +260,7 @@ if [ "$MODE" = "install" ]; then
     log "Rebooting"
     rm -f "$PID_FILE"
     trap - EXIT INT TERM
-    sleep 1
+    wait_for_reboot_ack
     reboot
     exit 0
 fi
@@ -340,7 +362,7 @@ if [ "$MODE" = "install_staged" ]; then
     rm -f "$STAGED_TARBALL" "$STAGED_VERSION"
     cd /tmp/qmanager_install || die "Extraction failed — /tmp/qmanager_install not found"
 
-    log "Running install_rm520n.sh --skip-packages --no-reboot"
+    log "Running install_rm520n.sh --force --skip-packages --no-reboot"
     if ! run_install_with_progress "$VERSION"; then
         die "Installation failed. Check $LOG_FILE for details."
     fi
@@ -355,7 +377,7 @@ if [ "$MODE" = "install_staged" ]; then
     log "Rebooting"
     rm -f "$PID_FILE"
     trap - EXIT INT TERM
-    sleep 1
+    wait_for_reboot_ack
     reboot
     exit 0
 fi
@@ -407,7 +429,7 @@ if [ "$MODE" = "rollback" ]; then
     rm -f "$download_path"
     cd /tmp/qmanager_install || die "Extraction failed"
 
-    log "Running install_rm520n.sh --skip-packages --no-reboot"
+    log "Running install_rm520n.sh --force --skip-packages --no-reboot"
     if ! run_install_with_progress "$VERSION"; then
         die "Rollback installation failed. Check $LOG_FILE"
     fi
@@ -422,7 +444,7 @@ if [ "$MODE" = "rollback" ]; then
     log "Rebooting"
     rm -f "$PID_FILE"
     trap - EXIT INT TERM
-    sleep 1
+    wait_for_reboot_ack
     reboot
     exit 0
 fi

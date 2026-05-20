@@ -121,7 +121,7 @@ const CellularAMBRCard = ({ ambr, isLoading }: CellularAMBRCardProps) => {
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  No LTE rate data — not connected to LTE
+                  No LTE rate data available
                 </p>
                 <Separator />
               </>
@@ -179,7 +179,7 @@ const CellularAMBRCard = ({ ambr, isLoading }: CellularAMBRCardProps) => {
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  No 5G rate data — not connected to 5G
+                  No 5G rate data available
                 </p>
                 <Separator />
               </>

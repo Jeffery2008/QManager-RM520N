@@ -1,0 +1,10 @@
+{
+  "profile": "relaxed",
+  "interval_sec": 5,
+  "fail_secs": 15,
+  "recover_secs": 10,
+  "intercept_secs": 8,
+  "history_secs": 300,
+  "target_1": "http://cp.cloudflare.com/",
+  "target_2": "http://www.gstatic.com/generate_204"
+}

@@ -73,26 +73,14 @@ check_lock() {
 }
 
 # Fetch URL to a file, capturing HTTP headers for rate-limit detection.
-# curl first — BusyBox wget on RM520N-GL lacks TLS support for HTTPS URLs.
+# curl is the sole transport (TLS + -D header capture).
 http_api_fetch() {
     local url="$1" out_file="$2" header_file="$3" timeout="${4:-15}"
 
-    # curl — supports HTTPS, -D captures response headers
-    if command -v curl >/dev/null 2>&1; then
-        curl -sL --max-time "$timeout" -o "$out_file" -D "$header_file" "$url" && return 0
+    if ! command -v curl >/dev/null 2>&1; then
+        return 1
     fi
-
-    # wget (full wget-ssl supports -S; BusyBox wget may not handle HTTPS)
-    if command -v wget >/dev/null 2>&1; then
-        wget -qO "$out_file" -T "$timeout" -S "$url" 2>"$header_file" && return 0
-    fi
-
-    # uclient-fetch — OpenWRT only
-    if command -v uclient-fetch >/dev/null 2>&1; then
-        uclient-fetch -qO "$out_file" --timeout="$timeout" "$url" 2>"$header_file" && return 0
-    fi
-
-    return 1
+    curl -sL --max-time "$timeout" -o "$out_file" -D "$header_file" "$url"
 }
 
 # =============================================================================
@@ -108,6 +96,15 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         else
             jq -n '{"status":"idle"}'
         fi
+        exit 0
+    fi
+
+    # --- Reboot ack: /reboot/ page tells the OTA worker it has loaded ---
+    # Worker waits up to REBOOT_ACK_TIMEOUT for this file before rebooting,
+    # so the static reboot page is in browser memory before the device dies.
+    if [ "$action" = "reboot_ack" ]; then
+        touch /tmp/qmanager_reboot_ack 2>/dev/null
+        jq -n '{"success":true}'
         exit 0
     fi
 
@@ -249,7 +246,7 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
             is_current: (.tag_name == $cv)
         }]')
 
-    # Download URL from GitHub Releases (stable, redirect handled by uclient-fetch/curl)
+    # Download URL from GitHub Releases (stable, redirect handled by curl -L)
     download_url=""
     if [ -n "$latest_tag" ]; then
         download_url="https://github.com/${GITHUB_REPO}/releases/download/${latest_tag}/qmanager.tar.gz"

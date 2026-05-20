@@ -29,6 +29,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CopyableCommand } from "@/components/ui/copyable-command";
 import {
@@ -78,6 +83,7 @@ export function TailscaleConnectionCard({
   isConnecting,
   isDisconnecting,
   isTogglingService,
+  isTogglingSsh,
   isUninstalling,
   installResult,
   error,
@@ -87,12 +93,14 @@ export function TailscaleConnectionCard({
   startService,
   stopService,
   setBootEnabled,
+  setSshEnabled,
   uninstall,
   runInstall,
   refresh,
 }: TailscaleConnectionCardProps) {
   const [showRebootDialog, setShowRebootDialog] = useState(false);
   const [isRebooting, setIsRebooting] = useState(false);
+  const [showSshEnableDialog, setShowSshEnableDialog] = useState(false);
 
   const handleReboot = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -360,6 +368,111 @@ export function TailscaleConnectionCard({
     </>
   );
 
+  // SSH preference state
+  const sshEnabled = status?.ssh_enabled ?? false;
+  // Disabled when daemon is stopped or backend not Running — tailscale set
+  // cannot reach the daemon, and the flag-only path is only meaningful at
+  // connect time.
+  const sshSwitchDisabled =
+    isTogglingSsh || !daemonRunning || backendState !== "Running";
+  // Pending = user enabled SSH but the daemon isn't fully up; the flag-aware
+  // connect path will pick it up on next connect.
+  const sshPending =
+    sshEnabled && (!daemonRunning || backendState !== "Running");
+
+  const handleSshChange = async (checked: boolean) => {
+    if (checked) {
+      // Don't toggle yet — show the confirmation dialog first.
+      // sshEnabled is derived from server state, so the switch only renders
+      // checked after the backend confirms via the next status fetch.
+      setShowSshEnableDialog(true);
+      return;
+    }
+    const success = await setSshEnabled(false);
+    if (success) {
+      toast.success("Tailscale SSH disabled");
+    } else {
+      toast.error("Failed to disable Tailscale SSH");
+    }
+  };
+
+  const handleSshConfirmEnable = async () => {
+    setShowSshEnableDialog(false);
+    const success = await setSshEnabled(true);
+    if (success) {
+      toast.success("Tailscale SSH enabled");
+    } else {
+      toast.error("Failed to enable Tailscale SSH");
+    }
+  };
+
+  // SSH toggle element (reused across post-install state branches).
+  const sshToggle = (
+    <>
+      <Separator />
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-muted-foreground">
+            Tailscale SSH
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Allow tailnet members to SSH into this device based on your
+            admin-panel ACLs.
+          </p>
+          {sshPending && (
+            <p className="text-xs text-muted-foreground mt-1 italic">
+              Pending — applies on next connect.
+            </p>
+          )}
+        </div>
+        {sshSwitchDisabled && !isTogglingSsh ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {/* span wrapper: Switch is disabled, but Tooltip still needs a hoverable target */}
+              <span tabIndex={0}>
+                <Switch
+                  checked={sshEnabled}
+                  onCheckedChange={handleSshChange}
+                  disabled
+                  aria-label="Enable Tailscale SSH"
+                />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              Connect to Tailscale to enable SSH.
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <Switch
+            checked={sshEnabled}
+            onCheckedChange={handleSshChange}
+            disabled={isTogglingSsh}
+            aria-label="Enable Tailscale SSH"
+          />
+        )}
+      </div>
+      <AlertDialog open={showSshEnableDialog} onOpenChange={setShowSshEnableDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enable Tailscale SSH?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tailnet members will be able to SSH into this device based on
+              your Tailscale admin-panel ACLs. Review your ACL policy in the
+              Tailscale admin console before enabling so only the intended
+              users can connect.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSshConfirmEnable}>
+              Enable SSH
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+
   // Uninstall section (follows Email Alerts / Video Optimizer pattern)
   const uninstallSection = (
     <>
@@ -444,6 +557,7 @@ export function TailscaleConnectionCard({
               </Badge>
             </div>
             {bootToggle}
+            {sshToggle}
             <Separator />
             <div className="flex items-center gap-2 flex-wrap pt-1">
               <Button
@@ -549,6 +663,7 @@ export function TailscaleConnectionCard({
             )}
 
             {bootToggle}
+            {sshToggle}
             <Separator />
             <div className="pt-1">
               <Button
@@ -645,6 +760,7 @@ export function TailscaleConnectionCard({
             {staleWarning}
             {/* Boot toggle */}
             {bootToggle}
+            {sshToggle}
             {/* Health warnings */}
             {health.length > 0 && (
               <>
@@ -787,6 +903,7 @@ export function TailscaleConnectionCard({
           </div>
 
           {bootToggle}
+          {sshToggle}
 
           <Separator />
           <div className="flex items-center gap-2 flex-wrap pt-1">

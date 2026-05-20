@@ -17,8 +17,8 @@ export const CarrierLabel: React.FC<CarrierLabelProps> = ({ opt }) => {
       <span
         className={`text-[10px] px-1.5 py-0.5 rounded border ${
           opt.type === "PCC"
-            ? "border-info/40 text-info bg-info/10"
-            : "border-muted-foreground/30 text-muted-foreground bg-muted/40"
+            ? "border-success/40 text-success bg-success/10"
+            : "border-info/40 text-info bg-info/10"
         }`}
       >
         {opt.type}

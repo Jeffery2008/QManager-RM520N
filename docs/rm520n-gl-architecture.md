@@ -10,6 +10,7 @@ The RM520N-GL is a fundamentally different platform: it runs its own Linux OS in
 
 - [Quick Reference](#quick-reference)
 - [Platform Comparison](#platform-comparison)
+- [Platform Tooling Inventory](#platform-tooling-inventory)
 - [SimpleAdmin RGMII Toolkit Foundation](#simpleadmin-rgmii-toolkit-foundation)
   - [Toolkit Overview](#toolkit-overview)
   - [Installation Flow](#installation-flow)
@@ -63,9 +64,11 @@ The RM520N-GL is a fundamentally different platform: it runs its own Linux OS in
 
 | Item | Value |
 |------|-------|
-| **SoC / Kernel** | Qualcomm SDXLEMUR, Linux 5.4.180, ARMv7l (32-bit) |
-| **Init system** | systemd |
-| **Shell** | `/bin/bash` (native, not BusyBox) |
+| **SoC / Kernel** | Qualcomm SDXLEMUR (X62/X65 family) on RM520N-GL/RM521F; SDXPRAIRIE (X55) on RG502Q/RM502Q. Probed dev device: kernel `5.4.210-perf`, ARMv7l Cortex-A7 single-core, glibc 2.31, distro `qti-distro-nogplv3-perf` `LE.UM.6.3.6.r1-02600-SDX65.0`. The OEM build name says `SDX65` even on X62 silicon because Quectel ships one firmware build for the SDXLEMUR family. |
+| **Memory budget** | 178 MB RAM total, ~91 MB zram swap, 89 MB `/tmp` tmpfs, ~124 MB writable ubifs (shared by `/etc /opt /usrdata /data /cache /persist /systemrw`). Plan daemon footprints accordingly. |
+| **CPU features** | `half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm`. Native binaries must target armhf VFPv4. |
+| **Init system** | systemd 244 (`-PAM -SECCOMP -APPARMOR -PCRE2`, hybrid cgroup v1+v2). `systemd-analyze` is **not installed**. Journald is volatile-only (`/run/log/journal`, no `/var/log/journal`) — see [§Known Platform Quirks](#known-platform-quirks). |
+| **Shell** | `/bin/sh` is **BusyBox `ash`** (`/bin/sh -> busybox.nosuid`); `/bin/bash` exists at `/bin/bash.bash` but is **bash 3.2.57(1)-release** (2007) — no `mapfile`/`readarray`/`${var,,}`/`declare -A`/`wait -n`. See [Platform Tooling Inventory](#platform-tooling-inventory). |
 | **AT port (QManager)** | `/dev/smd11` (direct access via `atcli_smd11`, no socat needed) |
 | **AT device perms** | Defaults `crw------- root:root`; `qmanager_setup` sets `660 root:dialout` at boot |
 | **AT port (legacy)** | `/dev/smd7` (claimed by `port_bridge` at boot — used by socat-at-bridge if installed) |
@@ -74,7 +77,7 @@ The RM520N-GL is a fundamentally different platform: it runs its own Linux OS in
 | **Web root** | `/usrdata/qmanager/www` (independent, not SimpleAdmin) |
 | **CGI PATH caveat** | lighttpd CGI excludes `/opt/bin`; `cgi_base.sh` exports full PATH |
 | **Config storage** | `/usrdata/` (persistent, writable) |
-| **LAN config** | `/etc/data/mobileap_cfg.xml` (xmlstarlet) |
+| **LAN config** | `/etc/data/mobileap_cfg.xml` — parsed with **`xmllint`** (`/usr/bin/xmllint`, system-bundled). `xmlstarlet` is **NOT** installed by default; if a feature truly needs it, add `opkg install xmlstarlet` to the installer. |
 | **Root filesystem** | ubifs (`ubi0:rootfs`), boots read-only (`mount -o remount,rw /`); `sync` before reboot |
 | **`/etc/`** | tmpfs — **volatile** (lost on reboot); exception: `/etc/qmanager/` is on rootfs |
 | **Persistent partition** | `/usrdata/` |
@@ -101,13 +104,112 @@ This table maps every major subsystem between the current QManager target (RM551
 | **Web server** | uhttpd (built-in) | lighttpd (Entware) | Different CGI config, auth mechanism |
 | **Firewall** | nftables (fw4) | iptables (direct) | Rewrite all firewall rules |
 | **TTL interface** | `wwan0` | `rmnet+` (wildcard) | Update interface names in rules |
-| **CGI shell** | `/bin/sh` (BusyBox ash) | `/bin/bash` | More features available; decide on POSIX compat |
+| **CGI shell** | `/bin/sh` (BusyBox ash) | `/bin/sh` is also BusyBox ash here; `/bin/bash` (3.2.57) available for explicit `#!/bin/bash` scripts | Same POSIX baseline as OpenWRT — bash 3.2 lacks modern bashisms (no `mapfile`, `${var,,}`, `declare -A`, `wait -n`) |
 | **Config system** | UCI (`/etc/config/`) | Files in `/usrdata/` + XML for LAN | Replace all `uci` calls |
 | **Persistent storage** | `/overlay/`, `/etc/` | `/usrdata/`, rootfs (`/lib/systemd/`, `/etc/qmanager/`). `/etc/` itself is tmpfs (volatile). | Different backup/restore paths |
 | **Auth** | Cookie-based multi-session | HTTP Basic Auth (`.htpasswd`) | Different auth middleware |
 | **LAN config** | UCI network config | XML (`mobileap_cfg.xml`) via xmlstarlet | Completely different API |
 | **Compound AT** | Semicolon batching via `qcmd` | Supported, but needs serialization | Add `flock` around compound commands |
 | **`fs.protected_regular`** | Not set (typical) | `=1` (kernel default) | All shared `/tmp` files must be `www-data`-owned; see [Known Platform Quirks](#known-platform-quirks) |
+
+---
+
+## Platform Tooling Inventory
+
+This section consolidates everything an automation author needs to know about the userspace tooling on Quectel-on-modem platforms (SDXLEMUR X62/X65, SDXPRAIRIE X55). Findings were probed live on RM520N-GL firmware `LE.UM.6.3.6.r1-02600-SDX65.0` on 2026-05-09 and cross-referenced with PRAIRIE deviations called out in CLAUDE.md.
+
+### Toolchain Summary
+
+| Tool | Variant | Path | Notes |
+|------|---------|------|-------|
+| `sh` | BusyBox ash 1.31.1 | `/bin/sh -> busybox.nosuid` | Default shell. POSIX-only. **No bashisms.** |
+| `bash` | bash **3.2.57(1)-release** | `/bin/bash -> /bin/bash.bash` | 2007-vintage. Missing `mapfile`/`readarray`/`${var,,}`/`${var^^}`/`declare -A`/`wait -n`. Works: `<<<`, `[[ =~ ]]`, indexed arrays, `local`, process substitution. |
+| `awk` | BusyBox awk 1.31.1 | `/usr/bin/awk` | Has `length`, indexed arrays, `gensub()`, `systime()`, `strftime()`. **No `--version` flag** (silent stderr). Do not assume gawk-only features beyond what is listed. |
+| `sed` | BusyBox sed 1.31.1 | `/bin/sed` | Reports "This is not GNU sed version 4.0". Supports `-i`, `-i.bak`, `-E`, `-r`, `-e`, `-f`. Avoid GNU-specific `\<`/`\>` and `--expression`. |
+| `grep` | **GNU grep 3.12** | `/opt/bin/grep` | From Entware. Full GNU featureset. |
+| `find` | **GNU findutils 4.10.0** | `/opt/bin/find` | From Entware. |
+| `xargs` | GNU | `/opt/bin/xargs` | From Entware. |
+| `tar` | BusyBox tar 1.31.1 | `/bin/tar` | Short flags only: `c\|x\|t -ZzJjahmvokO -f -C -T -X --exclude`. **Missing:** `--owner=`, `--group=`, `--transform=`, `--newer-mtime=`, `--mode=`, `--exclude-from`. |
+| `gzip` / `xz` / `bzip2` | BusyBox | `/bin/gzip` | Via `tar -z\|J\|j`. |
+| `jq` | jq-1.7.1 | `/opt/bin/jq` | Full jq. Remember the `// "default"` gotcha for `false` (treated as absent — see BACKEND.md §2). |
+| `xmllint` | libxml2 | `/usr/bin/xmllint` | System-bundled. Use this for XML on-device. |
+| `xmlstarlet` | **MISSING** | — | Not installed. Earlier docs referencing `xmlstarlet` for `mobileap_cfg.xml` are aspirational; current code uses `xmllint`/`sed`. |
+| `flock` | util-linux | `/usr/bin/flock` | BusyBox `flock` lacks `-w` (timeout). Use `flock -x -n` in a polling loop — see `flock_wait()` in `qcmd`. |
+| `pgrep` / `pkill` | procps-ng | `/usr/bin/pgrep` | Standard. |
+| `ps` | procps-ng | `/usr/bin/ps` | **No `-o etimes`** — only `etime` (HH:MM:SS). Read `/proc/<pid>/stat` for jiffies. |
+| `mktemp` | BusyBox | `/bin/mktemp` | **No `--tmpdir=` flag.** Use `mktemp /tmp/prefix.XXXXXX`. |
+| `date` | BusyBox | system | **No `%N` (nanoseconds).** Returns literal `%N`. **No `-d "now - 1 hour"`.** Compute offsets via `$(( $(date +%s) - 3600 ))` and feed back via `date -d @<epoch>`. |
+| `realpath` / `dirname` / `basename` / `stat` | coreutils-ish | `/usr/bin/`, `/bin/` | `stat -c %Y` works. |
+| `getconf` | broken | system | Returns empty for `ARG_MAX`, `PIPE_BUF`, `PATH_MAX`. Assume Linux defaults. |
+| `ss` | **MISSING** | — | Use `/opt/bin/netstat` (Entware net-tools) or BusyBox `netstat`. |
+| `ip` | iproute2 5.10.0 | `/opt/sbin/ip` | From Entware. |
+| `iptables` | **1.8.4 legacy** | `/usr/sbin/iptables` | Legacy backend (xtables, not nftables). `nft` is **not** installed. |
+| `conntrack` | netfilter | `/usr/sbin/conntrack` | Useful for clearing stuck connections during failover. `conntrack_max=12288` — small NAT table. |
+| `curl` | 8.12.0 / OpenSSL 1.1.1l | `/usr/bin/curl` | Full TLS. **All HTTP transport in QManager uses curl** — see CLAUDE.md note about wget/uclient-fetch removal. |
+| `openssl` | 1.1.1l (system); 3.5.5 (Entware `libopenssl`) | `/usr/bin/openssl` | Two versions coexist — prefer system `/usr/bin/openssl` for scripts unless a 3.x feature is needed. |
+| `dropbear` | 2024.86 | Entware | SSH server. No `sftp-server` — use `scp -O` (legacy mode) for transfers. |
+| `lighttpd` | 1.4.82 | `/opt/sbin/lighttpd` | Modules: `mod_cgi`, `mod_dirlisting`, `mod_h2`, `mod_openssl`, `mod_proxy` confirmed loaded. |
+| `python` / `python3` / `perl` / `lua` / `node` | **MISSING** | — | No script interpreters beyond shell. Pure POSIX shell + jq is the only option. Adding any of these means an Entware install (~5–15 MB on the persistent partition). |
+| Editor | BusyBox `vi` | `/bin/vi` | Only editor on-device. No `nano`, no `vim`. |
+| Hashing | `md5sum` `sha1sum` `sha256sum` `sha512sum` `base64` | `/usr/bin/`, `/bin/` | `xxd` is **not** installed. |
+
+### Filesystem Topology
+
+This is **the** layout to internalize before any code that touches persistent paths:
+
+```
+ubi0:rootfs       → /                   (~100 MB ubifs, boots ro, remount rw before writes)
+                    ├── /etc            (tmpfs root + /dev/ubi2_0 bind for some subdirs — see below)
+                    ├── /lib/systemd    (persistent — service unit files live here)
+                    └── /usr            (persistent system binaries)
+
+/dev/ubi2_0       → /usrdata, /opt, /etc (parts), /data, /cache, /persist, /systemrw
+                    ALL OF THESE ARE THE SAME 124 MB UBIFS VOLUME, BIND-MOUNTED
+                    Writes anywhere drain the same pool.
+
+ubi1:firmware     → /firmware           (~91 MB, modem firmware blobs)
+
+tmpfs             → /tmp                (89 MB, volatile, fs.protected_regular=1)
+                    /run                (89 MB, volatile)
+                    /var/volatile       (89 MB, volatile)
+                    /var/lib            (89 MB, volatile — ⚠ /var/lib is volatile!)
+                    /sys/fs/cgroup      (ro, hybrid v1+v2)
+                    /etc/machine-id     (single-file ro tmpfs)
+```
+
+**Implications for backend code:**
+
+- `/var/lib/` is a tmpfs. Anything written there is lost on reboot. Use `/etc/qmanager/` (rootfs) or `/usrdata/qmanager/` for persistence.
+- `/etc/qmanager/` is on the rootfs (ubi0) — the rest of `/etc/` content from the OEM firmware is shipped as part of the rootfs ubifs image, not tmpfs as the older docs implied. The "/etc is tmpfs" claim is **partially incorrect** for this device — verify behavior of any new `/etc/` write before relying on persistence.
+- All write-heavy operations (logs, backups, SMS spool) compete for the same 124 MB ubifs pool spanning `/usrdata + /opt + /data + /cache + /persist + /systemrw`. Quota one feature at a time.
+- The rootfs (`/`) is a **separate** ubifs volume with its own ~100 MB budget — installer changes to `/lib/systemd/system/`, `/usr/bin/`, `/usr/lib/qmanager/` consume there.
+
+### Time and Clock
+
+- **No NTP service.** `timedatectl` reports `System clock synchronized: no` and `NTP service: n/a`. Wall-clock time is set when the modem registers on the cellular network; if the modem is offline at boot the clock can be years off (probed device showed RTC time stuck at `1970-01-01 02:13:52`).
+- **No `/etc/localtime`** — system runs in UTC.
+- **Never rely on absolute timestamps** for security-sensitive ordering. Use `/proc/uptime` for monotonic deltas where possible.
+
+### Hardened Kernel Tunables
+
+| Tunable | Value | Effect on automation |
+|---------|-------|----------------------|
+| `fs.protected_regular` | 1 | Already documented — see [Known Platform Quirks](#known-platform-quirks). |
+| `fs.protected_fifos` | 1 | Same protection extends to FIFOs in `/tmp/`. |
+| `fs.protected_symlinks` | 1 | Symlink races blocked in sticky dirs. |
+| `kernel.dmesg_restrict` | 1 | Non-root cannot read kernel ring buffer. CGI scripts that scrape `dmesg` will get empty output under www-data. |
+| `kernel.kptr_restrict` | 2 | Pointer values zeroed in `/proc`. Affects any kernel-debug helper. |
+
+No SELinux, no AppArmor (systemd built `-APPARMOR -SELINUX`). Cgroups are **hybrid v1+v2** (`default-hierarchy=hybrid`) — systemd resource limits work but don't assume pure-v2 features.
+
+### Known Discrepancies and Bugs Surfaced by Probing
+
+These are issues observed on a running device; they should be fixed in code or tracked separately.
+
+- **`qmanager-firewall.service` uses a dedicated `QMANAGER_FW` user chain** (since 2026-05). Probe-validated layout: `iptables -L QMANAGER_FW -n -v` is the single source of truth; `INPUT` carries one `-j QMANAGER_FW` jump and nothing else QManager-owned. The script also drains pre-chain orphan rules (e.g. legacy `DROP -i rmnet_data0`) on every `start`/`stop` so upgrades self-heal. See `docs/BACKEND.md` §14 for the full pattern.
+- **`qmanager-imei-check.service` is in `failed` state** on the dev device alongside expected OEM service failures (`pcie-diag`, `pcie`, `ql_ctcc_selfreg`, `r8168`). Worth investigating whether this is environmental or a real regression.
+- **Doc claim `/etc/ is tmpfs`** is partially wrong — `/etc/qmanager/` and most OEM-shipped files in `/etc/` are on the ubifs rootfs. Only specific subpaths (`/etc/machine-id`) are tmpfs-backed. Code that relies on `/etc/` being volatile should be re-checked.
+- **Kernel version is `5.4.210-perf`** on the probed device, not `5.4.180` as older docs say. Update references when convenient.
 
 ---
 

@@ -37,6 +37,7 @@ export const SIGNAL_KEYS = [
 
 export const SAMPLES_PER_RECORDING = 3;
 export const SLOT_COUNT = 3;
+export const ALIGNMENT_STORAGE_KEY = "qmanager:antenna-alignment:v1";
 
 export const RADIO_MODE_LABELS: Record<RadioMode, string> = {
   lte: "4G LTE",

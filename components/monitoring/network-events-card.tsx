@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, type ReactNode } from "react";
+import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
 import { motion } from "motion/react";
 
 import {
@@ -52,11 +52,7 @@ import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 
 import { useRecentActivities } from "@/hooks/use-recent-activities";
-import {
-  EVENT_LABELS,
-  EVENT_TAB_CATEGORIES,
-  translateEventMessage,
-} from "@/constants/network-events";
+import { EVENT_LABELS, EVENT_TAB_CATEGORIES } from "@/constants/network-events";
 import type { NetworkEvent, EventSeverity } from "@/types/modem-status";
 
 // --- Constants ---------------------------------------------------------------
@@ -73,12 +69,12 @@ const LIMIT_OPTIONS = [
 
 function SeverityIcon({ severity }: { severity: EventSeverity }) {
   if (severity === "error") {
-    return <TbCircleXFilled className="size-6 text-destructive" />;
+    return <TbCircleXFilled className="size-6 shrink-0 text-destructive" />;
   }
   if (severity === "warning") {
-    return <TbAlertTriangleFilled className="size-6 text-warning" />;
+    return <TbAlertTriangleFilled className="size-6 shrink-0 text-warning" />;
   }
-  return <TbCircleCheckFilled className="size-6 text-success" />;
+  return <TbCircleCheckFilled className="size-6 shrink-0 text-success" />;
 }
 
 function formatEventDateTime(timestamp: number) {
@@ -112,9 +108,9 @@ function EventsTable({
     <>
       <Table>
         <TableHeader>
-            <TableRow>
+          <TableRow>
             <TableHead className="hidden @md/card:table-cell">事件类型</TableHead>
-            <TableHead>内容</TableHead>
+            <TableHead>消息</TableHead>
             <TableHead>日期与时间</TableHead>
           </TableRow>
         </TableHeader>
@@ -163,8 +159,8 @@ function EventsTable({
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-md">
-                    {translateEventMessage(event.message)}
+                  <TableCell className="max-w-[12rem] @sm/card:max-w-[20rem] @md/card:max-w-md whitespace-normal break-words">
+                    {event.message}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <div className="flex flex-col">
@@ -180,15 +176,16 @@ function EventsTable({
           )}
         </TableBody>
       </Table>
-      <div className="flex justify-between items-center pt-4">
+      <div className="flex flex-col @sm/card:flex-row @sm/card:justify-between @sm/card:items-center gap-1 pt-4">
         <div className="text-xs text-muted-foreground">
-          显示 <strong>{events.length}</strong> /{" "}
-          <strong>{totalCount}</strong> 条事件
+          显示 <strong>{events.length}</strong> / <strong>{totalCount}</strong> 条事件
         </div>
         {lastUpdate && (
           <div className="flex items-center text-xs text-muted-foreground">
-            <Clock className="h-3 w-3 mr-1" />
-            最后更新：{lastUpdate.toLocaleTimeString("zh-CN")}
+            <Clock className="h-3 w-3 mr-1 shrink-0" />
+            <span className="truncate">
+              上次更新：{lastUpdate.toLocaleTimeString()}
+            </span>
           </div>
         )}
       </div>
@@ -211,12 +208,17 @@ const NetworkEventsCard = () => {
       enabled: monitoringEnabled,
     });
 
-  // Track last successful data update
+  // Track last successful fetch completion (falling edge of in-flight, no error).
+  // Catches empty-payload fetches too, so the "paused" timestamp stays accurate
+  // when monitoring is toggled off after a successful but empty refresh.
+  const wasFetchingRef = useRef(false);
   useEffect(() => {
-    if (events.length > 0) {
+    const fetching = isLoading || isRefreshing;
+    if (wasFetchingRef.current && !fetching && !error) {
       setLastUpdate(new Date());
     }
-  }, [events]);
+    wasFetchingRef.current = fetching;
+  }, [isLoading, isRefreshing, error]);
 
   // Filter by tab category
   const filteredEvents = useMemo(() => {
@@ -272,8 +274,8 @@ const NetworkEventsCard = () => {
             <Alert>
               <BellOff className="size-4" />
               <AlertTitle>
-                Auto-refresh paused — displaying events as of{" "}
-                {lastUpdate ? lastUpdate.toLocaleTimeString("zh-CN") : "上次获取"}。
+                自动刷新已暂停，正在显示{" "}
+                {lastUpdate ? lastUpdate.toLocaleTimeString() : "上次获取"} 时的事件。
               </AlertTitle>
             </Alert>
           )}
@@ -281,20 +283,20 @@ const NetworkEventsCard = () => {
           <div className="flex flex-col sm:py-4">
             <div className="grid flex-1 items-start gap-4 sm:py-0 md:gap-8">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <div className="flex items-center">
-                  <TabsList>
+                <div className="flex flex-wrap items-center gap-2">
+                  <TabsList className="h-11 @md/card:h-9">
                     <TabsTrigger value="all">全部</TabsTrigger>
-                    <TabsTrigger value="bandChanges">
-                      <span className="hidden @sm/card:inline">频段变化</span>
-                      <Radio className="@sm/card:hidden" />
+                    <TabsTrigger value="bandChanges" aria-label="频段变化">
+                      <span className="hidden @md/card:inline">频段变化</span>
+                      <Radio className="@md/card:hidden" />
                     </TabsTrigger>
-                    <TabsTrigger value="networkMode">
-                      <span className="hidden @sm/card:inline">网络模式</span>
-                      <Signal className="@sm/card:hidden" />
+                    <TabsTrigger value="networkMode" aria-label="网络模式">
+                      <span className="hidden @md/card:inline">网络模式</span>
+                      <Signal className="@md/card:hidden" />
                     </TabsTrigger>
-                    <TabsTrigger value="dataConnection">
-                      <span className="hidden @sm/card:inline">数据连接</span>
-                      <Wifi className="@sm/card:hidden" />
+                    <TabsTrigger value="dataConnection" aria-label="数据连接">
+                      <span className="hidden @md/card:inline">数据连接</span>
+                      <Wifi className="@md/card:hidden" />
                     </TabsTrigger>
                   </TabsList>
                   <div className="ml-auto flex items-center gap-2">
@@ -306,7 +308,7 @@ const NetworkEventsCard = () => {
                           className="h-7 gap-1"
                         >
                           <ArrowUpDown className="h-3.5 w-3.5" />
-                          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                          <span className="sr-only @sm/card:not-sr-only @sm/card:whitespace-nowrap">
                             排序
                           </span>
                         </Button>
@@ -330,7 +332,7 @@ const NetworkEventsCard = () => {
                           checked={sortOrder === "type"}
                           onCheckedChange={() => setSortOrder("type")}
                         >
-                          按事件类型
+                          事件类型
                         </DropdownMenuCheckboxItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -342,7 +344,7 @@ const NetworkEventsCard = () => {
                           className="h-7 gap-1"
                         >
                           <ListFilter className="h-3.5 w-3.5" />
-                          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                          <span className="sr-only @sm/card:not-sr-only @sm/card:whitespace-nowrap">
                             数量
                           </span>
                         </Button>
@@ -371,7 +373,7 @@ const NetworkEventsCard = () => {
                       <RefreshCw
                         className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
                       />
-                      <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                      <span className="sr-only @sm/card:not-sr-only @sm/card:whitespace-nowrap">
                         刷新
                       </span>
                     </Button>
@@ -381,7 +383,7 @@ const NetworkEventsCard = () => {
                 {error && (
                   <Alert variant="destructive" className="my-4">
                     <div className="flex items-center gap-x-2">
-                      <AlertCircle className="size-5" />
+                      <AlertCircle className="size-4 shrink-0" />
                       <AlertTitle>
                         加载网络事件失败：{error}
                       </AlertTitle>
@@ -444,7 +446,7 @@ const NetworkEventsCard = () => {
                   <div className="grid gap-1.5 mb-4">
                     <h3 className="text-sm font-medium">数据连接</h3>
                     <p className="text-sm text-muted-foreground">
-                      互联网连接、延迟和丢包相关事件。
+                      互联网连接、延迟和丢包事件。
                     </p>
                   </div>
                   <EventsTable

@@ -1,6 +1,11 @@
 # QManager Backend Reference
 
-**Target platform:** Quectel RM520N-GL running vanilla Linux (SDXLEMUR, ARMv7l, kernel 5.4.180) internally.
+**Target platforms:** QManager targets the broader Quectel ARMv7-on-modem ecosystem, not a single SKU. Two SoC families are in scope:
+
+- **SDXLEMUR (5G Modem-RF System)** — X62 silicon (RM520N-GL, the dev device for this branch) and X65 silicon (RM521F). The SoC codename `SDXLEMUR` reported by `/proc/cpuinfo` covers both; firmware is built from the SDX65 SDK regardless (`LE.UM.6.3.6.r1-02600-SDX65.0` on the dev device), which is why the OEM build string mentions `SDX65` even on the X62 part.
+- **SDXPRAIRIE** — X55 silicon (RG502Q-EA, RM502Q-AE). Quirks unique to this family are called out where they differ (notably `/dev/smd11` re-creation timing, see [§8 udev Rules](#8-udev-rules)).
+
+Probe data in this document was collected on an RM520N-GL (X62, SDXLEMUR, ARMv7l Cortex-A7 single-core, kernel `5.4.210-perf`, glibc 2.31, distro `qti-distro-nogplv3-perf` `LE.UM.6.3.6.r1-02600-SDX65.0`, 178 MB RAM, ~91 MB zram swap, `/tmp` 89 MB tmpfs). PRAIRIE devices report different OEM strings but share the same Quectel userspace conventions (BusyBox-1.31 toolchain, bash 3.2, systemd 244, Entware armv7sf-k3.2). Where this doc says "the platform", read it as "this Quectel-on-modem userspace stack" unless a SDK-specific note is called out.
 This document is a developer reference for the shell-script backend. It covers every library, daemon, unit file, sudoers rule, udev rule, CGI endpoint, and file path that exists in this codebase. It does not cover frontend React code, installer operational flow, or platform internals.
 
 ---
@@ -33,13 +38,13 @@ QManager runs as a self-contained web management stack inside the RM520N-GL mode
 
 | Layer | Technology |
 |-------|-----------|
-| Init system | systemd |
-| Web server | lighttpd (Entware, `/opt/sbin/lighttpd`) |
-| Package manager | Entware opkg at `/opt/` |
+| Init system | systemd 244 (`-PAM -SECCOMP -APPARMOR`, hybrid cgroup v1+v2) |
+| Web server | lighttpd 1.4.82 (Entware, `/opt/sbin/lighttpd`) |
+| Package manager | Entware opkg at `/opt/` (Entware libc 2.27 alongside system glibc 2.31) |
 | Config store | JSON files under `/etc/qmanager/` (no UCI) |
 | AT transport | `atcli_smd11` via `/dev/smd11` (direct, no socat) |
-| Firewall | iptables (direct, no nftables/fw4) |
-| Shell | `/bin/bash` available; `/bin/sh` is bash on this platform |
+| Firewall | iptables 1.8.4 legacy (direct, no nftables/fw4) |
+| Shell | `/bin/sh` is **BusyBox `ash`** (`/bin/sh -> busybox.nosuid`); `/bin/bash` exists but is **bash 3.2.57(1)-release** — see [§14 Common Pitfalls](#14-common-pitfalls) for missing modern bashisms |
 
 **Backend layers (source to device):**
 
@@ -75,7 +80,13 @@ These constraints cause silent failures or security issues if violated.
 - For files written exclusively by root, pre-create them as `root:root` mode 666.
 - For worker scripts that need to reset their own log, use `rm -f` then create fresh (as seen in `qmanager_update`).
 
-**`/bin/bash` is available.** Scripts may use bashisms (arrays, `local`, `[[`, process substitution). POSIX-only is not a requirement. However, libraries sourced by many callers should prefer POSIX for portability.
+**`/bin/bash` is bash 3.2.57 — many "modern" bashisms are missing.** Probe-confirmed unsupported in this version:
+- `${var,,}` / `${var^^}` (lowercase/uppercase substitution) — **broken**, use `tr` instead
+- `mapfile` / `readarray` — **not built-in**, use `while read` loops
+- `wait -n` (wait for any child) — **not supported**
+- `declare -A` (associative arrays) — **not supported**, use parallel indexed arrays or temp files
+
+Probe-confirmed supported: `<<<` herestring, `[[ =~ ]]` regex with `$BASH_REMATCH`, indexed arrays, `local`, `[[ ]]`, process substitution `<(...)`. **`/bin/sh` is BusyBox `ash`** — POSIX-only by definition; do **not** assume any bashism in `#!/bin/sh` scripts. Libraries sourced by both contexts must stay POSIX-clean.
 
 **AT commands via `qcmd` only.** Never write directly to `/dev/smd11`. `qcmd` provides flock serialization. Concurrent writes to `/dev/smd11` corrupt modem responses.
 
@@ -461,14 +472,62 @@ Main data collection daemon. Sources `qlog.sh`, `parse_at.sh`, `events.sh`, `ema
 
 Network interface for traffic stats is auto-detected: `rmnet_ipa0` on RM520N-GL (presence of `/etc/quectel-project-version`), `wwan0` on other platforms.
 
+**System Health collection (`update_system_health()`):** Runs every Tier 1 cycle. Cheap reads only — no AT commands, no extra forks beyond `awk`/`grep`/`df`. Emits a top-level `system_health` block in the cache so the `system/modem-subsys.sh` CGI can serve it as a thin reader. Sources:
+
+| Field | Source |
+|-------|--------|
+| `state`, `state_raw`, `crash_count` | `/sys/devices/platform/4080000.qcom,mss/subsys0/{state,crash_count}` |
+| `coredump_present` | Non-empty file under `/sys/devices/platform/4080000.qcom,mss/ramdump/ramdump_modem/` (sysfs metadata pseudo-files excluded) |
+| `last_crash_at`, `total_logged_crashes` | `/etc/qmanager/modem_crashes.json` (NDJSON-style array; last entry's `ts` and `length`) |
+| `cpu.load_1m` | `/proc/loadavg` (first column) |
+| `cpu.core_count` | `nproc` (cached after first read — value never changes at runtime) |
+| `cpu.usage_pct` | `/proc/stat` delta computed in `update_proc_metrics()` (the same value the rest of the cache uses) |
+| `cpu.freq_khz`, `cpu.max_freq_khz` | `/sys/devices/system/cpu/cpu0/cpufreq/{scaling_cur_freq,scaling_max_freq}` |
+| `memory.{total_kb, used_kb, available_kb}` | Derived from `device.memory_total_mb` / `device.memory_used_mb` (× 1024) |
+| `storage.{mount, total_kb, used_kb, available_kb}` | `df -P /usrdata` |
+
+The CGI reader (`/cgi-bin/quecmanager/system/modem-subsys.sh`) is now a thin `jq` extractor: it reshapes `system_health` into the historical response schema, falls back to an all-null shape if the cache is missing or older than 30s, and never re-implements live computation. Per-request cost dropped from ~80–120ms to ~15–25ms.
+
+#### `qmanager_traffic`
+
+**Location:** `/usr/bin/qmanager_traffic`
+**State files:** `/tmp/qmanager_traffic.json` (atomic write per tick)
+
+1 Hz cellular traffic counter daemon. Reads `/proc/net/dev` every second for the active rmnet interface and emits a slim JSON snapshot consumed by the Device Metrics card via `fetch_traffic.sh` and `useTrafficStream`. Decoupled from `qmanager_poller` so the dashboard's Live Traffic and Data Used rows update at 1 s without waiting on the AT-bound 2 s tier. Never touches `/dev/smd11` and acquires no AT lock.
+
+**Iface selection (per tick):** prefers `$NETWORK_IFACE` (default `rmnet_ipa0`), falls back to `rmnet_data0`, emits `iface=null` with zeroed counters if neither is present in `/proc/net/dev`. Selection is by `/proc/net/dev` presence, not `/sys/class/net/<iface>/operstate` — Quectel rmnet drivers leave `operstate` at `unknown` even when actively passing traffic, so an operstate gate would never select an iface on this platform. This mirrors the approach in `qmanager_poller`'s traffic stats path.
+
+**Counter-reset handling:** a negative delta (modem subsystem restart re-created the iface) emits one zero tick and reseeds the baseline. No negative speeds ever surface to the UI.
+
+**Footprint (measured on RM520N-GL, single-core ARMv7, 30 s sample):** ~0.4 % CPU, ~14 MB RSS — about ¼ of `qmanager_poller`. Dominated by the per-tick `awk` + `jq` + `mv`.
+
 #### `qmanager_ping`
 
 **Location:** `/usr/bin/qmanager_ping`
 **State files:** `/tmp/qmanager_ping.json` (current state), `/tmp/qmanager_ping_history` (flat ring buffer)
 
-The single source of internet reachability data. Pings two targets (default `google.com`, `cloudflare.com`) on a 5-second interval. Writes atomic JSON with `available`, `latency_ms`, `streak_ok`, and `streak_fail` fields. Does not touch the modem or AT device. Stats (avg/min/max/jitter/loss) are computed by the poller from the history file.
+The single source of internet reachability data. Probes two configurable HTTP/HTTPS targets on a 5-second interval using a primary-then-fallback strategy. Writes atomic JSON with `available`, `latency_ms`, `streak_ok`, and `streak_fail` fields. Does not touch the modem or AT device. Stats (avg/min/max/jitter/loss) are computed by the poller from the history file.
+
+**Config:** `/etc/qmanager/ping_profile.json` — `profile` (sensitivity preset), `target_1` (primary), `target_2` (secondary).
 
 Consumers: poller (reads `ping.json` and history), watchcat (reads `streak_fail` to drive recovery), frontend (reads via `status.json` merged by poller).
+
+### Probe Targets
+
+The ping daemon checks two targets in a primary-then-fallback strategy. Primary is probed every interval; secondary is only probed when primary returns `Disconnected`.
+
+Both targets accept:
+- Full URL: `https://example.com/path` or `http://example.com/path`
+- Bare hostname: `youtube.com` (auto-prefixed to `https://youtube.com/`)
+- Hostname with path: `example.com/health` → `https://example.com/health`
+
+**Response interpretation:**
+- For canonical captive-portal endpoints (`/generate_204`, `/hotspot-detect.html`): 204 = Connected, anything else = Limited (probable captive portal intercept).
+- For custom URLs: any HTTP response (2xx–5xx) = Connected — the network path worked end-to-end. Limited state only triggers from canonical endpoints.
+
+**Defaults:** `http://cp.cloudflare.com/` (primary), `http://www.gstatic.com/generate_204` (secondary).
+
+**Why these defaults:** Cloudflare's captive portal endpoint is reachable from most regions including networks that filter Google services (e.g. mainland China). Google's `gstatic` is the established fallback for everywhere else.
 
 #### `qmanager_watchcat`
 
@@ -674,6 +733,7 @@ OTA update worker. See §12 for full pipeline description. Called via `sudo -n` 
 | `qmanager-mtu.service` | simple | `/usr/bin/qmanager_mtu_apply` | MTU persistence; `ConditionPathExists=/etc/firewall.user.mtu` |
 | `qmanager-ping.service` | simple | `/usr/bin/qmanager_ping` | Ping daemon; required by poller |
 | `qmanager-poller.service` | simple | `/usr/bin/qmanager_poller` | Main data poller; guards `/dev/smd11` in `ExecStartPre` |
+| `qmanager-traffic.service` | simple | `/usr/bin/qmanager_traffic` | 1 Hz `/proc/net/dev` reader for Live Traffic + Data Used; no AT access |
 | `qmanager-setup.service` | oneshot (RemainAfterExit) | `/usr/bin/qmanager_setup` | Permission setup; before ping and poller |
 | `qmanager-tower-failover.service` | simple | `/usr/bin/qmanager_tower_failover` | Tower lock failover; guarded by config check in `ExecStartPre` |
 | `qmanager-ttl.service` | oneshot (RemainAfterExit) | inline sh | TTL/HL rule persistence; `ConditionPathExists=/etc/qmanager/ttl_state` |
@@ -682,7 +742,7 @@ OTA update worker. See §12 for full pipeline description. Called via `sudo -n` 
 
 **`tailscaled.service`** is staged in `/usr/lib/qmanager/tailscaled.service` (source: `scripts/etc/systemd/system/tailscaled.service`). It is only copied to `/lib/systemd/system/` when the user installs Tailscale via `qmanager_tailscale_mgr install`. `ExecStartPost=/bin/chmod 755 /usrdata/tailscale` restores directory permissions after tailscaled resets them to 700.
 
-**Service ordering:** `qmanager-firewall` -> `qmanager-setup` -> `qmanager-ping` -> `qmanager-poller` -> `qmanager-watchcat`.
+**Service ordering:** `qmanager-firewall` -> `qmanager-setup` -> `qmanager-ping` -> `qmanager-poller` -> `qmanager-watchcat`. `qmanager-traffic` runs in parallel with the others (`After=network.target qmanager-setup.service` only — no AT-device dependency).
 
 ---
 
@@ -970,6 +1030,7 @@ Cleared on every reboot (tmpfs). Files pre-created by `qmanager_setup` are marke
 | `/tmp/qmanager_status.json` | root | qmanager_poller | Main modem status cache; polled by frontend |
 | `/tmp/qmanager_ping.json` | root | qmanager_ping | Current ping state (available, latency, streaks) |
 | `/tmp/qmanager_ping_history` | root | qmanager_ping | Raw latency history (flat ring buffer) |
+| `/tmp/qmanager_traffic.json` | root | qmanager_traffic | 1 Hz cellular traffic snapshot (iface, totals, byte rates) |
 | `/tmp/qmanager_signal_history.json` | root | qmanager_poller | Signal history NDJSON for chart |
 | `/tmp/qmanager_events.json` | root | qmanager_poller / qmanager_watchcat | Recent activity events NDJSON |
 | `/tmp/qmanager_pci_state.json` | root | qmanager_poller | SCC PCI state for handoff detection |
@@ -1298,6 +1359,50 @@ file scripts/usr/bin/qmanager_setup
 **UPX-compressing `atcli_smd11`.** UPX self-modifying code causes segmentation faults on exit for this ARMv7 Rust build. Ship the uncompressed binary (~647KB). The installer must not UPX-compress it.
 
 **Using `kill -0` for cross-user PID checks.** `kill -0 <pid>` fails with EPERM when www-data checks a root daemon's PID. Use `pid_alive()` from `platform.sh` which checks `/proc/$pid` existence instead.
+
+### Platform Tooling Quirks (probe-confirmed 2026-05-09)
+
+These quirks are easy to miss when porting code from a typical GNU/Linux box. Every item below was verified by direct SSH probing of the target firmware (`LE.UM.6.3.6.r1-02600-SDX65.0`).
+
+**`bash` is 3.2.57.** Predates `mapfile`, `readarray`, `${var,,}`, `${var^^}`, `wait -n`, `declare -A`. See [§2 Critical Constraints](#2-critical-constraints) for the full list and workarounds.
+
+**`/bin/sh` is BusyBox `ash`, not bash.** Do not put bashisms in `#!/bin/sh` scripts even if they "work locally" — they will fail on-device. Use `#!/bin/bash` if a script genuinely needs bash features.
+
+**`sed` is BusyBox sed (1.31.1), not GNU sed.** Probe shows: `sed -i`, `sed -i.bak`, `sed -E`, `sed -r` all work. **Avoid:** GNU-specific `\<`/`\>` word boundaries, `sed -i ''` (empty SFX requires a non-empty arg or no arg at all), `sed --expression` long form. Stick to short flags.
+
+**`awk` is BusyBox awk.** Probe shows `length()`, indexed arrays, `gensub()`, `systime()`, `strftime()` all available. Does **not** accept `--version` (silent stderr). For one-off scripts this is rich enough — but do not assume full gawk: `--posix`, `--re-interval`, GNU `printf %a`, `getline` over pipes with `|&` may behave differently.
+
+**`tar` is BusyBox tar (1.31.1).** Only short flags: `c|x|t -ZzJjahmvokO -f -C -T -X --exclude`. **Missing:** `--owner=`, `--group=`, `--transform=`, `--newer-mtime=`, `--exclude-from`, `--mode=`. Backup/restore code that relies on these will silently misbehave or refuse the option.
+
+**`xmlstarlet` is NOT installed.** Earlier docs imply `xmlstarlet` is the tool for `/etc/data/mobileap_cfg.xml`; **it is not present** on stock RM520N-GL. Use **`xmllint`** (`/usr/bin/xmllint`, system-bundled) for queries, or `sed`/`awk` for simple in-place edits. If a feature requires xmlstarlet, the installer must `opkg install xmlstarlet` from Entware first.
+
+**`date` cannot do nanoseconds or relative-time parsing.**
+- `date +%N` returns the **literal string `%N`** (no expansion). For sub-second timestamps, use `date +%s` (seconds only).
+- `date -d 'now - 1 hour'` returns `invalid date` — BusyBox date has no GNU date-string parser. Compute offsets in shell: `$(( $(date +%s) - 3600 ))` and feed back via `date -d @<epoch>` (this **does** work).
+
+**`mktemp --tmpdir=` is unsupported.** Use the template form: `mktemp /tmp/qmanager_foo.XXXXXX`.
+
+**`ps -o etimes` is unsupported.** Only `etime` (HH:MM:SS string format) is allowed. To get elapsed seconds, parse `etime` in shell or read `/proc/<pid>/stat` field 22 (`starttime` jiffies) and subtract from `/proc/uptime`.
+
+**`ss` is not installed.** Use `/opt/bin/netstat` (Entware net-tools) or BusyBox `netstat`. There is no `ss --version` to detect.
+
+**No script interpreters beyond shell.** No `python`, `python3`, `perl`, `lua`, `node` — none. Anything that needs structured logic must be written as POSIX shell + `jq`. Adding an interpreter would mean an Entware package install (`opkg install python3`) plus its ~15 MB footprint on the persistent partition.
+
+**No `getconf` for `ARG_MAX`/`PIPE_BUF`/`PATH_MAX`.** These names return empty on this device. Use Linux defaults: `ARG_MAX = 131072`, `PIPE_BUF = 4096`, `PATH_MAX = 4096`. If you need a real check, read `/proc/sys/kernel/...` directly.
+
+**No NTP, RTC drifts to 1970.** `timedatectl` reports `System clock synchronized: no` and `NTP service: n/a`. Wall-clock time is set by the cellular network when it attaches; if the modem is offline at boot the clock can be years off. Never rely on absolute timestamps for security-sensitive ordering — use monotonic deltas (`/proc/uptime`) where possible.
+
+**`/etc`, `/opt`, `/usrdata`, `/data`, `/cache`, `/persist`, `/systemrw` all bind-mount the same `/dev/ubi2_0` ubifs volume (~124 MB total).** Writes anywhere in this set consume from the same pool. `/tmp` is a separate 89 MB tmpfs (volatile). The rootfs `/` is `/dev/ubi0:rootfs` (~100 MB) — boots `ro`, must `mount -o remount,rw /` before persistent writes, then `sync` and `mount -o remount,ro /` before reboot.
+
+**Single-core CPU, 178 MB RAM, ~91 MB zram swap.** ARMv7-A Cortex-A7 @ ~1.2 GHz (`BogoMIPS 38.40`) with VFPv4 + NEON + IDIVA/IDIVT. CPU-bound shell loops compete with the modem stack — keep daemon polling intervals reasonable and avoid per-second `jq` invocations on large JSON.
+
+**`kernel.dmesg_restrict=1` and `kernel.kptr_restrict=2`.** Non-root cannot read kernel ring buffer; pointer values are zeroed in `/proc`. Diagnostic scripts that scrape `dmesg` will return empty under www-data.
+
+**`conntrack_max = 12288`.** NAT table is small. Don't run conntrack-heavy probes (e.g., concurrent port scans) from the modem.
+
+**Hardware-enforced binary ABI.** Native binaries shipped in `dependencies/` must be **armhf VFPv4** (Cortex-A7 features: `half thumb fastmult vfp edsp neon vfpv3 tls vfpv4 idiva idivt vfpd32 lpae evtstrm`). `armel` (soft-float) binaries will run but slowly; `aarch64` will not run at all.
+
+**`iptables` rules live in a dedicated `QMANAGER_FW` user chain.** All web-UI port-firewall rules (ports 80/443 ACCEPT on trusted interfaces, DROP on others) live in the user chain `QMANAGER_FW` hooked from `INPUT`. `qmanager_firewall start` creates the chain (`-N`), flushes it (`-F`), populates the rules (`-A`), and hooks `INPUT` exactly once (`-I INPUT 1 -j QMANAGER_FW`). `qmanager_firewall stop` unhooks, flushes, and deletes the chain. This replaces an earlier direct-`INPUT` layout that left orphan rules across version drift (e.g. `DROP -i rmnet_data0 -p tcp --dport 80` rules from a prior trusted-interface set). Both `start` and `stop` also call `cleanup_legacy_input_rules()` to drain such orphans on devices upgrading from the old layout. Inspect with `iptables -L QMANAGER_FW -n -v` — single source of truth.
 
 ---
 

@@ -33,11 +33,12 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         exit 0
     fi
 
-    # +QNWPREFCFG: "rat_acq_order",NR5G:LTE:WCDMA
+    # +QNWPREFCFG: "rat_acq_order",NR5G:LTE:WCDMA   (x5x firmware)
+    # +QNWPREFCFG: "rat_order_pref",NR5G:LTE:WCDMA  (x6x firmware, e.g. RM521F-GL)
     order=$(printf '%s' "$resp" | awk -F',' '
-        /\+QNWPREFCFG:.*"rat_acq_order"/ {
+        /\+QNWPREFCFG:.*"(rat_acq_order|rat_order_pref)"/ {
             val = $2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val)
-            if (val != "") print val
+            if (val != "") { print val; exit }
         }
     ')
 

@@ -52,18 +52,12 @@ tmp_body="/tmp/qm_auto_update_body.json"
 rm -f "$tmp_body"
 
 fetched=0
-if command -v uclient-fetch >/dev/null 2>&1; then
-    uclient-fetch -qO "$tmp_body" --timeout=15 "$api_url" 2>/dev/null && fetched=1
-fi
-if [ "$fetched" != "1" ] && command -v curl >/dev/null 2>&1; then
+if command -v curl >/dev/null 2>&1; then
     curl -sL --max-time 15 -o "$tmp_body" "$api_url" 2>/dev/null && fetched=1
-fi
-if [ "$fetched" != "1" ] && command -v wget >/dev/null 2>&1; then
-    wget -qO "$tmp_body" -T 15 "$api_url" 2>/dev/null && fetched=1
 fi
 
 if [ "$fetched" != "1" ] || [ ! -s "$tmp_body" ]; then
-    qlog_warn "Failed to fetch releases from GitHub"
+    qlog_warn "Failed to fetch releases from GitHub (curl missing or network down)"
     rm -f "$tmp_body"
     exit 1
 fi

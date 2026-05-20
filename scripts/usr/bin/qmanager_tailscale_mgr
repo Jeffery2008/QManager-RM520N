@@ -366,6 +366,9 @@ do_uninstall() {
           "$LOG_FILE" \
           "$INNER_SCRIPT"
 
+    # Remove QManager-owned SSH intent flag so a reinstall starts off (explicit opt-in).
+    rm -f /etc/qmanager/tailscale_ssh
+
     sync
     mount -o remount,ro / 2>/dev/null || true
 }

@@ -57,12 +57,12 @@ The backend uses a tiered polling system to balance data freshness against modem
 
 | Tier | Interval | Data Collected | Source |
 |------|----------|---------------|--------|
-| **Tier 1 (Hot)** | 2s | Serving cell (RSRP/RSRQ/SINR/RSSI), traffic stats, uptime | `AT+QENG="servingcell"`, `/proc/net/dev` |
+| **Tier 1 (Hot)** | 2s | Serving cell (RSRP/RSRQ/SINR/RSSI), traffic stats, uptime, system health | `AT+QENG="servingcell"`, `/proc/net/dev`, sysfs |
 | **Tier 1.5 (Signal)** | 10s | Per-antenna signal, signal history, ping history | `AT+QRSRP`, `AT+QRSRQ`, `AT+QSINR` |
 | **Tier 2 (Warm)** | 30s | Temperature, carrier, SIM slot, CA info, MIMO, APN | `AT+QTEMP`, `AT+COPS`, `AT+QCAINFO` |
 | **Boot (Once)** | Startup | Firmware, IMEI, IMSI, ICCID, capabilities, supported bands | `AT+CGMM`, `AT+CGSN`, etc. |
 
-All tiers write to a single cache file: `/tmp/qmanager_status.json`
+All tiers write to a single cache file: `/tmp/qmanager_status.json`. Tier 1 also runs `update_system_health()` — a no-AT, sysfs-only collector that emits the top-level `system_health` block (modem subsystem state, crash counters, CPU, memory, storage). The `/system/modem-subsys.sh` CGI is a thin reader over this block; no live computation happens at request time.
 
 ### Frontend Polling
 
@@ -145,6 +145,7 @@ Auth endpoints use `_SKIP_AUTH=1` to bypass the automatic auth check in `cgi_bas
 | `/tmp/qmanager_ping_history.json` | poller | NDJSON | 24h ping history (10s samples, max 8640 lines) |
 | `/tmp/qmanager_events.json` | poller | NDJSON | Network events (max 50 entries) |
 | `/tmp/qmanager_ping.json` | ping daemon | JSON | Current ping result |
+| `/tmp/qmanager_traffic.json` | traffic daemon | JSON | 1 Hz `/proc/net/dev` snapshot (Live Traffic + Data Used) |
 | `/tmp/qmanager_watchcat.json` | watchcat | JSON | Watchdog state machine |
 | `/tmp/qmanager_profile_state.json` | profile_apply | JSON | Profile apply progress |
 | `/tmp/qmanager_pci_state.json` | poller (events) | JSON | SCC PCI tracking |
@@ -167,6 +168,9 @@ init.d/qmanager (procd)
 
 init.d/qmanager (procd)
   └── qmanager_ping (ping daemon, runs forever)
+
+systemd/qmanager-traffic.service
+  └── qmanager_traffic (1 Hz /proc/net/dev reader, runs forever; no AT access)
 
 init.d/qmanager_eth_link (non-procd, one-shot)
   └── applies persisted ethernet link speed on boot

@@ -58,6 +58,7 @@ export interface TailscaleStatus {
   installed: boolean;
   daemon_running?: boolean;
   enabled_on_boot?: boolean;
+  ssh_enabled?: boolean;
   version?: string;
   backend_state?: string;
   auth_url?: string;
@@ -75,6 +76,7 @@ export interface UseTailscaleReturn {
   isConnecting: boolean;
   isDisconnecting: boolean;
   isTogglingService: boolean;
+  isTogglingSsh: boolean;
   isUninstalling: boolean;
   installResult: InstallResult;
   error: string | null;
@@ -84,6 +86,7 @@ export interface UseTailscaleReturn {
   startService: () => Promise<boolean>;
   stopService: () => Promise<boolean>;
   setBootEnabled: (enabled: boolean) => Promise<boolean>;
+  setSshEnabled: (enabled: boolean) => Promise<boolean>;
   uninstall: () => Promise<boolean>;
   runInstall: () => Promise<void>;
   refresh: () => void;
@@ -97,6 +100,7 @@ export function useTailscale(): UseTailscaleReturn {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isTogglingService, setIsTogglingService] = useState(false);
+  const [isTogglingSsh, setIsTogglingSsh] = useState(false);
   const [isUninstalling, setIsUninstalling] = useState(false);
   const [installResult, setInstallResult] = useState<InstallResult>({
     success: true,
@@ -349,6 +353,35 @@ export function useTailscale(): UseTailscaleReturn {
     [postAction, fetchStatus],
   );
 
+  const setSshEnabled = useCallback(
+    async (enabled: boolean): Promise<boolean> => {
+      setIsTogglingSsh(true);
+      setError(null);
+
+      try {
+        const json = await postAction({ action: "set_ssh", enabled });
+        if (!mountedRef.current) return false;
+
+        if (!json.success) {
+          setError(json.detail || json.error || "Failed to update SSH setting");
+          return false;
+        }
+
+        await fetchStatus(true);
+        return true;
+      } catch (err) {
+        if (!mountedRef.current) return false;
+        setError(
+          err instanceof Error ? err.message : "Failed to update SSH setting",
+        );
+        return false;
+      } finally {
+        if (mountedRef.current) setIsTogglingSsh(false);
+      }
+    },
+    [postAction, fetchStatus],
+  );
+
   // ---------------------------------------------------------------------------
   // Install via helper script
   // ---------------------------------------------------------------------------
@@ -423,6 +456,7 @@ export function useTailscale(): UseTailscaleReturn {
     isConnecting,
     isDisconnecting,
     isTogglingService,
+    isTogglingSsh,
     isUninstalling,
     installResult,
     error,
@@ -432,6 +466,7 @@ export function useTailscale(): UseTailscaleReturn {
     startService,
     stopService,
     setBootEnabled,
+    setSshEnabled,
     uninstall,
     runInstall,
     refresh: fetchStatus,

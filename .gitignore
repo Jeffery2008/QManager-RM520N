@@ -53,10 +53,8 @@ RELEASE_NOTE.md
 # simpleadmin source
 /simpleadmin-source
 
-# playwright cache
-.playwright*/
+# bundled build tools (developer-local; not part of the repo)
+/tools/
 
-.tmp/
-.npm-cache/
-output/
-qmanager-offline-install.ps1
+# Health check directory
+/health-checks/

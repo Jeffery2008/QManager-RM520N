@@ -27,6 +27,7 @@ _EA_MSMTP_CONFIG="/etc/qmanager/msmtprc"
 _EA_LOG_FILE="/tmp/qmanager_email_log.json"
 _EA_RELOAD_FLAG="/tmp/qmanager_email_reload"
 _EA_MAX_LOG=100
+_EA_RECOVERY_PIDFILE="/tmp/qmanager_email_send.pid"
 
 # Detect msmtp binary — Entware installs to /opt/bin which is not in the
 # poller's PATH. Check common locations so both CGI and daemon contexts work.
@@ -138,8 +139,8 @@ check_email_alert() {
         qlog_info "Email alerts: recovery detected — measured downtime=${duration}s, threshold=${threshold_secs}s"
 
         if [ "$duration" -ge "$threshold_secs" ]; then
-            qlog_info "Email alerts: threshold exceeded, sending recovery email"
-            _ea_send_recovery_email "$_ea_downtime_start" "$duration"
+            qlog_info "Email alerts: threshold exceeded, dispatching recovery email"
+            _ea_send_recovery_email_async "$_ea_downtime_start" "$duration"
         else
             qlog_info "Email alerts: downtime ${duration}s < threshold ${threshold_secs}s — skipped (ping debounce eats ~25s)"
         fi
@@ -148,6 +149,41 @@ check_email_alert() {
         _ea_was_down="false"
         _ea_downtime_start=0
     fi
+}
+
+# =============================================================================
+# _ea_send_recovery_email_async — Background variant for the poll loop
+# =============================================================================
+# The poller calls this so the main loop never blocks on the 30s stabilize
+# delay or the msmtp SMTP I/O. Single-flight via _EA_RECOVERY_PIDFILE: if a
+# previous worker is still running, drop this one (the previous send will
+# either succeed or be logged as failed — either way, do not stack).
+_ea_send_recovery_email_async() {
+    local start_epoch="$1"
+    local duration_secs="$2"
+
+    # Single-flight check
+    if [ -f "$_EA_RECOVERY_PIDFILE" ]; then
+        local _old_pid
+        _old_pid=$(cat "$_EA_RECOVERY_PIDFILE" 2>/dev/null)
+        if [ -n "$_old_pid" ] && [ -d "/proc/$_old_pid" ]; then
+            qlog_warn "Email alerts: previous recovery send still in flight (pid=$_old_pid), skipping new dispatch"
+            return 0
+        fi
+        rm -f "$_EA_RECOVERY_PIDFILE"
+    fi
+
+    # Fork the send. Closing stdin/stdout/stderr lets systemd reap the child
+    # without keeping a journal pipe open. We capture the worker's PID via
+    # $! after backgrounding (NOT $$ inside the subshell — that resolves to
+    # the parent poller's PID and would create a permanent lockout if the
+    # worker is hard-killed). The stale-file cleanup at the top of this
+    # function already handles orphans, so no EXIT trap is needed.
+    (
+        _ea_send_recovery_email "$start_epoch" "$duration_secs"
+    ) </dev/null >/dev/null 2>&1 &
+    local _ea_worker_pid=$!
+    echo "$_ea_worker_pid" > "$_EA_RECOVERY_PIDFILE" 2>/dev/null
 }
 
 # =============================================================================

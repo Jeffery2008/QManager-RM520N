@@ -4,6 +4,8 @@ import React from "react";
 import { motion, type Variants } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useModemStatus } from "@/hooks/use-modem-status";
+import { useTrafficStream } from "@/hooks/use-traffic-stream";
+import { useAboutDevice } from "@/hooks/use-about-device";
 import NetworkStatusComponent from "./network-status";
 import DeviceStatus from "./device-status";
 import LTEStatusComponent from "./lte-status";
@@ -13,6 +15,9 @@ import { SignalHistoryComponent } from "./signal-history";
 import RecentActivitiesComponent from "./recent-activities";
 import DeviceMetricsComponent from "./device-metrics";
 import LiveLatencyComponent from "./live-latency";
+
+const DEFAULT_POLL_MS = 2000;
+const POLL_BUFFER_MS = 250; // Small lag past each daemon write to avoid catching a half-written cache
 
 const containerVariants: Variants = {
   hidden: {},
@@ -29,20 +34,33 @@ const itemVariants: Variants = {
 };
 
 const HomeComponent = () => {
-  const { data, isLoading, isStale, error } = useModemStatus();
+  const [pollInterval, setPollInterval] = React.useState<number>(DEFAULT_POLL_MS);
+  const { data, isLoading, isStale, error } = useModemStatus({ pollInterval });
+  const { data: trafficStream } = useTrafficStream();
+  const { data: aboutDevice } = useAboutDevice();
+
+  // Tie poll cadence to the ping daemon's write interval (Connection Sensitivity).
+  // history_interval_sec comes straight from the active profile, so this adapts
+  // automatically when the user changes Sensitivity in System Settings.
+  const daemonIntervalSec = data?.connectivity?.history_interval_sec;
+  React.useEffect(() => {
+    if (!daemonIntervalSec || daemonIntervalSec <= 0) return;
+    const next = daemonIntervalSec * 1000 + POLL_BUFFER_MS;
+    setPollInterval((prev) => (prev === next ? prev : next));
+  }, [daemonIntervalSec]);
 
   const networkType = data?.network?.type ?? "";
   const carrierComponents = data?.network?.carrier_components ?? [];
   const hasScc = carrierComponents.some((c) => c.type === "SCC");
 
   return (
-    <div className="grid grid-cols-1 gap-6 px-4 lg:px-6 @3xl/main:grid-cols-2 @5xl/main:grid-cols-5" aria-live="polite" aria-atomic="false">
+    <div className="grid grid-cols-1 gap-6 px-4 lg:px-6 @4xl/main:grid-cols-5" aria-live="polite" aria-atomic="false">
       {error && !isLoading && (
         <div role="alert" className="col-span-full rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
           无法连接到调制解调器，当前显示的数据可能不是最新的。
         </div>
       )}
-      <div className="grid gap-4 @3xl/main:col-span-3 @5xl/main:col-span-3 col-span-1">
+      <div className="grid gap-4 col-span-1 @4xl/main:col-span-3">
         <NetworkStatusComponent
           data={data?.network ?? null}
           connectivity={data?.connectivity ?? null}
@@ -56,13 +74,6 @@ const HomeComponent = () => {
           initial="hidden"
           animate="visible"
         >
-          {/* SA mode: SCC card on the left */}
-          {networkType === "5G-SA" && hasScc && (
-            <motion.div variants={itemVariants} className="h-full *:data-[slot=card]:h-full">
-              <SccStatusComponent carriers={carrierComponents} />
-            </motion.div>
-          )}
-
           {/* LTE PCC — shown in LTE and NSA modes; spans full width when no SCCs */}
           {networkType !== "5G-SA" && (
             <motion.div
@@ -95,18 +106,23 @@ const HomeComponent = () => {
             </motion.div>
           )}
 
-          {/* LTE mode: SCC card on the right */}
-          {networkType === "LTE" && hasScc && (
+          {/*
+           * SCC card on the right — Primary always on the left, Secondary always on the right.
+           * 5G-NSA intentionally omits SCC here to keep the dual-Primary row uncluttered;
+           * carrier-aggregation details for NSA live on the Cellular Information page.
+           */}
+          {(networkType === "LTE" || networkType === "5G-SA") && hasScc && (
             <motion.div variants={itemVariants} className="h-full *:data-[slot=card]:h-full">
               <SccStatusComponent carriers={carrierComponents} />
             </motion.div>
           )}
         </motion.div>
       </div>
-      <div className="@3xl/main:col-span-2 @5xl/main:col-span-2 col-span-1 h-full *:data-[slot=card]:h-full">
+      <div className="col-span-1 @4xl/main:col-span-2 h-full *:data-[slot=card]:h-full">
         <DeviceStatus
           data={data?.device ?? null}
           isLoading={isLoading}
+          lanGateway={aboutDevice?.network.lan_gateway}
         />
       </div>
 
@@ -121,6 +137,7 @@ const HomeComponent = () => {
             <DeviceMetricsComponent
               deviceData={data?.device ?? null}
               trafficData={data?.traffic ?? null}
+              trafficStream={trafficStream}
               lteData={data?.lte ?? null}
               nrData={data?.nr ?? null}
               isLoading={isLoading}

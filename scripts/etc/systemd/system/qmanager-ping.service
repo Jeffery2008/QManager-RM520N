@@ -1,11 +1,20 @@
 # /lib/systemd/system/qmanager-ping.service
 [Unit]
-Description=QManager Ping Daemon
+Description=QManager Ping Daemon (Rust)
 After=network.target qmanager-setup.service
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/qmanager_ping
+# Probe targets and timing knobs (PING_TARGET_1, PING_TARGET_2,
+# PING_PROFILE, PING_INTERVAL, FAIL_SECS, RECOVER_SECS, INTERCEPT_SECS,
+# HISTORY_SECS) are intentionally NOT set here: the daemon's resolution
+# order is env > JSON > hardcoded defaults (see ping-daemon/src/config.rs),
+# so any inline Environment= here would beat /etc/qmanager/ping_profile.json
+# written by the Connectivity Sensitivity UI. The daemon's hardcoded
+# defaults (Cloudflare primary, Google secondary; relaxed profile) cover
+# fresh boots before the JSON exists. Operators who genuinely need a
+# manual override can drop values into /etc/qmanager/environment.
 EnvironmentFile=-/etc/qmanager/environment
 TimeoutStopSec=10
 Restart=on-failure

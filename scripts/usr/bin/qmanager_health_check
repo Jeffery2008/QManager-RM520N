@@ -196,7 +196,12 @@ _test_catalog_pending() {
         {id:"cfg.sms_alerts_json",category:"configuration", label:"sms_alerts.json valid",         status:"pending", duration_ms:0, detail:""},
         {id:"cfg.email_alerts_json",category:"configuration", label:"email_alerts.json valid",     status:"pending", duration_ms:0, detail:""},
         {id:"cfg.poller_cache_fresh", category:"configuration", label:"poller cache mtime < 60s",  status:"pending", duration_ms:0, detail:""},
-        {id:"cfg.cgi_path_opt",   category:"configuration", label:"lighttpd CGI PATH includes /opt/bin", status:"pending", duration_ms:0, detail:""}
+        {id:"cfg.cgi_path_opt",   category:"configuration", label:"lighttpd CGI PATH includes /opt/bin", status:"pending", duration_ms:0, detail:""},
+        {id:"data_used.fresh",    category:"configuration", label:"data_used.json fresh (mtime < 60s)",  status:"pending", duration_ms:0, detail:""},
+
+        {id:"svc.traffic",        category:"services",       label:"qmanager-traffic.service",            status:"pending", duration_ms:0, detail:""},
+
+        {id:"data_used.divergence_low", category:"network",  label:"data_used divergence count low",      status:"pending", duration_ms:0, detail:""}
     ]'
 }
 
@@ -479,6 +484,7 @@ t_svc_console()   { _svc_check qmanager-console.service 1; }
 t_svc_setup()     { _svc_check qmanager-setup.service 1; }
 t_svc_lighttpd()  { _svc_check lighttpd.service 1; }
 t_svc_tailscaled(){ _svc_check tailscaled.service 0; }
+t_svc_traffic()   { _svc_check qmanager-traffic.service 1; }
 
 t_net_dns() {
     # Bound the test to 5s — nslookup against unreachable DNS can stall 30s+
@@ -538,6 +544,24 @@ t_net_firewall_rules() {
     if [ "$rules" -gt 0 ]; then echo "pass|$rules INPUT rules"
     else echo "warn|no INPUT rules detected"; fi
 }
+t_net_data_used_divergence() {
+    local f=/usrdata/qmanager/data_used.json
+    if [ ! -f "$f" ]; then
+        echo "missing $f" >> "$OUTPUT_FILE"
+        echo "skip|data_used.json absent"
+        return
+    fi
+    local count; count=$(jq -r '.divergence_count // empty' "$f" 2>>"$OUTPUT_FILE")
+    if [ -z "$count" ]; then
+        echo "jq read failed or key absent" >> "$OUTPUT_FILE"
+        echo "skip|data_used.json absent"
+        return
+    fi
+    echo "divergence_count=$count" >> "$OUTPUT_FILE"
+    if [ "$count" -lt 100 ]; then echo "pass|divergence_count $count"
+    elif [ "$count" -lt 1000 ]; then echo "warn|divergence_count $count (>=100)"
+    else echo "fail|divergence_count $count (>=1000)"; fi
+}
 
 t_cfg_qmanager_dir() {
     if [ -d /etc/qmanager ]; then
@@ -564,6 +588,18 @@ t_cfg_poller_cache_fresh() {
     if [ "$age" -lt 60 ]; then echo "pass|age ${age}s"
     elif [ "$age" -lt 300 ]; then echo "warn|age ${age}s (>60s)"
     else echo "fail|age ${age}s (poller may be stalled)"; fi
+}
+t_cfg_data_used_fresh() {
+    local f=/usrdata/qmanager/data_used.json
+    if [ ! -f "$f" ]; then
+        echo "missing $f" >> "$OUTPUT_FILE"
+        echo "fail|missing (poller has never run successfully)"
+        return
+    fi
+    local age; age=$(( $(date +%s) - $(stat -c %Y "$f") ))
+    echo "path=$f age=${age}s" >> "$OUTPUT_FILE"
+    if [ "$age" -lt 60 ]; then echo "pass|age ${age}s"
+    else echo "warn|age ${age}s (>60s)"; fi
 }
 t_cfg_cgi_path_opt() {
     # PATH must include /opt/bin for CGI scripts (jq, msmtp, etc.). Either
@@ -650,7 +686,7 @@ _collect_system_info() {
 _collect_services() {
     local dir="$1"
     mkdir -p "$dir"
-    local units="qmanager-firewall.service qmanager-poller.service qmanager-console.service qmanager-setup.service lighttpd.service tailscaled.service qmanager-tailscale-watchdog.service"
+    local units="qmanager-firewall.service qmanager-poller.service qmanager-console.service qmanager-setup.service qmanager-traffic.service lighttpd.service tailscaled.service qmanager-tailscale-watchdog.service"
     for u in $units; do
         {
             echo "# systemctl status $u"
@@ -813,18 +849,21 @@ _run_test svc.console         services     "qmanager-console.service"           
 _run_test svc.setup           services     "qmanager-setup.service"                t_svc_setup
 _run_test svc.lighttpd        services     "lighttpd.service"                      t_svc_lighttpd
 _run_test svc.tailscaled      services     "tailscaled.service (optional)"         t_svc_tailscaled
+_run_test svc.traffic         services     "qmanager-traffic.service"              t_svc_traffic
 
 _run_test net.dns             network      "DNS resolves install.speedtest.net"    t_net_dns
 _run_test net.ping            network      "IPv4 reachability (1.1.1.1)"           t_net_ping
 _run_test net.rmnet           network      "rmnet+ has IP"                         t_net_rmnet
 _run_test net.lighttpd_listen network      "lighttpd listening on 80/443"          t_net_lighttpd_listen
 _run_test net.firewall_rules  network      "iptables INPUT rules loaded"           t_net_firewall_rules
+_run_test data_used.divergence_low network "data_used divergence count low"        t_net_data_used_divergence
 
 _run_test cfg.qmanager_dir         configuration "/etc/qmanager exists"               t_cfg_qmanager_dir
 _run_test cfg.sms_alerts_json      configuration "sms_alerts.json valid"              t_cfg_sms_alerts
 _run_test cfg.email_alerts_json    configuration "email_alerts.json valid"            t_cfg_email_alerts
 _run_test cfg.poller_cache_fresh   configuration "poller cache mtime < 60s"           t_cfg_poller_cache_fresh
 _run_test cfg.cgi_path_opt         configuration "lighttpd CGI PATH includes /opt/bin" t_cfg_cgi_path_opt
+_run_test data_used.fresh          configuration "data_used.json fresh (mtime < 60s)" t_cfg_data_used_fresh
 
 if _build_bundle 2>>"$JOB_DIR/build.log"; then
     _finalize_status "complete"

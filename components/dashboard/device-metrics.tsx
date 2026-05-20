@@ -1,17 +1,30 @@
 "use client";
 
-import React from "react";
-import { motion } from "motion/react";
-import { cn } from "@/lib/utils";
+import React, { useState, useCallback } from "react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MetricBar } from "@/components/ui/metric-bar";
 import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { RotateCcwIcon } from "lucide-react";
 import {
   TbAlertTriangleFilled,
   TbCircleArrowDownFilled,
@@ -22,10 +35,12 @@ import {
 import type {
   DeviceStatus,
   TrafficStatus,
+  TrafficStream,
   LteStatus,
   NrStatus,
 } from "@/types/modem-status";
 import {
+  formatBytes,
   formatBytesPerSec,
   formatUptime,
   calculateLteDistance,
@@ -34,10 +49,12 @@ import {
   formatTemperature,
 } from "@/types/modem-status";
 import { useUnitPreferences } from "@/hooks/use-system-settings";
+import { useDataUsed } from "@/hooks/use-data-used";
 
 interface DeviceMetricsComponentProps {
   deviceData: DeviceStatus | null;
   trafficData: TrafficStatus | null;
+  trafficStream: TrafficStream | null;
   lteData: LteStatus | null;
   nrData: NrStatus | null;
   isLoading: boolean;
@@ -49,41 +66,10 @@ const TEMP_DANGER = 75; // °C
 const CPU_WARN = 70; // percentage
 const CPU_DANGER = 90; // percentage
 
-// --- Animated metric progress bar ---
-function MetricBar({
-  value,
-  max = 100,
-  warnAt,
-  dangerAt,
-}: {
-  value: number;
-  max?: number;
-  warnAt: number;
-  dangerAt: number;
-}) {
-  const pct = Math.min((value / max) * 100, 100);
-  const colorClass =
-    value >= dangerAt
-      ? "bg-destructive"
-      : value >= warnAt
-        ? "bg-warning"
-        : "bg-primary";
-  return (
-    <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
-      <motion.div
-        className={cn("h-full rounded-full", colorClass)}
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: pct / 100 }}
-        style={{ originX: 0 }}
-        transition={{ type: "spring", stiffness: 180, damping: 24 }}
-      />
-    </div>
-  );
-}
-
 const DeviceMetricsComponent = ({
   deviceData,
   trafficData,
+  trafficStream,
   lteData,
   nrData,
   isLoading,
@@ -99,11 +85,44 @@ const DeviceMetricsComponent = ({
   const displayDevUptime = deviceData?.uptime_seconds ?? 0;
   const displayConnUptime = deviceData?.conn_uptime_seconds ?? 0;
 
-  const rxSpeed = trafficData?.rx_bytes_per_sec ?? 0;
-  const txSpeed = trafficData?.tx_bytes_per_sec ?? 0;
+  // Prefer the 1 Hz stream daemon; fall back to the 2 s poller cache when
+  // the stream daemon is missing, stale, or has no bound iface. The stream
+  // emits explicit 0s when iface is null, so a `??` chain alone would never
+  // fall through — gate on iface presence and freshness instead.
+  const streamUsable =
+    trafficStream != null &&
+    trafficStream.iface != null &&
+    !trafficStream.stale;
+
+  const rxSpeed = streamUsable
+    ? trafficStream.rx_bytes_per_sec
+    : trafficData?.rx_bytes_per_sec ?? 0;
+  const txSpeed = streamUsable
+    ? trafficStream.tx_bytes_per_sec
+    : trafficData?.tx_bytes_per_sec ?? 0;
+
   const isTempHigh = temp !== null && temp >= TEMP_WARN;
   const isCpuHigh = cpu !== null && cpu >= CPU_WARN;
   const memPct = memTotal > 0 ? (memUsed / memTotal) * 100 : 0;
+
+  // Persistent data-usage counter — polled independently at 2 s cadence
+  const {
+    data: dataUsed,
+    isResetting,
+    resetCounter,
+  } = useDataUsed();
+
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+
+  const handleResetConfirm = useCallback(async () => {
+    const ok = await resetCounter();
+    if (ok) {
+      toast.success("Reset queued — counter will update in a few seconds.");
+    } else {
+      toast.error("Failed to queue reset. Please try again.");
+    }
+    setResetDialogOpen(false);
+  }, [resetCounter]);
 
   if (isLoading) {
     return (
@@ -201,6 +220,59 @@ const DeviceMetricsComponent = ({
             {memTotal > 0 && (
               <MetricBar value={memPct} max={100} warnAt={70} dangerAt={90} />
             )}
+          </div>
+
+          {/* Data Used (persistent cumulative counter from AT+QGDCNT/QGDNRCNT) */}
+          <Separator />
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p className="font-semibold text-muted-foreground text-sm shrink-0">
+                Data Used
+              </p>
+              {/* Reset button */}
+              <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 text-muted-foreground hover:text-foreground"
+                    aria-label="Reset data usage counter"
+                    disabled={isResetting}
+                  >
+                    <RotateCcwIcon className="size-3.5" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reset Data Used counter?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will zero the cumulative download and upload total.
+                      The counter will resume tracking immediately.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleResetConfirm}>
+                      Reset Counter
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+            <div className="flex items-center gap-x-2">
+              <div className="flex items-center gap-1">
+                <TbCircleArrowDownFilled className="text-info size-5 shrink-0" />
+                <p className="font-semibold text-sm tabular-nums">
+                  {formatBytes(dataUsed?.accumulated_rx_bytes ?? 0)}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <TbCircleArrowUpFilled className="text-purple-500 size-5 shrink-0" />
+                <p className="font-semibold text-sm tabular-nums">
+                  {formatBytes(dataUsed?.accumulated_tx_bytes ?? 0)}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Live Traffic */}

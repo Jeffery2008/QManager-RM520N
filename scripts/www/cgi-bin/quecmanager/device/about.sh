@@ -8,9 +8,9 @@
 # and OpenWRT system info into a single JSON response.
 #
 # Data sources:
-#   /tmp/qmanager_status.json       -> Poller cache (firmware, IMEI, WAN IPs)
+#   /tmp/qmanager_status.json       -> Poller cache (firmware, IMEI, WAN IPs,
+#                                       LAN IP/gateway via collect_boot_data)
 #   AT+QNWCFG="3gpp_rel"           -> 3GPP release versions (LTE, NR5G)
-#   AT+QMAP="LANIP"                -> Device LAN IP and gateway
 #   https://api.ipify.org           -> Public IPv4 (3s timeout, non-blocking)
 #   https://api6.ipify.org          -> Public IPv6 (3s timeout, non-blocking)
 #   /etc/openwrt_release            -> OpenWRT version
@@ -47,15 +47,10 @@ fi
 #    These run in parallel while we do everything else.
 # =============================================================================
 if command -v curl >/dev/null 2>&1; then
-    # -L: follow redirects; -k: tolerate missing CA certs (common on OpenWRT)
+    # -L: follow redirects; -k: tolerate missing CA certs
     ( curl -sLk --max-time "$PUB_IP_TIMEOUT" https://api.ipify.org > "$pub4_file" 2>/dev/null ) &
     pid4=$!
     ( curl -sLk --max-time "$PUB_IP_TIMEOUT" https://api6.ipify.org > "$pub6_file" 2>/dev/null ) &
-    pid6=$!
-elif command -v wget >/dev/null 2>&1; then
-    ( wget -qO- -T "$PUB_IP_TIMEOUT" https://api.ipify.org > "$pub4_file" 2>/dev/null ) &
-    pid4=$!
-    ( wget -qO- -T "$PUB_IP_TIMEOUT" https://api6.ipify.org > "$pub6_file" 2>/dev/null ) &
     pid6=$!
 else
     pid4=""
@@ -72,6 +67,8 @@ c_model=""
 c_imei=""
 c_wan_ipv4=""
 c_wan_ipv6=""
+lan_ip=""
+lan_gateway=""
 
 if [ -f "$CACHE_FILE" ]; then
     eval "$(jq -r '
@@ -81,33 +78,27 @@ if [ -f "$CACHE_FILE" ]; then
         @sh "c_model=\(.device.model // "")",
         @sh "c_imei=\(.device.imei // "")",
         @sh "c_wan_ipv4=\(.network.wan_ipv4 // "")",
-        @sh "c_wan_ipv6=\(.network.wan_ipv6 // "")"
+        @sh "c_wan_ipv6=\(.network.wan_ipv6 // "")",
+        @sh "lan_ip=\(.network.device_ip // "")",
+        @sh "lan_gateway=\(.network.lan_gateway // "")"
     ' "$CACHE_FILE" 2>/dev/null)"
 fi
 
 # =============================================================================
 # 3. AT commands for data not in the poller cache
 # =============================================================================
+# 3GPP release is the only live AT call here. LAN IP/gateway moved to the
+# poller's collect_boot_data() and is read from the cache above.
 rel_lte=""
 rel_nr5g=""
-lan_ip=""
-lan_gateway=""
 
-# Compound AT: 3GPP release + LAN IP in one call
-raw=$(qcmd 'AT+QNWCFG="3gpp_rel";+QMAP="LANIP"' 2>/dev/null)
+raw=$(qcmd 'AT+QNWCFG="3gpp_rel"' 2>/dev/null)
 
 # 3GPP release versions -- +QNWCFG: "3gpp_rel",R17,R17
 line=$(printf '%s\n' "$raw" | grep '+QNWCFG:.*"3gpp_rel"' | head -1 | tr -d '\r ')
 if [ -n "$line" ]; then
     rel_lte=$(printf '%s' "$line" | cut -d',' -f2)
     rel_nr5g=$(printf '%s' "$line" | cut -d',' -f3)
-fi
-
-# LAN IP and gateway -- +QMAP: "LANIP",192.168.224.100,192.168.227.99,192.168.224.1
-line=$(printf '%s\n' "$raw" | grep '+QMAP:.*"LANIP"' | head -1 | tr -d '\r ')
-if [ -n "$line" ]; then
-    lan_ip=$(printf '%s' "$line" | cut -d',' -f2 | tr -d '"')
-    lan_gateway=$(printf '%s' "$line" | cut -d',' -f4 | tr -d '"')
 fi
 
 # =============================================================================

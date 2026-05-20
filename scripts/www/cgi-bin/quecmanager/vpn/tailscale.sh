@@ -33,6 +33,7 @@ INSTALL_PID="/tmp/qmanager_tailscale_install.pid"
 INSTALL_LOG="/tmp/qmanager_tailscale_install.log"
 WANTS_DIR="/lib/systemd/system/multi-user.target.wants"
 UNIT_DIR="/lib/systemd/system"
+SSH_PREF_FILE="/etc/qmanager/tailscale_ssh"
 
 # --- Helper: check if tailscale binaries exist --------------------------------
 is_installed() {
@@ -49,6 +50,18 @@ is_daemon_running() {
 # --- Helper: check if tailscale is enabled on boot ---------------------------
 get_boot_enabled() {
     if [ -L "$WANTS_DIR/tailscaled.service" ]; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
+
+# --- Helper: read persisted SSH intent flag (true/false) ---------------------
+# Defaults to "false" if the file is missing, unreadable, or contains anything
+# other than "1". This is the QManager-owned source of truth for whether
+# `tailscale up` should be invoked with `--ssh`.
+get_ssh_pref() {
+    if [ -f "$SSH_PREF_FILE" ] && [ "$(cat "$SSH_PREF_FILE" 2>/dev/null | tr -d ' \n\r')" = "1" ]; then
         echo "true"
     else
         echo "false"
@@ -99,16 +112,19 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
     # --- Tier 2: Installed but daemon not running ----------------------------
     if ! is_daemon_running; then
         qlog_info "Tailscale installed but daemon not running"
+        ssh_enabled=$(get_ssh_pref)
         jq -n \
             --argjson installed true \
             --argjson daemon_running false \
             --argjson enabled_on_boot "$boot_enabled" \
+            --argjson ssh_enabled "$ssh_enabled" \
             --arg version "$ts_version" \
             '{
                 success: true,
                 installed: $installed,
                 daemon_running: $daemon_running,
                 enabled_on_boot: $enabled_on_boot,
+                ssh_enabled: $ssh_enabled,
                 version: $version
             }'
         exit 0
@@ -121,16 +137,19 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
 
     if [ -z "$status_json" ] || ! printf '%s' "$status_json" | jq -e . >/dev/null 2>&1; then
         qlog_error "Failed to get tailscale status JSON"
+        ssh_enabled=$(get_ssh_pref)
         jq -n \
             --argjson installed true \
             --argjson daemon_running true \
             --argjson enabled_on_boot "$boot_enabled" \
+            --argjson ssh_enabled "$ssh_enabled" \
             --arg version "$ts_version" \
             '{
                 success: true,
                 installed: $installed,
                 daemon_running: $daemon_running,
                 enabled_on_boot: $enabled_on_boot,
+                ssh_enabled: $ssh_enabled,
                 version: $version,
                 backend_state: "Unknown",
                 error_detail: "Could not retrieve status from tailscale daemon"
@@ -187,10 +206,12 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
     health_json=$(printf '%s' "$status_json" | jq '.Health // []' 2>/dev/null) || health_json='[]'
 
     # Assemble full response
+    ssh_enabled=$(get_ssh_pref)
     jq -n \
         --argjson installed true \
         --argjson daemon_running true \
         --argjson enabled_on_boot "$boot_enabled" \
+        --argjson ssh_enabled "$ssh_enabled" \
         --arg version "$ts_version" \
         --arg backend_state "$backend_state" \
         --arg auth_url "$auth_url" \
@@ -203,6 +224,7 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
             installed: $installed,
             daemon_running: $daemon_running,
             enabled_on_boot: $enabled_on_boot,
+            ssh_enabled: $ssh_enabled,
             version: $version,
             backend_state: $backend_state,
             auth_url: $auth_url,
@@ -327,7 +349,17 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         # NOTE: Do NOT use --json flag — its output is fully buffered on
         # RM520N-GL (no stdbuf available) and never flushes to the file.
         # Interactive mode flushes the auth URL immediately.
-        ( ts_cmd up --accept-dns=false > "$TS_UP_OUTPUT" 2>&1 ) &
+        # --reset clears any lingering flags from a prior `tailscale up`
+        # (matches the rgmii-toolkit/SimpleAdmin convention validated across
+        # PRAIRE and SDXLEMUR modem platforms).
+        # Flag-aware SSH: --reset would wipe RunSSH on every connect, so we
+        # re-append --ssh here when the QManager-owned intent flag is set.
+        ssh_flag_arg=""
+        if [ "$(get_ssh_pref)" = "true" ]; then
+            ssh_flag_arg="--ssh"
+        fi
+        # shellcheck disable=SC2086 # $ssh_flag_arg intentionally unquoted: empty→zero words (POSIX opt-arg idiom)
+        ( ts_cmd up --reset --accept-dns=false $ssh_flag_arg > "$TS_UP_OUTPUT" 2>&1 ) &
         ts_up_pid=$!
         echo "$ts_up_pid" > "$TS_UP_PID_FILE"
 
@@ -459,6 +491,72 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
                 ;;
         esac
         cgi_success
+        exit 0
+    fi
+
+    # -------------------------------------------------------------------------
+    # action: set_ssh — persist SSH intent flag + apply live if daemon running
+    # -------------------------------------------------------------------------
+    # User intent (1 or 0) is stored in $SSH_PREF_FILE and read by the connect
+    # path so SSH survives `tailscale up --reset`. When the daemon is running
+    # we also apply the change immediately via `tailscale set --ssh=`.
+    if [ "$ACTION" = "set_ssh" ]; then
+        ssh_value=$(printf '%s' "$POST_DATA" | jq -r '.enabled | if . == null then empty else tostring end')
+        if [ -z "$ssh_value" ]; then
+            cgi_error "missing_field" "enabled field is required"
+            exit 0
+        fi
+        case "$ssh_value" in
+            true)  new_flag="1" ;;
+            false) new_flag="0" ;;
+            *)
+                cgi_error "invalid_value" "enabled must be true or false"
+                exit 0
+                ;;
+        esac
+
+        # Snapshot previous flag for rollback on `tailscale set` failure.
+        old_flag=""
+        if [ -f "$SSH_PREF_FILE" ]; then
+            old_flag=$(cat "$SSH_PREF_FILE" 2>/dev/null | tr -d ' \n\r')
+        fi
+
+        # Atomic write: .tmp + mv (matches the convention in email/sms alert configs).
+        mkdir -p /etc/qmanager 2>/dev/null
+        tmp_file="${SSH_PREF_FILE}.tmp"
+        trap 'rm -f "$tmp_file"' EXIT
+        if ! printf '%s\n' "$new_flag" > "$tmp_file"; then
+            cgi_error "write_failed" "Could not write SSH preference file"
+            exit 0
+        fi
+        if ! mv -f "$tmp_file" "$SSH_PREF_FILE"; then
+            cgi_error "write_failed" "Could not persist SSH preference (filesystem error)"
+            exit 0
+        fi
+        trap - EXIT
+
+        # If daemon is up, apply immediately. Otherwise return pending=true so
+        # the UI surfaces "applies on next connect".
+        if is_daemon_running; then
+            set_output=$(ts_cmd set --ssh="$ssh_value" 2>&1)
+            set_rc=$?
+            if [ "$set_rc" -ne 0 ]; then
+                # Roll back the flag write so the UI state matches reality.
+                if [ -n "$old_flag" ]; then
+                    printf '%s\n' "$old_flag" > "$SSH_PREF_FILE"
+                else
+                    rm -f "$SSH_PREF_FILE"
+                fi
+                qlog_error "tailscale set --ssh=$ssh_value failed: $set_output"
+                jq -n --arg detail "$set_output" '{success: false, error: "set_failed", detail: $detail}'
+                exit 0
+            fi
+            qlog_info "Tailscale SSH set to $ssh_value"
+            cgi_success
+        else
+            qlog_info "Tailscale SSH preference set to $ssh_value (daemon stopped, will apply on next connect)"
+            jq -n '{success: true, pending: true, message: "Tailscale SSH will activate on next connect."}'
+        fi
         exit 0
     fi
 

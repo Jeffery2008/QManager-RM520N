@@ -25,10 +25,10 @@ interface Phase {
 }
 
 function getPhase(remaining: number): Phase {
-  if (remaining > 47) return { label: "Shutting down...", segment: 1 };
-  if (remaining > 23) return { label: "Restarting services...", segment: 2 };
-  if (remaining > 0) return { label: "Almost ready...", segment: 3 };
-  return { label: "Reconnecting \u2014 taking longer than usual...", segment: 3 };
+  if (remaining > 47) return { label: "正在关闭...", segment: 1 };
+  if (remaining > 23) return { label: "正在重启服务...", segment: 2 };
+  if (remaining > 0) return { label: "即将完成...", segment: 3 };
+  return { label: "正在重新连接，用时比平常更久...", segment: 3 };
 }
 
 export function RebootCountdown() {
@@ -46,6 +46,13 @@ export function RebootCountdown() {
     }
     sessionStorage.removeItem(SESSION_KEY);
     setVerified(true);
+
+    // Tell the OTA worker (if any) that the static reboot page has loaded
+    // so it can stop waiting and fire the reboot syscall. Harmless on
+    // non-OTA reboots — the worker simply isn't watching.
+    fetch("/cgi-bin/quecmanager/system/update.sh?action=reboot_ack", {
+      keepalive: true,
+    }).catch(() => {});
   }, []);
 
   // Keep ref in sync so the polling effect can read it without re-subscribing
@@ -124,8 +131,8 @@ export function RebootCountdown() {
           role="timer"
           aria-label={
             isOvertime
-              ? "Reconnecting, taking longer than usual"
-              : `${displaySeconds} seconds remaining`
+              ? "正在重新连接，用时比平常更久"
+              : `剩余 ${displaySeconds} 秒`
           }
           className="relative"
           style={{ width: RING_SIZE, height: RING_SIZE }}
@@ -175,7 +182,7 @@ export function RebootCountdown() {
                   {displaySeconds}
                 </span>
                 <span className="mt-1 text-[10px] uppercase tracking-widest text-muted-foreground">
-                  sec
+                  秒
                 </span>
               </>
             )}
@@ -202,8 +209,8 @@ export function RebootCountdown() {
               </p>
               <p className="mt-1 text-[13px] text-muted-foreground">
                 {isOvertime
-                  ? "The device is still restarting"
-                  : "Your device will be back online shortly"}
+                  ? "设备仍在重启"
+                  : "设备很快会重新上线"}
               </p>
             </motion.div>
           </AnimatePresence>
@@ -236,7 +243,7 @@ export function RebootCountdown() {
           href="/login/"
           className="mt-3 text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
         >
-          Device may need manual attention — go to login
+          设备可能需要手动处理，前往登录页
         </a>
       )}
       </motion.div>

@@ -47,20 +47,19 @@ const SupportComponent = () => {
               联系方式
             </CardTitle>
             <CardDescription>
-              可用于提问、反馈 Bug 或提出功能需求。
+              有问题、Bug 或功能建议都可以联系。
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                如果你遇到 Bug、想到新功能，或在配置过程中需要帮助，
-                可以通过下面的渠道联系。
+                如果遇到 Bug、有功能想法，或需要配置方面的帮助，可以通过下面的渠道联系。
               </p>
               <div>
                 <dl className="grid divide-y divide-border border-y border-border">
                   <div className="flex items-center justify-between py-2">
                     <dt className="text-sm font-semibold text-muted-foreground">
-                      Email
+                      邮箱
                     </dt>
                     <dd className="text-sm font-semibold min-w-0">
                       <a
@@ -102,32 +101,32 @@ const SupportComponent = () => {
               社区
             </CardTitle>
             <CardDescription>
-              加入 Cellular Modem Talk/Development Discord 服务器。
+              加入 Cellular Modem Talk/Development Discord 社区。
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Discord 上的 Cellular Modem Talk/Development 社区是用户分享配置、
-                一起排障、交流蜂窝网络经验的地方。欢迎加入。
+                Cellular Modem Talk/Development Discord 社区用于分享配置、一起排查问题，
+                以及讨论蜂窝网络相关经验。
               </p>
               <div className="flex flex-col items-center gap-4">
                 <div className="rounded-lg border border-border bg-muted p-2">
                   <Image
                     src="/discord-qr.svg"
-                    alt="QManager Discord 邀请二维码"
+                    alt="QManager Discord 服务器邀请二维码"
                     width={192}
                     height={192}
                     className="size-48"
                   />
                 </div>
                 <a
-                  href="https://discord.gg/wNuzkg8s"
+                  href="https://discord.iamromulan.dev/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 py-1 text-sm font-semibold text-primary hover:underline underline-offset-4"
                 >
-                  discord.gg/wNuzkg8s
+                  discord.iamromulan.dev/
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </div>

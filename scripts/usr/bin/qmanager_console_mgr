@@ -30,12 +30,10 @@ do_install() {
 
     echo "Downloading ttyd v${TTYD_VERSION}..."
     if ! curl -fSL -o "$TTYD_BIN" "$DOWNLOAD_URL" 2>/dev/null; then
-        if ! wget -q -O "$TTYD_BIN" "$DOWNLOAD_URL" 2>/dev/null; then
-            echo "ERROR: Failed to download ttyd" >&2
-            rm -f "$TTYD_BIN"
-            mount -o remount,ro / 2>/dev/null || true
-            return 1
-        fi
+        echo "ERROR: Failed to download ttyd" >&2
+        rm -f "$TTYD_BIN"
+        mount -o remount,ro / 2>/dev/null || true
+        return 1
     fi
 
     chmod 755 "$TTYD_BIN"

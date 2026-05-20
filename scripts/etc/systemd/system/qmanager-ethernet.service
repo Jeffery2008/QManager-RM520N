@@ -1,0 +1,15 @@
+# /lib/systemd/system/qmanager-ethernet.service
+[Unit]
+Description=QManager Ethernet Link Speed Persistence
+After=network.target qmanager-setup.service ethernet-config.service
+
+[Service]
+Type=oneshot
+ConditionPathExists=/etc/qmanager/ethernet_speed
+ConditionFileIsExecutable=/usr/bin/qmanager_ethernet_apply
+ExecStart=/bin/sh -c '/usr/bin/qmanager_ethernet_apply "$(cat /etc/qmanager/ethernet_speed)"'
+RemainAfterExit=yes
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

@@ -38,6 +38,7 @@ _SA_MAX_LOG=100
 _SA_MAX_ATTEMPTS=3
 _SA_RETRY_DELAY_SECS=5
 _SA_MAX_SKIPS=3
+_SA_DISPATCH_PIDFILE="/tmp/qmanager_sms_send.pid"
 
 # --- State (populated by sms_alerts_init / _sa_read_config) ------------------
 _sa_enabled="false"
@@ -157,7 +158,7 @@ check_sms_alert() {
 
     elif [ "$conn_internet_available" = "true" ] && [ "$_sa_was_down" = "true" ]; then
         # RECOVERY PATH
-        local now duration dur_text body trigger rc threshold_secs
+        local now duration dur_text body trigger threshold_secs
         now=$(date +%s)
         duration=$((now - _sa_downtime_start))
         dur_text=$(_sa_format_duration "$duration")
@@ -176,38 +177,24 @@ check_sms_alert() {
         fi
 
         if [ "$_sa_downtime_sms_status" = "sent" ]; then
-            # Separate recovery SMS
             body="[QManager] Connection recovered (down ${dur_text})"
             trigger="Connection recovered (down ${dur_text})"
-            _sa_do_send "$body"
-            rc=$?
-            if [ "$rc" -eq 0 ]; then
-                _sa_log_event "$trigger" "sent" "$_sa_recipient"
-            elif [ "$rc" -eq 1 ]; then
-                _sa_log_event "$trigger" "failed" "$_sa_recipient"
-            # rc=2: not attempted (no registration) — leave tracking state intact
-            fi
         else
-            # Dedup path: "none" (above threshold) | "pending" | "failed"
             body="[QManager] Connection was down for ${dur_text}, now restored"
             trigger="Connection was down for ${dur_text}, now restored"
-            _sa_do_send "$body"
-            rc=$?
-            if [ "$rc" -eq 0 ]; then
-                _sa_log_event "$trigger" "sent" "$_sa_recipient"
-            elif [ "$rc" -eq 1 ]; then
-                _sa_log_event "$trigger" "failed" "$_sa_recipient"
-            # rc=2: not attempted (no registration) — leave tracking state intact
-            fi
         fi
-
-        # If the send couldn't be attempted (unlikely on recovery but possible
-        # during a brief re-registration window), leave tracking state intact
-        # so the next poll cycle retries.
-        if [ "$rc" -eq 2 ]; then
-            qlog_warn "SMS alerts: recovery send deferred — not registered"
-            return 0
-        fi
+        _sa_do_send_async "$body" "$trigger"
+        # Note: with async dispatch, _sa_downtime_sms_status reflects
+        # dispatch INTENT, not delivery outcome — the background worker
+        # has no channel to mutate this parent variable. So:
+        #   "sent"  here means "downtime-start was dispatched" (which
+        #           may have actually failed; check the NDJSON log).
+        #   "failed" / "pending" / "none" all collapse into the dedup
+        #           branch above. This is intentional: the user gets
+        #           one combined "was down for X, now restored" SMS
+        #           when no successful downtime-start was visible.
+        # The poller's tracking state is reset below regardless; the
+        # worker's _sa_log_event call records the actual outcome.
 
         # Reset tracking
         _sa_was_down="false"
@@ -231,28 +218,78 @@ check_sms_alert() {
     # Step 5: if pending and registered, attempt send
     if [ "$_sa_was_down" = "true" ] && [ "$_sa_downtime_sms_status" = "pending" ]; then
         if _sa_is_registered; then
-            local now duration dur_text body trigger rc
+            local now duration dur_text body trigger
             now=$(date +%s)
             duration=$((now - _sa_downtime_start))
             dur_text=$(_sa_format_duration "$duration")
             body="[QManager] Connection down ${dur_text}"
             trigger="Connection down ${dur_text}"
 
-            qlog_info "SMS alerts: attempting downtime-start send (registered)"
-            _sa_do_send "$body"
-            rc=$?
-            if [ "$rc" -eq 0 ]; then
-                _sa_downtime_sms_status="sent"
-                _sa_log_event "$trigger" "sent" "$_sa_recipient"
-            elif [ "$rc" -eq 1 ]; then
-                _sa_downtime_sms_status="failed"
-                _sa_log_event "$trigger" "failed" "$_sa_recipient"
-            # rc=2: not attempted — leave status as "pending" for next cycle
-            fi
+            qlog_info "SMS alerts: dispatching downtime-start send (registered)"
+            _sa_do_send_async "$body" "$trigger"
+            # Optimistically advance to "sent" so the recovery path knows a
+            # downtime-start SMS was attempted. The background worker logs
+            # "sent" or "failed" via _sa_log_event according to its own rc.
+            # If the worker returns rc=2 (unregistered for every retry inside
+            # _sa_do_send), no NDJSON log is written and no in-band retry
+            # happens — the user will still receive the recovery SMS when
+            # internet returns. A qlog_warn is emitted by the worker for
+            # operator visibility.
+            _sa_downtime_sms_status="sent"
         else
             qlog_debug "SMS alerts: pending downtime send, modem not registered — waiting"
         fi
     fi
+}
+
+# =============================================================================
+# _sa_do_send_async — Background variant for the poll loop
+# =============================================================================
+# Wraps _sa_do_send so check_sms_alert (called every poll cycle) does not
+# block on registration-skip sleeps or the underlying sms_tool I/O.
+# Single-flight via _SA_DISPATCH_PIDFILE.
+#
+# Args: $1 — message body
+#       $2 — trigger description for the NDJSON log entry
+# Returns immediately (always 0). The forked worker logs success/failure
+# via _sa_log_event itself.
+_sa_do_send_async() {
+    local body="$1"
+    local trigger="$2"
+
+    if [ -f "$_SA_DISPATCH_PIDFILE" ]; then
+        local _old_pid
+        _old_pid=$(cat "$_SA_DISPATCH_PIDFILE" 2>/dev/null)
+        if [ -n "$_old_pid" ] && [ -d "/proc/$_old_pid" ]; then
+            qlog_warn "SMS alerts: previous dispatch still in flight (pid=$_old_pid), skipping"
+            return 0
+        fi
+        rm -f "$_SA_DISPATCH_PIDFILE"
+    fi
+
+    # Fork the worker. Capture $! (child PID) — NOT $$ (which inside the
+    # subshell resolves to the parent poller's PID and would create a
+    # permanent lockout if the worker is hard-killed). The stale-file
+    # cleanup above already handles orphan pidfiles.
+    (
+        _sa_do_send "$body"
+        local _rc=$?
+        if [ "$_rc" -eq 0 ]; then
+            _sa_log_event "$trigger" "sent" "$_sa_recipient"
+        elif [ "$_rc" -eq 1 ]; then
+            _sa_log_event "$trigger" "failed" "$_sa_recipient"
+        else
+            # rc=2 (modem not registered for every attempt). Don't write
+            # an NDJSON entry (it represents an unattempted send, not a
+            # failure), but emit a syslog warning so operators can see
+            # the dispatch was deferred. The poller does NOT auto-retry
+            # because _sa_downtime_sms_status is set to "sent" optimistically;
+            # the user will still receive the recovery SMS when internet returns.
+            qlog_warn "SMS alerts: dispatch deferred — not registered after retries (trigger: $trigger)"
+        fi
+    ) </dev/null >/dev/null 2>&1 &
+    local _sa_worker_pid=$!
+    echo "$_sa_worker_pid" > "$_SA_DISPATCH_PIDFILE" 2>/dev/null
 }
 
 # =============================================================================

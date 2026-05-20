@@ -10,6 +10,7 @@ import {
   CompassIcon,
   RotateCcwIcon,
   TrophyIcon,
+  Trash2Icon,
 } from "lucide-react";
 import {
   Card,
@@ -46,6 +47,7 @@ import {
   DEFAULT_ANGLES,
   DEFAULT_POSITIONS,
   EMPTY_SNAPSHOT_ARRAYS,
+  ALIGNMENT_STORAGE_KEY,
   type RadioMode,
   type AntennaType,
   type RecordingSnapshot,
@@ -64,11 +66,29 @@ interface RecorderState {
 }
 
 function usePositionRecorder(spa: SignalPerAntenna | null) {
-  const [state, setState] = useState<RecorderState>({
-    antennaType: "directional",
-    slots: [null, null, null],
-    activeSlot: null,
-    samplesCollected: 0,
+  const [state, setState] = useState<RecorderState>(() => {
+    const defaults: RecorderState = {
+      antennaType: "directional",
+      slots: [null, null, null],
+      activeSlot: null,
+      samplesCollected: 0,
+    };
+    if (typeof window === "undefined") return defaults;
+    try {
+      const raw = window.localStorage.getItem(ALIGNMENT_STORAGE_KEY);
+      if (!raw) return defaults;
+      const parsed = JSON.parse(raw);
+      if (parsed?.version !== 1) return defaults;
+      if (parsed.antennaType !== "directional" && parsed.antennaType !== "omni") return defaults;
+      if (!Array.isArray(parsed.slots) || parsed.slots.length !== 3) return defaults;
+      return {
+        ...defaults,
+        antennaType: parsed.antennaType,
+        slots: parsed.slots,
+      };
+    } catch {
+      return defaults;
+    }
   });
 
   const accRef = useRef<{ [K in SignalKey]: (number | null)[][] }>({
@@ -127,6 +147,18 @@ function usePositionRecorder(spa: SignalPerAntenna | null) {
     for (const key of SIGNAL_KEYS) acc[key] = [];
   }, [spa, state.activeSlot]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      ALIGNMENT_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        antennaType: state.antennaType,
+        slots: state.slots,
+      })
+    );
+  }, [state.slots, state.antennaType]);
+
   const startRecording = useCallback(
     (slotIndex: number, label: string) => {
       for (const key of SIGNAL_KEYS) accRef.current[key] = [];
@@ -145,6 +177,15 @@ function usePositionRecorder(spa: SignalPerAntenna | null) {
     setState((s) => ({ ...s, activeSlot: null, samplesCollected: 0 }));
   }, []);
 
+  const clearSlot = useCallback((slotIndex: number) => {
+    setState((s) => {
+      if (s.activeSlot === slotIndex) return s;
+      const slots = [...s.slots];
+      slots[slotIndex] = null;
+      return { ...s, slots };
+    });
+  }, []);
+
   const setAntennaType = useCallback((type: AntennaType) => {
     setState((s) => ({ ...s, antennaType: type }));
   }, []);
@@ -159,7 +200,7 @@ function usePositionRecorder(spa: SignalPerAntenna | null) {
     }));
   }, []);
 
-  return { state, startRecording, cancelRecording, setAntennaType, resetAll };
+  return { state, startRecording, cancelRecording, clearSlot, setAntennaType, resetAll };
 }
 
 // ---------------------------------------------------------------------------
@@ -286,6 +327,7 @@ function RecordingSlotCard({
   isBest,
   onRecord,
   onCancel,
+  onClear,
 }: {
   slotIndex: number;
   snapshot: RecordingSnapshot | null;
@@ -296,6 +338,7 @@ function RecordingSlotCard({
   isBest: boolean;
   onRecord: (label: string) => void;
   onCancel: () => void;
+  onClear: () => void;
 }) {
   const defaults =
     antennaType === "directional" ? DEFAULT_ANGLES : DEFAULT_POSITIONS;
@@ -387,6 +430,15 @@ function RecordingSlotCard({
       {/* Recorded snapshot */}
       {!isRecording && snapshot && (
         <div className="space-y-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-destructive"
+            aria-label={`Clear ${label}`}
+            onClick={onClear}
+          >
+            <Trash2Icon className="h-3.5 w-3.5" />
+          </Button>
           {showLte && (
             <div className="space-y-1">
               {mode === "endc" && (
@@ -495,6 +547,7 @@ export default function AlignmentMeterSection({
     state: recorderState,
     startRecording,
     cancelRecording,
+    clearSlot,
     setAntennaType,
     resetAll,
   } = usePositionRecorder(spa);
@@ -578,6 +631,7 @@ export default function AlignmentMeterSection({
               isBest={bestSlot === i}
               onRecord={(label) => startRecording(i, label)}
               onCancel={cancelRecording}
+              onClear={() => clearSlot(i)}
             />
           ))}
         </div>

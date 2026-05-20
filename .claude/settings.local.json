@@ -52,7 +52,10 @@
       "Bash(file scripts/usr/lib/qmanager/cgi_auth.sh scripts/cgi/quecmanager/auth/*.sh scripts/usr/bin/qmanager_reset_password scripts/usr/lib/qmanager/cgi_base.sh)",
       "Bash(file scripts/usr/lib/qmanager/cgi_auth.sh scripts/cgi/quecmanager/auth/*.sh scripts/usr/bin/qmanager_reset_password)",
       "Bash(wc -l \"/d/Projects/QM PROJECT/QManager/scripts/www/cgi-bin/quecmanager\"/*/*)",
-      "WebFetch(domain:bin.entware.net)"
+      "WebFetch(domain:bin.entware.net)",
+      "Bash(git push *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)"
     ]
   }
 }

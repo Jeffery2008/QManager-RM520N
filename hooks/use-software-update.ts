@@ -199,14 +199,15 @@ export function useSoftwareUpdate(): UseSoftwareUpdateReturn {
         setUpdateStatus(json);
 
         if (json.status === "rebooting") {
-          // Stop polling, navigate to reboot page
+          // Navigate to /reboot/ immediately so the static page loads from
+          // lighttpd before the OTA worker fires the reboot syscall. The
+          // worker waits for the page's reboot_ack before issuing reboot,
+          // so any delay here only widens the race.
           if (pollRef.current) clearInterval(pollRef.current);
           pollRef.current = null;
-          setTimeout(() => {
-            sessionStorage.setItem("qm_rebooting", "1");
-            document.cookie = "qm_logged_in=; Path=/; Max-Age=0";
-            window.location.href = "/reboot/";
-          }, 2000);
+          sessionStorage.setItem("qm_rebooting", "1");
+          document.cookie = "qm_logged_in=; Path=/; Max-Age=0";
+          window.location.href = "/reboot/";
         }
 
         if (json.status === "error") {
@@ -216,15 +217,15 @@ export function useSoftwareUpdate(): UseSoftwareUpdateReturn {
           setError(json.message || "Update failed");
         }
       } catch {
-        // Device may be rebooting — stop polling and redirect
+        // Fetch failed — device is likely rebooting already. Navigate
+        // immediately; if the static page is uncached and lighttpd is
+        // already gone the user will see a connection error, but waiting
+        // doesn't help since the device won't come back any sooner.
         if (pollRef.current) clearInterval(pollRef.current);
         pollRef.current = null;
-
-        setTimeout(() => {
-          sessionStorage.setItem("qm_rebooting", "1");
-          document.cookie = "qm_logged_in=; Path=/; Max-Age=0";
-          window.location.href = "/reboot/";
-        }, 2000);
+        sessionStorage.setItem("qm_rebooting", "1");
+        document.cookie = "qm_logged_in=; Path=/; Max-Age=0";
+        window.location.href = "/reboot/";
       }
     }, POLL_INTERVAL);
   }, []);

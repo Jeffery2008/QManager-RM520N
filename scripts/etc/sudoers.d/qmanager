@@ -37,3 +37,6 @@ www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_update
 
 # System Health Check (privileged runner that probes binaries, AT, services, sudoers)
 www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_health_check
+
+# Ethernet link speed limit management
+www-data ALL=(root) NOPASSWD: /usr/bin/qmanager_ethernet_apply

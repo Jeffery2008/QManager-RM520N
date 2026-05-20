@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { authFetch } from "@/lib/auth-fetch";
 
-import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
+import { CartesianGrid, Line, LineChart } from "recharts";
 import {
   Card,
   CardContent,
@@ -39,14 +39,14 @@ export const description = "A multiple bar chart";
 // Data Wiring
 // =============================================================================
 // The ping daemon writes RTT history as (number | null)[] where null = timeout.
-// We show the last 5 data points. For each point:
+// We show the last 10 data points. For each point:
 //   - latency: the RTT in ms (rounded), or 0 if timeout
 //   - packetloss: rolling % of null entries in a 10-sample window ending at
 //                 that point (gives a smoothed per-point loss indicator)
 // =============================================================================
 
 /** How many points to show on the chart */
-const CHART_POINTS = 5;
+const CHART_POINTS = 10;
 
 /** Rolling window size for per-point packet loss calculation */
 const LOSS_WINDOW = 10;
@@ -192,12 +192,6 @@ const LiveLatencyComponent = ({ connectivity }: LiveLatencyComponentProps) => {
               }}
             >
               <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="time"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-              />
               <ChartTooltip
                 cursor={false}
                 content={

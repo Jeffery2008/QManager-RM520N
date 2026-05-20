@@ -26,7 +26,14 @@ import type {
   NetworkStatus,
   ConnectivityStatus,
   ServiceStatus,
+  PingTriState,
 } from "@/types/modem-status";
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface NetworkStatusComponentProps {
   data: NetworkStatus | null;
@@ -53,7 +60,7 @@ function getNetworkDisplay(
     case "5G-SA":
       return {
         icon: <MdOutline5G className="size-full text-white" />,
-        label: "5G 信号",
+        label: "5G Signal",
         sublabel: nrCaActive ? "独立组网 / NR-CA" : "独立组网",
         hasNetwork: true,
       };
@@ -134,6 +141,89 @@ function getServiceColor(
   return "yellow";
 }
 
+// ─── Internet badge — tri-state with optional tooltip ──────────────────────
+
+interface InternetBadge {
+  cls: string;
+  label: string;
+  state: PingTriState;
+  tooltip: string | null;
+}
+
+function buildInternetBadge(c: ConnectivityStatus | null): InternetBadge {
+  // Prefer the new tri-state field; fall back to internet_available for
+  // rolling-upgrade safety (poller without Phase 2 forwarding).
+  let state: PingTriState = "unknown";
+  if (c?.state) {
+    state = c.state;
+  } else if (c?.internet_available === true) {
+    state = "connected";
+  } else if (c?.internet_available === false) {
+    state = "disconnected";
+  }
+
+  switch (state) {
+    case "connected":
+      return {
+        cls: "bg-success/15 text-success hover:bg-success/20 border-success/30",
+        label: "在线",
+        state,
+        tooltip: null,
+      };
+    case "limited":
+      return {
+        cls: "bg-warning/15 text-warning hover:bg-warning/20 border-warning/30",
+        label: "运营商受限",
+        state,
+        tooltip: limitedTooltip(c?.limited_reason ?? null),
+      };
+    case "disconnected":
+      return {
+        cls: "bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30",
+        label: "离线",
+        state,
+        tooltip: downTooltip(c?.down_reason ?? null),
+      };
+    default:
+      return {
+        cls: "bg-muted/50 text-muted-foreground hover:bg-muted/70 border-muted-foreground/30",
+        label: "互联网",
+        state,
+        tooltip: null,
+      };
+  }
+}
+
+function limitedTooltip(code: number | null): string {
+  if (code === null) {
+    return "运营商正在拦截探测，可能是账单或激活页面。";
+  }
+  if (code >= 300 && code < 400) {
+    return `运营商正在重定向探测（HTTP ${code}），可能是封闭门户或激活页面。`;
+  }
+  if (code >= 400) {
+    return `运营商返回 HTTP ${code}。探测路径被拦截，但不是重定向。`;
+  }
+  return `网络可达，但探测返回 HTTP ${code} 而不是 204。运营商可能把流量重定向到账单或激活页面。`;
+}
+
+function downTooltip(reason: string | null): string {
+  switch (reason) {
+    case "timeout":
+      return "探测超时，连接可能已卡住。";
+    case "refused":
+      return "探测目标拒绝连接。";
+    case "reset":
+      return "连接被运营商或对端重置。";
+    case "dns":
+      return "DNS 解析失败。";
+    case "malformed":
+      return "探测响应格式异常。";
+    default:
+      return "互联网不可达。";
+  }
+}
+
 // Color map for the pulsating service rings
 const serviceColorMap: Record<
   string,
@@ -192,10 +282,6 @@ const NetworkStatusComponent = ({
   // Whether we have a real network (LTE/5G), not fallback 3G
   const hasNetwork = networkDisplay.hasNetwork;
 
-  // Internet status — driven by ping daemon via connectivity data
-  // true = reachable, false = unreachable, null = ping daemon not running / unknown
-  const internetAvailable = connectivity?.internet_available ?? null;
-
   return (
     <Card className="@container/card">
       <CardHeader>
@@ -246,40 +332,45 @@ const NetworkStatusComponent = ({
                 {isAirplaneMode
                   ? "飞行模式"
                   : radioOn
-                    ? "无线已开启"
-                    : "无线已关闭"}
+                    ? "射频开启"
+                    : "射频关闭"}
               </Badge>
 
-              {/* Internet status — green/red/gray based on ping daemon */}
-              <Badge
-                variant="outline"
-                className={
-                  internetAvailable === true
-                    ? "bg-success/15 text-success hover:bg-success/20 border-success/30"
-                    : internetAvailable === false
-                      ? "bg-destructive/15 text-destructive hover:bg-destructive/20 border-destructive/30"
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted/70 border-muted-foreground/30"
+              {/* Internet status — tri-state from ping daemon */}
+              {(() => {
+                const b = buildInternetBadge(connectivity);
+                const dot =
+                  b.state === "connected" ? (
+                    <span className="relative flex size-2 shrink-0">
+                      <span className="absolute inline-flex size-full rounded-full bg-success opacity-75 animate-ping" />
+                      <span className="relative inline-flex size-2 rounded-full bg-success" />
+                    </span>
+                  ) : b.state === "limited" ? (
+                    <span className="relative flex size-2 shrink-0">
+                      <span className="absolute inline-flex size-full rounded-full bg-warning opacity-75 animate-ping" />
+                      <span className="relative inline-flex size-2 rounded-full bg-warning" />
+                    </span>
+                  ) : b.state === "disconnected" ? (
+                    <span className="inline-flex size-2 rounded-full shrink-0 bg-destructive" />
+                  ) : (
+                    <span className="inline-flex size-2 rounded-full shrink-0 bg-muted-foreground" />
+                  );
+                const badge = (
+                  <Badge variant="outline" className={b.cls}>
+                    {dot}
+                    {b.label}
+                  </Badge>
+                );
+                if (b.tooltip) {
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{badge}</TooltipTrigger>
+                      <TooltipContent>{b.tooltip}</TooltipContent>
+                    </Tooltip>
+                  );
                 }
-              >
-                {/* Sonar ping — only when online */}
-                {internetAvailable === true ? (
-                  <span className="relative flex size-2 shrink-0">
-                    <span className="absolute inline-flex size-full rounded-full bg-success opacity-75 animate-ping" />
-                    <span className="relative inline-flex size-2 rounded-full bg-success" />
-                  </span>
-                ) : (
-                  <span
-                    className={`inline-flex size-2 rounded-full shrink-0 ${
-                      internetAvailable === false ? "bg-destructive" : "bg-muted-foreground"
-                    }`}
-                  />
-                )}
-                {internetAvailable === true
-                  ? "在线"
-                  : internetAvailable === false
-                    ? "离线"
-                    : "互联网"}
-              </Badge>
+                return badge;
+              })()}
             </div>
           )}
         </div>
@@ -331,7 +422,7 @@ const NetworkStatusComponent = ({
                   {isAirplaneMode ? "低功耗" : networkDisplay.label}
                 </h3>
                 <p className="text-muted-foreground text-sm">
-                  {isAirplaneMode ? "无线已关闭" : networkDisplay.sublabel}
+                  {isAirplaneMode ? "射频关闭" : networkDisplay.sublabel}
                 </p>
               </div>
             </div>
@@ -431,7 +522,7 @@ const NetworkStatusComponent = ({
                   {isAirplaneMode ? "待机" : "服务"}
                 </h3>
                 <p className="text-muted-foreground text-sm">
-                  {isAirplaneMode ? "无线已关闭" : serviceLabel}
+                  {isAirplaneMode ? "射频关闭" : serviceLabel}
                 </p>
               </div>
             </div>

@@ -777,6 +777,50 @@ Get the currently active scenario.
 }
 ```
 
+### GET/POST `/settings/ping_profile.sh`
+
+Connectivity probe sensitivity and target configuration. Controls the `qmanager_ping` daemon's check interval, failure thresholds, and the two probe URLs.
+
+**GET Response:**
+```json
+{
+  "success": true,
+  "settings": {
+    "profile": "regular",
+    "target_1": "http://cp.cloudflare.com/",
+    "target_2": "http://www.gstatic.com/generate_204"
+  }
+}
+```
+
+**POST (save_settings):**
+```json
+{
+  "action": "save_settings",
+  "profile": "regular",
+  "target_1": "youtube.com",
+  "target_2": "google.com"
+}
+```
+
+- `profile`: one of `"aggressive"`, `"regular"`, `"relaxed"` — controls the sensitivity preset (check interval, streak thresholds) applied by `qmanager_ping`.
+- `target_1`: primary probe URL. Probed on every tick.
+- `target_2`: secondary probe URL. Only probed when `target_1` returns `Disconnected` (primary-then-fallback, not alternating).
+
+**Validation rules for `target_1` / `target_2`:**
+- Both fields are required on every `save_settings` POST.
+- Each must be nonempty after whitespace trim, at most 256 characters, and contain only URL-safe characters (no shell metacharacters).
+- Bare hostnames are accepted (`youtube.com` → daemon auto-prefixes `https://`); hostnames with paths are also accepted (`example.com/health` → `https://example.com/health`).
+- `http://` and `https://` schemes are accepted. Other schemes (`ftp://`, `file://`, etc.) are rejected.
+
+**Error codes:**
+
+| Code | Meaning |
+|------|---------|
+| `invalid_target` | `target_1` or `target_2` failed validation (empty, too long, bad scheme, or disallowed characters) |
+| `missing_field` | Required POST field absent |
+| `invalid_profile` | `profile` value not in the accepted set |
+
 ---
 
 ## Device
@@ -944,6 +988,70 @@ During installation the worker tails `=== Step N/M: <label> ===` lines from `/tm
 ```json
 { "success": false, "error": "worker_error", "detail": "..." }
 ```
+
+### GET `/system/modem-subsys.sh`
+
+System Health telemetry consumed by the System Health card in System Settings. Read-only — POST returns 405.
+
+**Implementation:** Thin reader over `/tmp/qmanager_status.json`. The poller refreshes the cache's top-level `system_health` block on every Tier 1 cycle (~2s); this CGI just `jq`-extracts and reshapes for backward-compat. Falls back to an all-null shape when the cache is missing or older than 30s. See `BACKEND.md` § `qmanager_poller` for source-of-truth details.
+
+**Response:**
+```json
+{
+  "state": "online",
+  "state_raw": "ONLINE",
+  "crash_count": 0,
+  "coredump_present": false,
+  "last_crash_at": null,
+  "total_logged_crashes": 0,
+  "uptime_seconds": 86400,
+  "cpu": {
+    "load_1m": 0.42,
+    "core_count": 4,
+    "usage_pct": 12,
+    "freq_khz": 1804800,
+    "max_freq_khz": 1804800
+  },
+  "memory": {
+    "total_kb": 186880,
+    "used_kb": 87040,
+    "available_kb": 99840
+  },
+  "storage": {
+    "mount": "/usrdata",
+    "total_kb": 524288,
+    "used_kb": 73728,
+    "available_kb": 450560
+  }
+}
+```
+
+- `state`: normalized to `online` | `offline` | `crashed` | `unknown`. `state_raw` is the unmodified sysfs string.
+- `crash_count`: monotonic counter from `/sys/.../subsys0/crash_count`. `null` when the path is unreadable.
+- `coredump_present`: `true` when a non-empty file exists under `/sys/.../ramdump/ramdump_modem/` (sysfs metadata pseudo-files excluded).
+- `last_crash_at` / `total_logged_crashes`: derived from `/etc/qmanager/modem_crashes.json`.
+- `cpu.usage_pct`: percent of total core capacity (`(load / cores) * 100`-style aggregate computed in the poller from `/proc/stat`); not the raw 1-minute load average.
+- `cpu.freq_khz` / `cpu.max_freq_khz`: from `/sys/devices/system/cpu/cpu0/cpufreq/`.
+- `memory`: derived from the existing `device.memory_*_mb` cache fields (× 1024).
+- `storage`: `df -P /usrdata`. The `mount` field is fixed at `/usrdata`.
+
+**Degraded response** (cache missing or stale):
+```json
+{
+  "state": "unknown",
+  "state_raw": null,
+  "crash_count": null,
+  "coredump_present": false,
+  "last_crash_at": null,
+  "total_logged_crashes": 0,
+  "uptime_seconds": 0,
+  "cpu": null,
+  "memory": null,
+  "storage": null
+}
+```
+
+The frontend hook (`hooks/use-modem-subsys.ts`) treats `null` fields the same as missing — UI shows em-dashes, never blanks out. Polled every 2000ms with an in-flight guard matching the poller's Tier 1 cadence.
 
 ---
 

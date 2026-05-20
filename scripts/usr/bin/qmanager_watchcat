@@ -207,10 +207,12 @@ tower_lock_active() {
 }
 
 # Read ping daemon data — returns 0 if valid, 1 if stale/missing
-# Sets: ping_streak_fail, ping_reachable, ping_during_recovery
+# Sets: ping_streak_fail, ping_reachable, ping_during_recovery, ping_connectivity, ping_limited_reason
 ping_streak_fail=0
 ping_reachable="true"
 ping_during_recovery="false"
+ping_connectivity="connected"
+ping_limited_reason="null"
 
 read_ping() {
     if [ ! -f "$PING_CACHE" ]; then
@@ -223,7 +225,9 @@ read_ping() {
         (.timestamp | if . == null then "0" else tostring end),
         ((.streak_fail) | if . == null then "0" else tostring end),
         ((.reachable) | if . == null then "true" else tostring end),
-        ((.during_recovery) | if . == null then "false" else tostring end)
+        ((.during_recovery) | if . == null then "false" else tostring end),
+        ((.connectivity) | if . == null then "disconnected" else tostring end),
+        ((.limited_reason) | if . == null then "null" else tostring end)
     ] | @tsv' "$PING_CACHE" 2>/dev/null)
 
     [ -z "$_pdata" ] && return 1
@@ -233,6 +237,8 @@ read_ping() {
     ping_streak_fail=$(printf '%s' "$_pdata" | cut -f2)
     ping_reachable=$(printf '%s' "$_pdata" | cut -f3)
     ping_during_recovery=$(printf '%s' "$_pdata" | cut -f4)
+    ping_connectivity=$(printf '%s' "$_pdata" | cut -f5)
+    ping_limited_reason=$(printf '%s' "$_pdata" | cut -f6)
 
     # Staleness check
     local now age
@@ -730,6 +736,30 @@ main() {
             sleep "$CFG_CHECK_INTERVAL"
             continue
         fi
+
+        # --- Carrier intercept (limited) check ---
+        # connectivity=limited means a carrier-side wall (billing portal, data
+        # cap, activation walled garden) is intercepting traffic. Recovery
+        # actions (modem reset, cfun toggle, SIM failover, reboot) cannot help.
+        # Stay in monitor and clear any pending recovery flag.
+        if [ "$ping_connectivity" = "limited" ]; then
+            if [ "$state" != "monitor" ]; then
+                qlog_info "$state → MONITOR: carrier-limited (HTTP $ping_limited_reason); abandoning recovery"
+                state="monitor"
+                failure_counter=0
+                rm -f "$RECOVERY_FLAG"
+            elif [ -n "$ping_limited_reason" ] && [ "$ping_limited_reason" != "null" ]; then
+                # First detection in monitor — log once per entry into limited
+                if [ "${prev_limited_reason:-null}" = "null" ]; then
+                    qlog_info "MONITOR: carrier-limited (HTTP $ping_limited_reason); recovery suppressed"
+                fi
+            fi
+            prev_limited_reason="$ping_limited_reason"
+            write_state
+            sleep "$CFG_CHECK_INTERVAL"
+            continue
+        fi
+        prev_limited_reason="null"
 
         # --- State machine ---
         case "$state" in

@@ -387,13 +387,29 @@ step "Cleaning up firewall rules"
 rm -f /etc/firewall.user.ttl /etc/firewall.user.mtu 2>/dev/null || true
 
 # The qmanager-firewall service (stopped in Step 1) runs ExecStop to flush
-# its iptables rules. We flush manually here as a fallback — handles the case
-# where the service was already gone before uninstall started.
+# its rules. The fallbacks below cover the case where the service was
+# already gone before uninstall started — both the new chain-based layout
+# and any pre-chain INPUT-direct rules from older installs are cleaned.
 if command -v iptables >/dev/null 2>&1; then
+    # New layout: tear down the QMANAGER_FW chain
+    while iptables -C INPUT -j QMANAGER_FW 2>/dev/null; do
+        iptables -D INPUT -j QMANAGER_FW 2>/dev/null || break
+    done
+    iptables -F QMANAGER_FW 2>/dev/null || true
+    iptables -X QMANAGER_FW 2>/dev/null || true
+
+    # Legacy layout: drain INPUT-direct rules from pre-chain installs
     for port in 80 443; do
-        iptables -D INPUT -p tcp --dport "$port" -j DROP 2>/dev/null || true
-        for iface in lo bridge0 eth0 tailscale0; do
-            iptables -D INPUT -i "$iface" -p tcp --dport "$port" -j ACCEPT 2>/dev/null || true
+        while iptables -C INPUT -p tcp --dport "$port" -j DROP 2>/dev/null; do
+            iptables -D INPUT -p tcp --dport "$port" -j DROP 2>/dev/null || break
+        done
+        for iface in lo bridge0 eth0 tailscale0 rmnet_data0; do
+            while iptables -C INPUT -i "$iface" -p tcp --dport "$port" -j ACCEPT 2>/dev/null; do
+                iptables -D INPUT -i "$iface" -p tcp --dport "$port" -j ACCEPT 2>/dev/null || break
+            done
+            while iptables -C INPUT -i "$iface" -p tcp --dport "$port" -j DROP 2>/dev/null; do
+                iptables -D INPUT -i "$iface" -p tcp --dport "$port" -j DROP 2>/dev/null || break
+            done
         done
     done
 fi
@@ -412,6 +428,7 @@ rm -f /tmp/qmanager_*.pid   2>/dev/null || true
 rm -f /tmp/qmanager_*.lock  2>/dev/null || true
 rm -f /tmp/qmanager_speedtest_output /tmp/qmanager_speedtest_run.sh 2>/dev/null || true
 rm -f /tmp/qmanager_email_reload /tmp/qmanager_sms_reload          2>/dev/null || true
+rm -f /tmp/qmanager_ping_reload /tmp/qmanager_ping_history          2>/dev/null || true
 rm -f /tmp/qmanager_imei_check_done                                 2>/dev/null || true
 rm -f /tmp/qmanager_low_power_active /tmp/qmanager_recovery_active  2>/dev/null || true
 rm -f /tmp/qmanager_staged.tar.gz /tmp/qmanager_staged_version      2>/dev/null || true

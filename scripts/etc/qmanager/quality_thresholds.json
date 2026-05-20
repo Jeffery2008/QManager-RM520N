@@ -1,0 +1,4 @@
+{
+  "latency": { "preset": "tolerant" },
+  "loss": { "preset": "tolerant" }
+}

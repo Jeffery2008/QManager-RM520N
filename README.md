@@ -5,7 +5,7 @@
   <h3>A modern, custom GUI for Quectel modem management</h3>
   <p>Visualize, configure, and optimize your cellular modem's performance with an intuitive web interface</p>
 
-  ![Version](https://img.shields.io/badge/version-v0.1.6--cn.1-blue?style=flat-square)
+  ![Version](https://img.shields.io/badge/version-v0.1.10--cn.1-blue?style=flat-square)
   ![License](https://img.shields.io/badge/license-MIT%20%2B%20Commons%20Clause-green?style=flat-square)
   ![Platform](https://img.shields.io/badge/platform-RM520N--GL-orange?style=flat-square)
   ![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square)
@@ -26,6 +26,7 @@
 - **Antenna Alignment** — 3-position recording tool that compares composite signal scores to recommend best antenna placement
 - **Network Events** — Automatic detection of band changes, cell handoffs, carrier aggregation changes, and connectivity events
 - **Latency Monitoring** — Real-time ping with 24-hour history, jitter, packet loss, and aggregated views (hourly/12h/daily)
+- **Connectivity Engine** — Configurable HTTP/HTTPS probe with primary-then-fallback, captive-portal detection, and a sensitivity preset (regions that block Google still come up clean by default)
 - **Traffic Statistics** — Live throughput (Mbps) and cumulative data usage
 
 ### Cellular Configuration
@@ -49,7 +50,7 @@
 - **IP Passthrough** — Direct IP assignment to downstream devices
 
 ### VPN & Remote Access
-- **Tailscale VPN** — One-click install, connect, and manage Tailscale mesh VPN directly from the UI; peer table, health warnings, boot persistence
+- **Tailscale VPN** — One-click install, connect, and manage Tailscale mesh VPN directly from the UI; peer table, health warnings, boot persistence, and a one-toggle Tailscale SSH switch (gated by your admin-panel ACLs)
 - **Port Firewall** — Built-in firewall restricting web UI (80/443) to trusted interfaces; Tailscale-aware, enabled by default
 
 ### Reliability & Monitoring
@@ -91,6 +92,25 @@ curl -fsSL -o /tmp/qmanager-installer.sh \
 ```
 
 The interactive installer fetches the latest release, verifies the SHA-256 checksum, bootstraps Entware (if needed), installs lighttpd, deploys the QManager frontend and backend, configures systemd services, and optionally sets up SSH (dropbear). Bundled dependencies (`atcli_smd11`, `sms_tool`, `jq`, `dropbear`) are installed automatically. The SSH root password is automatically set to match the web UI password during first-time onboarding. A reboot is triggered after installation.
+
+> **If `curl` isn't available on your modem** (common on x5x/x6x firmwares like RM502, RM520, RM521), install it through Entware first, then call it by absolute path so the BusyBox shell's default `PATH` doesn't trip you up:
+>
+> ```sh
+> opkg update && opkg install curl
+> /opt/bin/curl -fsSL -o /tmp/qmanager-installer.sh \
+>   https://github.com/Jeffery2008/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
+>   bash /tmp/qmanager-installer.sh
+> ```
+>
+> **If you have `wget` but not `curl`**, just use `wget` to fetch the installer — the installer's preflight will install `curl` from Entware automatically (Entware must already be bootstrapped) so future OTA updates work:
+>
+> ```sh
+> wget -O /tmp/qmanager-installer.sh \
+>   https://github.com/Jeffery2008/QManager-RM520N/raw/refs/heads/main/qmanager-installer.sh && \
+>   bash /tmp/qmanager-installer.sh
+> ```
+>
+> The QManager installer creates a `/usr/bin/curl` symlink during install, so subsequent commands and OTA updates pick up `curl` from the standard PATH without manual export.
 
 ### Upgrading
 
@@ -276,17 +296,21 @@ QManager runs 10 systemd services on the modem:
 
 ---
 
-## Support the Project
+## Tips for the Project
 
 <div align="center">
   <h3>Support QManager's Development</h3>
   <p>Your contribution helps maintain the project and fund continued development, testing on new cellular networks, and hardware costs.</p>
   <br/>
-  <a href="https://github.com/sponsors/dr-dolomite" target="_blank">
-    <img height="40" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub" />
+  <a href="https://wise.com/pay/business/blackcatdev?currency=USD" target="_blank">
+    <img height="40" src="https://img.shields.io/badge/Donate-Wise-9FE870?style=for-the-badge&logo=wise&logoColor=white" alt="Donate via Wise" />
+  </a>
+  &nbsp;
+  <a href="https://paypal.me/iamrusss" target="_blank">
+    <img height="40" src="https://img.shields.io/badge/Donate-PayPal-003087?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal" />
   </a>
   <br/><br/>
-  <p><strong>GCash via Remitly</strong><br/>Name: Russel Yasol<br/>Number: +639544817486</p>
+  <p>You can also <a href="https://github.com/sponsors/dr-dolomite" target="_blank">sponsor on GitHub</a>.</p>
 </div>
 
 ---

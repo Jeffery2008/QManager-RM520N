@@ -561,21 +561,20 @@ parse_ca_info() {
         local csv
         csv=$(printf '%s' "$line" | sed 's/+QCAINFO: //g' | tr -d '"' | tr -d ' ' | tr -d '\r')
 
-        local cc_type
-        cc_type=$(printf '%s' "$csv" | cut -d',' -f1)
+        # POSIX field splitting — one substitution instead of 10 cut forks.
+        local _OLD_IFS=$IFS
+        IFS=','
+        # shellcheck disable=SC2086 # intentional word splitting on commas
+        set -- $csv
+        IFS=$_OLD_IFS
+        local nfields=$#
 
-        local freq
-        freq=$(printf '%s' "$csv" | cut -d',' -f2)
+        [ "$nfields" -lt 4 ] && continue
 
-        local bw_raw
-        bw_raw=$(printf '%s' "$csv" | cut -d',' -f3)
-
-        local band_str
-        band_str=$(printf '%s' "$csv" | cut -d',' -f4)
-
-        # Count total comma-separated fields
-        local nfields
-        nfields=$(printf '%s' "$csv" | awk -F',' '{print NF}')
+        local cc_type="$1"
+        local freq="$2"
+        local bw_raw="$3"
+        local band_str="$4"
 
         local tech="" band_short="" mhz=0
         local cc_pci="null" cc_rsrp="null" cc_rsrq="null" cc_rssi="null" cc_sinr="null"
@@ -583,18 +582,18 @@ parse_ca_info() {
         case "$band_str" in
             LTEBAND*)
                 # ---- LTE line ----
+                # Positions: type(1),freq(2),bw(3),band(4),state(5),PCI(6),RSRP(7),RSRQ(8),RSSI(9),RSSNR(10)
                 tech="LTE"
                 mhz=$(_lte_rb_to_mhz "$bw_raw")
                 local band_num
                 band_num=$(printf '%s' "$band_str" | sed 's/LTEBAND//')
                 band_short="B${band_num}"
 
-                # LTE fields: type(1),freq(2),bw(3),band(4),state(5),PCI(6),RSRP(7),RSRQ(8),RSSI(9),RSSNR(10)
-                cc_pci=$(printf '%s' "$csv" | cut -d',' -f6)
-                cc_rsrp=$(printf '%s' "$csv" | cut -d',' -f7)
-                cc_rsrq=$(printf '%s' "$csv" | cut -d',' -f8)
-                cc_rssi=$(printf '%s' "$csv" | cut -d',' -f9)
-                cc_sinr=$(printf '%s' "$csv" | cut -d',' -f10)
+                [ "$nfields" -ge 6 ]  && cc_pci="$6"
+                [ "$nfields" -ge 7 ]  && cc_rsrp="$7"
+                [ "$nfields" -ge 8 ]  && cc_rsrq="$8"
+                [ "$nfields" -ge 9 ]  && cc_rssi="$9"
+                [ "$nfields" -ge 10 ] && cc_sinr="${10}"
                 ;;
             NR5GBAND*|NRDCBAND*)
                 # ---- NR line ----
@@ -607,12 +606,11 @@ parse_ca_info() {
                 if [ "$nfields" -ge 9 ]; then
                     # Long form (SCC with UL info):
                     # type(1),freq(2),bw(3),band(4),state(5),PCI(6),UL_cfg(7),UL_bw(8),UL_ARFCN(9)[,RSRP(10),RSRQ(11)[,SNR(12)]]
-                    cc_pci=$(printf '%s' "$csv" | cut -d',' -f6)
-                    [ "$nfields" -ge 10 ] && cc_rsrp=$(printf '%s' "$csv" | cut -d',' -f10)
-                    [ "$nfields" -ge 11 ] && cc_rsrq=$(printf '%s' "$csv" | cut -d',' -f11)
+                    [ "$nfields" -ge 6 ]  && cc_pci="$6"
+                    [ "$nfields" -ge 10 ] && cc_rsrp="${10}"
+                    [ "$nfields" -ge 11 ] && cc_rsrq="${11}"
                     if [ "$nfields" -ge 12 ]; then
-                        local raw_snr
-                        raw_snr=$(printf '%s' "$csv" | cut -d',' -f12)
+                        local raw_snr="${12}"
                         case "$raw_snr" in
                             -32768) cc_sinr="null" ;;
                             *) cc_sinr=$(printf '%s' "$raw_snr" | awk '{if($1+0==$1) printf "%.1f", $1/100; else print "null"}') ;;
@@ -621,12 +619,11 @@ parse_ca_info() {
                 else
                     # Short form (PCC or old SCC):
                     # type(1),freq(2),bw(3),band(4),PCI(5)[,RSRP(6),RSRQ(7)[,SNR(8)]]
-                    cc_pci=$(printf '%s' "$csv" | cut -d',' -f5)
-                    [ "$nfields" -ge 6 ] && cc_rsrp=$(printf '%s' "$csv" | cut -d',' -f6)
-                    [ "$nfields" -ge 7 ] && cc_rsrq=$(printf '%s' "$csv" | cut -d',' -f7)
+                    [ "$nfields" -ge 5 ] && cc_pci="$5"
+                    [ "$nfields" -ge 6 ] && cc_rsrp="$6"
+                    [ "$nfields" -ge 7 ] && cc_rsrq="$7"
                     if [ "$nfields" -ge 8 ]; then
-                        local raw_snr
-                        raw_snr=$(printf '%s' "$csv" | cut -d',' -f8)
+                        local raw_snr="$8"
                         case "$raw_snr" in
                             -32768) cc_sinr="null" ;;
                             *) cc_sinr=$(printf '%s' "$raw_snr" | awk '{if($1+0==$1) printf "%.1f", $1/100; else print "null"}') ;;
@@ -986,4 +983,55 @@ parse_ippt_dhcpv4dns() {
     esac
 
     qlog_debug "ippt_dhcpv4dns: $boot_ippt_dhcpv4dns"
+}
+
+# -----------------------------------------------------------------------------
+# Parse AT+QMAP="LANIP" — DHCP range and device LAN gateway
+#
+# Response format (canonical):
+#   +QMAP: "LANIP",<dhcp_start_ip>,<dhcp_end_ip>,<gateway_ip>
+# Example:
+#   +QMAP: "LANIP",192.168.225.100,192.168.227.99,192.168.225.1
+#
+# Some firmwares may quote the IPs or omit fields; treat anything that
+# doesn't dot-decimal-shape as missing rather than emitting garbage.
+#
+# Populates: boot_lan_ip (gateway = device IP), boot_lan_gateway
+#
+# Note: field 2 is the DHCP start range, NOT the device's own IP. The device
+# IP is the gateway (field 4). Both boot_lan_ip and boot_lan_gateway are set
+# to that gateway so consumers don't have to know the QMAP semantics.
+# -----------------------------------------------------------------------------
+parse_lan_ip() {
+    local raw="$1"
+    local line gateway
+
+    boot_lan_ip=""
+    boot_lan_gateway=""
+
+    line=$(printf '%s\n' "$raw" | grep '+QMAP:.*"LANIP"' | head -1 | tr -d '\r')
+    [ -z "$line" ] && {
+        qlog_debug "lan_ip: no +QMAP LANIP line in response (firmware may not support it)"
+        return 0
+    }
+
+    # Strip prefix and surrounding spaces, drop quotes around values.
+    line=$(printf '%s' "$line" | sed 's/+QMAP: //; s/"//g' | tr -d ' ')
+
+    # Field 4 = gateway (the device's own LAN IP). awk over $0 because
+    # BusyBox `cut -d, -f4` returns empty silently when the field is absent.
+    gateway=$(printf '%s' "$line" | awk -F',' 'NF>=4 {print $4}')
+
+    # Sanity: must look like a dotted-quad. Reject anything else.
+    case "$gateway" in
+        [0-9]*.[0-9]*.[0-9]*.[0-9]*)
+            boot_lan_gateway="$gateway"
+            boot_lan_ip="$gateway"
+            ;;
+        *)
+            qlog_warn "lan_ip: unexpected LANIP format, gateway not parsed: $line"
+            ;;
+    esac
+
+    qlog_debug "lan_ip: gateway=$boot_lan_gateway"
 }

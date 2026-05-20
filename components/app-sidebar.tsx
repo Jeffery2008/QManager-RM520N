@@ -18,7 +18,7 @@ import {
   SettingsIcon,
   TerminalIcon,
   DownloadIcon,
-  TerminalSquareIcon,
+  EthernetPort,
 } from "lucide-react";
 
 import QManagerLogo from "@/public/qmanager-logo.svg";
@@ -45,7 +45,7 @@ import Link from "next/link";
 
 const data = {
   user: {
-    name: "管理员",
+    name: "Admin",
     avatar: QManagerLogo.src,
   },
   navMain: [
@@ -70,6 +70,10 @@ const data = {
           title: "系统健康检查",
           url: "/system-settings/system-health-check",
         },
+        {
+          title: "连接质量",
+          url: "/system-settings/connection-quality",
+        },
       ],
     },
     {
@@ -78,14 +82,12 @@ const data = {
       icon: DownloadIcon,
     },
     {
-      title: "AT 终端",
+      title: "终端",
       url: "/system-settings/at-terminal",
       icon: TerminalIcon,
-    },
-    {
-      title: "网页控制台",
-      url: "/system-settings/web-console",
-      icon: TerminalSquareIcon,
+      items: [
+        { title: "Web 控制台", url: "/system-settings/web-console" },
+      ],
     },
   ],
   navSecondary: [
@@ -162,7 +164,7 @@ const data = {
           url: "/cellular/cell-scanner/neighbourcell-scanner",
         },
         {
-          title: "频点计算器",
+          title: "频率计算器",
           url: "/cellular/cell-scanner/frequency-calculator",
         },
       ],
@@ -193,6 +195,11 @@ const data = {
   ],
   localNetwork: [
     {
+      title: "以太网状态",
+      url: "/local-network/ethernet",
+      icon: EthernetPort,
+    },
+    {
       title: "设置",
       url: "/local-network/ip-passthrough",
       icon: Settings2,
@@ -222,6 +229,10 @@ const data = {
           title: "短信告警",
           url: "/monitoring/sms-alerts",
         },
+        {
+          title: "Discord 机器人",
+          url: "/monitoring/discord-bot",
+        },
       ],
     },
     {
@@ -230,7 +241,7 @@ const data = {
       icon: DogIcon,
     },
     {
-      title: "Tailscale 网络",
+      title: "Tailscale VPN",
       url: "/monitoring/tailscale",
       icon: GlobeIcon,
     },
@@ -256,14 +267,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                   <Image
                     src={QManagerLogo}
-                    alt="QManager 标志"
+                    alt="QManager Logo"
                     className="size-full"
                     priority
                   />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">QManager</span>
-                  <span className="truncate text-xs">管理员</span>
+                  <span className="truncate text-xs">Admin</span>
                 </div>
               </Link>
             </SidebarMenuButton>

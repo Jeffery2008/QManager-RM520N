@@ -35,6 +35,7 @@ LONG_FLAG="/tmp/qmanager_long_running"
 POLL_INTERVAL=2        # seconds between Tier 1 cycles
 TIER1_5_EVERY=5        # Tier 1.5 (per-antenna signal) runs every N cycles (10s)
 TIER2_EVERY=15         # Tier 2 runs every N cycles
+CYCLE_TIME_BUDGET=10   # seconds; warn if poll_cycle exceeds this
 # Network interface for traffic stats (platform-specific)
 if [ -f /etc/quectel-project-version ]; then
     NETWORK_IFACE="rmnet_ipa0"   # RM520N-GL internal modem
@@ -42,6 +43,7 @@ else
     NETWORK_IFACE="wwan0"        # RM551E on OpenWRT
 fi
 SIP_DELAY=0.1          # Delay between AT commands (seconds)
+LONG_FLAG_MAX_AGE=300  # seconds; auto-clear stale long-running flags
 
 # Signal history (NDJSON file for chart data)
 SIGNAL_HISTORY_FILE="/tmp/qmanager_signal_history.json"
@@ -51,8 +53,32 @@ SIGNAL_HISTORY_MAX=180 # 30 min at 10s intervals
 PING_HISTORY_FILE="/tmp/qmanager_ping_history.json"
 PING_HISTORY_MAX=8640  # 24h at 10s intervals
 
+# --- Persistent Data Used counter (Tier 1) -----------------------------------
+DATA_USED_FILE="/usrdata/qmanager/data_used.json"
+DATA_USED_TMP="/usrdata/qmanager/data_used.json.tmp"
+DATA_USED_RESET_FLAG="/tmp/qmanager_data_used_reset"
+DATA_USED_DIVERGENCE_PCT=15        # warn threshold (%) — looser than 5% because
+                                    # IPA and AT counters are read ~80ms apart
+                                    # within a tick; per-tick deltas during
+                                    # bursty traffic can legitimately differ
+                                    # by 5–10%. NSA undercounting (the case we
+                                    # actually want to catch) shows ~50%.
+DATA_USED_DIVERGENCE_MIN=100000    # bytes; only run divergence check when the
+                                    # IPA delta this tick is at least 100KB.
+                                    # Smaller windows are too noisy for per-
+                                    # tick comparison and produce false warns.
+DATA_USED_SCHEMA=1
+
 # --- State Variables ---------------------------------------------------------
 cycle_count=0
+
+# --- Modem crash watcher (sysfs subsys0/crash_count) -----------------------
+_CRASH_COUNT_SYSFS="/sys/devices/platform/4080000.qcom,mss/subsys0/crash_count"
+_CRASH_STATE_SYSFS="/sys/devices/platform/4080000.qcom,mss/subsys0/state"
+_CRASH_SIDECAR="/etc/qmanager/.modem_crash_count_last"
+_CRASH_LOG="/etc/qmanager/modem_crashes.json"
+_crash_watcher_enabled=false   # set to true at startup if sysfs path exists
+_last_crash_count=0            # last-known crash_count value
 
 # --- Event Detection State ---------------------------------------------------
 EVENTS_FILE="/tmp/qmanager_events.json"
@@ -75,6 +101,7 @@ prev_ev_nr_ca_active=""
 prev_ev_nr_ca_count=""
 prev_ev_service_status=""
 prev_ev_carrier_components=""
+prev_ev_cfun=""
 
 # Data connection quality event debounce state
 ev_high_lat_streak=0
@@ -100,6 +127,8 @@ boot_ippt_mac=""
 boot_ippt_nat="1"
 boot_ippt_usbnet="1"
 boot_ippt_dhcpv4dns="disabled"
+boot_lan_ip=""
+boot_lan_gateway=""
 
 # Tier 2 data (updated periodically)
 t2_temperature=""
@@ -164,6 +193,7 @@ errors=""
 # Traffic tracking
 prev_rx_bytes=0
 prev_tx_bytes=0
+prev_traffic_ts=0
 rx_bytes_per_sec=0
 tx_bytes_per_sec=0
 
@@ -174,6 +204,23 @@ prev_cpu_total=0
 # Data usage tracking
 total_rx_bytes=0
 total_tx_bytes=0
+
+# data_used in-memory mirror — initialized from file on first call
+du_loaded=false
+du_accumulated_rx=0
+du_accumulated_tx=0
+du_selected_counter=""
+du_prev_qgdcnt_tx=0
+du_prev_qgdcnt_rx=0
+du_prev_qgdnrcnt_tx=0
+du_prev_qgdnrcnt_rx=0
+du_prev_ipa_rx=0
+du_prev_ipa_tx=0
+du_last_update_ts=0
+du_last_reset_ts=0
+du_divergence_count=0
+du_modem_reset_count=0
+du_mode_transition_count=0
 
 # Connectivity (from ping daemon)
 conn_internet_available="null"
@@ -189,7 +236,17 @@ conn_history="[]"
 conn_history_interval=5
 conn_history_size=60
 conn_during_recovery="false"
+# Phase 2 — tri-state + runtime profile/threshold (from ping daemon)
+conn_connectivity="unknown"
+conn_limited_reason="null"
+conn_down_reason="null"
+conn_streak_limited=0
+conn_profile="unknown"
+conn_fail_secs=0
+conn_recover_secs=0
+conn_intercept_secs=0
 _last_ping_ts=0          # tracks last processed ping.json timestamp (awk gate)
+_ping_stale_since=0      # epoch when ping daemon first went stale (0 = healthy)
 
 # History size constant (must match ping daemon)
 CONN_HISTORY_SIZE=60
@@ -203,6 +260,31 @@ cpu_usage=0
 memory_used_mb=0
 memory_total_mb=0
 uptime_seconds=0
+
+# System health (modem subsystem + cpu/storage telemetry consumed by the
+# System Health card and any other UI that wants near-realtime device stats).
+# Populated by update_system_health(); read directly from sysfs/cpufreq/df.
+sh_state="unknown"
+sh_state_raw=""
+sh_crash_count="null"
+sh_coredump_present="false"
+sh_last_crash_at="null"
+sh_total_logged_crashes=0
+sh_load_1m="null"
+sh_load_5m="null"
+sh_load_15m="null"
+sh_core_count="null"
+sh_freq_khz="null"
+sh_max_freq_khz="null"
+sh_storage_total_kb="null"
+sh_storage_used_kb="null"
+sh_storage_avail_kb="null"
+
+# sysfs/sys paths (mirrored from modem-subsys.sh — single source of truth)
+SH_SUBSYS_BASE="/sys/devices/platform/4080000.qcom,mss/subsys0"
+SH_RAMDUMP_DIR="/sys/devices/platform/4080000.qcom,mss/ramdump/ramdump_modem"
+SH_CRASH_LOG="/etc/qmanager/modem_crashes.json"
+SH_CPUFREQ_BASE="/sys/devices/system/cpu/cpu0/cpufreq"
 
 # Per-antenna signal data (Tier 1.5 — JSON array strings)
 sig_lte_rsrp="[null,null,null,null]"
@@ -366,10 +448,17 @@ update_proc_metrics() {
         fi
     fi
 
-    # Calculate bytes per second
-    if [ "$prev_rx_bytes" -gt 0 ] 2>/dev/null; then
-        rx_bytes_per_sec=$(( (rx_bytes - prev_rx_bytes) / POLL_INTERVAL ))
-        tx_bytes_per_sec=$(( (tx_bytes - prev_tx_bytes) / POLL_INTERVAL ))
+    # Calculate bytes per second using actual elapsed wall time. Dividing by
+    # POLL_INTERVAL would inflate rates ~30x after any blocking event (e.g.
+    # an alert send). Floor at 1 to guard against clock skew.
+    local now_ts
+    now_ts=$(date +%s)
+    if [ "$prev_rx_bytes" -gt 0 ] 2>/dev/null && [ "$prev_traffic_ts" -gt 0 ] 2>/dev/null; then
+        local elapsed
+        elapsed=$((now_ts - prev_traffic_ts))
+        [ "$elapsed" -lt 1 ] && elapsed=1
+        rx_bytes_per_sec=$(( (rx_bytes - prev_rx_bytes) / elapsed ))
+        tx_bytes_per_sec=$(( (tx_bytes - prev_tx_bytes) / elapsed ))
 
         [ "$rx_bytes_per_sec" -lt 0 ] 2>/dev/null && rx_bytes_per_sec=0
         [ "$tx_bytes_per_sec" -lt 0 ] 2>/dev/null && tx_bytes_per_sec=0
@@ -377,10 +466,115 @@ update_proc_metrics() {
 
     prev_rx_bytes=$rx_bytes
     prev_tx_bytes=$tx_bytes
+    prev_traffic_ts=$now_ts
     total_rx_bytes=$rx_bytes
     total_tx_bytes=$tx_bytes
 
     cpu_usage="${cpu_usage:-0}"
+}
+
+# --- System Health -----------------------------------------------------------
+# Collects modem-subsystem state (sysfs) plus CPU/storage telemetry that the
+# System Health card consumes. Output flows into the top-level system_health
+# block of /tmp/qmanager_status.json so the CGI is a thin cache reader.
+#
+# Cheap reads only — no AT commands, no forks beyond awk/grep/df. Safe to run
+# every Tier 1 cycle.
+update_system_health() {
+    # --- subsys state + state_raw -------------------------------------------
+    sh_state_raw=""
+    if [ -r "${SH_SUBSYS_BASE}/state" ]; then
+        sh_state_raw=$(cat "${SH_SUBSYS_BASE}/state")
+    fi
+    if [ -z "$sh_state_raw" ]; then
+        sh_state="unknown"
+    else
+        case "$(printf '%s' "$sh_state_raw" | tr '[:upper:]' '[:lower:]')" in
+            online)  sh_state="online"  ;;
+            offline) sh_state="offline" ;;
+            crashed) sh_state="crashed" ;;
+            *)       sh_state="unknown" ;;
+        esac
+    fi
+
+    # --- crash_count (sysfs counter) ----------------------------------------
+    sh_crash_count="null"
+    if [ -r "${SH_SUBSYS_BASE}/crash_count" ]; then
+        local _cc
+        _cc=$(cat "${SH_SUBSYS_BASE}/crash_count")
+        case "$_cc" in
+            *[!0-9]*) sh_crash_count="null" ;;
+            "")       sh_crash_count="null" ;;
+            *)        sh_crash_count="$_cc" ;;
+        esac
+    fi
+
+    # --- coredump_present ---------------------------------------------------
+    # Match modem-subsys.sh CGI: exclude sysfs metadata pseudo-files.
+    sh_coredump_present="false"
+    if [ -d "$SH_RAMDUMP_DIR" ]; then
+        local _dump
+        _dump=$(find "$SH_RAMDUMP_DIR" -maxdepth 1 -type f -size +0 \
+            ! -name dev ! -name name ! -name power \
+            ! -name subsystem ! -name uevent \
+            ! -name waiting_for_supplier \
+            2>/dev/null | head -1)
+        [ -n "$_dump" ] && sh_coredump_present="true"
+    fi
+
+    # --- crash log summary (last_crash_at + total_logged_crashes) ------------
+    sh_last_crash_at="null"
+    sh_total_logged_crashes=0
+    if [ -f "$SH_CRASH_LOG" ] && [ -s "$SH_CRASH_LOG" ]; then
+        sh_total_logged_crashes=$(jq 'length' "$SH_CRASH_LOG" 2>/dev/null) || sh_total_logged_crashes=0
+        sh_last_crash_at=$(jq 'if length > 0 then last.ts else null end' "$SH_CRASH_LOG" 2>/dev/null) || sh_last_crash_at="null"
+    fi
+
+    # --- load averages (1m / 5m / 15m) --------------------------------------
+    sh_load_1m="null"
+    sh_load_5m="null"
+    sh_load_15m="null"
+    if [ -r /proc/loadavg ]; then
+        read sh_load_1m sh_load_5m sh_load_15m _rest < /proc/loadavg
+    fi
+
+    # --- core_count (cache after first read — value never changes at runtime)
+    if [ "$sh_core_count" = "null" ]; then
+        if command -v nproc >/dev/null 2>&1; then
+            sh_core_count=$(nproc)
+        elif [ -r /proc/cpuinfo ]; then
+            sh_core_count=$(grep -c '^processor' /proc/cpuinfo)
+        fi
+    fi
+
+    # --- cpu frequency (current + max from cpufreq) -------------------------
+    sh_freq_khz="null"
+    if [ -r "${SH_CPUFREQ_BASE}/scaling_cur_freq" ]; then
+        sh_freq_khz=$(cat "${SH_CPUFREQ_BASE}/scaling_cur_freq")
+    fi
+    sh_max_freq_khz="null"
+    if [ -r "${SH_CPUFREQ_BASE}/scaling_max_freq" ]; then
+        sh_max_freq_khz=$(cat "${SH_CPUFREQ_BASE}/scaling_max_freq")
+    fi
+
+    # --- storage (/usrdata partition) ---------------------------------------
+    sh_storage_total_kb="null"
+    sh_storage_used_kb="null"
+    sh_storage_avail_kb="null"
+    local _df_out
+    _df_out=$(df -P /usrdata 2>/dev/null)
+    if [ $? -eq 0 ] && [ -n "$_df_out" ]; then
+        local _df_line
+        _df_line=$(printf '%s\n' "$_df_out" | awk 'NR==2{print}')
+        if [ -n "$_df_line" ]; then
+            sh_storage_total_kb=$(printf '%s\n' "$_df_line" | awk '{print $2}')
+            sh_storage_used_kb=$(printf '%s\n' "$_df_line"  | awk '{print $3}')
+            sh_storage_avail_kb=$(printf '%s\n' "$_df_line" | awk '{print $4}')
+            [ -z "$sh_storage_total_kb" ] && sh_storage_total_kb="null"
+            [ -z "$sh_storage_used_kb"  ] && sh_storage_used_kb="null"
+            [ -z "$sh_storage_avail_kb" ] && sh_storage_avail_kb="null"
+        fi
+    fi
 }
 
 # --- Connection Uptime -------------------------------------------------------
@@ -408,6 +602,233 @@ update_conn_uptime() {
     fi
     # If conn_internet_available is "null" (ping daemon not running / stale),
     # leave timer as-is — don't reset, don't count up.
+}
+
+# =============================================================================
+# PERSISTENT DATA USED COUNTER (Tier 1)
+# =============================================================================
+# Tracks cumulative rx/tx bytes across modem resets and reboots using both
+# AT+QGDCNT (LTE) and AT+QGDNRCNT (5G) modem-side counters, cross-checked
+# against the kernel rmnet_ipa0 interface for divergence detection.
+# State is persisted atomically to DATA_USED_FILE each tick.
+
+# Write current du_* state to DATA_USED_FILE atomically.
+write_data_used_state() {
+    mkdir -p /usrdata/qmanager 2>/dev/null
+    jq -n \
+        --argjson schema     "$DATA_USED_SCHEMA" \
+        --argjson acc_rx     "$du_accumulated_rx" \
+        --argjson acc_tx     "$du_accumulated_tx" \
+        --arg     sel        "$du_selected_counter" \
+        --argjson prev_gd_tx "$du_prev_qgdcnt_tx" \
+        --argjson prev_gd_rx "$du_prev_qgdcnt_rx" \
+        --argjson prev_nr_tx "$du_prev_qgdnrcnt_tx" \
+        --argjson prev_nr_rx "$du_prev_qgdnrcnt_rx" \
+        --argjson prev_i_rx  "$du_prev_ipa_rx" \
+        --argjson prev_i_tx  "$du_prev_ipa_tx" \
+        --argjson last_upd   "$du_last_update_ts" \
+        --argjson last_rst   "$du_last_reset_ts" \
+        --argjson div_cnt    "$du_divergence_count" \
+        --argjson modem_rst  "$du_modem_reset_count" \
+        --argjson mode_xn    "$du_mode_transition_count" \
+        '{
+            schema:               $schema,
+            accumulated_rx_bytes: $acc_rx,
+            accumulated_tx_bytes: $acc_tx,
+            selected_counter:     $sel,
+            prev_qgdcnt_tx:       $prev_gd_tx,
+            prev_qgdcnt_rx:       $prev_gd_rx,
+            prev_qgdnrcnt_tx:     $prev_nr_tx,
+            prev_qgdnrcnt_rx:     $prev_nr_rx,
+            prev_ipa_rx:          $prev_i_rx,
+            prev_ipa_tx:          $prev_i_tx,
+            last_update_ts:       $last_upd,
+            last_reset_ts:        $last_rst,
+            divergence_count:     $div_cnt,
+            modem_reset_count:    $modem_rst,
+            mode_transition_count:$mode_xn
+        }' > "$DATA_USED_TMP" && mv "$DATA_USED_TMP" "$DATA_USED_FILE"
+}
+
+update_data_used() {
+    # Step 0: lazy-load from disk on first call
+    if [ "$du_loaded" = "false" ]; then
+        if [ -f "$DATA_USED_FILE" ]; then
+            local _jv
+            _jv=$(jq -r '
+                (.accumulated_rx_bytes  // 0 | tostring) + " " +
+                (.accumulated_tx_bytes  // 0 | tostring) + " " +
+                (.selected_counter      // ""           ) + " " +
+                (.prev_qgdcnt_tx        // 0 | tostring) + " " +
+                (.prev_qgdcnt_rx        // 0 | tostring) + " " +
+                (.prev_qgdnrcnt_tx      // 0 | tostring) + " " +
+                (.prev_qgdnrcnt_rx      // 0 | tostring) + " " +
+                (.prev_ipa_rx           // 0 | tostring) + " " +
+                (.prev_ipa_tx           // 0 | tostring) + " " +
+                (.last_update_ts        // 0 | tostring) + " " +
+                (.last_reset_ts         // 0 | tostring) + " " +
+                (.divergence_count      // 0 | tostring) + " " +
+                (.modem_reset_count     // 0 | tostring) + " " +
+                (.mode_transition_count // 0 | tostring)
+            ' "$DATA_USED_FILE" 2>/dev/null)
+            if [ -n "$_jv" ]; then
+                du_accumulated_rx=$(    printf '%s' "$_jv" | awk '{print $1}')
+                du_accumulated_tx=$(    printf '%s' "$_jv" | awk '{print $2}')
+                du_selected_counter=$(  printf '%s' "$_jv" | awk '{print $3}')
+                du_prev_qgdcnt_tx=$(    printf '%s' "$_jv" | awk '{print $4}')
+                du_prev_qgdcnt_rx=$(    printf '%s' "$_jv" | awk '{print $5}')
+                du_prev_qgdnrcnt_tx=$(  printf '%s' "$_jv" | awk '{print $6}')
+                du_prev_qgdnrcnt_rx=$(  printf '%s' "$_jv" | awk '{print $7}')
+                du_prev_ipa_rx=$(       printf '%s' "$_jv" | awk '{print $8}')
+                du_prev_ipa_tx=$(       printf '%s' "$_jv" | awk '{print $9}')
+                du_last_update_ts=$(    printf '%s' "$_jv" | awk '{print $10}')
+                du_last_reset_ts=$(     printf '%s' "$_jv" | awk '{print $11}')
+                du_divergence_count=$(  printf '%s' "$_jv" | awk '{print $12}')
+                du_modem_reset_count=$( printf '%s' "$_jv" | awk '{print $13}')
+                du_mode_transition_count=$(printf '%s' "$_jv" | awk '{print $14}')
+            fi
+        else
+            # No file yet — create directory; zeroed state already set at init
+            mkdir -p /usrdata/qmanager 2>/dev/null
+        fi
+        du_loaded=true
+    fi
+
+    # Step 1: honor user reset flag
+    if [ -f "$DATA_USED_RESET_FLAG" ]; then
+        du_accumulated_rx=0
+        du_accumulated_tx=0
+        du_last_reset_ts=$(date +%s)
+        rm -f "$DATA_USED_RESET_FLAG"
+        qlog_info "data_used: user reset triggered"
+    fi
+
+    # Step 2: pick counter from network_type
+    local du_active
+    case "$network_type" in
+        LTE)          du_active="qgdcnt"   ;;
+        5G-SA|5G-NSA) du_active="qgdnrcnt" ;;
+        *)            return 0 ;;
+    esac
+
+    # Step 3: read /proc/net/dev rmnet_ipa0
+    local ipa_rx
+    local ipa_tx
+    ipa_rx=0
+    ipa_tx=0
+    if [ -f /proc/net/dev ]; then
+        local _dev_line
+        _dev_line=$(grep "rmnet_ipa0:" /proc/net/dev 2>/dev/null)
+        if [ -n "$_dev_line" ]; then
+            ipa_rx=$(printf '%s\n' "$_dev_line" | awk '{print $2}')
+            ipa_tx=$(printf '%s\n' "$_dev_line" | awk '{print $10}')
+        fi
+    fi
+    ipa_rx="${ipa_rx:-0}"
+    ipa_tx="${ipa_tx:-0}"
+
+    # Step 3b: read the AT counter for the active mode
+    local _at_resp
+    if [ "$du_active" = "qgdcnt" ]; then
+        _at_resp=$(qcmd_exec 'AT+QGDCNT?')
+    else
+        _at_resp=$(qcmd_exec 'AT+QGDNRCNT?')
+    fi
+
+    # Parse: +QGDCNT: <tx>,<rx>  or  +QGDNRCNT: <tx>,<rx>
+    local _parsed
+    _parsed=$(printf '%s\n' "$_at_resp" | \
+        sed -n 's/^+QGD[A-Z]*CNT:[[:space:]]*\([0-9]*\),\([0-9]*\).*/\1 \2/p' | \
+        head -1)
+    if [ -z "$_parsed" ]; then
+        # AT failure — leave all state untouched; next tick will retry
+        return 0
+    fi
+
+    local current_tx
+    local current_rx
+    current_tx=$(printf '%s' "$_parsed" | awk '{print $1}')
+    current_rx=$(printf '%s' "$_parsed" | awk '{print $2}')
+
+    # Step 4: mode transition handling — rebase, no accumulation this tick
+    if [ "$du_active" != "$du_selected_counter" ]; then
+        qlog_info "data_used: counter changed ${du_selected_counter} -> ${du_active}"
+        du_selected_counter="$du_active"
+        du_mode_transition_count=$((du_mode_transition_count + 1))
+        if [ "$du_active" = "qgdcnt" ]; then
+            du_prev_qgdcnt_tx="$current_tx"
+            du_prev_qgdcnt_rx="$current_rx"
+        else
+            du_prev_qgdnrcnt_tx="$current_tx"
+            du_prev_qgdnrcnt_rx="$current_rx"
+        fi
+        du_prev_ipa_rx="$ipa_rx"
+        du_prev_ipa_tx="$ipa_tx"
+        write_data_used_state
+        return 0
+    fi
+
+    # Step 5: pick prev for active counter
+    local prev_tx
+    local prev_rx
+    if [ "$du_active" = "qgdcnt" ]; then
+        prev_tx="$du_prev_qgdcnt_tx"
+        prev_rx="$du_prev_qgdcnt_rx"
+    else
+        prev_tx="$du_prev_qgdnrcnt_tx"
+        prev_rx="$du_prev_qgdnrcnt_rx"
+    fi
+
+    local delta_tx
+    local delta_rx
+    delta_tx=$((current_tx - prev_tx))
+    delta_rx=$((current_rx - prev_rx))
+
+    # Step 6: counter reset detection (negative delta — modem cleared its counter)
+    if [ "$delta_tx" -lt 0 ] || [ "$delta_rx" -lt 0 ]; then
+        qlog_info "data_used: modem-side reset detected (delta_rx=${delta_rx} delta_tx=${delta_tx})"
+        du_modem_reset_count=$((du_modem_reset_count + 1))
+        # Rebase only — no accumulation this tick
+    else
+        du_accumulated_rx=$((du_accumulated_rx + delta_rx))
+        du_accumulated_tx=$((du_accumulated_tx + delta_tx))
+
+        # Step 7: divergence check vs IPA kernel counter
+        local ipa_drx
+        local ipa_dtx
+        ipa_drx=$((ipa_rx - du_prev_ipa_rx))
+        ipa_dtx=$((ipa_tx - du_prev_ipa_tx))
+        if [ "$ipa_drx" -lt 0 ]; then ipa_drx=0; fi
+        if [ "$ipa_dtx" -lt 0 ]; then ipa_dtx=0; fi
+        local ipa_total
+        local at_total
+        ipa_total=$((ipa_drx + ipa_dtx))
+        at_total=$((delta_rx + delta_tx))
+        if [ "$ipa_total" -gt "$DATA_USED_DIVERGENCE_MIN" ]; then
+            local _diff
+            _diff=$((at_total - ipa_total))
+            if [ "$_diff" -lt 0 ]; then _diff=$((-_diff)); fi
+            local _pct
+            _pct=$((_diff * 100 / ipa_total))
+            if [ "$_pct" -gt "$DATA_USED_DIVERGENCE_PCT" ]; then
+                qlog_warn "data_used divergence at=${at_total}B ipa=${ipa_total}B (${_pct}%) mode=${network_type} counter=${du_active}"
+                du_divergence_count=$((du_divergence_count + 1))
+            fi
+        fi
+    fi
+
+    # Step 8: update prev_* for next tick
+    if [ "$du_active" = "qgdcnt" ]; then
+        du_prev_qgdcnt_tx="$current_tx"
+        du_prev_qgdcnt_rx="$current_rx"
+    else
+        du_prev_qgdnrcnt_tx="$current_tx"
+        du_prev_qgdnrcnt_rx="$current_rx"
+    fi
+    du_prev_ipa_rx="$ipa_rx"
+    du_prev_ipa_tx="$ipa_tx"
+    du_last_update_ts=$(date +%s)
+    write_data_used_state
 }
 
 # =============================================================================
@@ -545,6 +966,18 @@ collect_boot_data() {
     fi
 
     # =========================================================================
+    # LAN gateway — separate qcmd call, isolated from other compounds.
+    # AT+QMAP="LANIP" is unsupported on some firmwares (e.g. older RM501);
+    # running it on its own keeps that failure from affecting other reads.
+    # The parser silently sets empty values when the response shape doesn't
+    # match the canonical +QMAP: "LANIP",start,end,gateway form.
+    # =========================================================================
+    result=$(qcmd 'AT+QMAP="LANIP"' 2>/dev/null)
+    if [ -n "$result" ]; then
+        parse_lan_ip "$result"
+    fi
+
+    # =========================================================================
     # Supported bands — conditional (cached to /tmp across hotplug restarts)
     # On full device reboot /tmp is cleared, so queried once then cached.
     # =========================================================================
@@ -581,6 +1014,7 @@ collect_boot_data() {
     log_info "Boot data: PHONE=$boot_phone_number CAT=$boot_lte_category MIMO=$t2_mimo"
     log_info "Boot data: LTE_BANDS=$boot_supported_lte_bands NSA_BANDS=$boot_supported_nsa_nr5g_bands SA_BANDS=$boot_supported_sa_nr5g_bands"
     log_info "Boot data: IPPT mode=$boot_ippt_mode nat=$boot_ippt_nat usb=$boot_ippt_usbnet dns=$boot_ippt_dhcpv4dns"
+    log_info "Boot data: LAN ip=$boot_lan_ip gateway=$boot_lan_gateway"
 }
 
 # =============================================================================
@@ -786,8 +1220,10 @@ poll_tier2() {
 # =============================================================================
 
 determine_service_status() {
+    # Reset every cycle so a stale value cannot survive ambiguous inputs.
+    service_status="unknown"
+
     if [ "$modem_reachable" != "true" ]; then
-        service_status="unknown"
         return
     fi
 
@@ -806,7 +1242,7 @@ determine_service_status() {
         return
     fi
 
-    # If we have signal values, assess quality
+    # Pick the primary RSRP — NR if connected, else LTE
     local primary_rsrp=""
     if [ "$nr_state" = "connected" ] && [ -n "$nr_rsrp" ]; then
         primary_rsrp=$nr_rsrp
@@ -818,10 +1254,9 @@ determine_service_status() {
         service_status="optimal"
     elif [ -n "$primary_rsrp" ]; then
         service_status="connected"
-    fi
-
-    # If still idle but registered on a network, show connected
-    if [ "$service_status" = "idle" ]; then
+    elif [ "$lte_state" = "connected" ] || [ "$nr_state" = "connected" ]; then
+        # Registered but signal not yet sampled this cycle — keep "connected"
+        # rather than the default "unknown".
         service_status="connected"
     fi
 }
@@ -833,6 +1268,7 @@ determine_service_status() {
 PING_CACHE="/tmp/qmanager_ping.json"
 PING_HISTORY_RAW="/tmp/qmanager_ping_history"   # flat-file ring buffer from ping daemon
 PING_STALE_THRESHOLD=10  # seconds before ping data is considered stale
+PING_DAEMON_STALE_EVENT_THRESHOLD=60  # seconds before emitting ping_daemon_stale
 
 read_ping_data() {
     # Reset to defaults if ping file missing or stale
@@ -847,7 +1283,17 @@ read_ping_data() {
         conn_packet_loss=0
         conn_ping_target=""
         conn_history="[]"
+        conn_history_interval=0
         conn_during_recovery="false"
+        conn_connectivity="unknown"
+        conn_limited_reason="null"
+        conn_down_reason="null"
+        conn_streak_limited=0
+        conn_profile="unknown"
+        conn_fail_secs=0
+        conn_recover_secs=0
+        conn_intercept_secs=0
+        _ping_stale_since=0
         return
     fi
 
@@ -871,20 +1317,62 @@ read_ping_data() {
             conn_jitter="null"
             conn_packet_loss=0
             conn_history="[]"
+            conn_history_interval=0
             conn_during_recovery="false"
+            conn_connectivity="unknown"
+            conn_limited_reason="null"
+            conn_down_reason="null"
+            conn_streak_limited=0
+            conn_profile="unknown"
+            conn_fail_secs=0
+            conn_recover_secs=0
+            conn_intercept_secs=0
+
+            # Track sustained staleness: emit a one-shot event when the
+            # ping daemon has been stale long enough that alerts could be
+            # silently missing. _ping_stale_since=0 means "not currently
+            # tracking"; a positive value is the epoch when staleness began.
+            if [ "$_ping_stale_since" -eq 0 ] 2>/dev/null; then
+                _ping_stale_since=$now
+            else
+                local stale_dur=$((now - _ping_stale_since))
+                if [ "$stale_dur" -ge "$PING_DAEMON_STALE_EVENT_THRESHOLD" ] 2>/dev/null; then
+                    append_event "ping_daemon_stale" \
+                        "Ping daemon stale for ${stale_dur}s — alerts may be suppressed" \
+                        "warning"
+                    # Restart the window from now so the next emission only
+                    # fires after another full threshold has elapsed. Storing
+                    # a real epoch (rather than a future-offset value) keeps
+                    # the variable's invariant easy to reason about: it is
+                    # always either 0 (healthy) or the epoch at which we
+                    # last either started tracking or emitted a heartbeat.
+                    _ping_stale_since=$now
+                fi
+            fi
             return
         fi
     fi
+    # Fresh data — clear any stale-tracking state.
+    _ping_stale_since=0
 
     # Step A: Extract slim scalar fields from ping JSON (single jq call)
     # ping.json no longer carries stats/history — those are computed here from raw file.
+    # Phase 2 additions: tri-state connectivity + runtime profile/threshold fields.
     local _pdata
     _pdata=$(jq -r '[
         ((.reachable) | if . == null then "null" else tostring end),
         ((.last_rtt_ms) | if . == null then "null" else tostring end),
         ((.during_recovery) | if . == null then "false" else tostring end),
         ((.interval_sec) | if . == null then "5" else tostring end),
-        (.targets[0] // "")
+        (.targets[0] // ""),
+        (.connectivity // "unknown"),
+        ((.limited_reason) | if . == null then "null" else tostring end),
+        ((.down_reason) | if . == null then "null" else tostring end),
+        ((.streak_limited) | if . == null then "0" else tostring end),
+        (.profile // "unknown"),
+        ((.fail_secs) | if . == null then "0" else tostring end),
+        ((.recover_secs) | if . == null then "0" else tostring end),
+        ((.intercept_secs) | if . == null then "0" else tostring end)
     ] | @tsv' "$PING_CACHE" 2>/dev/null)
 
     conn_internet_available=$(printf '%s' "$_pdata" | cut -f1)
@@ -892,6 +1380,14 @@ read_ping_data() {
     conn_during_recovery=$(printf '%s' "$_pdata" | cut -f3)
     conn_history_interval=$(printf '%s' "$_pdata" | cut -f4)
     conn_ping_target=$(printf '%s' "$_pdata" | cut -f5)
+    conn_connectivity=$(printf '%s' "$_pdata" | cut -f6)
+    conn_limited_reason=$(printf '%s' "$_pdata" | cut -f7)
+    conn_down_reason=$(printf '%s' "$_pdata" | cut -f8)
+    conn_streak_limited=$(printf '%s' "$_pdata" | cut -f9)
+    conn_profile=$(printf '%s' "$_pdata" | cut -f10)
+    conn_fail_secs=$(printf '%s' "$_pdata" | cut -f11)
+    conn_recover_secs=$(printf '%s' "$_pdata" | cut -f12)
+    conn_intercept_secs=$(printf '%s' "$_pdata" | cut -f13)
 
     # Step B: Single awk pass — only when ping timestamp changed (saves awk fork every 2s)
     # With ping daemon at 5s, awk runs ~every 5s instead of every cycle.
@@ -970,6 +1466,131 @@ read_ping_data() {
 }
 
 # =============================================================================
+# MODEM CRASH WATCHER (sysfs subsys0/crash_count)
+# =============================================================================
+# Runs once at startup (crash_watcher_init) and once per Tier 1 cycle
+# (crash_watcher_check). Uses two global state variables declared above:
+#   _crash_watcher_enabled  — false if sysfs path absent (RM551E / unknown hw)
+#   _last_crash_count       — last-known value; updated on every change
+
+crash_watcher_init() {
+    if [ ! -f "$_CRASH_COUNT_SYSFS" ]; then
+        qlog_warn "modem crash watcher disabled — sysfs path absent"
+        _crash_watcher_enabled=false
+        return
+    fi
+    _crash_watcher_enabled=true
+
+    local current_count
+    current_count=$(cat "$_CRASH_COUNT_SYSFS" 2>/dev/null | tr -d '[:space:]')
+    # If unreadable even though the file exists, treat as 0 (safe baseline)
+    case "$current_count" in
+        ''|*[!0-9]*) current_count=0 ;;
+    esac
+
+    if [ -f "$_CRASH_SIDECAR" ]; then
+        # Load persisted last-known count
+        local saved
+        saved=$(cat "$_CRASH_SIDECAR" 2>/dev/null | tr -d '[:space:]')
+        case "$saved" in
+            ''|*[!0-9]*) saved=0 ;;
+        esac
+        _last_crash_count=$saved
+        qlog_info "crash watcher: loaded sidecar last_count=${_last_crash_count} current=${current_count}"
+    else
+        # First run — establish baseline without writing a crash log entry
+        _last_crash_count=$current_count
+        printf '%s\n' "$current_count" > "${_CRASH_SIDECAR}.tmp" && \
+            mv "${_CRASH_SIDECAR}.tmp" "$_CRASH_SIDECAR"
+        qlog_info "crash watcher: baseline established count=${current_count}"
+    fi
+}
+
+crash_watcher_check() {
+    # Fast-exit if disabled (sysfs absent — RM551E or unsupported hw)
+    if [ "$_crash_watcher_enabled" != "true" ]; then
+        return
+    fi
+
+    local new_count
+    new_count=$(cat "$_CRASH_COUNT_SYSFS" 2>/dev/null | tr -d '[:space:]')
+    case "$new_count" in
+        ''|*[!0-9]*)
+            # Unreadable this cycle — skip silently (transient sysfs glitch)
+            return
+            ;;
+    esac
+
+    # No change — common case, returns immediately
+    if [ "$new_count" -eq "$_last_crash_count" ] 2>/dev/null; then
+        return
+    fi
+
+    # Counter decreased — modem reset zeroed the counter; re-baseline silently
+    if [ "$new_count" -lt "$_last_crash_count" ] 2>/dev/null; then
+        qlog_info "crash watcher: counter reset (${_last_crash_count} → ${new_count}), re-baselining"
+        _last_crash_count=$new_count
+        printf '%s\n' "$new_count" > "${_CRASH_SIDECAR}.tmp" && \
+            mv "${_CRASH_SIDECAR}.tmp" "$_CRASH_SIDECAR"
+        return
+    fi
+
+    # Counter incremented — log the crash event
+    local prev_count="$_last_crash_count"
+    local ts
+    ts=$(date +%s)
+
+    # Read modem state from sysfs; lowercase-normalise; default "unknown"
+    local raw_state modem_state_at_event
+    raw_state=$(cat "$_CRASH_STATE_SYSFS" 2>/dev/null | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
+    case "$raw_state" in
+        online|offline|crashed) modem_state_at_event="$raw_state" ;;
+        *) modem_state_at_event="unknown" ;;
+    esac
+
+    # Uptime is already populated by update_proc_metrics earlier this cycle
+    local uptime_now="${uptime_seconds:-0}"
+
+    # Build the new entry using jq (no hand-rolled JSON)
+    local new_entry
+    new_entry=$(jq -n \
+        --argjson ts "$ts" \
+        --argjson prev "$prev_count" \
+        --argjson new  "$new_count" \
+        --arg     state "$modem_state_at_event" \
+        --argjson uptime "$uptime_now" \
+        '{ts: $ts, previous_count: $prev, new_count: $new,
+          modem_state_at_event: $state, uptime_at_event_seconds: $uptime}')
+
+    if [ -z "$new_entry" ]; then
+        qlog_error "crash watcher: jq failed to build entry — skipping log write"
+        return
+    fi
+
+    # Read existing log (treat missing/empty/corrupt file as empty array)
+    local existing_log
+    existing_log=$(jq '.' "$_CRASH_LOG" 2>/dev/null)
+    case "$existing_log" in
+        '['*) : ;;   # valid array — keep as-is
+        *)    existing_log='[]' ;;
+    esac
+
+    # Append new entry and cap at 100 most-recent, then atomic-write
+    printf '%s\n' "$existing_log" | \
+        jq --argjson entry "$new_entry" \
+           '. + [$entry] | if length > 100 then .[-100:] else . end' \
+        > "${_CRASH_LOG}.tmp" && \
+        mv "${_CRASH_LOG}.tmp" "$_CRASH_LOG"
+
+    # Update sidecar atomically
+    printf '%s\n' "$new_count" > "${_CRASH_SIDECAR}.tmp" && \
+        mv "${_CRASH_SIDECAR}.tmp" "$_CRASH_SIDECAR"
+
+    _last_crash_count=$new_count
+    qlog_info "crash watcher: modem crash detected (${prev_count} → ${new_count}), state=${modem_state_at_event}"
+}
+
+# =============================================================================
 # WATCHCAT & SIM STATE READERS
 # =============================================================================
 
@@ -1034,24 +1655,38 @@ read_sim_state() {
     sim_swap_profile_id=""
     sim_swap_profile_name=""
     if [ -f "$SIM_SWAP_FLAG" ]; then
+        local _swap_data
+        _swap_data=$(jq -r '[
+            ((.dismissed) | if . == null then "false" else tostring end),
+            (.matching_profile_id // ""),
+            (.matching_profile_name // "")
+        ] | @tsv' "$SIM_SWAP_FLAG" 2>/dev/null)
         local _dismissed
-        _dismissed=$(jq -r '(.dismissed) | if . == null then "false" else tostring end' "$SIM_SWAP_FLAG" 2>/dev/null)
+        _dismissed=$(printf '%s' "$_swap_data" | cut -f1)
         if [ "$_dismissed" != "true" ]; then
             sim_swap_detected="true"
-            sim_swap_profile_id=$(jq -r '.matching_profile_id // empty' "$SIM_SWAP_FLAG" 2>/dev/null)
-            sim_swap_profile_name=$(jq -r '.matching_profile_name // empty' "$SIM_SWAP_FLAG" 2>/dev/null)
+            sim_swap_profile_id=$(printf '%s' "$_swap_data" | cut -f2)
+            sim_swap_profile_name=$(printf '%s' "$_swap_data" | cut -f3)
         fi
     fi
+
     # SIM failover state (written by watchcat Tier 3)
     sim_fo_active="false"
     sim_fo_original_slot="null"
     sim_fo_current_slot="null"
     sim_fo_switched_at="null"
     if [ -f "$SIM_FAILOVER_FILE" ]; then
-        sim_fo_active=$(jq -r '(.active) | if . == null then "false" else tostring end' "$SIM_FAILOVER_FILE" 2>/dev/null)
-        sim_fo_original_slot=$(jq -r '(.original_slot) | if . == null then "null" else tostring end' "$SIM_FAILOVER_FILE" 2>/dev/null)
-        sim_fo_current_slot=$(jq -r '(.current_slot) | if . == null then "null" else tostring end' "$SIM_FAILOVER_FILE" 2>/dev/null)
-        sim_fo_switched_at=$(jq -r '(.switched_at) | if . == null then "null" else tostring end' "$SIM_FAILOVER_FILE" 2>/dev/null)
+        local _fo_data
+        _fo_data=$(jq -r '[
+            ((.active) | if . == null then "false" else tostring end),
+            ((.original_slot) | if . == null then "null" else tostring end),
+            ((.current_slot) | if . == null then "null" else tostring end),
+            ((.switched_at) | if . == null then "null" else tostring end)
+        ] | @tsv' "$SIM_FAILOVER_FILE" 2>/dev/null)
+        sim_fo_active=$(printf '%s' "$_fo_data" | cut -f1)
+        sim_fo_original_slot=$(printf '%s' "$_fo_data" | cut -f2)
+        sim_fo_current_slot=$(printf '%s' "$_fo_data" | cut -f3)
+        sim_fo_switched_at=$(printf '%s' "$_fo_data" | cut -f4)
     fi
 }
 
@@ -1148,6 +1783,8 @@ write_cache() {
         --arg ippt_nat  "$boot_ippt_nat" \
         --arg ippt_usb  "$boot_ippt_usbnet" \
         --arg ippt_dns  "$boot_ippt_dhcpv4dns" \
+        --arg lan_ip    "$boot_lan_ip" \
+        --arg lan_gw    "$boot_lan_gateway" \
         --argjson rx_rate "${rx_bytes_per_sec:-0}" \
         --argjson tx_rate "${tx_bytes_per_sec:-0}" \
         --argjson rx_total "${total_rx_bytes:-0}" \
@@ -1165,6 +1802,14 @@ write_cache() {
         --argjson hist_int "${conn_history_interval:-2}" \
         --argjson hist_size "${CONN_HISTORY_SIZE:-60}" \
         --argjson during_rec "${conn_during_recovery:-false}" \
+        --arg conn_state "$conn_connectivity" \
+        --argjson conn_limited_reason "$conn_limited_reason" \
+        --arg conn_down_reason "$conn_down_reason" \
+        --argjson conn_streak_limited "$conn_streak_limited" \
+        --arg conn_profile "$conn_profile" \
+        --argjson conn_fail_secs "$conn_fail_secs" \
+        --argjson conn_recover_secs "$conn_recover_secs" \
+        --argjson conn_intercept_secs "$conn_intercept_secs" \
         --argjson wc_enabled "${wc_enabled:-false}" \
         --arg wc_state "${wc_state:-disabled}" \
         --argjson wc_tier "${wc_current_tier:-0}" \
@@ -1181,6 +1826,29 @@ write_cache() {
         --argjson ss_detected "${sim_swap_detected:-false}" \
         --arg ss_profile_id "$sim_swap_profile_id" \
         --arg ss_profile_name "$sim_swap_profile_name" \
+        --arg     sh_state          "$sh_state" \
+        --arg     sh_state_raw      "$sh_state_raw" \
+        --argjson sh_crash_count    "${sh_crash_count:-null}" \
+        --argjson sh_coredump       "${sh_coredump_present:-false}" \
+        --argjson sh_last_crash_at  "${sh_last_crash_at:-null}" \
+        --argjson sh_total_crashes  "${sh_total_logged_crashes:-0}" \
+        --argjson sh_load_1m        "${sh_load_1m:-null}" \
+        --argjson sh_load_5m        "${sh_load_5m:-null}" \
+        --argjson sh_load_15m       "${sh_load_15m:-null}" \
+        --argjson sh_core_count     "${sh_core_count:-null}" \
+        --argjson sh_freq_khz       "${sh_freq_khz:-null}" \
+        --argjson sh_max_freq_khz   "${sh_max_freq_khz:-null}" \
+        --argjson sh_st_total_kb    "${sh_storage_total_kb:-null}" \
+        --argjson sh_st_used_kb     "${sh_storage_used_kb:-null}" \
+        --argjson sh_st_avail_kb    "${sh_storage_avail_kb:-null}" \
+        --argjson du_acc_rx         "${du_accumulated_rx:-0}" \
+        --argjson du_acc_tx         "${du_accumulated_tx:-0}" \
+        --arg     du_sel            "${du_selected_counter:-}" \
+        --argjson du_last_upd       "${du_last_update_ts:-0}" \
+        --argjson du_last_rst       "${du_last_reset_ts:-0}" \
+        --argjson du_div            "${du_divergence_count:-0}" \
+        --argjson du_modem_rst      "${du_modem_reset_count:-0}" \
+        --argjson du_mode_xn        "${du_mode_transition_count:-0}" \
         '{
             timestamp: $timestamp,
             system_state: $system_state,
@@ -1204,7 +1872,9 @@ write_cache() {
                 wan_ipv4: $wan4,
                 wan_ipv6: $wan6,
                 primary_dns: $dns1,
-                secondary_dns: $dns2
+                secondary_dns: $dns2,
+                device_ip: $lan_ip,
+                lan_gateway: $lan_gw
             },
             lte: {
                 state: $lte_st, band: $lte_b,
@@ -1248,6 +1918,16 @@ write_cache() {
                 rx_bytes_per_sec: $rx_rate, tx_bytes_per_sec: $tx_rate,
                 total_rx_bytes: $rx_total, total_tx_bytes: $tx_total
             },
+            data_used: {
+                accumulated_rx_bytes: $du_acc_rx,
+                accumulated_tx_bytes: $du_acc_tx,
+                selected_counter:     $du_sel,
+                last_update_ts:       $du_last_upd,
+                last_reset_ts:        $du_last_rst,
+                divergence_count:     $du_div,
+                modem_reset_count:    $du_modem_rst,
+                mode_transition_count: $du_mode_xn
+            },
             connectivity: {
                 internet_available: $inet, status: $conn_st,
                 latency_ms: $lat, avg_latency_ms: $avg_lat,
@@ -1255,7 +1935,15 @@ write_cache() {
                 jitter_ms: $jit, packet_loss_pct: $pkt_loss,
                 ping_target: $ping_tgt, latency_history: $lat_hist,
                 history_interval_sec: $hist_int, history_size: $hist_size,
-                during_recovery: $during_rec
+                during_recovery: $during_rec,
+                state: $conn_state,
+                limited_reason: $conn_limited_reason,
+                down_reason: (if $conn_down_reason == "null" then null else $conn_down_reason end),
+                streak_limited: $conn_streak_limited,
+                profile: $conn_profile,
+                fail_secs: $conn_fail_secs,
+                recover_secs: $conn_recover_secs,
+                intercept_secs: $conn_intercept_secs
             },
             watchcat: {
                 enabled: $wc_enabled, state: $wc_state,
@@ -1276,6 +1964,38 @@ write_cache() {
                 detected: $ss_detected,
                 matching_profile_id: $ss_profile_id,
                 matching_profile_name: $ss_profile_name
+            },
+            system_health: {
+                state:                $sh_state,
+                state_raw:            (if $sh_state_raw == "" then null else $sh_state_raw end),
+                crash_count:          $sh_crash_count,
+                coredump_present:     $sh_coredump,
+                last_crash_at:        $sh_last_crash_at,
+                total_logged_crashes: $sh_total_crashes,
+                cpu: {
+                    load_1m:      $sh_load_1m,
+                    load_5m:      $sh_load_5m,
+                    load_15m:     $sh_load_15m,
+                    core_count:   $sh_core_count,
+                    usage_pct:    $cpu,
+                    freq_khz:     $sh_freq_khz,
+                    max_freq_khz: $sh_max_freq_khz
+                },
+                memory: (
+                    if $mem_total > 0 then
+                        { total_kb: ($mem_total * 1024),
+                          used_kb:  ($mem_used * 1024),
+                          available_kb: (($mem_total - $mem_used) * 1024) }
+                    else null end
+                ),
+                storage: (
+                    if $sh_st_total_kb == null then null else
+                        { mount: "/usrdata",
+                          total_kb: $sh_st_total_kb,
+                          used_kb:  $sh_st_used_kb,
+                          available_kb: $sh_st_avail_kb }
+                    end
+                )
             }
         }' > "$CACHE_TMP"
 
@@ -1287,9 +2007,26 @@ write_cache() {
 # =============================================================================
 
 poll_cycle() {
+    # --- LONG_FLAG expiry guard ---
+    # If a CGI sets the flag and dies before clearing it, the poller would
+    # otherwise stay in scan_in_progress mode forever. Treat any flag older
+    # than LONG_FLAG_MAX_AGE seconds as stale and remove it.
+    if [ -f "$LONG_FLAG" ]; then
+        local _lf_mtime _lf_now _lf_age
+        _lf_mtime=$(stat -c %Y "$LONG_FLAG" 2>/dev/null || echo 0)
+        _lf_now=$(date +%s)
+        _lf_age=$((_lf_now - _lf_mtime))
+        if [ "$_lf_age" -gt "$LONG_FLAG_MAX_AGE" ] 2>/dev/null; then
+            qlog_warn "LONG_FLAG stale (age=${_lf_age}s > ${LONG_FLAG_MAX_AGE}s) — removing"
+            rm -f "$LONG_FLAG"
+        fi
+    fi
+    # --- end LONG_FLAG expiry guard ---
+
     # --- Ping-based checks FIRST (no modem dependency) ---
     # These must run before AT commands in case qcmd blocks on serial I/O.
     update_proc_metrics
+    update_system_health
     read_ping_data
     check_email_alert
     check_sms_alert
@@ -1331,15 +2068,12 @@ poll_cycle() {
     fi
     sleep "$SIP_DELAY"
 
-    # CFUN — standalone query every cycle (compound commands timeout in CFUN=0)
-    local cfun_result
-    cfun_result=$(qcmd 'AT+CFUN?' 2>/dev/null)
-    if [ -n "$cfun_result" ]; then
-        local cfun_val
-        cfun_val=$(printf '%s\n' "$cfun_result" | grep '+CFUN:' | head -1 | tr -d '\r' | awk -F': ' '{print $2}' | tr -d ' ')
-        [ -n "$cfun_val" ] && t1_cfun="$cfun_val"
-    fi
-    sleep "$SIP_DELAY"
+    # Tier 1 — modem crash watcher (pure sysfs reads; no-op when disabled)
+    crash_watcher_check
+
+    # Persistent Data Used counter (Tier 1) — network_type is set by
+    # poll_serving_cell above; must run before write_cache below.
+    update_data_used
 
     # Tier 1.5 (per-antenna signal history + watchcat state)
     if [ $((cycle_count % TIER1_5_EVERY)) -eq 0 ]; then
@@ -1348,10 +2082,21 @@ poll_cycle() {
         read_watchcat_state
     fi
 
-    # Tier 2 (warm data + SIM state)
+    # Tier 2 (warm data + SIM state + CFUN)
     if [ $((cycle_count % TIER2_EVERY)) -eq 0 ]; then
         poll_tier2
         read_sim_state
+
+        # CFUN — standalone query (compound commands timeout in CFUN=0).
+        # Cadence is Tier 2 because airplane-mode toggles are user-driven and rare.
+        local cfun_result
+        cfun_result=$(qcmd 'AT+CFUN?' 2>/dev/null)
+        if [ -n "$cfun_result" ]; then
+            local cfun_val
+            cfun_val=$(printf '%s\n' "$cfun_result" | grep '+CFUN:' | head -1 | tr -d '\r' | awk -F': ' '{print $2}' | tr -d ' ')
+            [ -n "$cfun_val" ] && t1_cfun="$cfun_val"
+        fi
+        sleep "$SIP_DELAY"
     fi
 
     # Ping history (every Tier 1.5 interval — 10s)
@@ -1371,6 +2116,8 @@ poll_cycle() {
 # =============================================================================
 
 main() {
+    local cycle_start cycle_end cycle_duration
+
     qlog_info "========================================"
     qlog_info "QManager Poller starting"
     qlog_info "Config: interval=${POLL_INTERVAL}s tier2_every=${TIER2_EVERY} iface=${NETWORK_IFACE}"
@@ -1379,14 +2126,23 @@ main() {
 
     collect_boot_data
     update_proc_metrics
+    update_system_health
     email_alerts_init
     sms_alerts_init
+    restore_event_state
+    crash_watcher_init
     write_cache
 
     qlog_info "Boot data collected, entering poll loop"
 
     while true; do
+        cycle_start=$(date +%s)
         poll_cycle
+        cycle_end=$(date +%s)
+        cycle_duration=$((cycle_end - cycle_start))
+        if [ "$cycle_duration" -gt "$CYCLE_TIME_BUDGET" ]; then
+            qlog_warn "poll_cycle exceeded budget: ${cycle_duration}s > ${CYCLE_TIME_BUDGET}s"
+        fi
         sleep "$POLL_INTERVAL"
     done
 }

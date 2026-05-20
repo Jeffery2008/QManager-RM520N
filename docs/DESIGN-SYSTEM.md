@@ -333,9 +333,51 @@ The main content area uses container queries for responsive layouts:
 </main>
 ```
 
+Cards that need internal responsive behavior declare their own container scope:
+
+```tsx
+<Card className="@container/card">
+  {/* Use @sm/card, @md/card, etc. inside this card */}
+</Card>
+```
+
+### Container vs. Viewport Queries — Don't Mix Within a Card
+
+When a card declares `@container/card`, **all responsive logic inside that card must use container queries** (`@sm/card:`, `@md/card:`). Mixing viewport queries (`sm:`, `md:`) with container queries inside the same card causes layout breakage on tablets and expanded sidebars: the card may be narrow while the viewport is wide, so viewport-keyed labels appear before the card has room for them.
+
+| ❌ Don't | ✅ Do |
+|---------|------|
+| `className="hidden sm:inline"` (inside `@container/card`) | `className="hidden @sm/card:inline"` |
+| Tabs use `@sm/card:` but action buttons use `sm:` in the same toolbar | Both use `@sm/card:` so they share one breakpoint authority |
+
+Viewport queries (`sm:`, `md:`) are still appropriate for **page-level** layout decisions (page heading scaling, page padding) that should respond to the viewport regardless of card sizing.
+
+### Toolbars Inside Cards
+
+Toolbars combining tabs + action buttons must `flex-wrap` so the action cluster falls to a second row instead of overflowing the card when the contents outgrow the available width:
+
+```tsx
+<div className="flex flex-wrap items-center gap-2">
+  <TabsList>…</TabsList>
+  <div className="ml-auto flex items-center gap-2">{/* actions */}</div>
+</div>
+```
+
+### Tables Inside Cards
+
+Tables inherit `whitespace-nowrap` from the base `TableCell`. For columns with prose content (event messages, descriptions, long names), explicitly opt back into wrapping and constrain max-width across container breakpoints:
+
+```tsx
+<TableCell className="max-w-[12rem] @sm/card:max-w-[20rem] @md/card:max-w-md whitespace-normal break-words">
+  {longMessage}
+</TableCell>
+```
+
+Date/time columns and short identifier columns can keep `whitespace-nowrap`. The wrapping `<Table>` provides `overflow-x-auto` as a fallback, but relying on horizontal scroll for primary content is a phone UX anti-pattern.
+
 ### Breakpoints
 
-Standard Tailwind breakpoints apply:
+Standard Tailwind viewport breakpoints — used for page-level responsive decisions:
 
 | Prefix | Width | Usage |
 |--------|-------|-------|
@@ -345,12 +387,21 @@ Standard Tailwind breakpoints apply:
 | `xl` | 1280px | Desktop |
 | `2xl` | 1536px | Large desktop |
 
+Container query breakpoints — used inside cards declaring their own `@container/card` scope:
+
+| Prefix | Width | Usage |
+|--------|-------|-------|
+| `@sm/card` | 384px | Card has room for short text labels |
+| `@md/card` | 448px | Card has room for full text labels (e.g., "Band Changes", "Network Mode") |
+| `@lg/card` | 512px | Card has room for dense multi-column layouts |
+
 ### Mobile Considerations
 
 - Sidebar collapses to sheet on mobile
 - Cards stack vertically
-- Tables become horizontally scrollable
-- Touch-friendly button sizes (min 44px)
+- Tables wrap prose columns and rely on `overflow-x-auto` only as a fallback
+- Touch-friendly button sizes (min 44 px). For icon-only tabs, bump the `TabsList` height with `h-11 @md/card:h-9` rather than overriding individual trigger min-widths (which collapses `flex-1` triggers below their content size and breaks tab spacing)
+- Page wrappers should use `px-4 lg:px-6` horizontal padding to match the dashboard rhythm; `mx-auto p-2` (legacy) is being phased out
 
 ---
 
