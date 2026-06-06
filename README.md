@@ -5,7 +5,7 @@
   <h3>A modern, custom GUI for Quectel modem management</h3>
   <p>Visualize, configure, and optimize your cellular modem's performance with an intuitive web interface</p>
 
-  ![Version](https://img.shields.io/badge/version-v0.1.10--cn.1-blue?style=flat-square)
+  ![Version](https://img.shields.io/badge/version-v0.1.12--cn.1-blue?style=flat-square)
   ![License](https://img.shields.io/badge/license-MIT%20%2B%20Commons%20Clause-green?style=flat-square)
   ![Platform](https://img.shields.io/badge/platform-RM520N--GL-orange?style=flat-square)
   ![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square)
@@ -52,6 +52,8 @@
 ### VPN & Remote Access
 - **Tailscale VPN** — One-click install, connect, and manage Tailscale mesh VPN directly from the UI; peer table, health warnings, boot persistence, and a one-toggle Tailscale SSH switch (gated by your admin-panel ACLs)
 - **Port Firewall** — Built-in firewall restricting web UI (80/443) to trusted interfaces; Tailscale-aware, enabled by default
+
+> **Note on the Tailscale SSH toggle:** QManager treats its SSH toggle as the source of truth and re-applies it on every reconnect, so it survives `tailscale up --reset`. If you carried a Tailscale install over from SimpleAdmin / the RGMII Toolkit, or you change SSH state via the `tailscale` CLI, the GUI won't see that change — and the next reconnect from the GUI will reset SSH back to whatever the toggle remembers. To resync after an out-of-band change, just toggle the switch off and on in the GUI once.
 
 ### Reliability & Monitoring
 - **Connection Watchdog** — 4-tier auto-recovery: AT+COPS deregister/reregister -> CFUN toggle -> SIM failover -> full reboot (with token bucket rate limiting)

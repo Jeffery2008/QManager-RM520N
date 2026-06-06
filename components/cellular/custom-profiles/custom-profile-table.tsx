@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { motion } from "motion/react";
-import { TriangleAlertIcon } from "lucide-react";
+import { CheckCircle2Icon, TriangleAlertIcon } from "lucide-react";
 import {
-  TbCircleCheckFilled,
   TbDotsVertical,
   TbEdit,
   TbPlayerPlay,
@@ -49,8 +48,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import type { ProfileSummary } from "@/types/sim-profile";
+import type { ProfileApplyState, ProfileSummary } from "@/types/sim-profile";
 import { formatProfileDate } from "@/types/sim-profile";
+
+/** Short clock-time formatter for the "Applied at" row breadcrumb. */
+const formatAppliedTime = (ts: number) =>
+  new Date(ts * 1000).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
 // =============================================================================
 // ProfileTable — Displays saved SIM profiles with actions
@@ -67,6 +73,8 @@ interface ProfileTableProps {
   onActivate?: (id: string) => void;
   onDeactivate?: () => void;
   currentIccid?: string | null;
+  /** Most recent terminal apply state — surfaces "Applied at HH:MM" on the matching row */
+  lastApplyState?: ProfileApplyState | null;
 }
 
 export function ProfileTable({
@@ -77,6 +85,7 @@ export function ProfileTable({
   onActivate,
   onDeactivate,
   currentIccid,
+  lastApplyState,
 }: ProfileTableProps) {
   const [deleteTarget, setDeleteTarget] = React.useState<ProfileSummary | null>(
     null
@@ -115,40 +124,73 @@ export function ProfileTable({
         header: "状态",
         cell: ({ row }) => {
           const isActive = row.original.id === activeProfileId;
+          const appliedHere =
+            lastApplyState &&
+            lastApplyState.profile_id === row.original.id &&
+            ["complete", "partial", "failed"].includes(lastApplyState.status)
+              ? lastApplyState
+              : null;
+
+          // Audit line below the badge — visible on whichever row received the
+          // most recent apply, regardless of whether it's the active profile.
+          const auditLine = appliedHere ? (
+            <div
+              className={`text-xs mt-1 ${
+                appliedHere.status === "failed"
+                  ? "text-destructive"
+                  : appliedHere.status === "partial"
+                  ? "text-warning"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {appliedHere.status === "complete"
+                ? "已应用"
+                : appliedHere.status === "partial"
+                ? "部分应用"
+                : "应用失败"}{" "}
+              于 {formatAppliedTime(appliedHere.started_at)}
+            </div>
+          ) : null;
+
+          let badge: React.ReactNode;
           if (isActive) {
             const profileIccid = row.original.sim_iccid;
             const isMismatch =
               profileIccid && currentIccid && profileIccid !== currentIccid;
 
-            if (isMismatch) {
-              return (
-                <Badge
-                  variant="outline"
-                  className="px-1.5 bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
-                >
-                  <TriangleAlertIcon className="size-3" />
-                  SIM 不匹配
-                </Badge>
-              );
-            }
-
-            return (
+            badge = isMismatch ? (
               <Badge
                 variant="outline"
-                className="px-1.5 text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800"
+                className="px-1.5 bg-warning/15 text-warning hover:bg-warning/20 border-warning/30"
               >
-                <TbCircleCheckFilled className="fill-blue-500 dark:fill-blue-400" />
+                <TriangleAlertIcon className="size-3" />
+                SIM 不匹配
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="px-1.5 bg-success/15 text-success hover:bg-success/20 border-success/30"
+              >
+                <CheckCircle2Icon className="size-3" />
                 已激活
               </Badge>
             );
+          } else {
+            badge = (
+              <Badge
+                variant="outline"
+                className="px-1.5 bg-muted/50 text-muted-foreground border-muted-foreground/30"
+              >
+                未激活
+              </Badge>
+            );
           }
+
           return (
-            <Badge
-              variant="outline"
-              className="px-1.5 text-muted-foreground"
-            >
-              未激活
-            </Badge>
+            <div>
+              {badge}
+              {auditLine}
+            </div>
           );
         },
       },
@@ -176,11 +218,11 @@ export function ProfileTable({
                 <span className="sr-only">打开菜单</span>
               </Button>
             </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                <DropdownMenuItem onClick={() => onEdit(row.original.id)}>
-                  <TbEdit className="size-4" />
-                  编辑
-                </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={() => onEdit(row.original.id)}>
+                <TbEdit className="size-4" />
+                编辑
+              </DropdownMenuItem>
               {onActivate && row.original.id !== activeProfileId && (
                 <DropdownMenuItem
                   onClick={() => onActivate(row.original.id)}
@@ -192,7 +234,7 @@ export function ProfileTable({
               {onDeactivate && row.original.id === activeProfileId && (
                 <DropdownMenuItem onClick={onDeactivate}>
                   <TbPlayerStop className="size-4" />
-                  停用
+                  取消激活
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -208,7 +250,7 @@ export function ProfileTable({
         ),
       },
     ],
-    [activeProfileId, onEdit, onActivate, onDeactivate, currentIccid]
+    [activeProfileId, onEdit, onActivate, onDeactivate, currentIccid, lastApplyState]
   );
 
   const table = useReactTable({
@@ -266,7 +308,7 @@ export function ProfileTable({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  还没有配置，请先创建一个。
+                  暂无配置，请先创建一个。
                 </TableCell>
               </TableRow>
             )}
@@ -290,7 +332,8 @@ export function ProfileTable({
                 上一页
               </Button>
               <span className="text-sm">
-                第 {table.getState().pagination.pageIndex + 1} / {table.getPageCount()} 页
+                第 {table.getState().pagination.pageIndex + 1} /{" "}
+                {table.getPageCount()}
               </span>
               <Button
                 variant="outline"
@@ -314,8 +357,7 @@ export function ProfileTable({
           <AlertDialogHeader>
             <AlertDialogTitle>删除配置</AlertDialogTitle>
             <AlertDialogDescription>
-              确认删除 &ldquo;{deleteTarget?.name}&rdquo; 吗？
-              此操作无法撤销。删除该配置不会改变当前调制解调器配置。
+              确定要删除“{deleteTarget?.name}”吗？此操作无法撤销。删除配置不会改变当前调制解调器设置。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -325,7 +367,7 @@ export function ProfileTable({
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? "删除中…" : "删除"}
+              {isDeleting ? "正在删除…" : "删除"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

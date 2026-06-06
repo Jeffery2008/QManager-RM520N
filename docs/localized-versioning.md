@@ -25,6 +25,6 @@
 
 实现说明：
 
-- `scripts/www/cgi-bin/quecmanager/system/update.sh` 中的版本比较逻辑已扩展，支持 `-cn.N` 作为汉化修订号比较。
+- `scripts/usr/lib/qmanager/semver.sh` 中的版本比较逻辑已扩展，支持 `-cn.N` 作为汉化修订号比较；更新 CGI 和自动更新脚本都会调用该共享函数。
 - OTA、检查更新、版本选择等前端界面直接显示完整标签。
 - 安装脚本中的内部版本号也应与 release tag 保持一致。

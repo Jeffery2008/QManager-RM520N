@@ -28,8 +28,6 @@ export interface ModemStatus {
   nr: NrStatus;
   /** Device hardware and identity info */
   device: DeviceStatus;
-  /** Live traffic metrics */
-  traffic: TrafficStatus;
   /** Internet connectivity and latency (from ping daemon) */
   connectivity: ConnectivityStatus;
   /** Per-antenna signal values (from AT+QRSRP/QRSRQ/QSINR, Tier 1.5) */
@@ -244,31 +242,19 @@ export interface DeviceStatus {
   supported_sa_nr5g_bands: string;
 }
 
-export interface TrafficStatus {
-  /** Current download speed in bytes/second */
-  rx_bytes_per_sec: number;
-  /** Current upload speed in bytes/second */
-  tx_bytes_per_sec: number;
-  /** Total downloaded bytes since boot */
-  total_rx_bytes: number;
-  /** Total uploaded bytes since boot */
-  total_tx_bytes: number;
-}
-
 /**
- * Persistent data-usage counter maintained by the poller across modem reboots
- * and interface flaps. Sourced from AT+QGDCNT / AT+QGDNRCNT.
+ * Persistent data-usage counter maintained by the poller across modem
+ * reboots and interface flaps. Sourced from the kernel rmnet interface
+ * byte counters (/proc/net/dev) — the kernel labels rx/tx identically on
+ * every firmware, so no AT-counter orientation calibration is needed.
  * Served by /cgi-bin/quecmanager/network/data_used.sh
  */
 export interface DataUsedBlock {
-  /** Cumulative received bytes (persisted across reboots) */
+  /** Cumulative received bytes (download), persisted across reboots */
   accumulated_rx_bytes: number;
-  /** Cumulative transmitted bytes (persisted across reboots) */
+  /** Cumulative transmitted bytes (upload), persisted across reboots */
   accumulated_tx_bytes: number;
-  /**
-   * Which AT counter the poller is currently using.
-   * "qgdcnt" = LTE, "qgdnrcnt" = 5G SA/NSA, "" = not yet selected.
-   */
+  /** Counter source — the kernel interface name (e.g. "rmnet_ipa0"). */
   selected_counter: string;
   /** Unix epoch (seconds) of the last poller write to this block */
   last_update_ts: number;
@@ -277,40 +263,17 @@ export interface DataUsedBlock {
    * 0 means never reset (fresh install).
    */
   last_reset_ts: number;
-  /** Number of times the poller detected a counter divergence */
-  divergence_count: number;
-  /** Number of times the modem has been reset since the last user reset */
-  modem_reset_count: number;
-  /** Number of LTE↔5G mode transitions since the last user reset */
-  mode_transition_count: number;
   /**
-   * True when the poller has not updated this block recently (cache is stale).
-   * CGI sets this flag when the on-disk file is older than expected.
+   * Times the kernel interface counter reset (modem reboot / interface
+   * re-creation) since the last user reset. Each reset rebases the
+   * baseline without accumulating the in-flight bytes.
+   */
+  modem_reset_count: number;
+  /**
+   * True when the poller has not updated this block recently (cache is
+   * stale). CGI sets this when the on-disk file is older than expected.
    */
   stale: boolean;
-}
-
-/**
- * Live cellular traffic stream from `qmanager_traffic` daemon.
- * Sourced from `/proc/net/dev` at 1 Hz, independent of the 2 s poller cache.
- * `iface` is `null` when neither rmnet candidate is up.
- * `stale` is set by the CGI when the on-disk file is older than 5 s.
- */
-export interface TrafficStream {
-  /** Unix epoch seconds when the daemon wrote this snapshot */
-  ts: number;
-  /** Active cellular interface name, or null when none is up */
-  iface: string | null;
-  /** Cumulative RX bytes since interface bringup (modem boot) */
-  total_rx_bytes: number;
-  /** Cumulative TX bytes since interface bringup (modem boot) */
-  total_tx_bytes: number;
-  /** Current download speed in bytes/sec, computed from a 1 s delta */
-  rx_bytes_per_sec: number;
-  /** Current upload speed in bytes/sec, computed from a 1 s delta */
-  tx_bytes_per_sec: number;
-  /** True when the on-disk file is older than 5 s (daemon stuck or stopped) */
-  stale?: boolean;
 }
 
 // --- Utility Types -----------------------------------------------------------
@@ -634,24 +597,8 @@ export interface NetworkEvent {
 // --- Formatting Utilities ----------------------------------------------------
 
 /**
- * Formats bytes per second into a human-readable string.
- * e.g., 1562500 → "12.5 Mbps"
- */
-export function formatBytesPerSec(bytesPerSec: number): string {
-  const bitsPerSec = bytesPerSec * 8;
-  if (bitsPerSec >= 1_000_000) {
-    return `${(bitsPerSec / 1_000_000).toFixed(1)} Mbps`;
-  }
-  if (bitsPerSec >= 1_000) {
-    return `${(bitsPerSec / 1_000).toFixed(0)} Kbps`;
-  }
-  return `${bitsPerSec} bps`;
-}
-
-/**
  * Formats bits per second into a human-readable string.
- * Unlike formatBytesPerSec (which takes bytes and converts to bits),
- * this takes raw bits per second directly (e.g., from WebSocket bandwidth data).
+ * Takes raw bits per second directly (e.g., from WebSocket bandwidth data).
  * e.g., 12500000 → "12.5 Mbps"
  */
 export function formatBitsPerSec(bitsPerSec: number): string {
@@ -672,6 +619,12 @@ export function formatBitsPerSec(bitsPerSec: number): string {
  * e.g., 1073741824 → "1.0 GB"
  */
 export function formatBytes(bytes: number): string {
+  // Defense in depth — a negative value would slip through every magnitude
+  // branch below and render as raw "-12345 B". Clamp to 0 so any future
+  // counter wrap (or fresh post-reset state) renders cleanly. See the
+  // BusyBox-sh overflow fix in qmanager_poller for the original case that
+  // produced negatives in v0.1.9.
+  if (bytes < 0) return "0 B";
   if (bytes >= 1_073_741_824) {
     return `${(bytes / 1_073_741_824).toFixed(1)} GB`;
   }

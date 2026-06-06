@@ -46,12 +46,7 @@ const CustomProfileComponent = () => {
     refresh,
   } = useSimProfiles();
 
-  const {
-    applyState,
-    applyProfile,
-    reset: resetApply,
-    error: applyError,
-  } = useProfileApply();
+  const { applyState, applyProfile, error: applyError } = useProfileApply();
 
   const { settings: currentSettings, refresh: refreshCurrentSettings } =
     useCurrentSettings(false);
@@ -148,10 +143,16 @@ const CustomProfileComponent = () => {
 
   const handleApplyProgressClose = useCallback(() => {
     setShowApplyProgress(false);
-    resetApply();
-    // Refresh profile list to pick up new active profile
+    // Intentionally NOT calling resetApply() — leaving applyState in memory so
+    // the table row can show "Applied at HH:MM" until the next activation
+    // (which clears it via applyProfile's own setApplyState(null)).
     refresh();
-  }, [resetApply, refresh]);
+  }, [refresh]);
+
+  const handleRetry = useCallback(async () => {
+    if (!applyState?.profile_id) return;
+    await applyProfile(applyState.profile_id);
+  }, [applyState, applyProfile]);
 
   // ---------------------------------------------------------------------------
   // Handle Deactivate: show confirmation → clear active marker
@@ -201,6 +202,7 @@ const CustomProfileComponent = () => {
           onDeactivate={handleDeactivateRequest}
           onRefresh={refresh}
           currentIccid={currentIccid}
+          lastApplyState={applyState}
         />
       </div>
 
@@ -213,8 +215,7 @@ const CustomProfileComponent = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>激活配置</AlertDialogTitle>
             <AlertDialogDescription>
-              确认将 &ldquo;{activateTarget?.name}&rdquo; 应用到调制解调器吗？
-              这将按配置更新 APN、TTL/HL 和 IMEI 设置，未变更的设置会被跳过。
+              要将“{activateTarget?.name}”应用到调制解调器吗？这会按配置更新 APN、TTL/HL 和 IMEI；未变更的设置会跳过。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -233,10 +234,9 @@ const CustomProfileComponent = () => {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>停用配置</AlertDialogTitle>
+            <AlertDialogTitle>取消激活配置</AlertDialogTitle>
             <AlertDialogDescription>
-              确认清除当前激活配置标记吗？调制解调器当前设置
-              （APN、IMEI、TTL）不会回退，只会移除 &ldquo;已激活&rdquo; 标记。
+              要清除当前激活配置标记吗？调制解调器当前设置（APN、IMEI、TTL）不会回滚，只会移除“已激活”标记。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -247,7 +247,7 @@ const CustomProfileComponent = () => {
               onClick={handleDeactivateConfirm}
               disabled={isDeactivating}
             >
-              {isDeactivating ? "停用中…" : "停用"}
+              {isDeactivating ? "正在取消激活…" : "取消激活"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -259,6 +259,7 @@ const CustomProfileComponent = () => {
         onClose={handleApplyProgressClose}
         applyState={applyState}
         error={applyError}
+        onRetry={handleRetry}
       />
     </div>
   );

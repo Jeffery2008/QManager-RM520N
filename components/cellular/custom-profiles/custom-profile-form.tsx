@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   Field,
+  FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldSet,
@@ -13,10 +15,24 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -28,7 +44,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { DownloadIcon } from "lucide-react";
+import { DownloadIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import type { SimProfile, CurrentModemSettings } from "@/types/sim-profile";
@@ -37,6 +53,7 @@ import {
   PDP_TYPE_LABELS,
   type PdpType,
 } from "@/types/sim-profile";
+import { useConnectionScenarios } from "@/hooks/use-connection-scenarios";
 import {
   MNO_PRESETS,
   MNO_CUSTOM_ID,
@@ -57,6 +74,14 @@ interface CustomProfileFormProps {
   onLoadCurrentSettings?: () => void;
 }
 
+// Sentinel value used by the "Create new custom scenario…" SelectItem. It is
+// intercepted in onValueChange and NEVER written to form state.
+const CREATE_SCENARIO_SENTINEL = "__create__";
+
+// Built-in scenario ids — kept in lockstep with DEFAULT_SCENARIOS from
+// types/connection-scenario.ts. Used to detect "unknown id" fallbacks.
+const BUILTIN_SCENARIO_IDS = ["balanced", "gaming", "streaming"] as const;
+
 const DEFAULT_FORM_STATE: ProfileFormData = {
   name: "",
   mno: "Custom",
@@ -67,6 +92,7 @@ const DEFAULT_FORM_STATE: ProfileFormData = {
   imei: "",
   ttl: 64,
   hl: 64,
+  scenario_id: "balanced",
 };
 
 function profileToFormData(profile: SimProfile): ProfileFormData {
@@ -81,6 +107,11 @@ function profileToFormData(profile: SimProfile): ProfileFormData {
     imei: s.imei,
     ttl: s.ttl,
     hl: s.hl,
+    // Older profile JSONs may lack scenario_id (null/empty) — show Balanced.
+    // This auto-migrates legacy profiles to a Balanced binding on next save,
+    // which is a no-op for users on stock modems (Balanced sets mode=AUTO,
+    // the modem default).
+    scenario_id: s.scenario_id || "balanced",
   };
 }
 
@@ -91,9 +122,15 @@ const CustomProfileFormComponent = ({
   currentSettings,
   onLoadCurrentSettings,
 }: CustomProfileFormProps) => {
+  const router = useRouter();
+  const { customScenarios } = useConnectionScenarios();
+
   const [form, setForm] = useState<ProfileFormData>(DEFAULT_FORM_STATE);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Discard-changes dialog state for the "Create new custom scenario…" path
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   const isEditing = !!editingProfile;
 
@@ -175,6 +212,63 @@ const CustomProfileFormComponent = ({
       setForm((prev) => ({ ...prev, mno: "Custom" }));
     }
   };
+
+  // ---------------------------------------------------------------------------
+  // Scenario Select handling
+  // ---------------------------------------------------------------------------
+
+  // Compute dirty-ness against the "baseline" form (existing profile or empty
+  // defaults). Used by the discard dialog to decide whether to confirm before
+  // navigating away to create a new scenario.
+  const baselineForm = useMemo<ProfileFormData>(
+    () => (editingProfile ? profileToFormData(editingProfile) : DEFAULT_FORM_STATE),
+    [editingProfile],
+  );
+
+  const isFormDirty = useMemo(() => {
+    return (
+      form.name !== baselineForm.name ||
+      form.mno !== baselineForm.mno ||
+      form.sim_iccid !== baselineForm.sim_iccid ||
+      form.cid !== baselineForm.cid ||
+      form.apn_name !== baselineForm.apn_name ||
+      form.pdp_type !== baselineForm.pdp_type ||
+      form.imei !== baselineForm.imei ||
+      form.ttl !== baselineForm.ttl ||
+      form.hl !== baselineForm.hl ||
+      form.scenario_id !== baselineForm.scenario_id
+    );
+  }, [form, baselineForm]);
+
+  const navigateToCreateScenario = () => {
+    router.push("/cellular/custom-profiles/connection-scenarios?action=create");
+  };
+
+  const handleScenarioChange = (value: string) => {
+    if (value === CREATE_SCENARIO_SENTINEL) {
+      // Sentinel: never persist to form state. Confirm only if dirty.
+      if (isFormDirty) {
+        setShowDiscardDialog(true);
+      } else {
+        navigateToCreateScenario();
+      }
+      return;
+    }
+    updateField("scenario_id", value);
+  };
+
+  // Detect "unknown id" — user selected a custom scenario that has since been
+  // deleted. Show a fallback SelectItem so the user can re-select.
+  const isUnknownScenario = useMemo(() => {
+    const id = form.scenario_id;
+    if (!id) return false;
+    if ((BUILTIN_SCENARIO_IDS as readonly string[]).includes(id)) return false;
+    return !customScenarios.some((s) => s.id === id);
+  }, [form.scenario_id, customScenarios]);
+
+  // ---------------------------------------------------------------------------
+  // Validation & submit
+  // ---------------------------------------------------------------------------
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -406,6 +500,64 @@ const CustomProfileFormComponent = ({
                 </Field>
               </div>
 
+              {/* --- Connection Scenario binding --- */}
+              <Field>
+                <FieldLabel htmlFor="scenarioBinding">
+                  连接场景
+                </FieldLabel>
+                <Select
+                  value={form.scenario_id || "balanced"}
+                  onValueChange={handleScenarioChange}
+                >
+                  <SelectTrigger id="scenarioBinding">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Built-in scenarios */}
+                    <SelectGroup>
+                      <SelectLabel>内置</SelectLabel>
+                      <SelectItem value="balanced">均衡</SelectItem>
+                      <SelectItem value="gaming">游戏</SelectItem>
+                      <SelectItem value="streaming">流媒体</SelectItem>
+                    </SelectGroup>
+
+                    {/* Custom scenarios (only if any exist) */}
+                    {customScenarios.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel>自定义</SelectLabel>
+                        {customScenarios.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+
+                    {/* Fallback for an unknown id (custom scenario was deleted
+                        after the profile was saved). Lets the user see the
+                        invalid state and re-select. */}
+                    {isUnknownScenario && (
+                      <SelectItem value={form.scenario_id}>
+                        （已缺失，请重新选择）
+                      </SelectItem>
+                    )}
+
+                    <SelectSeparator />
+
+                    {/* Sentinel — intercepted in onValueChange */}
+                    <SelectItem value={CREATE_SCENARIO_SENTINEL}>
+                      <span className="flex items-center gap-2">
+                        <PlusIcon className="size-4" />
+                        新建自定义场景…
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FieldDescription>
+                  激活配置时会应用该场景的网络模式和频段锁定。均衡模式（AUTO、无锁频）不会限制场景和锁频页面；绑定其他场景时，配置激活期间这些页面会被锁定。
+                </FieldDescription>
+              </Field>
+
               {/* --- Actions --- */}
               <div className="flex gap-3 pt-2">
                 <Button type="submit" disabled={isSaving}>
@@ -425,6 +577,24 @@ const CustomProfileFormComponent = ({
           </FieldSet>
         </form>
       </CardContent>
+
+      {/* Discard-changes confirmation for the "Create new scenario" path */}
+      <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>放弃未保存的更改？</AlertDialogTitle>
+            <AlertDialogDescription>
+              当前配置中未保存的更改会丢失。要继续吗？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>留在此页</AlertDialogCancel>
+            <AlertDialogAction onClick={navigateToCreateScenario}>
+              放弃并前往场景
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

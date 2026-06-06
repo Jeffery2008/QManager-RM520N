@@ -15,6 +15,13 @@ interface ActiveConfigCardProps {
   isActivating?: boolean;
   onEdit?: () => void;
   onActivate?: () => void;
+  /** When true, hide/disable the Activate button — radio config is profile-
+   *  owned. Passed in by ConnectionScenariosCard when a Custom SIM Profile
+   *  with a bound scenario_id is active. */
+  activateDisabled?: boolean;
+  /** Display name of the active profile, used for the disabled-Activate
+   *  tooltip. Only meaningful when activateDisabled is true. */
+  activeProfileName?: string;
 }
 
 export const ActiveConfigCard = ({
@@ -23,6 +30,8 @@ export const ActiveConfigCard = ({
   isActivating,
   onEdit,
   onActivate,
+  activateDisabled,
+  activeProfileName,
 }: ActiveConfigCardProps) => {
   if (!scenario) return null;
   const Icon = scenario.icon;
@@ -43,14 +52,14 @@ export const ActiveConfigCard = ({
               <Icon className="size-6" />
             </div>
             <div className="grid">
-              <h4 className="font-semibold">{scenario.name} Configuration</h4>
+              <h4 className="font-semibold">{scenario.name} 配置</h4>
               {isActivating ? (
                 <Badge
                   variant="outline"
                   className="bg-info/15 text-info hover:bg-info/20 border-info/30"
                 >
                   <Spinner className="h-2 w-2" />
-                  Applying…
+                  正在应用…
                 </Badge>
               ) : isActive ? (
                 <Badge
@@ -58,7 +67,7 @@ export const ActiveConfigCard = ({
                   className="bg-success/15 text-success hover:bg-success/20 border-success/30"
                 >
                   <div className="w-2 h-2 rounded-full bg-success" />
-                  Active
+                  已激活
                 </Badge>
               ) : (
                 <Badge
@@ -66,14 +75,14 @@ export const ActiveConfigCard = ({
                   className="bg-muted text-muted-foreground hover:bg-muted border-border"
                 >
                   <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
-                  Not Active
+                  未激活
                 </Badge>
               )}
             </div>
           </div>
           <div className="flex items-center gap-1">
             {isCustom && (
-              <Button variant="ghost" size="icon" aria-label="Edit scenario settings" onClick={onEdit}>
+              <Button variant="ghost" size="icon" aria-label="编辑场景设置" onClick={onEdit}>
                 <Settings className="size-4" />
               </Button>
             )}
@@ -82,6 +91,12 @@ export const ActiveConfigCard = ({
                 size="sm"
                 onClick={onActivate}
                 className="gap-1.5"
+                disabled={activateDisabled}
+                title={
+                  activateDisabled && activeProfileName
+                    ? `场景激活由自定义 SIM 配置 ${activeProfileName} 管理。`
+                    : undefined
+                }
               >
                 激活
               </Button>
@@ -92,22 +107,22 @@ export const ActiveConfigCard = ({
         {/* Config Details */}
         <div className="grid gap-2">
           <Separator />
-          <ConfigRow label="Network Mode" value={scenario.config.mode} />
+          <ConfigRow label="网络模式" value={scenario.config.mode} />
           <Separator />
-          <ConfigRow label="Optimization" value={scenario.config.optimization} />
+          <ConfigRow label="优化" value={scenario.config.optimization} />
           <Separator />
           <ConfigRow
-            label="LTE Bands"
+            label="LTE 频段"
             value={bandsToDisplay(scenario.config.lte_bands)}
           />
           <Separator />
           <ConfigRow
-            label="NR5G-SA Bands"
+            label="NR5G-SA 频段"
             value={bandsToDisplay(scenario.config.sa_nr_bands)}
           />
           <Separator />
           <ConfigRow
-            label="NR5G-NSA Bands"
+            label="NR5G-NSA 频段"
             value={bandsToDisplay(scenario.config.nsa_nr_bands)}
           />
           <Separator />

@@ -58,7 +58,7 @@ const STATE_BADGE_CONFIG: Record<
     icon: <CheckCircle2Icon className="h-3 w-3" />,
   },
   suspect: {
-    label: "正在检测问题",
+    label: "检测到异常",
     variant: "outline",
     className: "bg-warning/15 text-warning hover:bg-warning/20 border-warning/30",
     icon: <TriangleAlertIcon className="h-3 w-3" />,
@@ -91,7 +91,7 @@ const STATE_BADGE_CONFIG: Record<
 
 const TIER_LABELS: Record<number, string> = {
   0: "\u2014",
-  1: "重启网络接口",
+  1: "重新注册到网络",
   2: "重启调制解调器无线",
   3: "切换到备用 SIM",
   4: "重启设备",
@@ -112,10 +112,10 @@ export function WatchdogStatusCard({
       const success = await revertSim();
       if (success) {
         toast.success(
-          "已请求恢复原始 SIM，看门狗将很快处理。",
+          "已请求切回原 SIM，看门狗稍后会处理。",
         );
       } else {
-        toast.error("请求恢复原始 SIM 失败");
+        toast.error("请求切回原 SIM 失败");
       }
     } finally {
       setIsReverting(false);
@@ -160,7 +160,7 @@ export function WatchdogStatusCard({
           <div className="flex flex-col items-center justify-center py-8 gap-3">
             <DogIcon className="size-10 text-muted-foreground" />
             <p className="text-sm text-muted-foreground text-center">
-              看门狗当前未启用。请先在设置中启用后再开始监控连接健康。
+              看门狗未启用。请在设置中启用后开始监控连接健康状态。
             </p>
           </div>
         </CardContent>
@@ -180,7 +180,7 @@ export function WatchdogStatusCard({
           <div className="flex flex-col items-center justify-center py-8 gap-3">
             <Loader2 className="size-10 text-muted-foreground animate-spin" />
             <p className="text-sm text-muted-foreground text-center">
-              看门狗正在启动，即将开始监控。
+              看门狗正在启动，稍后会开始监控。
             </p>
           </div>
         </CardContent>
@@ -293,11 +293,11 @@ export function WatchdogStatusCard({
               <Alert className="mb-3">
                 <InfoIcon className="size-4" />
                 <AlertDescription>
-                  当前正在使用备用 SIM（卡槽 {simFailover.current_slot}），开始于{" "}
+                  当前运行在备用 SIM（卡槽 {simFailover.current_slot}），切换时间：{" "}
                   {simFailover.switched_at
                     ? formatTimeAgo(simFailover.switched_at)
                     : "刚刚"}
-                  。原始 SIM 位于卡槽 {simFailover.original_slot}.
+                  。原 SIM 位于卡槽 {simFailover.original_slot}。
                 </AlertDescription>
               </Alert>
 
@@ -309,28 +309,27 @@ export function WatchdogStatusCard({
                     size="sm"
                     disabled={isReverting}
                   >
-                      {isReverting ? (
+                    {isReverting ? (
                       <>
                         <Loader2 className="size-4 animate-spin" />
-                        恢复中…
+                        正在切回…
                       </>
                     ) : (
-                      "恢复到原始 SIM"
+                      "切回原 SIM"
                     )}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>恢复到原始 SIM？</AlertDialogTitle>
+                    <AlertDialogTitle>切回原 SIM？</AlertDialogTitle>
                     <AlertDialogDescription>
-                      这将切换回 SIM 卡槽{" "}
-                      {simFailover.original_slot}. 调制解调器重新连接期间，网络会短暂中断。
+                      这会切回 SIM 卡槽 {simFailover.original_slot}。调制解调器重新连接期间，互联网会短暂断开。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>取消</AlertDialogCancel>
                     <AlertDialogAction onClick={handleRevertSim}>
-                      恢复 SIM
+                      切回 SIM
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

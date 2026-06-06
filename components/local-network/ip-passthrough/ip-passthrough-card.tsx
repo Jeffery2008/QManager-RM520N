@@ -148,7 +148,7 @@ const IPPassthroughCard = () => {
     e.preventDefault();
 
     if (!macValid) {
-      toast.error("请输入有效的 MAC 地址（XX:XX:XX:XX:XX:XX）");
+      toast.error("请输入有效的 MAC 地址 (XX:XX:XX:XX:XX:XX)");
       return;
     }
 
@@ -167,12 +167,18 @@ const IPPassthroughCard = () => {
       dns_proxy: localDnsProxy,
     });
 
-    if (success) {
-      markSaved();
-      toast.success("设置已应用，设备正在重启…");
-    } else {
+    if (!success) {
       toast.error("保存 IP 透传设置失败");
+      return;
     }
+
+    markSaved();
+    // Hand off to the countdown page. The backend (cgi_reboot_response) is
+    // waiting on /tmp/qmanager_reboot_ack — the /reboot/ page touches it on
+    // mount, so the device reboots only after the page is in browser memory.
+    sessionStorage.setItem("qm_rebooting", "1");
+    document.cookie = "qm_logged_in=; Path=/; Max-Age=0";
+    window.location.href = "/reboot/";
   };
 
   // Format MAC input: strip non-hex, uppercase, insert colons every 2 chars
@@ -272,17 +278,17 @@ const IPPassthroughCard = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="disabled">
-                          已禁用（路由模式）
+                          禁用（路由模式）
                         </SelectItem>
-                        <SelectItem value="eth">以太网（ETH）</SelectItem>
-                        <SelectItem value="usb">USB 共享网络</SelectItem>
+                        <SelectItem value="eth">以太网 (ETH)</SelectItem>
+                        <SelectItem value="usb">USB 网络共享</SelectItem>
                       </SelectContent>
                     </Select>
                   </Field>
 
                   {/* Field 2: Target Device MAC (hidden when disabled) */}
                   <Field>
-                    <FieldLabel>目标设备（MAC）</FieldLabel>
+                    <FieldLabel>目标设备 (MAC)</FieldLabel>
                     <AnimatePresence mode="wait">
                       {localMode === "disabled" ? (
                         <motion.div
@@ -293,8 +299,8 @@ const IPPassthroughCard = () => {
                           transition={{ duration: 0.2 }}
                         >
                           <Select disabled>
-                            <SelectTrigger aria-label="Target Device MAC">
-                              <SelectValue placeholder="不适用：当前为路由模式" />
+                            <SelectTrigger aria-label="目标设备 MAC">
+                              <SelectValue placeholder="不适用 — 路由模式" />
                             </SelectTrigger>
                             <SelectContent />
                           </Select>
@@ -321,7 +327,7 @@ const IPPassthroughCard = () => {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="automatic">
-                                自动：第一个已连接设备
+                                自动 — 首个已连接设备
                               </SelectItem>
                               <SelectItem value="manual">
                                 手动输入…
@@ -379,7 +385,7 @@ const IPPassthroughCard = () => {
                       onValueChange={(v) => setLocalIpptNat(v as NatMode)}
                       disabled={isSaving}
                     >
-                      <SelectTrigger aria-label="NAT mode">
+                      <SelectTrigger aria-label="NAT 模式">
                         <SelectValue placeholder="选择 NAT 模式" />
                       </SelectTrigger>
                       <SelectContent>
@@ -404,9 +410,9 @@ const IPPassthroughCard = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="rmnet">RMNET (QMI)</SelectItem>
-                        <SelectItem value="ecm">ECM (Universal)</SelectItem>
-                        <SelectItem value="mbim">MBIM (Windows)</SelectItem>
-                        <SelectItem value="rndis">RNDIS (Legacy)</SelectItem>
+                        <SelectItem value="ecm">ECM（通用）</SelectItem>
+                        <SelectItem value="mbim">MBIM（Windows）</SelectItem>
+                        <SelectItem value="rndis">RNDIS（旧版）</SelectItem>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -427,10 +433,10 @@ const IPPassthroughCard = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="disabled">
-                          已禁用（推荐）
+                          禁用（推荐）
                         </SelectItem>
                         <SelectItem value="enabled">
-                          已启用（使用调制解调器 DNS）
+                          启用（使用调制解调器 DNS）
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -452,7 +458,7 @@ const IPPassthroughCard = () => {
               variant="outline"
               onClick={resetToServer}
               disabled={isSaving}
-              aria-label="重置为已保存的值"
+              aria-label="恢复为已保存的值"
             >
               <RotateCcwIcon />
             </Button>
@@ -472,14 +478,14 @@ const IPPassthroughCard = () => {
               <AlertDialogDescription asChild>
                 <div className="space-y-3 text-sm text-muted-foreground">
                   <p>
-                    应用这些更改会保存配置，并立即重启设备。
+                    应用这些更改会保存配置并立即重启设备。
                   </p>
                   {localMode !== "disabled" && (
                     <p className="font-medium text-foreground">
-                      启用 IP 透传后，设备本地网关将无法再直接访问。请确保你有可用的 Tailscale 连接，或其他可在重启后访问设备的带外方式。
+                      IP 透传启用后，设备本地网关将不再可达。请确认已启用 Tailscale，或有其他带外方式可在重启后访问设备。
                     </p>
                   )}
-                  <p>该设置会在重启后持续生效。</p>
+                  <p>此设置会在重启后保留。</p>
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>

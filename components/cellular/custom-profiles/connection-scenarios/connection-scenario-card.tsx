@@ -31,6 +31,8 @@ import { AddScenarioItem } from "./add-scenario-item";
 import { ActiveConfigCard } from "./active-config-card";
 import { ScenarioItem, Scenario } from "./scenario-item";
 import { useConnectionScenarios } from "@/hooks/use-connection-scenarios";
+import { useSimProfiles } from "@/hooks/use-sim-profiles";
+import { ProfileOverrideAlert } from "@/components/cellular/custom-profiles/profile-override-alert";
 import {
   NETWORK_MODE_OPTIONS,
   modeValueToLabel,
@@ -61,16 +63,16 @@ const gradientOptions = [
 const DEFAULT_SCENARIOS: Scenario[] = [
   {
     id: "balanced",
-    name: "Balanced",
-    description: "Auto band selection",
+    name: "均衡",
+    description: "自动选择频段",
     icon: Zap,
     gradient: "from-emerald-500 via-teal-500 to-cyan-500",
     pattern: "balanced",
     isDefault: true,
     config: {
       atModeValue: "AUTO",
-      mode: "Auto",
-      optimization: "Balanced",
+      mode: "自动",
+      optimization: "均衡",
       lte_bands: "",
       nsa_nr_bands: "",
       sa_nr_bands: "",
@@ -78,16 +80,16 @@ const DEFAULT_SCENARIOS: Scenario[] = [
   },
   {
     id: "gaming",
-    name: "Gaming",
-    description: "Low latency, SA priority",
+    name: "游戏",
+    description: "低延迟，优先 5G SA",
     icon: Gamepad2,
     gradient: "from-violet-600 via-purple-600 to-indigo-700",
     pattern: "gaming",
     isDefault: true,
     config: {
       atModeValue: "NR5G",
-      mode: "5G SA Only",
-      optimization: "Latency",
+      mode: "仅 5G SA",
+      optimization: "低延迟",
       lte_bands: "",
       nsa_nr_bands: "",
       sa_nr_bands: "",
@@ -95,8 +97,8 @@ const DEFAULT_SCENARIOS: Scenario[] = [
   },
   {
     id: "streaming",
-    name: "Streaming",
-    description: "High bandwidth, stable connection",
+    name: "流媒体",
+    description: "高带宽，稳定连接",
     icon: Play,
     gradient: "from-rose-500 via-pink-500 to-orange-400",
     pattern: "streaming",
@@ -104,7 +106,7 @@ const DEFAULT_SCENARIOS: Scenario[] = [
     config: {
       atModeValue: "LTE:NR5G",
       mode: "5G SA / NSA",
-      optimization: "Throughput",
+      optimization: "吞吐优先",
       lte_bands: "",
       nsa_nr_bands: "",
       sa_nr_bands: "",
@@ -116,7 +118,17 @@ const DEFAULT_SCENARIOS: Scenario[] = [
 // Main Component
 // =============================================================================
 
-const ConnectionScenariosCard = () => {
+interface ConnectionScenariosCardProps {
+  /** If true on mount, open the "New Scenario" dialog automatically. Used by
+   *  the deep-link from the SIM Profile form's "Create new custom scenario…"
+   *  Select item. After successful create, a special toast prompts the user
+   *  to return to their profile and select the new scenario. */
+  autoOpenAddDialog?: boolean;
+}
+
+const ConnectionScenariosCard = ({
+  autoOpenAddDialog,
+}: ConnectionScenariosCardProps = {}) => {
   const {
     activeScenarioId,
     customScenarios: storedScenarios,
@@ -126,6 +138,38 @@ const ConnectionScenariosCard = () => {
     saveCustomScenario,
     deleteCustomScenario,
   } = useConnectionScenarios();
+
+  // --- SIM Profile override check ------------------------------------------
+  // When an active Custom SIM Profile binds a NON-Balanced scenario, that
+  // profile owns scenario activation: the Activate button is disabled on
+  // every card and a banner explains why. A Balanced binding is treated as
+  // "no opinion" and doesn't gate anything (no profileGate populated).
+  // Edit/Delete of *custom* scenarios is intentionally NOT gated.
+  const { activeProfileId, getProfile } = useSimProfiles();
+  const [profileGate, setProfileGate] = useState<{
+    profileName: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!activeProfileId) return;
+    let cancelled = false;
+    (async () => {
+      const profile = await getProfile(activeProfileId);
+      if (cancelled) return;
+      // null and "" both mean "no binding"; "balanced" is treated identically.
+      const boundId = profile?.settings.scenario_id || "";
+      if (profile && boundId && boundId !== "balanced") {
+        setProfileGate({ profileName: profile.name });
+      } else {
+        setProfileGate(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProfileId, getProfile]);
+
+  const isProfileControlled = profileGate !== null;
 
   // Convert backend StoredScenario[] → UI Scenario[] (add icon, pattern, isDefault)
   const customScenarios: Scenario[] = useMemo(
@@ -150,6 +194,21 @@ const ConnectionScenariosCard = () => {
   // --- Dialog state ----------------------------------------------------------
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+
+  // Deep-link flag — remembers if the user arrived via ?action=create so we
+  // can show a tailored toast after the scenario is created. Latches once at
+  // mount; we don't re-open the dialog if the user dismisses it.
+  const [arrivedFromProfileForm, setArrivedFromProfileForm] = useState(
+    !!autoOpenAddDialog,
+  );
+
+  useEffect(() => {
+    if (autoOpenAddDialog) {
+      setShowAddDialog(true);
+    }
+    // Only auto-open on mount; ignore subsequent prop changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Add form state
   const [addName, setAddName] = useState("");
@@ -200,14 +259,17 @@ const ConnectionScenariosCard = () => {
   const handleActivate = useCallback(async () => {
     if (!selectedScenario || isActivating) return;
     if (selectedId === activeScenarioId) return;
+    // Belt-and-braces: even though the button is disabled, never let an
+    // activation through while the profile owns radio config.
+    if (isProfileControlled) return;
 
     const success = await activateScenario(selectedId, selectedScenario.config);
 
     if (success) {
-      toast.success(`Switched to ${selectedScenario.name} scenario.`);
+      toast.success(`已切换到 ${selectedScenario.name} 场景。`);
     } else {
       toast.error(
-        `Failed to activate ${selectedScenario.name} scenario.`,
+        `激活 ${selectedScenario.name} 场景失败。`,
       );
     }
   }, [
@@ -216,6 +278,7 @@ const ConnectionScenariosCard = () => {
     activeScenarioId,
     isActivating,
     activateScenario,
+    isProfileControlled,
   ]);
 
   // ---------------------------------------------------------------------------
@@ -229,12 +292,12 @@ const ConnectionScenariosCard = () => {
     setIsSaving(true);
     const scenarioData = {
       name: addName,
-      description: addDescription || "Custom configuration",
+      description: addDescription || "自定义配置",
       gradient: addGradient,
       config: {
         atModeValue: addMode,
         mode: modeValueToLabel(addMode),
-        optimization: "Custom",
+        optimization: "自定义",
         lte_bands: inputToBands(addLteBands),
         nsa_nr_bands: inputToBands(addNsaNrBands),
         sa_nr_bands: inputToBands(addSaNrBands),
@@ -248,9 +311,17 @@ const ConnectionScenariosCard = () => {
       setSelectedId(newId);
       setShowAddDialog(false);
       resetAddForm();
-      toast.success("Scenario created successfully.");
+      if (arrivedFromProfileForm) {
+        toast.success(
+          "场景已创建。请返回 SIM 配置并选择它。",
+        );
+        // One-shot — subsequent creates show the normal toast.
+        setArrivedFromProfileForm(false);
+      } else {
+        toast.success("场景已创建。");
+      }
     } else {
-      toast.error("Failed to create scenario.");
+      toast.error("创建场景失败。");
     }
   };
 
@@ -274,9 +345,9 @@ const ConnectionScenariosCard = () => {
       if (selectedId === id) {
         setSelectedId(activeScenarioId === id ? DEFAULT_SCENARIOS[0].id : activeScenarioId);
       }
-      toast.success("Scenario deleted.");
+      toast.success("场景已删除。");
     } else {
-      toast.error("Failed to delete scenario.");
+      toast.error("删除场景失败。");
     }
   };
 
@@ -320,9 +391,9 @@ const ConnectionScenariosCard = () => {
 
     if (updatedId) {
       setShowEditDialog(false);
-      toast.success("Scenario updated.");
+      toast.success("场景已更新。");
     } else {
-      toast.error("Failed to update scenario.");
+      toast.error("更新场景失败。");
     }
   };
 
@@ -331,6 +402,16 @@ const ConnectionScenariosCard = () => {
   // ---------------------------------------------------------------------------
   return (
     <div className="grid gap-y-6">
+      {/* Profile override banner — shown when a Custom SIM Profile owns
+          scenario activation. Edit/Delete remain enabled; only Activate
+          is restricted. */}
+      {isProfileControlled && profileGate && !isLoading && (
+        <ProfileOverrideAlert
+          profileName={profileGate.profileName}
+          controls="场景激活"
+        />
+      )}
+
       {/* Row 1: Scenario Profile Cards */}
       <div className="col-span-full grid grid-cols-2 @3xl/main:grid-cols-4 gap-4">
         {isLoading ? (
@@ -402,6 +483,8 @@ const ConnectionScenariosCard = () => {
             isActivating={isActivating}
             onEdit={handleOpenEditDialog}
             onActivate={handleActivate}
+            activateDisabled={isProfileControlled}
+            activeProfileName={profileGate?.profileName}
           />
         )}
       </div>
@@ -410,37 +493,37 @@ const ConnectionScenariosCard = () => {
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>New Connection Scenario</DialogTitle>
+            <DialogTitle>新建连接场景</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
             {/* Name */}
             <div className="space-y-2">
-              <Label htmlFor="add-name">Scenario Name</Label>
+              <Label htmlFor="add-name">场景名称</Label>
               <Input
                 id="add-name"
                 value={addName}
                 onChange={(e) => setAddName(e.target.value)}
-                placeholder="e.g., Work from Home"
+                placeholder="例如：居家办公"
               />
             </div>
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="add-description">Description</Label>
+              <Label htmlFor="add-description">说明</Label>
               <Input
                 id="add-description"
                 value={addDescription}
                 onChange={(e) => setAddDescription(e.target.value)}
-                placeholder="e.g., Optimized for video calls"
+                placeholder="例如：为视频会议优化"
               />
             </div>
 
             {/* Network Mode */}
             <div className="space-y-2">
-              <Label>Network Mode</Label>
+              <Label>网络模式</Label>
               <Select value={addMode} onValueChange={setAddMode}>
-                <SelectTrigger aria-label="Network Mode">
+                <SelectTrigger aria-label="网络模式">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -455,38 +538,38 @@ const ConnectionScenariosCard = () => {
 
             {/* Band Locks */}
             <div className="space-y-2">
-              <Label htmlFor="add-lte-bands">LTE Band Lock</Label>
+              <Label htmlFor="add-lte-bands">LTE 频段锁定</Label>
               <Input
                 id="add-lte-bands"
                 value={addLteBands}
                 onChange={(e) => setAddLteBands(e.target.value)}
-                placeholder="e.g., 1, 3, 7, 28 (empty = Auto)"
+                placeholder="例如：1, 3, 7, 28（留空为自动）"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="add-sa-bands">NR5G-SA Band Lock</Label>
+                <Label htmlFor="add-sa-bands">NR5G-SA 频段锁定</Label>
                 <Input
                   id="add-sa-bands"
                   value={addSaNrBands}
                   onChange={(e) => setAddSaNrBands(e.target.value)}
-                  placeholder="e.g., 41, 78"
+                  placeholder="例如：41, 78"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="add-nsa-bands">NR5G-NSA Band Lock</Label>
+                <Label htmlFor="add-nsa-bands">NR5G-NSA 频段锁定</Label>
                 <Input
                   id="add-nsa-bands"
                   value={addNsaNrBands}
                   onChange={(e) => setAddNsaNrBands(e.target.value)}
-                  placeholder="e.g., 41, 78"
+                  placeholder="例如：41, 78"
                 />
               </div>
             </div>
 
             {/* Card Theme */}
             <div className="space-y-2">
-              <Label>Card Theme</Label>
+              <Label>卡片主题</Label>
               <div className="grid grid-cols-6 gap-2">
                 {gradientOptions.map((grad) => (
                   <button
@@ -507,7 +590,7 @@ const ConnectionScenariosCard = () => {
 
             {/* Preview */}
             <div className="space-y-2">
-              <Label>Preview</Label>
+              <Label>预览</Label>
               <div
                 className={cn(
                   "relative overflow-hidden rounded-xl h-20 bg-linear-to-br",
@@ -520,10 +603,10 @@ const ConnectionScenariosCard = () => {
                 />
                 <div className="relative p-4 text-white">
                   <p className="font-medium">
-                    {addName || "Scenario Name"}
+                    {addName || "场景名称"}
                   </p>
                   <p className="text-sm text-white/70">
-                    {addDescription || "Custom configuration"}
+                    {addDescription || "自定义配置"}
                   </p>
                 </div>
               </div>
@@ -554,31 +637,31 @@ const ConnectionScenariosCard = () => {
           <div className="space-y-5 py-4">
             {/* Name */}
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Scenario Name</Label>
+              <Label htmlFor="edit-name">场景名称</Label>
               <Input
                 id="edit-name"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                placeholder="Scenario name"
+                placeholder="场景名称"
               />
             </div>
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="edit-description">说明</Label>
               <Input
                 id="edit-description"
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="Scenario description"
+                placeholder="场景说明"
               />
             </div>
 
             {/* Network Mode */}
             <div className="space-y-2">
-              <Label>Network Mode</Label>
+              <Label>网络模式</Label>
               <Select value={editMode} onValueChange={setEditMode}>
-                <SelectTrigger aria-label="Network Mode">
+                <SelectTrigger aria-label="网络模式">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -593,49 +676,49 @@ const ConnectionScenariosCard = () => {
 
             {/* Optimization */}
             <div className="space-y-2">
-              <Label htmlFor="edit-optimization">Optimization Label</Label>
+              <Label htmlFor="edit-optimization">优化标签</Label>
               <Input
                 id="edit-optimization"
                 value={editOptimization}
                 onChange={(e) => setEditOptimization(e.target.value)}
-                placeholder="e.g., Latency, Throughput, Custom"
+                placeholder="例如：低延迟、吞吐优先、自定义"
               />
             </div>
 
             {/* Band Locks */}
             <div className="space-y-2">
-              <Label htmlFor="edit-lte-bands">LTE Band Lock</Label>
+              <Label htmlFor="edit-lte-bands">LTE 频段锁定</Label>
               <Input
                 id="edit-lte-bands"
                 value={editLteBands}
                 onChange={(e) => setEditLteBands(e.target.value)}
-                placeholder="e.g., 1, 3, 7, 28 (empty = Auto)"
+                placeholder="例如：1, 3, 7, 28（留空为自动）"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-sa-bands">NR5G-SA Band Lock</Label>
+                <Label htmlFor="edit-sa-bands">NR5G-SA 频段锁定</Label>
                 <Input
                   id="edit-sa-bands"
                   value={editSaNrBands}
                   onChange={(e) => setEditSaNrBands(e.target.value)}
-                  placeholder="e.g., 41, 78"
+                  placeholder="例如：41, 78"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-nsa-bands">NR5G-NSA Band Lock</Label>
+                <Label htmlFor="edit-nsa-bands">NR5G-NSA 频段锁定</Label>
                 <Input
                   id="edit-nsa-bands"
                   value={editNsaNrBands}
                   onChange={(e) => setEditNsaNrBands(e.target.value)}
-                  placeholder="e.g., 41, 78"
+                  placeholder="例如：41, 78"
                 />
               </div>
             </div>
 
             {/* Card Theme */}
             <div className="space-y-2">
-              <Label>Card Theme</Label>
+              <Label>卡片主题</Label>
               <div className="grid grid-cols-6 gap-2">
                 {gradientOptions.map((grad) => (
                   <button
@@ -656,7 +739,7 @@ const ConnectionScenariosCard = () => {
 
             {/* Preview */}
             <div className="space-y-2">
-              <Label>Preview</Label>
+              <Label>预览</Label>
               <div
                 className={cn(
                   "relative overflow-hidden rounded-xl h-20 bg-linear-to-br",
@@ -668,9 +751,9 @@ const ConnectionScenariosCard = () => {
                   className="absolute inset-0 w-full h-full"
                 />
                 <div className="relative p-4 text-white">
-                  <p className="font-medium">{editName || "Scenario Name"}</p>
+                  <p className="font-medium">{editName || "场景名称"}</p>
                   <p className="text-sm text-white/70">
-                    {editDescription || "Custom configuration"}
+                    {editDescription || "自定义配置"}
                   </p>
                 </div>
               </div>

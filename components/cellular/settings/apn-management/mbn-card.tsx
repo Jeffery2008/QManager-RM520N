@@ -29,7 +29,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Loader2, RotateCcwIcon } from "lucide-react";
+import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import type { MbnProfile, MbnSaveRequest } from "@/types/mbn-settings";
 
 interface MBNCardProps {
@@ -38,7 +40,6 @@ interface MBNCardProps {
   isLoading: boolean;
   isSaving: boolean;
   onSave: (request: MbnSaveRequest) => Promise<boolean>;
-  onReboot: () => Promise<boolean>;
 }
 
 const MBNCard = ({
@@ -47,9 +48,9 @@ const MBNCard = ({
   isLoading,
   isSaving,
   onSave,
-  onReboot,
 }: MBNCardProps) => {
   // Form state
+  const { saved, markSaved } = useSaveFlash();
   const [localAutoSel, setLocalAutoSel] = useState<string>("");
   const [selectedProfile, setSelectedProfile] = useState<string>("");
 
@@ -79,6 +80,7 @@ const MBNCard = ({
     if (localAutoSel === "1" && currentAutoSel !== "1") {
       const success = await onSave({ action: "auto_sel", auto_sel: 1 });
       if (success) {
+        markSaved();
         toast.success("已启用自动选择，需要重启");
         setShowRebootDialog(true);
       } else {
@@ -91,6 +93,7 @@ const MBNCard = ({
     if (localAutoSel === "0" && currentAutoSel !== "0" && selectedProfile === currentProfile?.name) {
       const success = await onSave({ action: "auto_sel", auto_sel: 0 });
       if (success) {
+        markSaved();
         toast.success("已关闭自动选择，需要重启");
         setShowRebootDialog(true);
       } else {
@@ -106,6 +109,7 @@ const MBNCard = ({
         profile_name: selectedProfile,
       });
       if (success) {
+        markSaved();
         toast.success("运营商配置已应用，需要重启");
         setShowRebootDialog(true);
       } else {
@@ -127,25 +131,33 @@ const MBNCard = ({
     }
   };
 
-  const handleReboot = async (e: React.MouseEvent) => {
-    e.preventDefault(); // Keep dialog open to show rebooting state
+  const handleReboot = (e: React.MouseEvent) => {
+    e.preventDefault();
     setIsRebooting(true);
-    const sent = await onReboot();
-    if (sent) {
-      toast.success("设备正在重启...");
-    } else {
-      toast.error("重启失败，请手动重启设备");
-      setIsRebooting(false);
-    }
+
+    // Prepare session state for the countdown page
+    sessionStorage.setItem("qm_rebooting", "1");
+    document.cookie = "qm_logged_in=; Path=/; Max-Age=0";
+
+    // Fire-and-forget: keepalive ensures the request survives page navigation.
+    fetch("/cgi-bin/quecmanager/cellular/mbn.sh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reboot" }),
+      keepalive: true,
+    }).catch(() => {});
+
+    // Navigate to countdown page immediately
+    window.location.href = "/reboot/";
   };
 
   if (isLoading) {
     return (
       <Card className="@container/card">
         <CardHeader>
-          <CardTitle>Carrier Profile</CardTitle>
+          <CardTitle>运营商配置</CardTitle>
           <CardDescription>
-            Select which carrier firmware profile is active on the modem. A reboot is required after changes.
+            选择调制解调器当前使用的运营商固件配置，更改后需要重启。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -171,9 +183,9 @@ const MBNCard = ({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>Carrier Profile</CardTitle>
+        <CardTitle>运营商配置</CardTitle>
         <CardDescription>
-          Select which carrier firmware profile is active on the modem. A reboot is required after changes.
+          选择调制解调器当前使用的运营商固件配置，更改后需要重启。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -192,11 +204,11 @@ const MBNCard = ({
                     disabled={isSaving}
                   >
                     <SelectTrigger id="mbn-auto-select" aria-label="自动选择配置">
-                      <SelectValue placeholder="选择自动选择方式" />
+                      <SelectValue placeholder="选择自动选择状态" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="1">已启用</SelectItem>
-                      <SelectItem value="0">已停用</SelectItem>
+                      <SelectItem value="0">已禁用</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
@@ -214,13 +226,13 @@ const MBNCard = ({
                     disabled={isSaving || localAutoSel === "1"}
                   >
                     <SelectTrigger id="mbn-carrier-config" aria-label="运营商配置">
-                      <SelectValue placeholder="Choose 运营商配置" />
+                      <SelectValue placeholder="选择运营商配置" />
                     </SelectTrigger>
                     <SelectContent>
                       {profiles?.map((p) => (
                         <SelectItem key={p.index} value={p.name}>
                           {p.name}
-                          {p.selected && p.activated ? " (Active)" : ""}
+                          {p.selected && p.activated ? "（已激活）" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -230,25 +242,26 @@ const MBNCard = ({
             </FieldSet>
           </div>
           <div className="flex items-center gap-x-2">
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Settings"
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleReset}
-              disabled={isSaving}
-              aria-label="恢复为已保存的值"
-            >
-              <RotateCcwIcon />
-            </Button>
+            <SaveButton
+              type="submit"
+              isSaving={isSaving}
+              saved={saved}
+              label="保存设置"
+            />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleReset}
+                  disabled={isSaving}
+                  aria-label="恢复为已保存的值"
+                >
+                  <RotateCcwIcon />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>恢复为已保存的值</TooltipContent>
+            </Tooltip>
           </div>
         </form>
 
@@ -258,27 +271,27 @@ const MBNCard = ({
         }}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Reboot Required</AlertDialogTitle>
+              <AlertDialogTitle>需要重启</AlertDialogTitle>
               <AlertDialogDescription>
-                Carrier profile changes require a device reboot to take effect.
-                Would you like to reboot now?
+                运营商配置更改需要重启设备后才会生效。要现在重启吗？
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={isRebooting}>
-                Reboot Later
+                稍后重启
               </AlertDialogCancel>
               <AlertDialogAction
+                variant="destructive"
                 disabled={isRebooting}
                 onClick={handleReboot}
               >
                 {isRebooting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Rebooting...
+                    正在重启...
                   </>
                 ) : (
-                  "Reboot Now"
+                  "立即重启"
                 )}
               </AlertDialogAction>
             </AlertDialogFooter>

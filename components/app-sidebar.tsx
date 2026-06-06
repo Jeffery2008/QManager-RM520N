@@ -208,6 +208,10 @@ const data = {
           title: "TTL 与 MTU 设置",
           url: "/local-network/ttl-settings",
         },
+        {
+          title: "自定义 DNS",
+          url: "/local-network/custom-dns",
+        },
       ],
     },
   ],

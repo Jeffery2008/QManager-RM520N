@@ -44,7 +44,7 @@ interface UpdatePreferencesCardProps {
   isLoading: boolean;
   isUpdating: boolean;
   isDownloading: boolean;
-  downloadUpdate: (version: string) => Promise<void>;
+  installVersion: (version: string) => Promise<void>;
   togglePrerelease: (enabled: boolean) => Promise<void>;
   saveAutoUpdate: (enabled: boolean, time: string) => Promise<void>;
 }
@@ -68,7 +68,7 @@ export function UpdatePreferencesCard({
   isLoading,
   isUpdating,
   isDownloading,
-  downloadUpdate,
+  installVersion,
   togglePrerelease,
   saveAutoUpdate,
 }: UpdatePreferencesCardProps) {
@@ -92,7 +92,9 @@ export function UpdatePreferencesCard({
       try {
         await togglePrerelease(checked);
         toast.success(
-          checked ? "已启用预发布更新" : "已禁用预发布更新",
+          checked
+            ? "已包含预发布版本"
+            : "已关闭预发布版本",
         );
       } catch {
         toast.error("更新偏好失败");
@@ -107,11 +109,11 @@ export function UpdatePreferencesCard({
     setShowInstallDialog(false);
     if (!selectedVersion) return;
     try {
-      await downloadUpdate(selectedVersion);
+      await installVersion(selectedVersion);
     } catch {
-      toast.error("启动下载失败");
+      toast.error("启动安装失败");
     }
-  }, [selectedVersion, downloadUpdate]);
+  }, [selectedVersion, installVersion]);
 
   const handleAutoUpdateToggle = useCallback(
     async (checked: boolean) => {
@@ -119,7 +121,7 @@ export function UpdatePreferencesCard({
       try {
         await saveAutoUpdate(checked, autoUpdateTime);
         toast.success(
-          checked ? "已启用自动更新" : "已禁用自动更新",
+          checked ? "已启用自动更新" : "已关闭自动更新",
         );
       } catch {
         toast.error("更新偏好失败");
@@ -140,9 +142,9 @@ export function UpdatePreferencesCard({
       autoTimerRef.current = setTimeout(async () => {
         try {
           await saveAutoUpdate(true, newTime);
-          toast.success("更新时间计划已保存");
+          toast.success("更新时间已保存");
         } catch {
-          toast.error("保存更新时间计划失败");
+          toast.error("保存更新时间失败");
         }
       }, AUTO_UPDATE_DEBOUNCE);
     },
@@ -249,16 +251,16 @@ export function UpdatePreferencesCard({
                 <Separator />
                 <motion.div variants={itemVariants} className="flex flex-col gap-2">
                   <p className="font-semibold text-sm">
-                    更新时间
+                    更新安装时间
                   </p>
 
                   <div className="flex flex-col @sm/card:flex-row @sm/card:items-center gap-2 @sm/card:justify-between rounded-lg border bg-muted/50 p-3">
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <span className="text-xs text-muted-foreground">
-                        执行时间
+                        更新时间
                       </span>
                       <p className="text-xs text-muted-foreground">
-                        到点自动检查并安装更新；如发现新版本，设备会自动重启。
+                        自动检查并安装更新；如果发现新版本，设备会在安装后重启。
                       </p>
                     </div>
                     <Input
@@ -309,7 +311,7 @@ export function UpdatePreferencesCard({
                               </span>
                             ) : !v.has_assets ? (
                               <span className="text-[10px] text-muted-foreground">
-                                无二进制包
+                                无安装包
                               </span>
                             ) : v.asset_size ? (
                               <span className="text-[10px] text-muted-foreground">
@@ -347,20 +349,20 @@ export function UpdatePreferencesCard({
           <AlertDialogHeader>
             <AlertDialogTitle>
               {selectedVersion === updateInfo?.current_version
-                ? "重新安装当前版本"
+                ? "重装当前版本"
                 : `安装 ${selectedVersion}`}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {selectedVersion === updateInfo?.current_version ? (
                 <>
-                  这会重新安装 <strong>{selectedVersion}</strong> 以修复当前安装。安装完成后设备会自动重启。
+                  这会重新安装 <strong>{selectedVersion}</strong> 以修复当前安装。安装后设备会重启。
                 </>
               ) : (
                 <>
-                  这会安装 <strong>{selectedVersion}</strong>，并替换当前版本（<strong>{updateInfo?.current_version}</strong>）。安装完成后设备会自动重启。
+                  这会安装 <strong>{selectedVersion}</strong>，替换当前版本（<strong>{updateInfo?.current_version}</strong>）。安装后设备会重启。
                 </>
               )}
-              更新期间请勿断电。
+              {" "}过程中不要关闭设备电源。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

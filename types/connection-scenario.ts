@@ -17,9 +17,9 @@
 // --- Network Mode Options ----------------------------------------------------
 
 export const NETWORK_MODE_OPTIONS = [
-  { label: "Auto", value: "AUTO" },
-  { label: "LTE Only", value: "LTE" },
-  { label: "5G SA Only", value: "NR5G" },
+  { label: "自动", value: "AUTO" },
+  { label: "仅 LTE", value: "LTE" },
+  { label: "仅 5G SA", value: "NR5G" },
   { label: "5G SA / NSA", value: "LTE:NR5G" },
 ] as const;
 
@@ -34,7 +34,7 @@ export function modeValueToLabel(atValue: string): string {
 
 /** Colon-delimited storage → comma-separated display ("1:3:7" → "1, 3, 7") */
 export function bandsToDisplay(colonDelimited: string): string {
-  if (!colonDelimited) return "Auto";
+  if (!colonDelimited) return "自动";
   return colonDelimited.split(":").join(", ");
 }
 
@@ -95,14 +95,14 @@ export interface ConnectionScenario {
 export const DEFAULT_SCENARIOS: ConnectionScenario[] = [
   {
     id: "balanced",
-    name: "Balanced",
-    description: "Auto band selection",
+    name: "均衡",
+    description: "自动选择频段",
     gradient: "from-emerald-500 via-teal-500 to-cyan-500",
     pattern: "balanced",
     config: {
       atModeValue: "AUTO",
-      mode: "Auto",
-      optimization: "Balanced",
+      mode: "自动",
+      optimization: "均衡",
       lte_bands: "",
       nsa_nr_bands: "",
       sa_nr_bands: "",
@@ -111,14 +111,14 @@ export const DEFAULT_SCENARIOS: ConnectionScenario[] = [
   },
   {
     id: "gaming",
-    name: "Gaming",
-    description: "Low latency, SA priority",
+    name: "游戏",
+    description: "低延迟，优先 5G SA",
     gradient: "from-violet-600 via-purple-600 to-indigo-700",
     pattern: "gaming",
     config: {
       atModeValue: "NR5G",
-      mode: "5G SA Only",
-      optimization: "Latency",
+      mode: "仅 5G SA",
+      optimization: "低延迟",
       lte_bands: "",
       nsa_nr_bands: "",
       sa_nr_bands: "",
@@ -127,14 +127,14 @@ export const DEFAULT_SCENARIOS: ConnectionScenario[] = [
   },
   {
     id: "streaming",
-    name: "Streaming",
-    description: "High bandwidth, stable connection",
+    name: "流媒体",
+    description: "高带宽，稳定连接",
     gradient: "from-rose-500 via-pink-500 to-orange-400",
     pattern: "streaming",
     config: {
       atModeValue: "LTE:NR5G",
       mode: "5G SA / NSA",
-      optimization: "Throughput",
+      optimization: "吞吐优先",
       lte_bands: "",
       nsa_nr_bands: "",
       sa_nr_bands: "",

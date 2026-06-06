@@ -97,7 +97,7 @@ constants/                      # Static configuration data
 |-------|-----------|-------------|
 | `/` | Redirect | → `/dashboard` |
 | `/login` | LoginForm | Authentication (login or first-time setup) |
-| `/dashboard` | HomeComponent | Real-time signal, traffic, device status |
+| `/dashboard` | HomeComponent | Real-time signal and device status |
 | `/cellular` | CellularInformation | Cellular info cards |
 | `/cellular/settings` | CellularSettings | Mode, roaming, AMBR settings |
 | `/cellular/settings/apn-management` | APNSettings | APN profile CRUD |
@@ -181,6 +181,14 @@ Fetches ping history for latency charts.
 - **Endpoint**: `GET /cgi-bin/quecmanager/at_cmd/fetch_ping_history.sh`
 - **Returns**: `PingHistoryEntry[]`
 - **Tabs**: Real Time (last 10 samples), Hourly, 12h, Daily
+
+#### `useDataUsed(options?)`
+
+Persistent session data-usage counter. Polls at 2 s to stay in sync with the poller's write rate. Provides a `resetCounter()` mutation.
+
+- **Fetch endpoint**: `GET /cgi-bin/quecmanager/network/data_used.sh`
+- **Reset endpoint**: `POST /cgi-bin/quecmanager/network/data_used_reset.sh`
+- **Returns**: `{ data, isLoading, isResetting, error, resetCounter, refresh }`
 
 ### One-Shot Hooks (Fetch + Save)
 
@@ -395,27 +403,31 @@ if (error) return <Alert variant="destructive">{error}</Alert>;
 if (!data) return <Empty icon={Icon} message="No data available" />;
 ```
 
-### Reboot Dialog Pattern
+### Reboot Navigation Pattern
 
-Features that require a device reboot (MBN, IMEI) use a state-controlled dialog:
+Features that require a device reboot (MBN, IMEI, IP Passthrough, Tailscale resync, manual reboot from `nav-user`) hand off to the static `/reboot/` countdown page on save success. **Do not use an in-card dialog** and do not call `reboot` yourself — the backend's `cgi_reboot_response` is waiting on a handshake file, and the `/reboot/` page is what touches that file. See [Reboot Ack Handshake](BACKEND.md#431-reboot-ack-handshake) in BACKEND.md for the backend contract.
 
 ```tsx
-const [showRebootDialog, setShowRebootDialog] = useState(false);
+const success = await saveSettings(payload);
+if (!success) {
+  toast.error("Failed to save settings");
+  return;
+}
 
-// Opens AFTER successful save, not before
-const handleSave = async () => {
-  const result = await saveSettings(payload);
-  if (result.success) setShowRebootDialog(true);
-};
-
-<Dialog open={showRebootDialog} onOpenChange={setShowRebootDialog}>
-  {/* Reboot confirmation content */}
-</Dialog>
+markSaved();
+// Hand off to the countdown page. The backend (cgi_reboot_response) is
+// waiting on /tmp/qmanager_reboot_ack — the /reboot/ page touches it on
+// mount, so the device reboots only after the page is in browser memory.
+sessionStorage.setItem("qm_rebooting", "1");
+document.cookie = "qm_logged_in=; Path=/; Max-Age=0";
+window.location.href = "/reboot/";
 ```
+
+Reference implementations: `components/nav-user.tsx` (manual reboot), `components/cellular/settings/apn-management/mbn-card.tsx` (MBN apply), `components/local-network/ip-passthrough/ip-passthrough-card.tsx` (IPPT save). The countdown page itself lives at `components/reboot/reboot-countdown.tsx` and fires the `reboot_ack` request on mount.
 
 ### Self-Contained Cards
 
-Some simple features (Network Priority, FPLMN, Ethernet Status) are self-contained cards that don't use a separate hook or types file. They handle fetch/save/display within the component file itself.
+Some features (Network Priority, FPLMN, Ethernet Status) are self-contained cards that don't use a separate hook or types file. They handle fetch/save/display within the component file itself. `components/local-network/ethernet-card.tsx` polls `network/ethernet.sh` every 10 s and implements its own optimistic speed-change + post-save link confirmation loop.
 
 ---
 

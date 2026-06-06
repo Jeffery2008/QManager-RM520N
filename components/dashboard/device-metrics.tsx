@@ -34,14 +34,11 @@ import {
 
 import type {
   DeviceStatus,
-  TrafficStatus,
-  TrafficStream,
   LteStatus,
   NrStatus,
 } from "@/types/modem-status";
 import {
   formatBytes,
-  formatBytesPerSec,
   formatUptime,
   calculateLteDistance,
   calculateNrDistance,
@@ -50,11 +47,10 @@ import {
 } from "@/types/modem-status";
 import { useUnitPreferences } from "@/hooks/use-system-settings";
 import { useDataUsed } from "@/hooks/use-data-used";
+import { useModemSubsys } from "@/hooks/use-modem-subsys";
 
 interface DeviceMetricsComponentProps {
   deviceData: DeviceStatus | null;
-  trafficData: TrafficStatus | null;
-  trafficStream: TrafficStream | null;
   lteData: LteStatus | null;
   nrData: NrStatus | null;
   isLoading: boolean;
@@ -68,8 +64,6 @@ const CPU_DANGER = 90; // percentage
 
 const DeviceMetricsComponent = ({
   deviceData,
-  trafficData,
-  trafficStream,
   lteData,
   nrData,
   isLoading,
@@ -85,22 +79,6 @@ const DeviceMetricsComponent = ({
   const displayDevUptime = deviceData?.uptime_seconds ?? 0;
   const displayConnUptime = deviceData?.conn_uptime_seconds ?? 0;
 
-  // Prefer the 1 Hz stream daemon; fall back to the 2 s poller cache when
-  // the stream daemon is missing, stale, or has no bound iface. The stream
-  // emits explicit 0s when iface is null, so a `??` chain alone would never
-  // fall through — gate on iface presence and freshness instead.
-  const streamUsable =
-    trafficStream != null &&
-    trafficStream.iface != null &&
-    !trafficStream.stale;
-
-  const rxSpeed = streamUsable
-    ? trafficStream.rx_bytes_per_sec
-    : trafficData?.rx_bytes_per_sec ?? 0;
-  const txSpeed = streamUsable
-    ? trafficStream.tx_bytes_per_sec
-    : trafficData?.tx_bytes_per_sec ?? 0;
-
   const isTempHigh = temp !== null && temp >= TEMP_WARN;
   const isCpuHigh = cpu !== null && cpu >= CPU_WARN;
   const memPct = memTotal > 0 ? (memUsed / memTotal) * 100 : 0;
@@ -112,14 +90,20 @@ const DeviceMetricsComponent = ({
     resetCounter,
   } = useDataUsed();
 
+  // /usrdata partition usage — sourced from the poller cache via modem-subsys
+  const { data: subsysData } = useModemSubsys();
+  const storageTotalKb = subsysData?.storage?.total_kb ?? 0;
+  const storageUsedKb = subsysData?.storage?.used_kb ?? 0;
+  const storagePct = storageTotalKb > 0 ? (storageUsedKb / storageTotalKb) * 100 : 0;
+
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const handleResetConfirm = useCallback(async () => {
     const ok = await resetCounter();
     if (ok) {
-      toast.success("Reset queued — counter will update in a few seconds.");
+      toast.success("重置请求已加入队列，计数器会在几秒内更新。");
     } else {
-      toast.error("Failed to queue reset. Please try again.");
+      toast.error("重置请求加入队列失败，请重试。");
     }
     setResetDialogOpen(false);
   }, [resetCounter]);
@@ -211,7 +195,7 @@ const DeviceMetricsComponent = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <p className="font-semibold text-muted-foreground text-sm">
-                内存使用
+                内存使用率
               </p>
               <p className="font-semibold text-sm tabular-nums">
                 {memTotal > 0 ? `${memUsed} MB / ${memTotal} MB` : "-"}
@@ -222,12 +206,30 @@ const DeviceMetricsComponent = ({
             )}
           </div>
 
+          {/* Storage (/usrdata partition) */}
+          <Separator />
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-muted-foreground text-sm">
+                存储
+              </p>
+              <p className="font-semibold text-sm tabular-nums">
+                {storageTotalKb > 0
+                  ? `${formatBytes(storageUsedKb * 1024)} / ${formatBytes(storageTotalKb * 1024)}`
+                  : "-"}
+              </p>
+            </div>
+            {storageTotalKb > 0 && (
+              <MetricBar value={storagePct} max={100} warnAt={80} dangerAt={95} />
+            )}
+          </div>
+
           {/* Data Used (persistent cumulative counter from AT+QGDCNT/QGDNRCNT) */}
           <Separator />
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-1.5 min-w-0">
               <p className="font-semibold text-muted-foreground text-sm shrink-0">
-                Data Used
+                已用流量
               </p>
               {/* Reset button */}
               <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
@@ -236,7 +238,7 @@ const DeviceMetricsComponent = ({
                     variant="ghost"
                     size="icon"
                     className="h-5 w-5 text-muted-foreground hover:text-foreground"
-                    aria-label="Reset data usage counter"
+                    aria-label="重置流量计数器"
                     disabled={isResetting}
                   >
                     <RotateCcwIcon className="size-3.5" />
@@ -244,16 +246,15 @@ const DeviceMetricsComponent = ({
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Reset Data Used counter?</AlertDialogTitle>
+                    <AlertDialogTitle>重置已用流量计数器？</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This will zero the cumulative download and upload total.
-                      The counter will resume tracking immediately.
+                      这会清零累计下载和上传总量，计数器会立即重新开始统计。
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>取消</AlertDialogCancel>
                     <AlertDialogAction onClick={handleResetConfirm}>
-                      Reset Counter
+                      重置计数器
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -270,28 +271,6 @@ const DeviceMetricsComponent = ({
                 <TbCircleArrowUpFilled className="text-purple-500 size-5 shrink-0" />
                 <p className="font-semibold text-sm tabular-nums">
                   {formatBytes(dataUsed?.accumulated_tx_bytes ?? 0)}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Live Traffic */}
-          <Separator />
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-muted-foreground text-sm">
-              实时流量
-            </p>
-            <div className="flex items-center gap-x-2">
-              <div className="flex items-center gap-1">
-                <TbCircleArrowDownFilled className="text-info size-5" />
-                <p className="font-semibold text-sm tabular-nums">
-                  {formatBytesPerSec(rxSpeed)}
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
-                <TbCircleArrowUpFilled className="text-purple-500 size-5" />
-                <p className="font-semibold text-sm tabular-nums">
-                  {formatBytesPerSec(txSpeed)}
                 </p>
               </div>
             </div>
@@ -314,13 +293,12 @@ const DeviceMetricsComponent = ({
                 <TooltipContent>
                   {lteData?.ta ? (
                     <p>
-                      这是根据 LTE Timing Advance 值{" "}
-                      <span className="font-semibold">{lteData.ta}</span>.
-                      <br />
-                      计算得到的近似距离。
+                      这是基于 LTE Timing Advance 值{" "}
+                      <span className="font-semibold">{lteData.ta}</span>
+                      <br /> 推算出的近似距离。
                     </p>
                   ) : (
-                    <p>当前没有可用的 Timing Advance 值。</p>
+                    <p>Timing Advance 值不可用。</p>
                   )}
                 </TooltipContent>
               </Tooltip>
@@ -346,13 +324,12 @@ const DeviceMetricsComponent = ({
                 <TooltipContent>
                   {nrData?.ta ? (
                     <p>
-                      这是根据 NR Timing Advance 值{" "}
-                      <span className="font-semibold">{nrData.ta}</span>.
-                      <br />
-                      计算得到的近似距离。
+                      这是基于 NR Timing Advance 值{" "}
+                      <span className="font-semibold">{nrData.ta}</span>
+                      <br /> 推算出的近似距离。
                     </p>
                   ) : (
-                    <p>当前没有可用的 Timing Advance 值。</p>
+                    <p>Timing Advance 值不可用。</p>
                   )}
                 </TooltipContent>
               </Tooltip>
@@ -366,7 +343,7 @@ const DeviceMetricsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              连接时长
+              连接运行时间
             </p>
             <p className="font-semibold text-sm tabular-nums">
               {displayConnUptime > 0 ? formatUptime(displayConnUptime) : "-"}
@@ -377,7 +354,7 @@ const DeviceMetricsComponent = ({
           <Separator />
           <div className="flex items-center justify-between">
             <p className="font-semibold text-muted-foreground text-sm">
-              设备运行时长
+              设备运行时间
             </p>
             <p className="font-semibold text-sm tabular-nums">
               {displayDevUptime > 0 ? formatUptime(displayDevUptime) : "-"}

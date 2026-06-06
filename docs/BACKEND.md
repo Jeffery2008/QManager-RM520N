@@ -194,8 +194,29 @@ PATH is exported at source time to include `/opt/bin:/opt/sbin:/usr/bin:/usr/sbi
 | `cgi_method_not_allowed` | Emit 405 JSON and exit |
 | `cgi_success` | Emit `{"success":true}` |
 | `cgi_error <code> <detail>` | Emit `{"success":false,"error":$code,"detail":$detail}` |
-| `cgi_reboot_response` | Emit success, schedule async reboot via subshell sleep+reboot |
+| `cgi_reboot_response` | Emit success, then async-wait for `/tmp/qmanager_reboot_ack` (up to `$QM_REBOOT_ACK_TIMEOUT`s, default 20) before issuing reboot via `run_reboot`. See [§4.3.1 Reboot Ack Handshake](#431-reboot-ack-handshake). |
 | `serve_ndjson_as_array <file>` | Serve an NDJSON file as a JSON array; emits `[]` if missing |
+
+#### 4.3.1 Reboot Ack Handshake
+
+Any CGI endpoint that triggers a reboot must call `cgi_reboot_response` — never inline `( sleep N && reboot )`. The helper coordinates with the static `/reboot/` page so the device only reboots **after** the countdown UI is in browser memory; otherwise lighttpd dies mid-serve and the user gets a connection-reset error instead of a countdown.
+
+The contract:
+
+1. CGI emits `{"success":true}` and forks a background block that polls `/tmp/qmanager_reboot_ack` once a second.
+2. Frontend redirects to `/reboot/` on save success (see the [Reboot Navigation Pattern](FRONTEND.md#reboot-navigation-pattern) in FRONTEND.md).
+3. The `/reboot/` page (`components/reboot/reboot-countdown.tsx`) fires `GET /cgi-bin/quecmanager/system/update.sh?action=reboot_ack` on mount, which creates `/tmp/qmanager_reboot_ack`.
+4. The CGI background block sees the ack file, removes it, sleeps `$QM_REBOOT_POST_ACK_DELAY` seconds, then calls `run_reboot`.
+5. If the user closed the tab or a non-UI caller invoked the endpoint, the wait is bounded — the reboot fires after `$QM_REBOOT_ACK_TIMEOUT` seconds regardless. The contract cannot hang.
+
+Tunables (export before sourcing or before the call):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `QM_REBOOT_ACK_TIMEOUT` | `20` | Max seconds to wait for the ack file before forcing reboot. Matches the OTA worker's `REBOOT_ACK_TIMEOUT` in `qmanager_update` so every reboot path shares one budget. |
+| `QM_REBOOT_POST_ACK_DELAY` | `1` | Grace seconds after ack is received, before `run_reboot` runs. Lets the browser finish painting the countdown's initial frame. |
+
+The OTA worker (`qmanager_update`) is **not** a CGI and reaches reboot via its own ack-wait loop using the same file. Both paths use the same 20s budget so user expectations match wherever the reboot was triggered.
 
 ### 4.4 `config.sh`
 
@@ -336,7 +357,21 @@ SIM profile CRUD library. No persistent process. Sourced by CGI scripts and `qma
 | `profile_check_lock` | Check if apply process is running; clean stale PID; sets `_profile_lock_pid` |
 | `profile_acquire_lock` | Check + write PID to `PROFILE_APPLY_PID_FILE`; rc=1 if locked |
 
-Profile JSON schema: `{id, name, mno, sim_iccid, created_at, updated_at, settings: {apn: {cid, name, pdp_type}, imei, ttl, hl}}`.
+Profile JSON schema: `{id, name, mno, sim_iccid, created_at, updated_at, settings: {apn: {cid, name, pdp_type}, imei, ttl, hl, scenario_id}}`.
+
+`settings.scenario_id` is optional (`""` = no binding). Valid values: `""`, `balanced`, `gaming`, `streaming`, or a `custom-<timestamp>` ID that exists at `/etc/qmanager/scenarios/<id>.json`. `profile_save` validates the field against this enum and rejects unknown values. See [`reference/sim-profiles.md`](reference/sim-profiles.md) for the binding semantics, gate matrix, and apply pipeline.
+
+### 4.9a `scenario_mgr.sh`
+
+Connection Scenario apply library. Sourced by `scenarios/activate.sh` and `qmanager_profile_apply`. Custom scenarios are stored at `/etc/qmanager/scenarios/<id>.json`; the active scenario ID is written to `/etc/qmanager/active_scenario`.
+
+| Function | Description |
+|----------|-------------|
+| `scenario_get_active` | Print the currently active scenario ID, or empty if none |
+| `scenario_set_active <id>` | Write active scenario ID atomically via `tmp` + `mv` |
+| `scenario_clear_active` | Remove the active scenario marker |
+| `scenario_lookup_custom <id>` | For a `custom-*` ID, print the stored JSON; rc=1 if missing |
+| `scenario_apply <id> [mode] [lte_bands] [nsa_nr_bands] [sa_nr_bands]` | Apply mode pref + optional band locks via `AT+QNWPREFCFG`. Built-ins (`balanced`/`gaming`/`streaming`) ignore the extra args and use hardcoded modes. Custom scenarios require `mode`. Returns 0 if `mode_pref` succeeded; sets `_scenario_apply_failed` to a comma-separated list of failed band sub-steps for partial-success detection. |
 
 ### 4.10 `qlog.sh`
 
@@ -445,6 +480,17 @@ TTL rules target `rmnet+` interface in `mangle POSTROUTING`. Replaces the legacy
 | `ttl_state_apply <ttl> <hl>` | Delete old rules, insert new rules; skips insert if value is 0 |
 | `ttl_state_clear` | Apply 0 0 and remove state file |
 
+### 4.16 `ethtool_helper.sh`
+
+Ethernet PHY helpers for `network/ethernet.sh`. Wraps `ethtool` output parsing into reusable functions. Guards against double-sourcing via `_ETHTOOL_HELPER_LOADED`.
+
+| Function | Description |
+|----------|-------------|
+| `get_supported_advertise_hex` | Parse `ethtool $ETH_INTERFACE` supported link modes into a bitmask hex string (for `ethtool --change advertise`) |
+| `supports_2500` | Returns `true` if `eth0` advertises `2500baseT/Full`; `false` otherwise |
+
+Caller must set `ETH_INTERFACE` before sourcing (default `eth0` in `ethernet.sh`).
+
 ---
 
 ## 5. Daemons & Utilities
@@ -487,19 +533,6 @@ Network interface for traffic stats is auto-detected: `rmnet_ipa0` on RM520N-GL 
 | `storage.{mount, total_kb, used_kb, available_kb}` | `df -P /usrdata` |
 
 The CGI reader (`/cgi-bin/quecmanager/system/modem-subsys.sh`) is now a thin `jq` extractor: it reshapes `system_health` into the historical response schema, falls back to an all-null shape if the cache is missing or older than 30s, and never re-implements live computation. Per-request cost dropped from ~80–120ms to ~15–25ms.
-
-#### `qmanager_traffic`
-
-**Location:** `/usr/bin/qmanager_traffic`
-**State files:** `/tmp/qmanager_traffic.json` (atomic write per tick)
-
-1 Hz cellular traffic counter daemon. Reads `/proc/net/dev` every second for the active rmnet interface and emits a slim JSON snapshot consumed by the Device Metrics card via `fetch_traffic.sh` and `useTrafficStream`. Decoupled from `qmanager_poller` so the dashboard's Live Traffic and Data Used rows update at 1 s without waiting on the AT-bound 2 s tier. Never touches `/dev/smd11` and acquires no AT lock.
-
-**Iface selection (per tick):** prefers `$NETWORK_IFACE` (default `rmnet_ipa0`), falls back to `rmnet_data0`, emits `iface=null` with zeroed counters if neither is present in `/proc/net/dev`. Selection is by `/proc/net/dev` presence, not `/sys/class/net/<iface>/operstate` — Quectel rmnet drivers leave `operstate` at `unknown` even when actively passing traffic, so an operstate gate would never select an iface on this platform. This mirrors the approach in `qmanager_poller`'s traffic stats path.
-
-**Counter-reset handling:** a negative delta (modem subsystem restart re-created the iface) emits one zero tick and reseeds the baseline. No negative speeds ever surface to the UI.
-
-**Footprint (measured on RM520N-GL, single-core ARMv7, 30 s sample):** ~0.4 % CPU, ~14 MB RSS — about ¼ of `qmanager_poller`. Dominated by the per-tick `awk` + `jq` + `mv`.
 
 #### `qmanager_ping`
 
@@ -546,12 +579,12 @@ MONITOR -> SUSPECT -> RECOVERY -> COOLDOWN -> MONITOR
 
 **Escalation tiers:**
 
-| Tier | Action | Guard |
-|------|--------|-------|
-| 1 | Network deregister/reregister (`AT+COPS=2/0`) | Enabled by default |
-| 2 | Radio toggle (`AT+CFUN=0/1`) | Skipped if tower lock active |
-| 3 | SIM failover (`AT+QUIMSLOT`) | Disabled by default; Golden Rule sequence |
-| 4 | System reboot | Token bucket: max N/hour; auto-disables if limit hit |
+| Tier | UI Label | Action | Guard |
+|------|----------|--------|-------|
+| 1 | Re-register to Network | Network deregister/reregister (`AT+COPS=2/0`) | Enabled by default |
+| 2 | CFUN Toggle | Radio toggle (`AT+CFUN=0/1`) | Skipped if tower lock active |
+| 3 | SIM Failover | SIM failover (`AT+QUIMSLOT`) | Disabled by default; Golden Rule sequence |
+| 4 | Reboot | System reboot | Token bucket: max N/hour; auto-disables if limit hit |
 
 LOCKED state: set by touching `/tmp/qmanager_watchcat.lock`. Watchcat sleeps until the file is removed. The update worker and installer touch this file during OTA operations.
 
@@ -599,12 +632,15 @@ Applies and removes tower lock on a time schedule. Reads `tower_lock.json` secti
 **Location:** `/usr/bin/qmanager_profile_apply`
 **State files:** `/tmp/qmanager_profile_state.json`, `/tmp/qmanager_profile_apply.pid`
 
-Detached process spawned by `profiles/apply.sh`. Applies a saved profile to the modem in three steps:
-1. APN -- `AT+CGDCONT` (non-disruptive)
+Detached process spawned by `profiles/apply.sh`. Applies a saved profile to the modem in four steps (`STEP_NAMES="apn ttl_hl scenario imei"`):
+1. APN -- `AT+CGDCONT` + full attach cycle (see [`reference/wan-profile-management.md`](reference/wan-profile-management.md))
 2. TTL/HL -- iptables rules via `ttl_state_apply`
-3. IMEI -- `AT+EGMR` + `AT+CFUN=1,1` soft reboot (most disruptive, applied last)
+3. Scenario -- `scenario_apply` from `scenario_mgr.sh`; skipped if `settings.scenario_id` is empty; marks `skipped` with detail `"Scenario <id> no longer exists"` for a dangling custom reference
+4. IMEI -- `AT+EGMR` + `AT+CFUN=1,1` soft reboot (most disruptive, applied last)
 
-State JSON tracks current step, total steps, and status (`idle`/`running`/`done`/`error`). Polled by `profiles/apply_status.sh`. Singleton via PID file; `profile_check_lock()` guards against concurrent runs.
+Scenario MUST precede IMEI: `AT+CFUN=1,1` reboots the radio, so any `AT+QNWPREFCFG` writes after it would be lost.
+
+State JSON tracks current step, total steps (4), and per-step status (`pending`/`running`/`done`/`skipped`/`failed`). Polled by `profiles/apply_status.sh`. Singleton via PID file; `profile_check_lock()` guards against concurrent runs.
 
 ### 5.3 Boot Oneshots
 
@@ -732,8 +768,7 @@ OTA update worker. See §12 for full pipeline description. Called via `sudo -n` 
 | `qmanager-imei-check.service` | oneshot | `/usr/bin/qmanager_imei_check` | Post-boot IMEI restore; guarded by `ExecStartPre` condition checks |
 | `qmanager-mtu.service` | simple | `/usr/bin/qmanager_mtu_apply` | MTU persistence; `ConditionPathExists=/etc/firewall.user.mtu` |
 | `qmanager-ping.service` | simple | `/usr/bin/qmanager_ping` | Ping daemon; required by poller |
-| `qmanager-poller.service` | simple | `/usr/bin/qmanager_poller` | Main data poller; guards `/dev/smd11` in `ExecStartPre` |
-| `qmanager-traffic.service` | simple | `/usr/bin/qmanager_traffic` | 1 Hz `/proc/net/dev` reader for Live Traffic + Data Used; no AT access |
+| `qmanager-poller.service` | simple | `/usr/bin/qmanager_poller` | Main data poller; guards `/dev/smd11` in `ExecStartPre`; sources Data Used (schema v4, with per-boot orientation detection) from `/proc/net/dev` at the 2 s Tier 1 cadence |
 | `qmanager-setup.service` | oneshot (RemainAfterExit) | `/usr/bin/qmanager_setup` | Permission setup; before ping and poller |
 | `qmanager-tower-failover.service` | simple | `/usr/bin/qmanager_tower_failover` | Tower lock failover; guarded by config check in `ExecStartPre` |
 | `qmanager-ttl.service` | oneshot (RemainAfterExit) | inline sh | TTL/HL rule persistence; `ConditionPathExists=/etc/qmanager/ttl_state` |
@@ -742,7 +777,7 @@ OTA update worker. See §12 for full pipeline description. Called via `sudo -n` 
 
 **`tailscaled.service`** is staged in `/usr/lib/qmanager/tailscaled.service` (source: `scripts/etc/systemd/system/tailscaled.service`). It is only copied to `/lib/systemd/system/` when the user installs Tailscale via `qmanager_tailscale_mgr install`. `ExecStartPost=/bin/chmod 755 /usrdata/tailscale` restores directory permissions after tailscaled resets them to 700.
 
-**Service ordering:** `qmanager-firewall` -> `qmanager-setup` -> `qmanager-ping` -> `qmanager-poller` -> `qmanager-watchcat`. `qmanager-traffic` runs in parallel with the others (`After=network.target qmanager-setup.service` only — no AT-device dependency).
+**Service ordering:** `qmanager-firewall` -> `qmanager-setup` -> `qmanager-ping` -> `qmanager-poller` -> `qmanager-watchcat`.
 
 ---
 
@@ -892,7 +927,7 @@ For request/response schemas, see `API-REFERENCE.md`.
 | `auth/password.sh` | POST | Change web UI password (and SSH password via `qm_set_ssh_password`) |
 | `auth/ssh_password.sh` | POST | Change root SSH password only |
 
-#### `at_cmd/` (13 scripts)
+#### `at_cmd/` (14 scripts)
 
 | Script | Method | Description |
 |--------|--------|-------------|
@@ -923,7 +958,7 @@ For request/response schemas, see `API-REFERENCE.md`.
 
 | Script | Method | Description |
 |--------|--------|-------------|
-| `cellular/apn.sh` | GET/POST | Read or write APN settings (`AT+CGDCONT`) |
+| `cellular/apn.sh` | GET/POST | WAN Profile Management — list/save/toggle 6 PDP contexts (AT-only). See `docs/reference/wan-profile-management.md` |
 | `cellular/fplmn.sh` | GET/POST | Read or manage FPLMN (forbidden PLMN) list |
 | `cellular/imei.sh` | GET/POST | Read or change IMEI (`AT+EGMR`) |
 | `cellular/mbn.sh` | GET/POST | Read or select MBN profile |
@@ -956,10 +991,14 @@ For request/response schemas, see `API-REFERENCE.md`.
 | `monitoring/sms_alerts.sh` | GET/POST | Read or write SMS alert config; POST test send |
 | `monitoring/watchdog.sh` | GET/POST | Read or write watchcat config; start/stop watchcat service |
 
-#### `network/` (3 scripts)
+#### `network/` (7 scripts)
 
 | Script | Method | Description |
 |--------|--------|-------------|
+| `network/custom_dns.sh` | GET/POST | Read or write dnsmasq upstream DNS override via sentinel block in `/etc/data/dnsmasq.conf`. See `docs/reference/custom-dns.md` |
+| `network/data_used.sh` | GET | Return `.data_used` block from poller status cache with stale flag; polled at 2 Hz by `useDataUsed` |
+| `network/data_used_reset.sh` | POST | Write reset flag consumed by poller on next tick; counter drops to ~0 within 4–5 s |
+| `network/ethernet.sh` | GET/POST | Read RTL8125B link state (sysfs + `ethtool`) and apply speed limit via `qmanager_ethernet_apply` root helper; uses `ethtool_helper.sh` |
 | `network/ip_passthrough.sh` | GET/POST | Read or configure IP passthrough (`AT+QMAP`, `AT+QCFG="usbnet"`) |
 | `network/mtu.sh` | GET/POST | Read or write custom MTU setting |
 | `network/ttl.sh` | GET/POST | Read or write TTL/HL override rules via `ttl_state.sh` |
@@ -981,17 +1020,18 @@ For request/response schemas, see `API-REFERENCE.md`.
 
 | Script | Method | Description |
 |--------|--------|-------------|
-| `scenarios/activate.sh` | POST | Apply a connection scenario (band lock + network mode) |
+| `scenarios/activate.sh` | POST | Apply a connection scenario (band lock + network mode). Returns `profile_managed` error without touching the modem if the active SIM profile binds a non-Balanced scenario via `settings.scenario_id` (defense-in-depth for stale frontends). A `"balanced"` binding is allowed through — Balanced is treated as "no opinion" both on the UI gates and at this guard. |
 | `scenarios/active.sh` | GET | Return currently active scenario ID |
 | `scenarios/delete.sh` | POST | Delete a scenario |
 | `scenarios/list.sh` | GET | Return all saved scenarios |
 | `scenarios/save.sh` | POST | Create or update a scenario |
 
-#### `system/` (4 scripts)
+#### `system/` (5 scripts)
 
 | Script | Method | Description |
 |--------|--------|-------------|
 | `system/logs.sh` | GET | Return QManager log file contents |
+| `system/modem-subsys.sh` | GET | Return modem subsystem health (state, crash count, coredump flag) by reshaping the `system_health` block from the poller status cache; thin `jq` extractor — never re-computes live data |
 | `system/reboot.sh` | POST | Initiate system reboot via `cgi_reboot_response` |
 | `system/settings.sh` | GET/POST | Read or write system settings (hostname, timezone, scheduled reboot, low-power schedule, auto-update) |
 | `system/update.sh` | GET/POST | OTA update: check version, download, install, rollback; spawns `qmanager_update` via sudo |
@@ -1012,7 +1052,7 @@ For request/response schemas, see `API-REFERENCE.md`.
 |--------|--------|-------------|
 | `vpn/tailscale.sh` | GET/POST | Tailscale VPN: install, uninstall, status, `tailscale up` |
 
-**Total: 63 CGI scripts.**
+**Total: 69 CGI scripts.**
 
 ---
 
@@ -1030,7 +1070,6 @@ Cleared on every reboot (tmpfs). Files pre-created by `qmanager_setup` are marke
 | `/tmp/qmanager_status.json` | root | qmanager_poller | Main modem status cache; polled by frontend |
 | `/tmp/qmanager_ping.json` | root | qmanager_ping | Current ping state (available, latency, streaks) |
 | `/tmp/qmanager_ping_history` | root | qmanager_ping | Raw latency history (flat ring buffer) |
-| `/tmp/qmanager_traffic.json` | root | qmanager_traffic | 1 Hz cellular traffic snapshot (iface, totals, byte rates) |
 | `/tmp/qmanager_signal_history.json` | root | qmanager_poller | Signal history NDJSON for chart |
 | `/tmp/qmanager_events.json` | root | qmanager_poller / qmanager_watchcat | Recent activity events NDJSON |
 | `/tmp/qmanager_pci_state.json` | root | qmanager_poller | SCC PCI state for handoff detection |
@@ -1084,6 +1123,8 @@ Lives on the rootfs (read-only by default). `qmanager_setup` calls `mount -o rem
 | `/etc/qmanager/updates/previous_version` | Previous version string for rollback support |
 | `/etc/qmanager/active_profile` | Active profile ID (plain text) |
 | `/etc/qmanager/profiles/` | Profile JSON files (`p_<ts>_<hex>.json`) |
+| `/etc/qmanager/active_scenario` | Active scenario ID (plain text) — written by `scenario_set_active` |
+| `/etc/qmanager/scenarios/` | Custom scenario JSON files (`custom-<ts>.json`) |
 | `/etc/qmanager/tower_lock.json` | Tower lock config (lte, nr_sa, persist, failover, schedule) |
 | `/etc/qmanager/email_alerts.json` | Email alert config (enabled, sender, recipient, threshold) |
 | `/etc/qmanager/msmtprc` | msmtp config (generated on save; no `logfile` directive) |
@@ -1350,6 +1391,8 @@ file scripts/usr/bin/qmanager_setup
 
 **Forgetting `sudo -n` in CGI invocations.** CGI runs as www-data. Any call to a root-required binary (iptables, systemctl, reboot, chown) without `sudo -n` will silently fail or produce a permission error that is hard to diagnose. Always use the `platform.sh` wrappers (`run_iptables`, `svc_*`, `run_reboot`) from CGI context.
 
+**Inlining `( sleep N && reboot )` in a CGI script.** Two failure modes, both silent: (1) bare `reboot` runs as www-data and fails with "Failed to talk to init daemon" because systemd's private bus rejects unprivileged callers; (2) even if you wrap it in `run_reboot`, the fixed sleep races the `/reboot/` page — lighttpd is killed mid-serve and the user sees a connection-reset instead of the countdown. Always use `cgi_reboot_response` (see [§4.3.1](#431-reboot-ack-handshake)); it uses the sudo-aware `run_reboot` and waits for the page's ack file before pulling the plug.
+
 **Trying to `systemctl enable` on RM520N-GL.** `systemctl enable` is a no-op on this platform because unit files are on the read-only rootfs where the command cannot write symlinks. Always use `svc_enable` / `svc_disable` from `platform.sh`, which writes the symlinks directly via `sudo /bin/ln -sf` and `sudo /bin/rm -f`.
 
 **Writing to `/tmp/qmanager_*.json` from CGI without pre-creation.** If a CGI script creates a `/tmp` file that a root daemon will later overwrite, root will be blocked by `fs.protected_regular=1`. Pre-create the file in `qmanager_setup` with `www-data` ownership and mode 666 (or `root:root` mode 666 if root writes it primarily). See `qmanager_setup` for the full list of pre-created files.
@@ -1408,7 +1451,7 @@ These quirks are easy to miss when porting code from a typical GNU/Linux box. Ev
 
 ## 15. See Also
 
-- `API-REFERENCE.md` -- CGI request/response schemas for all 63 endpoints
+- `API-REFERENCE.md` -- CGI request/response schemas for all 69 endpoints
 - `DEPLOYMENT.md` -- Install and update operational flow; installer behaviour; upgrade/rollback procedures
 - `docs/rm520n-gl-architecture.md` -- Platform internals: Entware bootstrap, lighttpd configuration, boot sequences, `/usrdata/` partition layout, troubleshooting
 - `ARCHITECTURE.md` -- System overview: component diagram, data flow, frontend/backend boundary

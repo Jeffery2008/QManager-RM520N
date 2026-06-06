@@ -68,7 +68,7 @@ export function WatchdogSettingsCard({
         <CardHeader>
           <CardTitle>看门狗设置</CardTitle>
           <CardDescription>
-            配置连接健康检测与恢复策略。
+            配置连接健康监控和自动恢复。
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -151,13 +151,13 @@ function WatchdogSettingsForm({
     (isNaN(Number(maxFailures)) ||
       Number(maxFailures) < 1 ||
       Number(maxFailures) > 20)
-      ? "Must be 1\u201320"
+      ? "必须为 1 到 20"
       : null;
 
   const cooldownError =
     cooldown &&
     (isNaN(Number(cooldown)) || Number(cooldown) < 10 || Number(cooldown) > 300)
-      ? "Must be 10\u2013300 seconds"
+      ? "必须为 10 到 300 秒"
       : null;
 
   const maxRebootsError =
@@ -165,7 +165,7 @@ function WatchdogSettingsForm({
     (isNaN(Number(maxRebootsPerHour)) ||
       Number(maxRebootsPerHour) < 1 ||
       Number(maxRebootsPerHour) > 10)
-      ? "Must be 1\u201310"
+      ? "必须为 1 到 10"
       : null;
 
   const hasValidationErrors = !!(
@@ -259,7 +259,7 @@ function WatchdogSettingsForm({
       <CardHeader>
         <CardTitle>看门狗设置</CardTitle>
         <CardDescription>
-          配置连接健康检测与恢复策略。
+          配置连接健康监控和自动恢复。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -267,7 +267,7 @@ function WatchdogSettingsForm({
           <Alert variant="destructive" className="mb-4">
             <AlertTriangleIcon className="size-4" />
             <AlertDescription>
-              看门狗因 1 小时内重启次数过多而自动关闭。待连接恢复稳定后，可在下方重新启用。
+              一小时内重启次数过多，看门狗已自动禁用。连接稳定后可在下方重新启用。
             </AlertDescription>
           </Alert>
         )}
@@ -291,7 +291,7 @@ function WatchdogSettingsForm({
                 {/* Max Failures */}
                 <Field>
                   <FieldLabel htmlFor="max-failures">
-                    故障阈值
+                    失败阈值
                   </FieldLabel>
                   <Input
                     id="max-failures"
@@ -316,7 +316,7 @@ function WatchdogSettingsForm({
                     </FieldError>
                   ) : (
                     <FieldDescription id="max-failures-desc">
-                      连续多少次连通性检查失败后开始执行恢复流程。
+                      连续多少次连接检查失败后开始恢复。
                     </FieldDescription>
                   )}
                 </Field>
@@ -370,7 +370,7 @@ function WatchdogSettingsForm({
                     <FieldError id="cooldown-error">{cooldownError}</FieldError>
                   ) : (
                     <FieldDescription id="cooldown-desc">
-                      每次恢复动作后等待多久再重新检查连通性。
+                      每个恢复步骤执行后，重新检查连接前的等待时间。
                     </FieldDescription>
                   )}
                 </Field>
@@ -403,7 +403,7 @@ function WatchdogSettingsForm({
                       </FieldError>
                     ) : (
                       <FieldDescription id="max-reboots-desc">
-                        安全限制：如果 1 小时内达到该重启次数，看门狗会自动停用。
+                        安全限制。如果一小时内达到此重启次数，看门狗会自动禁用。
                       </FieldDescription>
                     )}
                   </Field>
@@ -432,7 +432,7 @@ function WatchdogSettingsForm({
                         </SelectContent>
                       </Select>
                       <FieldDescription>
-                        当主 SIM 失去连通性时切换到的备用卡槽，必须与当前激活卡槽不同。
+                        主 SIM 失去连接时切换到的卡槽，必须不同于当前活动卡槽。
                       </FieldDescription>
                     </Field>
                   )}
@@ -443,14 +443,14 @@ function WatchdogSettingsForm({
               <div className="grid gap-2">
                 <CardTitle>恢复步骤</CardTitle>
                 <CardDescription>
-                  按顺序依次尝试，从影响最小到影响最大。
+                  按顺序尝试，从影响最小到影响最大。
                 </CardDescription>
               </div>
 
               <div className="grid grid-cols-1 @sm/card:grid-cols-2 gap-4">
                 <Field orientation="horizontal" className="w-fit">
                   <FieldLabel htmlFor="tier1-enabled">
-                    重启网络接口
+                    重新注册到网络
                   </FieldLabel>
                   <Switch
                     id="tier1-enabled"
@@ -474,13 +474,12 @@ function WatchdogSettingsForm({
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
-                          当基站锁定启用时会自动跳过此步骤，<br />
-                          以避免破坏当前锁定的小区。
+                          当基站锁定启用时会自动跳过，<br />以保留当前锁定的小区。
                         </p>
                       </TooltipContent>
                     </Tooltip>
                     <FieldLabel htmlFor="tier2-enabled">
-                      重启调制解调器无线电
+                      重启调制解调器无线
                     </FieldLabel>
                     <Switch
                       id="tier2-enabled"

@@ -65,7 +65,7 @@ function formatCarrierAggregation(network: NetworkStatus): string {
   const parts: string[] = [];
 
   if (network.ca_active && network.ca_count > 0) {
-    parts.push(`LTE (${network.ca_count + 1} carriers)`);
+    parts.push(`LTE（${network.ca_count + 1} 个载波）`);
   } else if (isNSA) {
     // NSA always has an LTE anchor — show "LTE" even without CA
     parts.push("LTE");
@@ -73,7 +73,7 @@ function formatCarrierAggregation(network: NetworkStatus): string {
 
   if (network.nr_ca_active && network.nr_ca_count > 0) {
     // Genuine NR CA — show carrier count (+1 for primary NR carrier)
-    parts.push(`NR (${network.nr_ca_count + 1} carriers)`);
+    parts.push(`NR（${network.nr_ca_count + 1} 个载波）`);
   } else if (isNSA) {
     // NSA dual connectivity: NR leg is active but not doing CA
     parts.push("NR");
@@ -169,6 +169,64 @@ function compressIPv6(ip: string): string {
 }
 
 // =============================================================================
+// IP Address Row
+// =============================================================================
+
+/**
+ * Row for IPv6 / DNS values that may overflow on narrow viewports.
+ * - Compresses IPv6 to RFC 5952 form
+ * - Allows the value to wrap mid-string (`break-all`) since IPv6 has no
+ *   natural break points
+ * - `min-w-0` lets the value column shrink below its intrinsic width inside
+ *   the parent flex container
+ * - Tooltip surfaces the original (uncompressed) form when compression
+ *   actually shortens it
+ */
+function IpAddressRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
+  const compressed = value ? compressIPv6(value) : "-";
+  const showTooltip = !!value && compressed !== value;
+
+  return (
+    <motion.div
+      className="flex items-start justify-between gap-3"
+      variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
+      <p className="text-sm font-semibold text-muted-foreground shrink-0">
+        {label}
+      </p>
+      <div className="flex items-start gap-1.5 min-w-0">
+        {showTooltip ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex shrink-0"
+                aria-label="显示完整地址"
+              >
+                <TbInfoCircleFilled className="size-5 text-info" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="font-mono break-all max-w-[14rem]">{value}</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+        <p className="text-sm font-semibold font-mono break-all text-right min-w-0">
+          {compressed}
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
+// =============================================================================
 // Loading Skeleton
 // =============================================================================
 
@@ -176,9 +234,9 @@ function CellDataSkeleton() {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>蜂窝信息</CardTitle>
+        <CardTitle>蜂窝网络信息</CardTitle>
         <CardDescription>
-          已连接蜂窝网络的详细信息。
+          当前蜂窝网络连接的详细信息。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -212,7 +270,7 @@ const CellDataComponent = ({
 }: CellDataComponentProps) => {
   if (isLoading) return <CellDataSkeleton />;
 
-  // Determine which RAT provides 小区 ID and TAC
+  // Determine which RAT provides Cell ID and TAC
   // SA mode: use NR values. NSA/LTE: use LTE values.
   const isSA = network?.type === "5G-SA";
   const cellId = isSA ? nr?.cell_id : lte?.cell_id;
@@ -224,9 +282,9 @@ const CellDataComponent = ({
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle>蜂窝信息</CardTitle>
+        <CardTitle>蜂窝网络信息</CardTitle>
         <CardDescription>
-          已连接蜂窝网络的详细信息。
+          当前蜂窝网络连接的详细信息。
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -243,7 +301,7 @@ const CellDataComponent = ({
             variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            <p className="text-sm font-semibold text-muted-foreground">运营商</p>
+            <p className="text-sm font-semibold text-muted-foreground">ISP</p>
             <p className="text-sm font-semibold">{network?.carrier || "-"}</p>
           </motion.div>
 
@@ -255,7 +313,7 @@ const CellDataComponent = ({
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
             <p className="text-sm font-semibold text-muted-foreground">
-              接入点名称（APN）
+              接入点名称 (APN)
             </p>
             <div className="flex items-center gap-1.5">
               <p className="text-sm font-semibold">{network?.apn || "-"}</p>
@@ -270,7 +328,7 @@ const CellDataComponent = ({
             </div>
           </motion.div>
 
-          {/* 网络类型 */}
+          {/* Network Type */}
           <Separator />
           <motion.div
             className="flex items-center justify-between"
@@ -285,7 +343,7 @@ const CellDataComponent = ({
             </p>
           </motion.div>
 
-          {/* 小区 ID */}
+          {/* Cell ID */}
           <Separator />
           <motion.div
             className="flex items-center justify-between"
@@ -389,7 +447,7 @@ const CellDataComponent = ({
             </div>
           </motion.div>
 
-          {/* 载波聚合 */}
+          {/* Carrier Aggregation */}
           <Separator />
           <motion.div
             className="flex items-center justify-between"
@@ -404,7 +462,7 @@ const CellDataComponent = ({
             </p>
           </motion.div>
 
-          {/* 当前 MIMO */}
+          {/* Active MIMO */}
           <Separator />
           <motion.div
             className="flex items-center justify-between"
@@ -422,7 +480,7 @@ const CellDataComponent = ({
                 className="p-0.5 cursor-pointer"
                 asChild
               >
-                <Link href="/cellular/antenna-statistics">逐天线</Link>
+                <Link href="/cellular/antenna-statistics">各天线</Link>
               </Button>
             </div>
           </motion.div>
@@ -444,90 +502,15 @@ const CellDataComponent = ({
 
           {/* WAN IPv6 */}
           <Separator />
-          <motion.div
-            className="flex items-center justify-between"
-            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            <p className="text-sm font-semibold text-muted-foreground">
-              WAN IPv6
-            </p>
-            <div className="flex items-center gap-1.5">
-              {network?.wan_ipv6 && compressIPv6(network.wan_ipv6) !== network.wan_ipv6 ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" className="inline-flex" aria-label="更多信息">
-                      <TbInfoCircleFilled className="size-5 text-info" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{network.wan_ipv6}</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : null}
-              <p className="text-sm font-semibold font-mono">
-                {network?.wan_ipv6 ? compressIPv6(network.wan_ipv6) : "-"}
-              </p>
-            </div>
-          </motion.div>
+          <IpAddressRow label="WAN IPv6" value={network?.wan_ipv6} />
 
-          {/* 主 DNS */}
+          {/* Primary DNS */}
           <Separator />
-          <motion.div
-            className="flex items-center justify-between"
-            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            <p className="text-sm font-semibold text-muted-foreground">
-              主 DNS
-            </p>
-            <div className="flex items-center gap-1.5">
-              {network?.primary_dns && compressIPv6(network.primary_dns) !== network.primary_dns ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" className="inline-flex" aria-label="更多信息">
-                      <TbInfoCircleFilled className="size-5 text-info" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-mono">{network.primary_dns}</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : null}
-              <p className="text-sm font-semibold font-mono">
-                {network?.primary_dns ? compressIPv6(network.primary_dns) : "-"}
-              </p>
-            </div>
-          </motion.div>
+          <IpAddressRow label="主 DNS" value={network?.primary_dns} />
 
-          {/* 备用 DNS */}
+          {/* Secondary DNS */}
           <Separator />
-          <motion.div
-            className="flex items-center justify-between"
-            variants={{ hidden: { opacity: 0, x: -8 }, visible: { opacity: 1, x: 0 } }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            <p className="text-sm font-semibold text-muted-foreground">
-              备用 DNS
-            </p>
-            <div className="flex items-center gap-1.5">
-              {network?.secondary_dns && compressIPv6(network.secondary_dns) !== network.secondary_dns ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" className="inline-flex" aria-label="更多信息">
-                      <TbInfoCircleFilled className="size-5 text-info" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="font-mono">{network.secondary_dns}</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : null}
-              <p className="text-sm font-semibold font-mono">
-                {network?.secondary_dns ? compressIPv6(network.secondary_dns) : "-"}
-              </p>
-            </div>
-          </motion.div>
+          <IpAddressRow label="备用 DNS" value={network?.secondary_dns} />
           <Separator />
         </motion.div>
       </CardContent>
