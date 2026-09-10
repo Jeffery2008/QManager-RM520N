@@ -53,6 +53,8 @@ cgi_handle_options
 # --- Config ------------------------------------------------------------------
 SMS_TOOL="/usr/bin/sms_tool"
 LOCK_FILE="/tmp/qmanager_at.lock"
+# 99 is clear of sms_tool's own 0/1/2, exec failures 126/127, and signal codes 128+N.
+SMS_LOCK_TIMEOUT_RC=99
 
 # --- flock with timeout (BusyBox compatible) ---------------------------------
 # BusyBox flock lacks -w (timeout). Polls with -n (non-blocking) in a loop.
@@ -83,7 +85,7 @@ flock_wait() {
 sms_locked() {
     _sms_err="/tmp/qmanager_sms_err.$$"
     (
-        flock_wait 9 10 || exit 2
+        flock_wait 9 10 || exit "$SMS_LOCK_TIMEOUT_RC"
         _sms_out=$("$SMS_TOOL" "$@" 2>"$_sms_err")
         _sms_rc=$?
 
@@ -360,7 +362,7 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
     #     to the caller as modem_busy since the whole endpoint is stuck.
     me_json=$(sms_locked -s ME recv -j)
     me_lock_rc=$?
-    if [ "$me_lock_rc" -eq 2 ]; then
+    if [ "$me_lock_rc" -eq "$SMS_LOCK_TIMEOUT_RC" ]; then
         qlog_error "SMS recv: could not acquire lock"
         jq -n '{"success":false,"error":"modem_busy","detail":"Could not acquire AT lock"}'
         exit 0
@@ -517,7 +519,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         result=$(sms_locked send "$PHONE" "$MESSAGE")
         sms_rc=$?
 
-        if [ "$sms_rc" -eq 2 ]; then
+        if [ "$sms_rc" -eq "$SMS_LOCK_TIMEOUT_RC" ]; then
             qlog_error "SMS send: could not acquire lock"
             jq -n '{"success":false,"error":"modem_busy","detail":"Could not acquire AT lock"}'
             exit 0
