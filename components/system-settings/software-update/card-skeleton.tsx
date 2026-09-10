@@ -56,9 +56,9 @@ export function AnchorCardSkeleton(): React.JSX.Element {
               <Skeleton className={SKELETON.DELTA.EYEBROW} />
               <Skeleton className={SKELETON.DELTA.VALUE} />
             </div>
+            {/* The strip carries the page's verb now, not two tags. */}
             <div className={DELTA.META}>
-              <Skeleton className={SKELETON.DELTA.TAG} />
-              <Skeleton className={SKELETON.DELTA.TAG} />
+              <Skeleton className={SKELETON.ACTION} />
             </div>
           </div>
 

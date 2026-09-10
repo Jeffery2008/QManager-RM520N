@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   AlertCircleIcon,
   CloudOffIcon,
-  Loader2Icon,
   type LucideIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -214,15 +213,6 @@ export function StatusBand({
               {t(`${K}.band.chip_offline`)}
             </Badge>
           ))}
-        {running && (
-          <Badge variant="info">
-            <Loader2Icon
-              className={cn(BAND.GLYPH, SPIN)}
-              aria-hidden="true"
-            />
-            {t(`${K}.band.chip_in_progress`)}
-          </Badge>
-        )}
       </div>
 
       {/* NO `aria-live` here: the Latest tile's caption re-reads the wall clock

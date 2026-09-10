@@ -1,37 +1,39 @@
 "use client";
 
 import type * as React from "react";
-import type { LucideIcon } from "lucide-react";
-import { ArrowRightIcon, OctagonAlertIcon, TriangleAlertIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  DownloadIcon,
+  Loader2Icon,
+  OctagonAlertIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 
-import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tag } from "@/components/ui/tag";
 import type { UpdateInfo } from "@/hooks/use-software-update";
 import { staggerItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
-import { channelKey, type FailureDetail, type UpdateView } from "./derive";
+import { type FailureDetail, type UpdateView } from "./derive";
 import {
-  ANCHOR_CHIP,
   CARD_DESC,
   CARD_PAD,
   CARD_SHELL_HERO,
   CARD_STACK,
   CARD_TITLE,
-  CHIP_GLYPH,
   DELTA,
-  FAILURE_CHIP,
   NOTICE,
+  PILL_ACTION,
+  PILL_GLYPH,
   SPIN,
   VALUE_NONE,
 } from "./shapes";
@@ -79,35 +81,35 @@ export interface UpdateCardProps {
   view: UpdateView;
   info: UpdateInfo | null;
   failure: FailureDetail | null;
-  packageSize: string | null;
   packageStaged: boolean;
+  onDownload: () => void;
+  onInstall: () => void;
 }
 
 /**
- * The anchor: what is installed against what is offered, the four steps an
- * install takes, and the consequence of running them. Title, description and
- * chip all resolve from the one view, or from the failure kind when the view is
- * a failure, so they cannot disagree.
+ * The anchor: what is installed against what is offered, the verb that acts on
+ * that delta, the four steps an install takes, and the consequence of running
+ * them. Title, description and verb all resolve from the one view, or from the
+ * failure kind when the view is a failure, so they cannot disagree.
  */
 export function UpdateCard({
   view,
   info,
   failure,
-  packageSize,
   packageStaged,
+  onDownload,
+  onInstall,
 }: UpdateCardProps): React.JSX.Element {
   const { t } = useTranslation("system-settings");
 
-  // One lookup for the whole header. A failing view names its own failure, so
-  // the copy slug and the chip both key off the kind rather than the view.
+  // A failing view names its own failure, so the copy slug keys off the kind
+  // rather than the view.
   const failureKind = view === "check_failed" ? (failure?.kind ?? "check") : null;
   const copyKey = failureKind ? `${failureKind}_failed` : view;
-  const chip: { variant: BadgeVariant; glyph: LucideIcon; spin?: boolean } =
-    failureKind ? FAILURE_CHIP[failureKind] : ANCHOR_CHIP[view];
-  const ChipGlyph = chip.glyph;
 
   const installed = info?.current_version || VALUE_NONE;
   const next = SHOWS_NEXT[view] ? (info?.latest_version ?? null) : null;
+  const version = info?.latest_version ?? VALUE_NONE;
 
   const notice = NOTICE_COPY[view];
   const failed = notice === "failed";
@@ -121,6 +123,68 @@ export function UpdateCard({
   const NoticeGlyph = failed ? OctagonAlertIcon : TriangleAlertIcon;
   const detail = failed ? (failure?.message ?? "") : "";
 
+  // The page's one verb, sitting on the delta it acts on. A run in flight
+  // returns null: the ladder is what reports a run, so there is nothing here
+  // left to say.
+  const renderAction = (): React.JSX.Element | null => {
+    switch (view) {
+      case "available":
+        return (
+          <Button className={PILL_ACTION} onClick={onDownload}>
+            <DownloadIcon className={PILL_GLYPH} aria-hidden="true" />
+            {t(`${K}.actions.download`, { version })}
+          </Button>
+        );
+
+      case "staged":
+        return (
+          <Button className={PILL_ACTION} onClick={onInstall}>
+            <DownloadIcon className={PILL_GLYPH} aria-hidden="true" />
+            {t(`${K}.actions.install`, { version })}
+          </Button>
+        );
+
+      case "downloading":
+      case "verifying":
+        return (
+          <Button className={PILL_ACTION} disabled>
+            <Loader2Icon className={cn(PILL_GLYPH, SPIN)} aria-hidden="true" />
+            {t(`${K}.actions.${view}`)}
+          </Button>
+        );
+
+      // A retry offers back exactly what failed; a failed check has no delta
+      // to act on, so its verb stays in the header.
+      case "check_failed":
+        if (failure?.kind === "download") {
+          return (
+            <Button
+              variant="outline"
+              className={PILL_ACTION}
+              onClick={onDownload}
+            >
+              <DownloadIcon className={PILL_GLYPH} aria-hidden="true" />
+              {t(`${K}.actions.retry_download`)}
+            </Button>
+          );
+        }
+        if (failure?.kind === "install") {
+          return (
+            <Button className={PILL_ACTION} onClick={onInstall}>
+              <DownloadIcon className={PILL_GLYPH} aria-hidden="true" />
+              {t(`${K}.actions.install`, { version })}
+            </Button>
+          );
+        }
+        return null;
+
+      default:
+        return null;
+    }
+  };
+
+  const action = renderAction();
+
   return (
     <motion.div variants={staggerItem}>
       <Card className={CARD_SHELL_HERO}>
@@ -131,15 +195,6 @@ export function UpdateCard({
           <CardDescription className={CARD_DESC}>
             {t(`${K}.card.${copyKey}.description`)}
           </CardDescription>
-          <CardAction>
-            <Badge variant={chip.variant}>
-              <ChipGlyph
-                className={cn(CHIP_GLYPH, chip.spin && SPIN)}
-                aria-hidden="true"
-              />
-              {t(`${K}.card.chip.${copyKey}`)}
-            </Badge>
-          </CardAction>
         </CardHeader>
 
         <CardContent className={cn(CARD_PAD, CARD_STACK)}>
@@ -163,14 +218,7 @@ export function UpdateCard({
               </>
             )}
 
-            <div className={DELTA.META}>
-              {next && packageSize && (
-                <Tag variant="neutral">{packageSize}</Tag>
-              )}
-              <Tag variant="neutral">
-                {t(`${K}.delta.channel_${channelKey(info)}`)}
-              </Tag>
-            </div>
+            {action && <div className={DELTA.META}>{action}</div>}
           </div>
 
           <StepLadder view={view} packageStaged={packageStaged} />

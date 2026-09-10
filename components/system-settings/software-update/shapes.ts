@@ -609,7 +609,6 @@ export const SKELETON = {
     EYEBROW: `${LINE.EYEBROW} w-16`,
     VALUE: `${LINE.VALUE} w-28`,
     ARROW: `${DELTA_ARROW_SIZE} flex-none rounded-inline`,
-    TAG: "h-[1.375rem] w-16 rounded-pill",
   },
   /** One ladder row, worn inside the real `LADDER.ROW`. */
   LADDER: {

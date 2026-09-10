@@ -149,11 +149,8 @@ export function SoftwareUpdate(): React.JSX.Element {
       <PageHeader
         view={view}
         failure={failure}
-        latestVersion={updateInfo?.latest_version ?? null}
         isChecking={isChecking}
         onCheck={() => void checkForUpdates()}
-        onDownload={() => void handleDownload()}
-        onInstall={() => setInstallDialogOpen(true)}
       />
 
       <StatusBand
@@ -206,8 +203,9 @@ export function SoftwareUpdate(): React.JSX.Element {
             view={view}
             info={updateInfo}
             failure={failure}
-            packageSize={packageSize}
             packageStaged={packageStaged}
+            onDownload={() => void handleDownload()}
+            onInstall={() => setInstallDialogOpen(true)}
           />
 
           {/* Download and verify leave the page whole; only a run that is
