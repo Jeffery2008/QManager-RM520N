@@ -725,18 +725,18 @@
       "restore_failed": "Couldn't restore the factory list"
     },
     "verify": {
-      "title": "Test bypass",
-      "description": "Run a two-phase speed test (without the engine, then with it) plus a speedtest.net reference, to separate CDN throttling from a slow connection.",
+      "title": "Bypass benefit test",
+      "description": "Measures whether bypassing DPI would speed up a throttled video CDN on this connection, against an unthrottled reference. It uses its own temporary proxy, so it doesn't check the engine you have running.",
       "run": "Run test",
       "run_again": "Run test again",
       "idle_heading": "No test run yet",
       "needs_binary_heading": "Engine not installed",
       "running": "Testing…",
-      "progress": "Downloading the same file twice: once direct, once through the engine. This takes a few minutes.",
+      "progress": "Downloading the same file twice — once direct, once through a temporary proxy — plus a reference sample. This takes a few minutes.",
       "timeout": "The test did not finish in time.",
       "error": "The test could not be started",
       "needs_binary": "Install the engine binary first.",
-      "headline_sub": "faster with the bypass on",
+      "headline_sub": "faster through the bypass in this test",
       "without": "Without bypass",
       "with": "With bypass",
       "line_speed": "Line speed",
@@ -745,6 +745,7 @@
       "source_cloudflare": "Cloudflare",
       "throttled": "throttled",
       "unthrottled": "not throttled",
+      "scope": "This measures your connection, not the engine that's running. Check the live state above for that.",
       "footnote": "Line speed is the reference: a slow result on all three is a slow connection, not throttling."
     },
     "forceTcp": {

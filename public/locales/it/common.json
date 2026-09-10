@@ -725,18 +725,18 @@
       "restore_failed": "Impossibile ripristinare l'elenco di fabbrica"
     },
     "verify": {
-      "title": "Prova il bypass",
-      "description": "Esegui un test di velocità in due fasi (senza il motore, poi con il motore) più un riferimento speedtest.net per distinguere il throttling della CDN da una connessione lenta.",
+      "title": "Test di utilità del bypass",
+      "description": "Misura se aggirare il DPI velocizzerebbe una CDN video limitata su questa connessione, rispetto a un riferimento non limitato. Usa un proxy temporaneo dedicato, quindi non verifica il motore che hai in esecuzione.",
       "run": "Avvia test",
       "run_again": "Ripeti il test",
       "idle_heading": "Nessun test eseguito",
       "needs_binary_heading": "Motore non installato",
       "running": "Test in corso…",
-      "progress": "Scarico lo stesso file due volte: una diretta e una attraverso il motore. Ci vogliono alcuni minuti.",
+      "progress": "Scarico lo stesso file due volte — una diretta e una attraverso un proxy temporaneo — più un campione di riferimento. Ci vogliono alcuni minuti.",
       "timeout": "Il test non è terminato in tempo.",
       "error": "Impossibile avviare il test",
       "needs_binary": "Installa prima il binario del motore.",
-      "headline_sub": "più veloce con il bypass attivo",
+      "headline_sub": "più veloce attraverso il bypass in questo test",
       "without": "Senza bypass",
       "with": "Con bypass",
       "line_speed": "Velocità della linea",
@@ -745,6 +745,7 @@
       "source_cloudflare": "Cloudflare",
       "throttled": "limitato",
       "unthrottled": "non limitato",
+      "scope": "Questo misura la tua connessione, non il motore in esecuzione. Per quello controlla lo stato in tempo reale qui sopra.",
       "footnote": "La velocità della linea è il riferimento: un risultato lento su tutti e tre indica una connessione lenta, non una limitazione."
     },
     "forceTcp": {

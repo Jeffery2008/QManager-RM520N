@@ -39,7 +39,7 @@ import {
 import type { VerifyResult } from "@/types/traffic-engine";
 
 // =============================================================================
-// VerifyCard — "Test bypass", drawn as a comparison rather than a list
+// VerifyCard — "Bypass benefit test", drawn as a comparison rather than a list
 // =============================================================================
 // This is Call B, and it merges `engine-check-row.tsx` (the run/poll machinery)
 // with `result-alert.tsx` (the result). The backend contract is untouched: the
@@ -386,6 +386,10 @@ export function VerifyCard({ binaryInstalled }: VerifyCardProps) {
             </motion.ul>
 
             {reference ? <p className={FOOTNOTE}>{t("trafficEngine.verify.footnote")}</p> : null}
+            {/* The scope line is unconditional: a result measures the technique
+                on this connection, not the running engine (docs/reference/dpi.md
+                > Verify). Without it a pass reads as an engine health check. */}
+            <p className={FOOTNOTE}>{t("trafficEngine.verify.scope")}</p>
           </>
         ) : (
           /* THE THREE FOOTNOTE LINES THIS REPLACES were the whole of the card

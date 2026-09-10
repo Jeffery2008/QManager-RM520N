@@ -725,18 +725,18 @@
       "restore_failed": "無法還原原廠清單"
     },
     "verify": {
-      "title": "測試繞過效果",
-      "description": "執行兩階段測速（先關閉引擎，再開啟引擎），並附 speedtest.net 參考值，用於區分 CDN 限速與網路本身較慢。",
+      "title": "繞過效果評估",
+      "description": "測量在目前網路下，繞過 DPI 能否提升被限速的影片 CDN 速度，並與未被限速的參考值對比。測試使用自己的臨時代理，因此不會檢查正在執行的引擎。",
       "run": "執行測試",
       "run_again": "重新測試",
       "idle_heading": "尚未進行測試",
       "needs_binary_heading": "引擎尚未安裝",
       "running": "測試中…",
-      "progress": "正在下載同一個檔案兩次：一次直連，一次經由引擎。需要幾分鐘。",
+      "progress": "正在下載同一個檔案兩次：一次直連，一次經由臨時代理，另加一次參考取樣。需要幾分鐘。",
       "timeout": "測試未在限定時間內完成。",
       "error": "無法啟動測試",
       "needs_binary": "請先安裝引擎程式。",
-      "headline_sub": "開啟繞過後的提速倍數",
+      "headline_sub": "本次測試中經由繞過的提速倍數",
       "without": "未繞過",
       "with": "已繞過",
       "line_speed": "線路速度",
@@ -745,6 +745,7 @@
       "source_cloudflare": "Cloudflare",
       "throttled": "受限速",
       "unthrottled": "未受限速",
+      "scope": "此結果反映的是你的網路，而不是正在執行的引擎。引擎狀態請查看上方的即時狀態。",
       "footnote": "線路速度是參照值：三項都慢代表線路本身慢，而不是被限速。"
     },
     "forceTcp": {

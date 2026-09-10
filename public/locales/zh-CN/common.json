@@ -725,18 +725,18 @@
       "restore_failed": "无法恢复出厂列表"
     },
     "verify": {
-      "title": "测试绕过效果",
-      "description": "运行两阶段测速（先关闭引擎，再开启引擎），并附 speedtest.net 参考值，用于区分 CDN 限速与网络本身较慢。",
+      "title": "绕过效果评估",
+      "description": "测量在当前网络下，绕过 DPI 能否提升被限速的视频 CDN 速度，并与未被限速的参考值对比。测试使用自己的临时代理，因此不会检查正在运行的引擎。",
       "run": "运行测试",
       "run_again": "重新测试",
       "idle_heading": "尚未进行测试",
       "needs_binary_heading": "引擎尚未安装",
       "running": "测试中…",
-      "progress": "正在下载同一个文件两次：一次直连，一次经由引擎。需要几分钟。",
+      "progress": "正在下载同一个文件两次：一次直连，一次经由临时代理，另加一次参考取样。需要几分钟。",
       "timeout": "测试未在限定时间内完成。",
       "error": "无法启动测试",
       "needs_binary": "请先安装引擎程序。",
-      "headline_sub": "开启绕过后的提速倍数",
+      "headline_sub": "本次测试中经由绕过的提速倍数",
       "without": "未绕过",
       "with": "已绕过",
       "line_speed": "线路速度",
@@ -745,6 +745,7 @@
       "source_cloudflare": "Cloudflare",
       "throttled": "受限速",
       "unthrottled": "未受限速",
+      "scope": "此结果反映的是你的网络，而不是正在运行的引擎。引擎状态请查看上方的实时状态。",
       "footnote": "线路速度是参照值：三项都慢说明线路本身慢，而不是被限速。"
     },
     "forceTcp": {

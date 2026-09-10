@@ -725,18 +725,18 @@
       "restore_failed": "Tidak dapat memulihkan daftar bawaan"
     },
     "verify": {
-      "title": "Uji bypass",
-      "description": "Jalankan tes kecepatan dua fase (tanpa mesin, lalu dengan mesin) plus referensi speedtest.net, untuk membedakan pembatasan CDN dari koneksi lambat.",
+      "title": "Uji manfaat bypass",
+      "description": "Mengukur apakah melewati DPI akan mempercepat CDN video yang dibatasi pada koneksi ini, dibandingkan dengan acuan yang tidak dibatasi. Tes ini memakai proksi sementaranya sendiri, jadi tidak memeriksa mesin yang sedang berjalan.",
       "run": "Jalankan tes",
       "run_again": "Jalankan tes lagi",
       "idle_heading": "Belum ada tes",
       "needs_binary_heading": "Mesin belum terpasang",
       "running": "Menguji…",
-      "progress": "Mengunduh berkas yang sama dua kali: sekali langsung, sekali lewat mesin. Butuh beberapa menit.",
+      "progress": "Mengunduh berkas yang sama dua kali — sekali langsung, sekali lewat proksi sementara — plus satu sampel acuan. Butuh beberapa menit.",
       "timeout": "Tes tidak selesai tepat waktu.",
       "error": "Tes tidak dapat dimulai",
       "needs_binary": "Pasang dulu biner mesin.",
-      "headline_sub": "lebih cepat dengan bypass aktif",
+      "headline_sub": "lebih cepat lewat bypass pada tes ini",
       "without": "Tanpa bypass",
       "with": "Dengan bypass",
       "line_speed": "Kecepatan saluran",
@@ -745,6 +745,7 @@
       "source_cloudflare": "Cloudflare",
       "throttled": "dibatasi",
       "unthrottled": "tidak dibatasi",
+      "scope": "Ini mengukur koneksi Anda, bukan mesin yang sedang berjalan. Untuk itu, lihat status langsung di atas.",
       "footnote": "Kecepatan saluran adalah acuan: hasil lambat pada ketiganya berarti koneksi yang lambat, bukan pembatasan."
     },
     "forceTcp": {
