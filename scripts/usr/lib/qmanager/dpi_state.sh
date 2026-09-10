@@ -418,6 +418,12 @@ dpi_uptime_str() {
     _bin="${DPI_BINARY:-/usrdata/qmanager/bin/tpws}"
     pid=$(pgrep -f "^$_bin " | head -n1)
     [ -z "$pid" ] && { echo "—"; return; }
+    # Uptime tracks the ENGINE, not the process, so it must agree with
+    # dpi_service_status: a live process with no listener reports "error" there
+    # and must not show a running time here. Unknown keeps the figure, matching
+    # that function's fallback.
+    dpi_listener_present
+    [ "$?" -eq 1 ] && { echo "—"; return; }
     start_jiffies=$(awk '{print $22}' "/proc/$pid/stat" 2>/dev/null)
     case "$start_jiffies" in
         ''|*[!0-9]*) echo "—"; return ;;
