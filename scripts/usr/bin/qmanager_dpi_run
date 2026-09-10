@@ -100,10 +100,15 @@ case "$cmd" in
                     # 60s reset would void the unit's hour backoff and hold
                     # NRestarts at 0, the only fault signal with journald masked.
                     dpi_remove_rule
-                    if svc_start qmanager-dpi; then
-                        qlog_warn "ensure: engine down with a mode enabled — rule drained, restart attempted"
+                    # svc_restart, NOT svc_start. tpws may be ALIVE yet bound to
+                    # the wrong address (a LAN subnet or IP-passthrough change),
+                    # and start is a no-op on an active unit — the same defect
+                    # that let a mode switch keep the old argv. start would log
+                    # a recovery it never attempted and repeat every 60s forever.
+                    if svc_restart qmanager-dpi; then
+                        qlog_warn "ensure: engine not listening with a mode enabled — rule drained, engine restarted"
                     else
-                        qlog_error "ensure: engine down and restart refused (start limit?) — rule left off"
+                        qlog_error "ensure: engine not listening and restart failed — rule left off (state: $(${_SYSTEMCTL:-systemctl} show qmanager-dpi -p Result -p NRestarts --value 2>/dev/null | tr '\n' ' '))"
                     fi
                     ;;
                 *)

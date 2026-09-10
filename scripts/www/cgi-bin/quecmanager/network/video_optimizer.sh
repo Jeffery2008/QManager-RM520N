@@ -265,6 +265,10 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
                 # limit, which refuses restart for the whole hour. Clearing it
                 # here is user-initiated, so it does not erode the automatic
                 # backoff the way a timed reset would.
+                # Record the fault state FIRST: reset-failed erases Result and
+                # NRestarts, and with journald masked to /dev/null that is the
+                # only crash record there is. qlog writes to a real file.
+                qlog_info "save: pre-reset engine fault state: $(${_SYSTEMCTL:-systemctl} show qmanager-dpi -p Result -p NRestarts -p ActiveState --value 2>/dev/null | tr '\n' ' ')"
                 svc_reset_failed qmanager-dpi
                 # restart, NOT start: start is a no-op on an already-active
                 # unit, so switching modes kept serving the previous mode's
@@ -322,6 +326,10 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
                 # limit, which refuses restart for the whole hour. Clearing it
                 # here is user-initiated, so it does not erode the automatic
                 # backoff the way a timed reset would.
+                # Record the fault state FIRST: reset-failed erases Result and
+                # NRestarts, and with journald masked to /dev/null that is the
+                # only crash record there is. qlog writes to a real file.
+                qlog_info "save: pre-reset engine fault state: $(${_SYSTEMCTL:-systemctl} show qmanager-dpi -p Result -p NRestarts -p ActiveState --value 2>/dev/null | tr '\n' ' ')"
                 svc_reset_failed qmanager-dpi
                 # restart, NOT start: start is a no-op on an already-active
                 # unit, so switching modes kept serving the previous mode's
