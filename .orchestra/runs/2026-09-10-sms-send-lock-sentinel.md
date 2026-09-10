@@ -1,5 +1,5 @@
 # Run: SMS send mislabels every real failure as "Could not acquire AT lock"
-status: active
+status: closed (committed 2c468f3; wedged AT lock on 61368cd2 cleared with user consent)
 lane: lite
 base: 14dcebe   branch: development   opened: 2026-09-10   lead: opus
 
