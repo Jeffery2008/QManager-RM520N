@@ -1,5 +1,5 @@
 # Run: Traffic Engine hotpatch — F1 / F2 / F8 (engine-down LAN blackhole)
-status: active
+status: closed (committed 3cb6b93 c37bd60 089fb74 c4b5230 bc7b691; device restored)
 lane: full
 base: 26f1d19   branch: development   opened: 2026-09-10   lead: opus
 (base moved 14dcebe -> 26f1d19 mid-run: `development` advanced while recon ran. Diff against
@@ -325,12 +325,108 @@ RM520N-GL `61368cd2` reachable and CLEAN — no REDIRECT rule, no tpws, unit ina
 ⚠️ Live LAN client at `192.168.225.86`. Proof steps 2–4 cut its web access ~60–90s and need
 the user's explicit yes, quoted into Decisions.
 
+## Commits (base 26f1d19)
+| sha | what |
+|---|---|
+| `3cb6b93` | backend: liveness contract, F1/F2/F5/F8, sudoers grant, installer both-modes gate |
+| `c37bd60` | UI: "Bypass benefit test" copy + all 5 locale packs (F4) |
+| `089fb74` | `dpi_uptime_str` consistency — flagged by docs-writer, not by a gate |
+| `c4b5230` | docs: `dpi.md` liveness contract + drift fixes, router row, RELEASE_NOTES v0.1.15 |
+
+`package.json` (`v0.1.15-draft`) deliberately LEFT UNSTAGED — not this run's change.
+
+## A2 post-verify — installer-safety-auditor: **CLEAR to proceed**
+Both pre-gate must-fixes resolved; 7/7 PASS. Confirmed independently: `_dpi_purge_legacy_rule` is
+`dpi_apply_rule`'s FIRST statement (ahead of the idempotence check) and is also called from
+`dpi_remove_rule`, so the CGI disable path, `_dpi_uninstall_run` and `--clear` are all covered
+with **zero caller-side change**; the 16-pass loop breaks on the first failed `-D` so it cannot
+loop or stack. Sudoers grant scoped identically to the existing lines, no `tailscaled`, no
+wildcard; `/opt/etc/sudoers.d/qmanager` 0440 root:root matches the installer's existing
+`install_file … 440` path. The installer's two-mode gate sits inside `start_services()` (line
+~4562), after `/opt` is mounted, following the established `qm_config_get` guard — so the
+dangling-jq-symlink hazard does not apply there. `--clear` runs at `uninstall_rm520n.sh:280`
+while the runner and lib are still on disk (removed at ~373), so `ExecStopPost` never fires
+after its own dependencies are gone. `StartLimit*` still in `[Unit]`. Rootfs logic untouched.
+
+## Close-out three-way md5 (rail 11) — deployed == HEAD == working copy
+`dpi_state.sh` `4d22567cef8d6e617adc062e4932f641` (redeployed after `089fb74`), `platform.sh`
+`275906e0…`, `qmanager_dpi_run` `88db983f…`, `qmanager-dpi.service` `f7b38c5d…`, sudoers
+`c674ac98…`, CGI `6ce173a5…`. `sh -n` clean under the device's own shell. Device left at the
+restored baseline: `mode=none status=stopped uptime=— rule_count=0 unit=success 0 inactive`.
+
+## qm-verifier: **PASS_WITH_NOTES** — and it found a real bug in the fix
+5/5 acceptance criteria and 8/8 invariants PASS (the disruptive halves marked NOT INDEPENDENTLY
+REPRODUCED, correctly, since its window was closed). Independent corroboration worth keeping:
+`-C` on the new spec returns rc **1** ("no chain/target/match by that name") vs rc **2**
+("Couldn't load match") for a genuinely absent module, and `/proc/net/ip_tables_matches` lists
+`addrtype` — so the spec parses and is installable. `busybox sh` confirmed `local IFS=.` does not
+leak (`IFS_restored=[a b c]`). systemd's recorded exec history showed `--rule-up` exiting 0 in
+**1 second**, which is on-device corroboration that the probe accepted tpws's listener first try —
+a `0A`-only probe would have burned the full 10s loop.
+
+**F-1 (MEDIUM) — FIXED in `bc7b691`.** `--ensure`'s listener-absent branch called `svc_start`,
+*the exact no-op this whole change set out to fix*. tpws can be ALIVE but bound to the wrong
+address (LAN subnet / IP-passthrough change): probe correctly says absent, rule correctly drained,
+then `svc_start` returns 0 without re-exec'ing because the unit is active — logging a recovery it
+never attempted, every 60s, forever. Proven on device by leaving a tpws on `127.0.0.1` with the
+unit active: `svc_restart` moves systemd's MainPID to a fresh instance on `192.168.225.1`,
+listener goes 1 -> 0, rule lands. **Measurement trap to remember:** `pgrep … | head -n1` returns
+the OLDEST pid, so it reported "pid unchanged" while systemd's MainPID had already moved. Count
+every instance, or read `MainPID`. The loopback listener (`0100007F:03DD`, also state `8A`) is
+independent proof the probe's ADDRESS-half check earns its keep.
+Also corrected: the failure log guessed "start limit?", which was wrong — a `ConditionPathExists`
+failure exits 0, so a missing binary read as success. It now prints the real `Result`/`NRestarts`.
+
+**F-2 (LOW) — MITIGATED in `bc7b691`.** `svc_reset_failed` erases `Result`/`NRestarts`, the only
+crash record with journald masked. The CGI now writes that state to `qlog` (a real file,
+`/tmp/qmanager.log`) BEFORE clearing it. The grant itself stays — the user chose it knowingly.
+
+**F-3 (LOW) — acknowledged, no action.** `.claude/agent-memory/ui-builder/MEMORY.md` rode along in
+`c37bd60`; it is the ui-builder's own memory note, outside the declared write set. Staged
+deliberately by the conductor, harmless, recorded here rather than silently.
+
+**F-5 — pre-existing.** `bun run lint` rc 1, 61 errors, none in this diff's files;
+`bunx eslint verify-card.tsx` rc 0. The gate cannot serve as a green signal for anything else.
+
+## Close-out three-way md5 — deployed == HEAD (`bc7b691`) == working copy, all six
+`dpi_state.sh 4d22567c…` · `platform.sh 275906e0…` · `qmanager_dpi_run 502ff30a…` ·
+`qmanager-dpi.service f7b38c5d…` · sudoers `c674ac98…` · CGI `e2454afe…`
+Device left at baseline: `mode=none status=stopped uptime=— tpws=0 rule_count=0`, no
+`multiport --dports 80,443` rule at all, Force-TCP 0/config 0, `unit=success 0 inactive`,
+timer active, config keys byte-identical to the opening probe, `03DD` listeners 0, client HTTP 301.
+
+## Open follow-ups — NOT done, deliberately
+1. **F6 — no `ip6tables` counterpart.** A dual-stack client's IPv6 bypasses the engine entirely.
+   Deferred as new engine surface, not a hotpatch. Still open.
+2. **RG501Q-EU unverified.** Offline the whole run. `ip`, `printf '%04X'`, `xt_addrtype`, and above
+   all whether tpws reports `8A` there too, are UNKNOWN on the community tier. If `8A` is
+   RM520N-specific and the RG501Q reports something else, `dpi_listener_present` reads a healthy
+   engine as dead there — the probe would drain the rule and restart in a loop. **Check this before
+   claiming RG501Q support.** No new applet or syntax was introduced, so CRLF/shebang residue is nil.
+3. **Cold boot not measured.** No reboot taken (needs its own consent). The design avoids the 1970 /
+   `/opt`-unmounted hazards by construction — procfs only, no Entware binary, `--rule-up` always
+   exits 0 — but it is reasoned, not observed.
+4. **The `!LOCAL` half of the exclusion** is unproven: the conductor's host is not routed through
+   the modem for WAN traffic. Only the LOCAL half was measured. The change only SUBTRACTS local
+   destinations, so this is a coverage gap, not a suspected defect.
+5. **Device scratch left in `/tmp`** — the sandbox blocked every deletion targeting `/tmp`.
+   Remaining: `/tmp/qmdpi{,2,3,4}`, `/tmp/qmtok`, `/tmp/qmpost.json`, and **one minted session
+   token in `/tmp/qmanager_sessions/`** (valid ≤3600s from ~17:05). `/tmp/qmbak/` is KEPT
+   deliberately for rollback. All cleared by a reboot; the user was given the one-liner.
+6. `dpi_uptime_str` / `dpi_service_status` asymmetry closed in `089fb74`.
+
 ## Handoff — NEXT ACTION
-`qm-advocate` (A1) and `installer-safety-auditor` (A2) are IN FLIGHT — collect both before the
-gate. Then put the gate to the user with three questions: (a) F5 scope — bind tpws to the LAN
-address vs add 989 to `QMANAGER_FW` vs defer; (b) F4 scope — reword the Test-bypass card so it
-stops implying it validates the live engine; (c) explicit consent for the disruptive proof
-(kill -9 loop plus a ~60–90s web outage for `192.168.225.86`). Also decide what to do about the
-stranded `sms-send-lock-sentinel` run.
-DO NOT REDO: the recon reads, either device probe batch, the md5 baseline, or the lane call.
-DO NOT act on F3 — retracted and disproven.
+**Run is COMPLETE.** F1, F2, F4, F5, F7 and F8 landed and are device-proven; F3 untouched
+(retracted); F6 deferred. Both gate agents cleared: `installer-safety-auditor` = CLEAR,
+`qm-verifier` = PASS_WITH_NOTES with its one medium finding fixed in `bc7b691` and re-proved.
+
+If anything picks this up next, the only live items are the six numbered follow-ups above.
+**The one that matters is #2:** the RG501Q-EU was offline all run, so it is unknown whether tpws
+reports listener state `8A` there. If it does not, `dpi_listener_present` reads a healthy engine as
+dead on that device and will drain the rule and restart in a loop. Verify before claiming
+community-tier support.
+
+`package.json` stays UNSTAGED at `v0.1.15-draft` — not this run's change, do not commit it.
+
+DO NOT REDO: the recon reads, any device probe in this ledger, the lane call, the F-1 device
+re-proof, or the addrtype/LOCAL measurement. DO NOT act on F3.
