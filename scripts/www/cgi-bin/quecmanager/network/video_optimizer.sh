@@ -261,7 +261,18 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             qm_config_set full_bypass enabled 0
             qlog_info "save: video_optimizer enabled=$EN_INT"
             if [ "$EN_INT" = "1" ]; then
-                svc_start qmanager-dpi
+                # A previous engine failure may have latched the unit's start
+                # limit, which refuses restart for the whole hour. Clearing it
+                # here is user-initiated, so it does not erode the automatic
+                # backoff the way a timed reset would.
+                svc_reset_failed qmanager-dpi
+                # restart, NOT start: start is a no-op on an already-active
+                # unit, so switching modes kept serving the previous mode's
+                # argv — Full Bypass silently never applied.
+                if ! svc_restart qmanager-dpi; then
+                    cgi_error "engine_start_failed" "settings saved but the engine did not start"
+                    exit 0
+                fi
             else
                 dpi_remove_rule
                 svc_stop qmanager-dpi
@@ -307,7 +318,18 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             qm_config_set video_optimizer enabled 0
             qlog_info "save_full_bypass: enabled=$EN_INT sni_domain=$SNI (action=$ACTION)"
             if [ "$EN_INT" = "1" ]; then
-                svc_start qmanager-dpi
+                # A previous engine failure may have latched the unit's start
+                # limit, which refuses restart for the whole hour. Clearing it
+                # here is user-initiated, so it does not erode the automatic
+                # backoff the way a timed reset would.
+                svc_reset_failed qmanager-dpi
+                # restart, NOT start: start is a no-op on an already-active
+                # unit, so switching modes kept serving the previous mode's
+                # argv — Full Bypass silently never applied.
+                if ! svc_restart qmanager-dpi; then
+                    cgi_error "engine_start_failed" "settings saved but the engine did not start"
+                    exit 0
+                fi
             else
                 dpi_remove_rule
                 svc_stop qmanager-dpi

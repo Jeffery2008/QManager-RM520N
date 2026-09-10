@@ -14,10 +14,17 @@
 #                binary exits 1 so Restart=on-failure retries (bounded by
 #                StartLimitIntervalSec) until qmanager_dpi_install lands.
 #   --ensure   — re-assert the REDIRECT rule (QCMAP flushes iptables on every
-#                re-dial) and restart the engine if it died while enabled.
-#                Runs every 60s from qmanager-dpi-ensure.timer. Always exits
-#                0 when the feature is disabled — the timer is unconditionally
-#                armed and its payload self-gates.
+#                re-dial), but ONLY over a proven-live listener. Enabled with
+#                nothing listening drains the rule first, then attempts a
+#                restart; an UNKNOWN listener state changes nothing. Runs every
+#                60s from qmanager-dpi-ensure.timer. Always exits 0 when the
+#                feature is disabled — the timer is unconditionally armed and
+#                its payload self-gates.
+#   --rule-up   — ExecStartPost: wait for tpws to bind, then apply the rule.
+#                ALWAYS exits 0 (see the verb for why a non-zero is unsafe).
+#   --rule-down — ExecStopPost: drain the rule. Fires on a clean stop, a crash,
+#                and the failure that trips the start limit, so the rule cannot
+#                outlive the engine.
 #   --clear    — whole-product teardown (uninstall_rm520n.sh only):
 #                remove EVERY rule the lib owns — the engine REDIRECT,
 #                the standalone QUIC force-TCP REJECT, and any legacy
@@ -42,6 +49,25 @@ qm_config_init 2>/dev/null
 
 cmd="${1:-run}"
 
+# Restart the engine when the running argv is for the OTHER mode. The hostlist
+# flag is the only bit that differs between the two, so comparing just that is
+# drift-proof — a full argv compare would restart on any harmless reordering.
+_dpi_reconcile_argv() {
+    local pid have want_hostlist have_hostlist
+    pid=$(pgrep -f "^$DPI_BINARY " | head -n1)
+    [ -n "$pid" ] || return 0
+    have=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)
+    [ -n "$have" ] || return 0
+    want_hostlist=0
+    [ "$(dpi_active_mode)" = "video_optimizer" ] && want_hostlist=1
+    have_hostlist=0
+    case "$have" in *"--hostlist=$DPI_HOSTLIST"*) have_hostlist=1 ;; esac
+    if [ "$want_hostlist" != "$have_hostlist" ]; then
+        qlog_warn "ensure: running argv is the wrong mode — restarting engine"
+        svc_restart qmanager-dpi
+    fi
+}
+
 case "$cmd" in
     --ensure)
         # QUIC handling is independent of the engine: reconcile the
@@ -53,15 +79,70 @@ case "$cmd" in
         dpi_reconcile_force_tcp
         dpi_purge_legacy_dscp_rule
         if dpi_is_enabled; then
-            if dpi_apply_rule; then
-                qlog_info "ensure: REDIRECT rule re-asserted (mode=$(dpi_active_mode))"
-            else
-                qlog_warn "ensure: REDIRECT rule apply failed"
-            fi
-            if ! svc_is_running qmanager-dpi; then
-                svc_start qmanager-dpi && qlog_info "ensure: restarted engine"
-            fi
+            dpi_listener_present
+            case "$?" in
+                0)
+                    # Engine proven live — the ONLY state allowed to assert the
+                    # rule. This is the QCMAP re-dial self-heal: a flush leaves
+                    # the engine listening with the rule gone, and this restores
+                    # it within 60s.
+                    if dpi_apply_rule; then
+                        qlog_info "ensure: REDIRECT rule re-asserted (mode=$(dpi_active_mode))"
+                    else
+                        qlog_warn "ensure: REDIRECT rule apply failed"
+                    fi
+                    _dpi_reconcile_argv
+                    ;;
+                1)
+                    # A mode is enabled but nothing is listening. Drain FIRST so
+                    # the LAN is never redirected at a dead port, THEN try to
+                    # bring the engine back. Deliberately no reset-failed: a
+                    # 60s reset would void the unit's hour backoff and hold
+                    # NRestarts at 0, the only fault signal with journald masked.
+                    dpi_remove_rule
+                    if svc_start qmanager-dpi; then
+                        qlog_warn "ensure: engine down with a mode enabled — rule drained, restart attempted"
+                    else
+                        qlog_error "ensure: engine down and restart refused (start limit?) — rule left off"
+                    fi
+                    ;;
+                *)
+                    # Unknown is not absent. Acting on an unreadable /proc/net/tcp
+                    # would drain a working rule and restart a healthy engine.
+                    qlog_warn "ensure: listener state unknown — rule and engine left untouched"
+                    ;;
+            esac
         fi
+        exit 0
+        ;;
+    --rule-up)
+        # ExecStartPost. ALWAYS exits 0. Under Type=simple this runs on the
+        # DISABLED path too, where no listener will ever appear, and a non-zero
+        # exit there would fail the unit and burn StartLimitBurst — five
+        # disable/enable cycles would lock the engine out for an hour. It also
+        # must not fail on a transient xtables-lock loss during a QCMAP re-dial,
+        # which would kill an otherwise healthy engine.
+        if ! dpi_is_enabled; then
+            exit 0
+        fi
+        i=0
+        while [ "$i" -lt 10 ]; do
+            if dpi_listener_present; then
+                dpi_apply_rule || qlog_warn "rule-up: REDIRECT rule apply failed"
+                exit 0
+            fi
+            i=$((i + 1))
+            sleep 1
+        done
+        qlog_warn "rule-up: tpws not listening on $DPI_PORT after ${i}s — rule left off"
+        dpi_remove_rule
+        exit 0
+        ;;
+    --rule-down)
+        # ExecStopPost — fires on a clean stop, on a crash, and on the attempt
+        # that trips StartLimitBurst, so the rule can never outlive the engine.
+        dpi_remove_rule
+        qlog_info "rule-down: REDIRECT rule drained (engine stopped)"
         exit 0
         ;;
     --clear)
@@ -101,12 +182,16 @@ case "$cmd" in
             qlog_error "run: tpws binary missing ($DPI_BINARY) — run qmanager_dpi_install"
             exit 1
         fi
-        if ! dpi_apply_rule; then
-            qlog_error "run: REDIRECT rule apply failed"
+        # The REDIRECT rule is deliberately NOT applied here. ExecStartPost
+        # (--rule-up) installs it only once tpws is proven to be listening —
+        # applying it before the bind blackholes every LAN client for the whole
+        # startup window, and left it installed forever if the bind never came.
+        set -- $(dpi_build_args)
+        if [ $# -eq 0 ]; then
+            qlog_error "run: no argv — $DPI_LAN_IF has no address yet"
             exit 1
         fi
         qlog_info "run: starting tpws (mode=$(dpi_active_mode), port=$DPI_PORT)"
-        set -- $(dpi_build_args)
         exec "$DPI_BINARY" "$@"
         ;;
     *)

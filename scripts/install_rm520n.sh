@@ -3841,7 +3841,12 @@ start_services() {
     # until the user runs the on-demand install.
     if [ -x "$BIN_DIR/qmanager_dpi_run" ]; then
         command -v qm_config_get >/dev/null 2>&1 || . "$LIB_DIR/config.sh"
+        # BOTH modes, not just video_optimizer: gating on that key alone meant a
+        # Full Bypass device's engine never came back after an install or OTA.
         _dpi_enabled=$(qm_config_get video_optimizer enabled 0 2>/dev/null) || _dpi_enabled=0
+        if [ "$_dpi_enabled" != "1" ]; then
+            _dpi_enabled=$(qm_config_get full_bypass enabled 0 2>/dev/null) || _dpi_enabled=0
+        fi
         if [ "$_dpi_enabled" = "1" ] && [ -x /usrdata/qmanager/bin/tpws ]; then
             systemctl start qmanager-dpi 2>/dev/null || warn "Could not start qmanager-dpi"
         fi

@@ -42,10 +42,12 @@
 # Install location: /usr/lib/qmanager/dpi_state.sh
 #
 # Public API:
-#   DPI_PORT / DPI_BIND_ADDR / DPI_BINARY / DPI_HOSTLIST / DPI_RULE_SIG
+#   DPI_PORT / DPI_LAN_IF / DPI_BINARY / DPI_HOSTLIST / DPI_RULE_SIG
 #   dpi_active_mode            — print video_optimizer/full_bypass/none
 #   dpi_is_enabled             — 0 if a mode is active
 #   dpi_binary_installed       — 0 if the tpws binary exists and is executable
+#   dpi_bind_addr              — print the LAN address tpws must bind to
+#   dpi_listener_present       — 0 listening / 1 absent / 2 UNKNOWN (tri-state)
 #   dpi_domains_loaded         — print hostlist line count (0 if absent)
 #   dpi_rule_present           — 0 if the REDIRECT rule is installed
 #   dpi_packets_processed      — print the rule's packet counter
@@ -66,7 +68,7 @@ _DPI_STATE_LOADED=1
 
 # --- Constants ---------------------------------------------------------------
 DPI_PORT="989"
-DPI_BIND_ADDR="0.0.0.0"
+DPI_LAN_IF="bridge0"
 DPI_BINARY="/usrdata/qmanager/bin/tpws"
 DPI_HOSTLIST="/etc/qmanager/video_domains.txt"
 # Factory default hostlist (seeded by qmanager_setup) — restore_hostlist
@@ -77,6 +79,15 @@ DPI_HOSTLIST_DEFAULT="/etc/qmanager/video_domains_default.txt"
 # identified by its unique target instead: nothing else on the modem
 # redirects to port 989. Match on the -S (unwrapped, single-line) form.
 DPI_RULE_SIG="--to-ports $DPI_PORT"
+# The rule spec, written ONCE. The -D drain must match the insert byte-for-byte
+# including match-module order, so all four call sites share these constants
+# rather than restating the flags.
+_DPI_RULE_MATCH="-i $DPI_LAN_IF -p tcp -m multiport --dports 80,443 -m addrtype ! --dst-type LOCAL"
+# Pre-2026-09-10 spec, without the addrtype exclusion. A device that took an OTA
+# is still carrying it, and DPI_RULE_SIG matches BOTH forms — so without an
+# exact-spec drain, dpi_apply_rule's idempotence check sees the old rule as
+# present and the exclusion never lands. Same shape as the legacy DSCP purge.
+_DPI_RULE_MATCH_LEGACY="-i $DPI_LAN_IF -p tcp -m multiport --dports 80,443"
 DPI_VERIFY_FILE="/tmp/qmanager_dpi_verify.json"
 DPI_INSTALL_FILE="/tmp/qmanager_dpi_install.json"
 DPI_INSTALL_PID="/tmp/qmanager_dpi_install.pid"
@@ -111,6 +122,63 @@ dpi_is_enabled() {
 # 0 (true) when the tpws binary is installed and executable
 dpi_binary_installed() {
     [ -x "$DPI_BINARY" ]
+}
+
+# =============================================================================
+# dpi_bind_addr — the address tpws must listen on
+# The LAN address, never 0.0.0.0: port 989 is matched by no rule in any chain
+# (QMANAGER_FW covers only 80/443), so a wildcard bind made tpws an open
+# transparent proxy reachable from the carrier side. Prints empty when the LAN
+# interface has no address yet — callers must treat that as "cannot start".
+# =============================================================================
+dpi_bind_addr() {
+    ip -4 addr show "$DPI_LAN_IF" 2>/dev/null \
+        | sed -n 's/.*inet \([0-9.]*\)\/.*/\1/p' | head -n1
+}
+
+# Dotted quad -> the little-endian hex /proc/net/tcp renders (192.168.225.1 -> 01E1A8C0).
+_dpi_hex_addr() {
+    local _a="$1" IFS=.
+    [ -n "$_a" ] || return 1
+    set -- $_a
+    [ $# -eq 4 ] || return 1
+    printf '%02X%02X%02X%02X' "$4" "$3" "$2" "$1"
+}
+
+# =============================================================================
+# dpi_listener_present — is tpws actually accepting on the engine port?
+# TRI-STATE: 0 = listening, 1 = absent, 2 = UNKNOWN. Unknown is not absent —
+# a caller that treated an unreadable procfs as "dead" would drain a working
+# rule and restart a healthy engine, so the ensure pass must do nothing on 2.
+# /proc/net/tcp, not netstat: netstat exists only at /opt/bin/netstat and /opt
+# is an Entware mount that appears ~30s into boot. The file always carries a
+# header row, so zero lines read is a failure, never an empty table.
+# A wildcard (00000000) bind still counts: during an OTA the pre-F5 argv may
+# still be running, and draining the rule under it would be a needless outage.
+# LISTEN is 0A *or* 8A here. tpws's transparent-mode listener reports 8A
+# (0x80 | TCP_LISTEN) on this kernel — measured on RM520N-GL, where every
+# ordinary listener (:22, :53, :80, :443) reports 0A and only tpws reports 8A.
+# /opt/bin/netstat cannot name that state either and prints "(null)" for the
+# row, so matching 0A alone reads a healthy engine as dead.
+# =============================================================================
+dpi_listener_present() {
+    local want_port want_addr verdict
+    want_port=$(printf '%04X' "$DPI_PORT")
+    want_addr=$(_dpi_hex_addr "$(dpi_bind_addr)") || return 2
+    verdict=$(awk -v p="$want_port" -v a="$want_addr" '
+        { rows++ }
+        $4 == "0A" || $4 == "8A" {
+            i = index($2, ":")
+            if (substr($2, i + 1) == p &&
+                (substr($2, 1, i - 1) == a || substr($2, 1, i - 1) == "00000000")) found++
+        }
+        END { print (rows ? (found ? "yes" : "no") : "unknown") }
+    ' /proc/net/tcp 2>/dev/null)
+    case "$verdict" in
+        yes) return 0 ;;
+        no) return 1 ;;
+        *) return 2 ;;
+    esac
 }
 
 # =============================================================================
@@ -163,6 +231,10 @@ dpi_packets_processed() {
 # Returns 0 on success (the -I exit status).
 # =============================================================================
 dpi_apply_rule() {
+    # The legacy drain runs BEFORE the idempotence check, not after: DPI_RULE_SIG
+    # matches the old spec too, so an un-migrated rule would read as "present"
+    # and the addrtype exclusion would never land.
+    _dpi_purge_legacy_rule
     # Idempotent: if the rule is already installed, leave it alone.
     # Re-creating it every ensure pass would reset its packet counter,
     # making "Packets processed" visibly collapse to 0 once a minute.
@@ -171,27 +243,39 @@ dpi_apply_rule() {
     fi
     local i=0
     while [ "$i" -lt 16 ]; do
-        run_iptables -w 5 -t nat -D PREROUTING \
-            -i bridge0 -p tcp -m multiport --dports 80,443 \
+        run_iptables -w 5 -t nat -D PREROUTING $_DPI_RULE_MATCH \
             -j REDIRECT --to-ports "$DPI_PORT" 2>/dev/null || break
         i=$((i + 1))
     done
-    run_iptables -w 5 -t nat -I PREROUTING \
-        -i bridge0 -p tcp -m multiport --dports 80,443 \
+    run_iptables -w 5 -t nat -I PREROUTING $_DPI_RULE_MATCH \
         -j REDIRECT --to-ports "$DPI_PORT"
 }
 
+# Drain the pre-addrtype rule. Unconditional and called from inside
+# dpi_remove_rule/dpi_apply_rule rather than from their callers, so the CGI
+# disable path and _dpi_uninstall_run are covered without touching either —
+# a drain that missed them would leave the old REDIRECT live with the engine
+# reported off, which is a LAN outage, not a leak.
+_dpi_purge_legacy_rule() {
+    local i=0
+    while [ "$i" -lt 16 ]; do
+        run_iptables -w 5 -t nat -D PREROUTING $_DPI_RULE_MATCH_LEGACY \
+            -j REDIRECT --to-ports "$DPI_PORT" 2>/dev/null || break
+        i=$((i + 1))
+    done
+}
+
 # =============================================================================
-# dpi_remove_rule — drain the engine rule (no insert)
+# dpi_remove_rule — drain the engine rule, both specs (no insert)
 # =============================================================================
 dpi_remove_rule() {
     local i=0
     while [ "$i" -lt 16 ]; do
-        run_iptables -w 5 -t nat -D PREROUTING \
-            -i bridge0 -p tcp -m multiport --dports 80,443 \
+        run_iptables -w 5 -t nat -D PREROUTING $_DPI_RULE_MATCH \
             -j REDIRECT --to-ports "$DPI_PORT" 2>/dev/null || break
         i=$((i + 1))
     done
+    _dpi_purge_legacy_rule
 }
 
 # =============================================================================
@@ -304,7 +388,15 @@ dpi_service_status() {
     # to stopped, which is what those models reported anyway.
     local _bin="${DPI_BINARY:-/usrdata/qmanager/bin/tpws}" st
     if pgrep -f "^$_bin " >/dev/null 2>&1; then
-        echo "running"
+        # A live process is not a working engine. Reporting "running" off the
+        # pgrep alone is what let a dead-on-the-wire engine read as healthy
+        # while the LAN was blackholed. An UNKNOWN probe keeps the old answer
+        # so a transient procfs read never flashes a false error.
+        dpi_listener_present
+        case "$?" in
+            1) echo "error" ;;
+            *) echo "running" ;;
+        esac
         return
     fi
     st=$(${_SYSTEMCTL:-systemctl} show qmanager-dpi -p ActiveState --value 2>/dev/null)
@@ -376,6 +468,12 @@ dpi_uptime_str() {
 # docs/reference/dpi.md.
 # =============================================================================
 dpi_build_args() {
+    local bind
+    bind=$(dpi_bind_addr)
+    # No LAN address yet (boot ordering) — emit nothing rather than fall back to
+    # a wildcard bind. The caller treats empty argv as "cannot start"; the
+    # ensure pass retries once the interface is up.
+    [ -n "$bind" ] || { echo ""; return 1; }
     case "$(dpi_active_mode)" in
         video_optimizer)
             # --hostlist-auto-reload is a newer-zapret option; v72.13 (the
@@ -383,13 +481,13 @@ dpi_build_args() {
             # connection check by default — a CGI hostlist save applies
             # immediately without restarting the engine.
             printf '%s' \
-                "--port=$DPI_PORT --bind-addr=$DPI_BIND_ADDR" \
+                "--port=$DPI_PORT --bind-addr=$bind" \
                 " --filter-l7=tls,http --split-pos=1,midsld,sniext+1 --disorder=tls" \
                 " --hostlist=$DPI_HOSTLIST"
             ;;
         full_bypass)
             printf '%s' \
-                "--port=$DPI_PORT --bind-addr=$DPI_BIND_ADDR" \
+                "--port=$DPI_PORT --bind-addr=$bind" \
                 " --filter-l7=tls,http --split-pos=1,midsld,sniext+1 --disorder=tls"
             ;;
         *)

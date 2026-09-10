@@ -57,6 +57,14 @@ svc_restart() {
     $_SUDO $_SYSTEMCTL restart "$(_svc_unit "$1")" 2>/dev/null
 }
 
+# Clear a latched start-limit / failed state so a following start or restart is
+# not refused. Only for a user-initiated recovery — calling this on a timer
+# would void the unit's backoff and hold NRestarts at 0, which with journald
+# masked to /dev/null is the only fault signal there is.
+svc_reset_failed() {
+    $_SUDO $_SYSTEMCTL reset-failed "$(_svc_unit "$1")" 2>/dev/null
+}
+
 # Enable a service (start on boot via symlink — SimpleAdmin pattern).
 # NOTE: `systemctl enable` is NOT actually broken on this systemd 244 — it works, but
 # it writes its symlink into /etc/systemd/system/...wants/ while `systemctl is-enabled`

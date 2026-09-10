@@ -12,6 +12,10 @@ www-data ALL=(root) NOPASSWD: /bin/systemctl start qmanager-*, /bin/systemctl st
 www-data ALL=(root) NOPASSWD: /bin/systemctl stop qmanager-*, /bin/systemctl stop tailscaled
 www-data ALL=(root) NOPASSWD: /bin/systemctl restart qmanager-*, /bin/systemctl restart tailscaled
 www-data ALL=(root) NOPASSWD: /bin/systemctl is-active qmanager-*, /bin/systemctl is-active tailscaled
+# reset-failed: qmanager-* only, no tailscaled. Needed so a user re-enabling a
+# Traffic Engine mode can clear a latched start limit — without it the restart
+# is refused for the full StartLimitIntervalSec hour and the UI cannot recover.
+www-data ALL=(root) NOPASSWD: /bin/systemctl reset-failed qmanager-*
 
 # Boot persistence (symlink-based — systemctl enable doesn't work on RM520N-GL)
 www-data ALL=(root) NOPASSWD: /bin/ln -sf /lib/systemd/system/qmanager*.service /lib/systemd/system/multi-user.target.wants/qmanager*.service
