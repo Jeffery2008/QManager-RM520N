@@ -1,31 +1,17 @@
 # 🚀 QManager RM520N BETA v0.1.16
 
-The important one: turning on Video Optimizer or Full Bypass can no longer take your whole network down with it. Every page also looks a little tighter this time — smaller, squarer corners throughout — and SMS Center now tells you the real reason a message failed to send instead of always blaming a busy modem.
+A visual pass: every page looks a little tighter this time — smaller, squarer corners throughout — and in dark mode, cards and every panel that opens over the page now catch a little light along their top edge.
 
 > One-click OTA from **System Settings → Software Update** if you're on v0.1.5 or newer.
 
-## ✨ New Features
-
-- **A GUI installer is now available.** Prefer not to run SSH commands? Grab it from the **Assets** section of this release on GitHub instead of the `curl`/`wget` one-liner below.
-
 ## 🛠️ Improvements
 
-- **Software Update now has one button, not three.** **System Settings → Software Update** keeps a single **Check again** at the top and moves **Download** / **Install** down onto the version row inside the update card, where the package size and channel tags used to sit. The duplicate status pills — the one beside the card title and the one in the Update status row — are gone; the step list underneath already reports what is running.
 - **Corners are tighter across the whole app, and dark mode cards now catch a little light.** Cards, tiles, inputs and dialogs everywhere moved to a smaller corner radius, so a panel reads as a panel rather than a lozenge; in dark mode each card also picks up a faint highlight along its top edge that lifts it off the background. (One radius scale in the stylesheet — no page was re-laid-out.)
-
-## 🐛 Fixes
-
-- **Turning on the Traffic Engine can no longer kill every device on your network — including your access to QManager itself.** If the engine failed to start (or was never installed), **Local Network → Traffic Engine** still sent all LAN web traffic to it, so nothing loaded and the settings page you'd use to switch it back off was unreachable too. The redirect now goes up only once the engine is confirmed listening, and is removed the instant it stops or crashes.
-- **Switching between Video Optimizer and Full Bypass now actually switches.** Picking the other mode in **Traffic Engine → Bypass mode** used to save your choice while the engine quietly kept running the old one, so Full Bypass never applied. The engine is now restarted on the switch, and a start failure reports as an error instead of a false success.
-- **The Traffic Engine no longer listens on every interface, including the carrier side.** It now binds only your LAN address, closing a proxy port that was reachable from outside the modem. No action needed on your side — update and it's closed.
-- **Full Bypass survives an update or reinstall.** The installer only ever restarted the engine for Video Optimizer users, so a Full Bypass setup came back with the feature switched on in the UI and nothing running behind it.
-- **The bypass test says what it measures.** Renamed to **Bypass benefit test** and given a scope line, because it tests whether the technique helps on your connection using its own temporary proxy — it never checked the engine you have running, and a passing result was easy to read as "the engine is fine". Engine health is the live status row above it.
-- **SMS Center no longer blames "modem busy" for a message that actually failed to send.** A genuine send failure — a bad number, no SMS center configured, the modem not registered — was being reported as "Could not acquire AT lock" purely by coincidence: the two very different failures shared one internal status code. Send failures now show their real reason, and a true busy-modem retry still reports as busy.
-- **The Cell Scanner results panel no longer resizes the page when you start your first sweep.** It's mounted from the start now, showing its empty state up front instead of popping in and pushing the layout down.
+- **Confirmation prompts and slide-out panels no longer look flatter than the dialogs beside them.** In dark mode the same top-edge highlight now reaches every panel that opens over the page, not just the main dialog, so a "are you sure?" prompt sits at the same depth as the window it came from.
 
 ## 📥 Installation
 
-### Upgrading from v0.1.14
+### Upgrading from v0.1.15
 
 **System Settings → Software Update** → Download → Install. No SSH/ADB needed. All settings preserved.
 
