@@ -49,7 +49,7 @@ import {
 //   - rows inset `px-3` against the loaded `px-4`;
 //   - FIVE rows against a real `pageSize` of ten, so the card grew by half its
 //     height at the handoff;
-//   - a checkbox at the 12px inline radius where the real Radix control is 4px —
+//   - a checkbox at the 8px inline radius where the real Radix control is 4px —
 //     at 16px square that is a near-circle standing in for a near-square;
 //   - no pagination footer at all, against a loaded footer carrying a select, a
 //     page label and four icon buttons.

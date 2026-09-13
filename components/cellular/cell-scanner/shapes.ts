@@ -150,7 +150,7 @@ export const PAGE_SHELL = "@container/main mx-auto flex flex-col gap-5 p-2";
 
 /**
  * The anchor geometry, shared by the run hero and the frequency calculator.
- * `rounded-hero` (40px) — one per surface, claimed by the section that leads the
+ * `rounded-hero` (20px) — one per surface, claimed by the section that leads the
  * page.
  *
  * It declares `@container/section`, which `HERO_SPLIT` and `SUMMARY` query. The
@@ -182,7 +182,7 @@ export const RUN_HERO = HERO_SHELL;
 
 /**
  * The results card. Identical to `RUN_HERO` except its radius — `rounded-card`
- * (36px), because it is a peer below the anchor and not a second hero. Imported
+ * (16px), because it is a peer below the anchor and not a second hero. Imported
  * by the loaded, loading, empty AND error branches so the four can never again
  * disagree about their own radius, which is how the incumbent ended up with a
  * `rounded-lg` table inside a `rounded-xl` card inside nothing.
@@ -433,7 +433,7 @@ export const SUMMARY = {
    * `RAIL`, which is the point — the rail is the run's posture and a tile is one
    * group's posture, and reading one should teach the other.
    *
-   * `rounded-tile` (28px), not the old `rounded-field` (20px): these are direct
+   * `rounded-tile` (12px), not the old `rounded-field` (10px): these are direct
    * children of the `rounded-hero` card now that the intermediate panel is gone,
    * so they take the step below it rather than the step below THAT.
    */

@@ -129,11 +129,13 @@ export function ProfileFormDialog({
             shell. `DialogContent` now paints `bg-surface`, and `--card` is the
             SAME oklch value in both modes — so the Card's fill, hairline and
             shadow would draw a second identical rectangle inside the first.
+            `bg-none` is separate from `bg-transparent`: the card sheen rides on
+            `background-image`, which a transparent `background-color` leaves alive.
             The user reads one panel here, so one element owns its fill: the
             dialog. Only the Card's decoration is dropped; its layout (`gap-6`,
             `py-6`) and every child, including the `bg-surface-container`
             sections that still need a step above the panel, are untouched. */}
-        <div className="max-h-[85dvh] overflow-y-auto overscroll-contain [scrollbar-width:thin] [&>[data-slot=card]]:border-0 [&>[data-slot=card]]:bg-transparent [&>[data-slot=card]]:shadow-none">
+        <div className="max-h-[85dvh] overflow-y-auto overscroll-contain [scrollbar-width:thin] [&>[data-slot=card]]:border-0 [&>[data-slot=card]]:bg-transparent [&>[data-slot=card]]:bg-none [&>[data-slot=card]]:shadow-none">
           <CustomProfileFormComponent
             key={editingProfile?.id ?? "new"}
             editingProfile={editingProfile}

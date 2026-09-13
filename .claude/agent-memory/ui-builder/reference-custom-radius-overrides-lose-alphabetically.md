@@ -1,40 +1,34 @@
 ---
 name: custom-radius-overrides-lose-alphabetically
-description: A theme radius (rounded-field/card/hero/inline) on a Skeleton silently loses to the primitive's own rounded-md; verified in built CSS, and the fix is a trailing `!`
+description: RESOLVED — cn() now extends tailwind-merge with our radius names, so a custom rounded-* deduplicates the primitive's rounded-md and wins. The trailing `!` this file used to prescribe is no longer needed.
 metadata:
   type: reference
 ---
 
-`cn()` is bare `tailwind-merge`, which does not know this repo's custom radius
-names (`field` / `card` / `hero` / `inline` / `pill` / `tile`). It cannot dedupe
-them against a stock `rounded-md`, so **both survive into the class list** and the
-CASCADE decides — by the order Tailwind emits the rules, which is alphabetical by
-utility name.
+**This is closed. Do not add `rounded-field!` / `rounded-card!` to new work.**
 
-**Verified in built CSS on 2026-08-31** (`out/_next/static/chunks/*.css`, after
-`bun --bun next build`):
+`lib/utils.ts:23` builds `cn()` from `extendTailwindMerge({ extend: { theme: {
+radius: ["inline","field","tile","card","hero","pill"] } } })`, so twMerge knows
+this repo's radius names and drops the losing one instead of letting both survive.
+
+Verified by CALLING the merge, which is the only evidence this file ever accepted:
 
 ```
-.rounded-field{        <- emitted FIRST
-.rounded-field\!{
-.rounded-md{           <- emitted LATER, therefore WINS
+m("bg-accent animate-pulse rounded-md rounded-field")  -> "bg-accent animate-pulse rounded-field"
+m("rounded-card rounded-hero")                          -> "rounded-hero"
 ```
 
-So `<Skeleton className={cn(SOMETHING, "rounded-field")} />` renders at **6px**,
-not 20px — `Skeleton`'s own base class is `"bg-accent animate-pulse rounded-md"`.
-`pill` and `tile` sort after `md` and win **by luck**, not by design.
+**What the old rule said, and why it is dead.** Before the extension, `cn()` was
+bare `tailwind-merge`: it could not dedupe a custom radius against a stock
+`rounded-md`, both reached the class list, and the cascade decided by Tailwind's
+alphabetical emission order — so `.rounded-md` came after `.rounded-field` and a
+Skeleton rendered at the legacy 10.4px instead of the field radius. `pill` and
+`tile` happened to sort after `md` and won by luck. The prescribed workaround was
+a trailing `!`. All of that is now handled by the merge configuration.
 
-**The fix is the Tailwind v4 important modifier:** `rounded-field!`. It compiles
-to `.rounded-field\!{border-radius:1.25rem!important}` and wins in both
-directions. Same instrument as [[dark-fill-override-wins-by-source-order]].
+The `!` spellings still in the tree are harmless but redundant. Related:
+[[dark-fill-override-wins-by-source-order]], which is a different mechanism and
+still live.
 
-**How to apply:** whenever a custom `rounded-*` is handed to a primitive that
-already declares one — `Skeleton` above all, since the Skeleton-Mirror Rule
-means every loading branch does this — write the `!`. No lint rule, no harness
-and no type sees it, and the failure is a 6px skeleton standing in for a 20px
-block, which reads as "slightly off" rather than as a bug. ~20 call sites across
-the product still have the un-`!`'d spelling; they are a separate cleanup, but do
-not add a new one.
-
-**Never verify this by reasoning about `cn()`.** Grep the built CSS — the source
-order is the only evidence.
+**The verification rule survives the fix:** never reason about `cn()`. Call
+`twMerge` against the installed library, or grep the built CSS.

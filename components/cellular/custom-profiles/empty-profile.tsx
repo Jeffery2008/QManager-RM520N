@@ -89,9 +89,9 @@ const EmptyProfileViewComponent = ({
       </CardHeader>
       <CardContent className="flex h-full items-center justify-center">
         <div className="flex w-full flex-col gap-4">
-          {/* `rounded-tile` (28px): an inner block inside a `rounded-card` (36px)
+          {/* `rounded-tile` (12px): an inner block inside a `rounded-card` (16px)
               card may not carry its parent's radius, and the primitive's own
-              `rounded-hero` (40px) would out-round the card hosting it.
+              `rounded-hero` (20px) would out-round the card hosting it.
               `ariaRole="status"` — a polite report, not an alert: nothing has
               gone wrong. */}
           <ConditionScreen

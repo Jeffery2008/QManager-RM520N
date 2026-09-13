@@ -25,7 +25,7 @@ Start by reading `CLAUDE.md` (6-phase change workflow, tier routing, worktree di
     04 (degraded), 05 (in-progress), 06 (success), 08 (deferred reboot) exist but are unmounted.
   - `components/dashboard/network-status.tsx` — retargeted, and currently **the only surface in the
     product using filled tonal chips**.
-  - `DESIGN.md` corrections: banner radius is `rounded-field` (20px, not card); the banner entrance
+  - `DESIGN.md` corrections: banner radius is `rounded-field`, not `rounded-card`; the banner entrance
     is a 6px **descent**; 15px/13px are documented banner type steps.
 - **`CLAUDE.md`'s status-badge table still documents the OLD outline pattern on purpose** — DESIGN.md
   requires it stay accurate to what ships until the flip is complete. Task A is what closes that.

@@ -19,7 +19,7 @@
 //
 // The values below are the system's, verbatim:
 //
-//   104px pinned tile   28px radius   52px disc   42px control   36px card
+//   104px pinned tile   12px radius   52px disc   42px control   16px card
 //
 // The retired module got two of those wrong. It carried `min-h-[5.75rem]` on
 // the tile root and `h-[5.75rem]` on the skeleton — the pre-correction 92px
@@ -57,9 +57,9 @@
 // The comp is drawn in raw pixels; this surface ships the role scale, mapped by
 // SHAPE ROLE rather than by nearest number:
 //
-//   comp 36px  card shell   -> `rounded-card` (36px)  — a PEER card, not a hero
-//   comp 28px  tile, group  -> `rounded-tile` (28px)
-//   comp 20px  row          -> `rounded-field` (20px)
+//   comp 36px  card shell   -> `rounded-card` (16px)  — a PEER card, not a hero
+//   comp 28px  tile, group  -> `rounded-tile` (12px)
+//   comp 20px  row          -> `rounded-field` (10px)
 //   comp 999px chips, discs -> `rounded-pill`
 //
 // `rounded-hero` is "the ONE card that anchors a surface". Both cards on this
@@ -202,7 +202,7 @@ export const NOTICE_TITLE = "truncate text-lg font-semibold";
 // -----------------------------------------------------------------------------
 
 /**
- * The card. A PEER, not the anchor: `rounded-card` (36px) and the whisper
+ * The card. A PEER, not the anchor: `rounded-card` (16px) and the whisper
  * shadow, which is the only card lift in the vocabulary and is never
  * load-bearing. `border-0` is explicit — a tonal surface never also carries a
  * hairline (The No-Hairline-On-Fill Rule).

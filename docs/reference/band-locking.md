@@ -258,7 +258,7 @@ Its current shape is **"2a" ("Compact tile grid")** from the *Band Locking Hero 
 `HERO_SPLIT` lays the two panels out: `flex-col` below `@2xl/hero`, `flex-row` above it — a **container** query against `@container/hero`, which `BAND_HERO` itself declares, so the split responds to the hero's own width rather than the viewport. Since the 2026-08-22 pass a **third** element sits inside the same hero section, below the split: the full-width failover row (see [Why failover spans the hero](#why-failover-spans-the-hero)).
 
 ```
-<section BAND_HERO>                      rounded-hero (40px) — the ONE hero on this page
+<section BAND_HERO>                      rounded-hero (20px) — the ONE hero on this page
   ├── <div HERO_SPLIT>                   @2xl/hero:flex-row @2xl/hero:items-start
   │   ├── HERO_ONAIR_PANEL rounded-card  flex-1  — live-dot header, tile grid, footnote
   │   └── HERO_RAIL_PANEL  rounded-card  25rem   — disc + title + subtitle,
@@ -276,7 +276,7 @@ The fix is *not* to inflate the rows to fill it. A rail row's content is fixed �
 
 ### Why both panels are `rounded-card`, not `rounded-hero`
 
-The panels sit at **36px, one step below** the outer section's 40px. `BAND_HERO` still solely claims the Consistent-Layout Rule's "a genuine glance surface may earn a hero card" exception; nesting two hero-radius panels inside it would spend that exception twice on one page. The step-down is the same nesting the surface already used for `HERO_ROW` (`rounded-field`, 20px, inside the hero) and for `HERO_ONAIR_TILE` (`rounded-tile`) inside the panel — each level of containment drops a step on the role scale.
+The panels sit at **16px, one step below** the outer section's 20px. `BAND_HERO` still solely claims the Consistent-Layout Rule's "a genuine glance surface may earn a hero card" exception; nesting two hero-radius panels inside it would spend that exception twice on one page. The step-down is the same nesting the surface already used for `HERO_ROW` (`rounded-field`, 10px, inside the hero) and for `HERO_ONAIR_TILE` (`rounded-tile`) inside the panel — each level of containment drops a step on the role scale.
 
 ### The on-air tile grid
 
@@ -629,7 +629,7 @@ Both pass `tone="neutral"` and `ariaRole="status"`, and neither passes `spin`:
 - **`neutral`, not `warning`.** A SKU that reports no bands in a category is a fact about the hardware; a modem not currently camped on anything is a fact about the radio. Neither is a fault the user can act on, and `condition-screen.tsx`'s own tone table reserves neutral for exactly this ("we do not know, and pretending otherwise would be the actual bug").
 - **No `spin`.** These are standing conditions, and a spinner would advertise work that is not happening.
 
-> ⚠️ WARNING: the hero's instance needs `className="rounded-tile bg-surface py-10"` and both overrides are load-bearing. The primitive's `neutral` tone is `bg-surface-container`, which is **byte-identical to the on-air panel's own ground** — so without the override the block has no visible edge at all. `rounded-tile` steps it down from the primitive's own `rounded-hero` (40px), which would otherwise out-round the `rounded-card` panel hosting it. `bg-surface` also matches `HERO_ONAIR_ABSENT`, so every "not a carrier" cell in that panel sits on one surface.
+> ⚠️ WARNING: the hero's instance needs `className="rounded-tile bg-surface py-10"` and both overrides are load-bearing. The primitive's `neutral` tone is `bg-surface-container`, which is **byte-identical to the on-air panel's own ground** — so without the override the block has no visible edge at all. `rounded-tile` steps it down from the primitive's own `rounded-hero` (20px), which would otherwise out-round the `rounded-card` panel hosting it. `bg-surface` also matches `HERO_ONAIR_ABSENT`, so every "not a carrier" cell in that panel sits on one surface.
 
 ## Geometry and tone
 
@@ -637,13 +637,13 @@ Everything shape- or tone-bearing on this surface lives in `components/cellular/
 
 | Constant | Purpose |
 | -------- | ------- |
-| `BAND_HERO` | The one hero card, `rounded-hero` (40px). Also declares `@container/hero`, which `HERO_SPLIT` queries. A second hero on this page spends the Consistent-Layout Rule's glance-surface exception twice |
-| `BAND_CARD` | One category card, `rounded-card` (36px). Imported by all three branches |
+| `BAND_HERO` | The one hero card, `rounded-hero` (20px). Also declares `@container/hero`, which `HERO_SPLIT` queries. A second hero on this page spends the Consistent-Layout Rule's glance-surface exception twice |
+| `BAND_CARD` | One category card, `rounded-card` (16px). Imported by all three branches |
 | `CARD_PAD`, `HERO_EYEBROW` | Card padding (24px peer / 28px hero) and the eyebrow type step |
 | `HERO_SPLIT` | The hero's two-panel layout: `flex-col`, becoming `flex-row items-start` at `@2xl/hero`. Both alignment utilities are breakpoint-scoped on purpose — see `items-start`, not `items-stretch` |
 | `HERO_ONAIR_PANEL`, `HERO_ONAIR_GRID`, `HERO_ONAIR_TILE`, `ONAIR_TILE_MIN_H`, `HERO_ONAIR_ABSENT` | The left panel. Panel is `rounded-card` on `surface-container` and declares its own `@container/onair`; the grid is a fixed 3-column ceiling (`grid-cols-1 @sm/onair:grid-cols-2 @lg/onair:grid-cols-3`); the tile is `rounded-tile` on a **neutral `bg-surface`**, `px-5 py-4`, at a binding `ONAIR_TILE_MIN_H` floor, with `HEAD` / `DISC` / `TAGS` / `BANDWIDTH` / `BAND` / `FREQ` / `DETAIL` / `METRICS` / `RSRP` / `RSRP_UNIT` / `SECONDARY` / `METER` (`mt-auto`) slots; `HERO_ONAIR_ABSENT` is the lone-carrier absent-leg cell |
 | `HERO_RAIL_PANEL`, `HERO_RAIL_DISC`, `HERO_RAIL_TITLE`, `HERO_RAIL_SUBTITLE`, `HERO_RAIL_ROW`, `HERO_RAIL_ROW_LABEL`, `HERO_RAIL_ROW_RATIO` | The right panel. Fixed `25rem` above `@2xl/hero`, full width below it. `HERO_RAIL_DISC` is 44px — one step below the product-wide 52px `HERO_DISC`, because the rail is a nested panel |
-| `HERO_ROW`, `HERO_ROW_MIN_H`, `HERO_ROW_LABEL` | The failover row, at **hero level** spanning both panels — no longer the rail's last child, and no longer `mt-auto`. `bg-surface-container` (it steps *up* from the hero's `bg-surface`); `rounded-field` (20px) because this row genuinely wraps, and a pill that has wrapped to two lines is a stadium; `HERO_ROW_MIN_H` is the 52px floor it shares with its skeleton |
+| `HERO_ROW`, `HERO_ROW_MIN_H`, `HERO_ROW_LABEL` | The failover row, at **hero level** spanning both panels — no longer the rail's last child, and no longer `mt-auto`. `bg-surface-container` (it steps *up* from the hero's `bg-surface`); `rounded-field` (10px) because this row genuinely wraps, and a pill that has wrapped to two lines is a stadium; `HERO_ROW_MIN_H` is the 52px floor it shares with its skeleton |
 | `carrierDiscTone` | `(technology) => string`. The 40px identity disc's **strong** fill — LTE violet, NR blue. Identity only; there is deliberately no `isLead` axis any more, because PCC primacy moved to `sortCarriers()` order |
 | `CARRIER_DISC_GLYPH` | `Record<"LTE" \| "NR", MaterialSymbolName>` — `signal_cellular_alt` / `cell_tower`. Two distinct marks for a single-slot indicator |
 | `BAND_CHIP`, `BAND_CHIP_LIVE_RING`, `bandChipClass`, `bandChipA11yKey`, `BAND_LEGEND` | The chip contract (above). `bandChipFill` is now **module-local** — its only consumer is `bandChipClass`, and a caller composing the fill by hand could pair it with the wrong `ROOT` or drop the live ring, which is the two-axis chip's one failure mode. `BAND_LEGEND`'s rationale comment carries the "Currently locked" naming rule |

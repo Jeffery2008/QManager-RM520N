@@ -332,11 +332,11 @@ export const PROFILE_STATUS_BADGE: Record<
 //
 // This is the exception the Consistent-Layout Rule allows, not a breach of it —
 // "a genuine glance surface may earn a hero card". The Today strip directly
-// below it is a PEER card (`PROFILE_CARD_PEER`, 36px) for exactly this reason,
+// below it is a PEER card (`PROFILE_CARD_PEER`, 16px) for exactly this reason,
 // even though it reads as a second banner: a surface gets one anchor, and the
 // hero has it.
 
-/** The hero shell. `rounded-hero` (40px) — one per surface. */
+/** The hero shell. `rounded-hero` (20px) — one per surface. */
 export const HERO_CARD =
   "@container/hero flex flex-col gap-5 rounded-hero border-0 bg-surface p-6 shadow-[var(--shadow-whisper)]";
 
@@ -404,7 +404,7 @@ export const HERO_DISC_TONE: Record<
  * THE TITLE STEP IS THE LOADED HERO'S, and the two exceptional states move up
  * to meet it rather than the reverse. Two reasons. The loaded state is what the
  * user sees essentially always, so it is the one whose scale is already
- * calibrated against the 40px `rounded-hero` shell hosting it — shrinking it to
+ * calibrated against the 20px `rounded-hero` shell hosting it — shrinking it to
  * match a state that appears once would detune the common case to tidy the rare
  * one. And the exceptional states are not LESS important than the loaded one: a
  * profile that is in force but unreadable is the most urgent thing this page can
@@ -558,7 +558,7 @@ export const HERO_TILE_DISC_NEUTRAL =
 /**
  * An inline notice inside the hero (mismatch / applying / partial).
  *
- * `rounded-field` (20px), so it never out-rounds the 40px hero hosting it —
+ * `rounded-field` (10px), so it never out-rounds the 20px hero hosting it —
  * the Radius-Follows-Size Rule. Tone comes from the CONTAINER PAIR, which is
  * sanctioned here and only here on this surface: a banner is one of the three
  * things the container layer is for.
@@ -721,7 +721,7 @@ export const RIBBON_MINI = {
  * shipped `rounded-card` next to `rounded-xl` in the same grid, and the skeleton
  * shadowing them used a third value.
  *
- * `rounded-tile` (28px), corrected from `rounded-card` (36px): this is an inner
+ * `rounded-tile` (12px), corrected from `rounded-card` (16px): this is an inner
  * block inside a card, and a child may not carry its parent's radius.
  *
  * `min-h-[6.5rem]` is a FLOOR and the skeleton mirrors by rendering ROOT, not by

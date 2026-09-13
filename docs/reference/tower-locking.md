@@ -103,7 +103,7 @@ For one revision the strip and the tiles shared a single `TOWER_HERO`, and the d
 
 Splitting also frees the freshness stamp. Merged, a stamp in the card header would have appeared to date the three settings tiles as well; the only honest home left for it was the verdict block. Split, `SECTION_HEAD.META` on "Right now" dates exactly the content that has a clock — see [Freshness heads the section](#freshness-heads-the-section).
 
-Only `TOWER_HERO` keeps `rounded-hero` (40px). One anchor per surface, claimed by the section that **leads** the page; `TOWER_SECTION` is `rounded-card` (36px), a peer of the leg cards below it. The two shells are otherwise byte-identical, including the container name.
+Only `TOWER_HERO` keeps `rounded-hero` (20px). One anchor per surface, claimed by the section that **leads** the page; `TOWER_SECTION` is `rounded-card` (16px), a peer of the leg cards below it. The two shells are otherwise byte-identical, including the container name.
 
 > ⚠️ WARNING: **both sections declare `@container/section`, and neither declares `@container/hero` any more.** That is what lets `SECTION_HEAD` and `AUTO_GRID` behave identically in either section without the constant knowing which one is hosting it. A stale `@container/hero` or `@container/card` variant left behind in this subtree would silently never match — the grid would stay single-column at every width, and the collapse would look like a design choice rather than a dead query.
 
@@ -497,7 +497,7 @@ They are all the same question — **what does this lock do when nobody is looki
 **They sit second, directly under "Right now", where they used to be the page's last card.** The order the old layout encoded — see where you are, choose where to point, then decide what happens unattended — describes the **first session only**. After one setup the target rarely moves, while everything a returning reader wants is in the top two sections: is the lock holding, does it survive a reboot, is the safety net armed, is the window still right. The two three-field forms come last because after the first session they are the part nobody opens.
 
 ```
-<section TOWER_SECTION>                   rounded-card (36px) — a peer, not a second anchor
+<section TOWER_SECTION>                   rounded-card (16px) — a peer, not a second anchor
   ├── SECTION_HEAD                        h2 "While nobody is watching" + DESCRIPTION
   └── <div AUTO_GRID>                     1 → 2 at @xl/section → [1fr 1fr 1.5fr] at @4xl/section
       ├── AUTO_TILE     restart_alt       persist: switch + PERSIST_BADGE + help copy
@@ -506,7 +506,7 @@ They are all the same question — **what does this lock do when nobody is looki
       └── ScheduleTile  (AUTO_TILE)       enable + window + day chips
 ```
 
-Every tile inside the section is `rounded-tile` (28px) on `surface-container` — a step below the section's `rounded-card` (36px), per Radius-Follows-Size, and the same step the live strip's panel uses in the section above, so the two sections' inner units read as peers. `TOWER_HERO` claims the Consistent-Layout Rule's "a genuine glance surface may earn a hero card" exception on its own; nesting card- or hero-radius panels inside either section would spend that exception twice on one page.
+Every tile inside the section is `rounded-tile` (12px) on `surface-container` — a step below the section's `rounded-card` (16px), per Radius-Follows-Size, and the same step the live strip's panel uses in the section above, so the two sections' inner units read as peers. `TOWER_HERO` claims the Consistent-Layout Rule's "a genuine glance surface may earn a hero card" exception on its own; nesting card- or hero-radius panels inside either section would spend that exception twice on one page.
 
 The columns are **stepped, not equal thirds**: the schedule carries seven 44px day chips plus two time fields and genuinely needs the room, where persistence is a label and a switch. Equal thirds either wrap the weekday row or leave the first tile mostly empty.
 
@@ -997,10 +997,10 @@ Everything shape- or tone-bearing lives in `components/cellular/tower-locking/sh
 
 | Constant | Purpose |
 | -------- | ------- |
-| `TOWER_HERO` | The "Right now" section and the page's one anchor, `rounded-hero` (40px). Declares **`@container/section`** — deliberately not `hero`, because two sibling sections now declare it and a `/hero` query would never match inside `TOWER_SECTION`. `shadow-whisper` must go through the custom property; the bare utility does not resolve |
-| `TOWER_CARD` | One peer card, `rounded-card` (36px). Imported by the loaded, loading **and** gated branches |
+| `TOWER_HERO` | The "Right now" section and the page's one anchor, `rounded-hero` (20px). Declares **`@container/section`** — deliberately not `hero`, because two sibling sections now declare it and a `/hero` query would never match inside `TOWER_SECTION`. `shadow-whisper` must go through the custom property; the bare utility does not resolve |
+| `TOWER_CARD` | One peer card, `rounded-card` (16px). Imported by the loaded, loading **and** gated branches |
 | `CARD_PAD` | 24px on a peer card; the sections' 28px is baked into `TOWER_HERO` / `TOWER_SECTION` |
-| `TOWER_SECTION` | The "While nobody is watching" section. Byte-identical to `TOWER_HERO` except its radius — `rounded-card` (36px), a peer of the leg cards, not a second anchor. Declares the **same** `@container/section` name |
+| `TOWER_SECTION` | The "While nobody is watching" section. Byte-identical to `TOWER_HERO` except its radius — `rounded-card` (16px), a peer of the leg cards, not a second anchor. Declares the **same** `@container/section` name |
 | `SECTION_HEAD` | The header both sections share: `ROOT` / `TITLE` / `DESCRIPTION` / `META` / `STAMP`. The description sits on the title's **row**, not under it — a section header signposts content the reader can already see, where a leg card's `CardHeader` explains a control whose effect is not visible until used. `META` is `ml-auto`, not `justify-between` on the root, because the row wraps |
 | `STRIP_GRID` | The live strip: one column, becoming `[18.5rem minmax(0,1fr)]` at `@3xl/section`. The verdict track is FIXED, and the grid is `items-start` so a two-word conclusion does not stretch to the height of the carrier grid |
 | `STRIP_PANEL`, `STRIP_HEAD`, `STRIP_FOOTNOTE` | The carrier half of the strip, `rounded-tile` on `surface-container`, declaring `@container/panel`. The footnote is `mt-auto` so it stays pinned to the panel's floor |
@@ -1163,7 +1163,7 @@ Both leg cards render `TOWER_CARD` + `CARD_PAD` in **every** branch, so the shel
 
 > ℹ️ NOTE: `SKELETON_SHAPE.READBACK` is sized for **the caption plus one pair**, even though the LTE card can render three. The skeleton cannot know how many will land, and a placeholder sized for three collapses on the common single-cell case — a skeleton that *shrinks* is worse than one that grows, because the content below it jumps upward into space the reader had already started on. `.VERDICT` makes the same call against a real measurement — see [Skeleton figures are measured, not estimated](#skeleton-figures-are-measured-not-estimated).
 
-- **Loading** — every measurement from `SKELETON_SHAPE`, except where the real shape can be *composed* instead (the LTE slot rows, the NR value tiles). The incumbent guessed `h-9 w-full rounded-md` for inputs that render at 42px with a 20px radius, and `h-5 w-20` for a Switch-plus-Label pair. Sizes are the loaded element's **line box**, not its font size: a skeleton sized to the glyph reflows the moment real text lands.
+- **Loading** — every measurement from `SKELETON_SHAPE`, except where the real shape can be *composed* instead (the LTE slot rows, the NR value tiles). The incumbent guessed `h-9 w-full rounded-md` for inputs that render at 42px with a 10px radius, and `h-5 w-20` for a Switch-plus-Label pair. Sizes are the loaded element's **line box**, not its font size: a skeleton sized to the glyph reflows the moment real text lands.
 - **Gated** (NR only) — the card shell, header, read-back, fields and footer all survive at full contrast; a tonal `NOTICE` leads the body and `formDisabled` reaches every control except Remove Lock.
 - **Empty** (LTE) — inline, above the slots, never instead of them.
 - **Loaded** — header chip, controls, conditional notices, `sr-only` `aria-live` applying announcement, footer pinned with `mt-auto` (these cards sit in an equal-height grid row, so without it a short card leaves its buttons floating above a void).

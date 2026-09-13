@@ -883,7 +883,7 @@ const ProfileRow = ({
           </DropdownMenuTrigger>
           {/* Scoped override, not a `dropdown-menu.tsx` primitive change —
               that shared component also backs the SMS Inbox row menu, which
-              this pass does not touch. `rounded-field` (20px) is the shape
+              this pass does not touch. `rounded-field` (10px) is the shape
               scale's own answer for "small popovers"; `border-0` +
               `shadow-lg` follows the Popover Float rule (a floating surface's
               detachment reads through elevation, not a hairline). */}

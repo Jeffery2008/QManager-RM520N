@@ -143,7 +143,7 @@ export const STATUS_LABEL_KEY = {
 export const CARD_SHELL =
   "@container/card gap-5 rounded-card border-0 bg-card py-6 shadow-[var(--shadow-whisper)]!";
 
-/** The anchor card on the surface: 40px radius, 28px pad, one per route. */
+/** The anchor card on the surface: 20px radius, 28px pad, one per route. */
 export const HERO_SHELL =
   "@container/card gap-5 rounded-hero border-0 bg-card py-7 shadow-[var(--shadow-whisper)]!";
 

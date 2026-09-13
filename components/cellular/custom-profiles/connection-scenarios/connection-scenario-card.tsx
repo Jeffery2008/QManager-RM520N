@@ -702,7 +702,7 @@ const ConnectionScenariosCard = ({
 
       {/* Ownership notice. Conditional on the radio actually being owned — a
           notice printed unconditionally would be describing a state the page
-          is not in. `rounded-field` (20px) so it never out-rounds the
+          is not in. `rounded-field` (10px) so it never out-rounds the
           `rounded-card` shell hosting it. */}
       {showOwnershipNotice && !showSkeleton && (
         <p className="bg-surface-container text-on-surface-variant rounded-field flex items-start gap-2.5 px-4 py-3.5 text-xs leading-relaxed text-pretty">

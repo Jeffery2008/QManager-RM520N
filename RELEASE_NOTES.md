@@ -1,12 +1,17 @@
-# 🚀 QManager RM520N BETA v0.1.15
+# 🚀 QManager RM520N BETA v0.1.16
 
-The important one: turning on Video Optimizer or Full Bypass can no longer take your whole network down with it. Also in here — SMS Center tells you the real reason a message failed to send instead of always blaming a busy modem, and Software Update drops its duplicate buttons and status pills.
+The important one: turning on Video Optimizer or Full Bypass can no longer take your whole network down with it. Every page also looks a little tighter this time — smaller, squarer corners throughout — and SMS Center now tells you the real reason a message failed to send instead of always blaming a busy modem.
 
 > One-click OTA from **System Settings → Software Update** if you're on v0.1.5 or newer.
+
+## ✨ New Features
+
+- **A GUI installer is now available.** Prefer not to run SSH commands? Grab it from the **Assets** section of this release on GitHub instead of the `curl`/`wget` one-liner below.
 
 ## 🛠️ Improvements
 
 - **Software Update now has one button, not three.** **System Settings → Software Update** keeps a single **Check again** at the top and moves **Download** / **Install** down onto the version row inside the update card, where the package size and channel tags used to sit. The duplicate status pills — the one beside the card title and the one in the Update status row — are gone; the step list underneath already reports what is running.
+- **Corners are tighter across the whole app, and dark mode cards now catch a little light.** Cards, tiles, inputs and dialogs everywhere moved to a smaller corner radius, so a panel reads as a panel rather than a lozenge; in dark mode each card also picks up a faint highlight along its top edge that lifts it off the background. (One radius scale in the stylesheet — no page was re-laid-out.)
 
 ## 🐛 Fixes
 

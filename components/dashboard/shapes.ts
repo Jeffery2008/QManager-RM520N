@@ -23,7 +23,7 @@
 // from each other for the same reason. What is shared is the SYSTEM's numbers,
 // not a module. The values below are the system's, verbatim:
 //
-//   104px pinned tile   28px radius   52px disc   36px card   40px row
+//   104px pinned tile   12px radius   52px disc   16px card   40px row
 //
 // -----------------------------------------------------------------------------
 // THREE DIVERGENCES THIS MODULE RECORDS RATHER THAN SILENTLY NORMALISES
@@ -171,8 +171,8 @@ export const CARD_SHELL =
   "@container/card h-full gap-4 rounded-card border-0 px-6 py-6 shadow-[var(--shadow-whisper)]";
 
 /**
- * The anchor card on the surface — `rounded-hero` (40px) rather than
- * `rounded-card` (36px), 28px padding rather than 24px, and one step more
+ * The anchor card on the surface — `rounded-hero` (20px) rather than
+ * `rounded-card` (16px), 28px padding rather than 24px, and one step more
  * breathing room between its groups.
  *
  * There is exactly ONE hero per surface, by definition. A grid full of heroes
@@ -191,8 +191,8 @@ export const HERO_SHELL =
  * to clear.
  *
  * It differs from both of its neighbours in ways that are real rather than
- * accidental: `rounded-hero` (40px) while sitting beside grid peers at 36px, an
- * explicit `bg-surface`, and NO whisper shadow. Whether a 40px radius belongs
+ * accidental: `rounded-hero` (20px) while sitting beside grid peers at 16px, an
+ * explicit `bg-surface`, and NO whisper shadow. Whether a 20px radius belongs
  * anywhere but the surface’s one true hero is a fair question — "there is
  * exactly ONE hero per surface, by definition" is written a few lines up — but
  * the answer is a VISUAL call about the hero band’s silhouette, not a grammar
@@ -212,7 +212,7 @@ export const SIDE_SHELL =
  * is: this string is what `carrier-aggregation.tsx` shipped inline, so
  * hoisting it is provably a zero-visual-change edit.
  *
- * It is not CARD_SHELL (36px radius, 24px padding) and it is not HERO_SHELL
+ * It is not CARD_SHELL (16px radius, 24px padding) and it is not HERO_SHELL
  * either, differing from that one in three places at once — its own container
  * name, `gap-4` rather than `gap-5`, and `py-6` rather than `py-[26px]`. The
  * container name is the load-bearing one: this card queries itself at `@md/ca`
@@ -363,7 +363,7 @@ export const DIRECTION = {
 
 /**
  * The glance tile: a 52px glyph disc beside an eyebrow → value → caption
- * column, in a 28px-radius block PINNED at 104px.
+ * column, in a 12px-radius block PINNED at 104px.
  *
  * It is PINNED because a floor made the skeleton's mirror a lie. Measured on
  * the sibling strips before that correction: a two-leg tile resolved to 118px,

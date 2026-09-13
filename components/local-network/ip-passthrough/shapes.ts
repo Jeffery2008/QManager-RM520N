@@ -21,7 +21,7 @@
 // — what is shared is the SYSTEM's numbers, not a module. The values below are
 // those numbers, verbatim:
 //
-//   104px pinned tile   28px radius   52px disc   42px control   36px card
+//   104px pinned tile   12px radius   52px disc   42px control   16px card
 //
 // -----------------------------------------------------------------------------
 // THE BAND ON THIS PAGE REPORTS CONFIGURATION, NOT A MEASUREMENT
@@ -56,9 +56,9 @@
 // -----------------------------------------------------------------------------
 // The role scale, mapped by SHAPE ROLE rather than by nearest number:
 //
-//   36px  card shell    -> `rounded-card` — a PEER card; the band is the anchor
-//   28px  tile, group   -> `rounded-tile`
-//   20px  row           -> `rounded-field`
+//   16px  card shell    -> `rounded-card` — a PEER card; the band is the anchor
+//   12px  tile, group   -> `rounded-tile`
+//   10px  row           -> `rounded-field`
 //   999px chips, fields -> `rounded-pill`
 //
 // `rounded-hero` is "the ONE card that anchors a surface". The anchor here is
@@ -254,7 +254,7 @@ export const CARD_PAD = "px-7";
 export const CARD_TITLE = "min-w-0 text-lg leading-tight";
 
 /**
- * The card. A PEER, not the anchor: `rounded-card` (36px) and the whisper
+ * The card. A PEER, not the anchor: `rounded-card` (16px) and the whisper
  * shadow, which is the only card lift in the vocabulary and is never
  * load-bearing. `border-0` is explicit — a tonal surface never also carries a
  * hairline (The No-Hairline-On-Fill Rule).

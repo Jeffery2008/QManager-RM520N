@@ -30,14 +30,14 @@ import type { MaterialSymbolName } from "@/components/ui/material-symbol";
 // The comp is drawn in raw pixels; this surface ships the role scale. The map is
 // by SHAPE ROLE, not by nearest number:
 //
-//   comp 32px  card shell        -> `rounded-card`  (36px)
-//   comp 26px  row group         -> `rounded-tile`  (28px)
-//   comp 22px  promoted row      -> `rounded-field` (20px)
+//   comp 32px  card shell        -> `rounded-card`  (16px)
+//   comp 26px  row group         -> `rounded-tile`  (12px)
+//   comp 22px  promoted row      -> `rounded-field` (10px)
 //   comp 999px chips, segments   -> `rounded-pill`
 //
 // A promoted row is deliberately a step TIGHTER than the group that contains it.
 // Radius-Follows-Size means the inner thing is rounder-per-pixel but smaller in
-// absolute radius; matching the group's 28px would make the promoted row read as
+// absolute radius; matching the group's 12px would make the promoted row read as
 // a sibling of its own container.
 //
 // -----------------------------------------------------------------------------
@@ -339,8 +339,8 @@ export const RATE_CEILING = {
    * the container and the block steps back DOWN to the page ground, which is
    * what keeps two nested neutrals legible without a hairline.
    *
-   * `rounded-field` (20px) is a step tighter than the panel's `rounded-tile`
-   * (28px), per Radius-Follows-Size: the inner block is rounder per pixel and
+   * `rounded-field` (10px) is a step tighter than the panel's `rounded-tile`
+   * (12px), per Radius-Follows-Size: the inner block is rounder per pixel and
    * smaller in absolute radius. It is deliberately NOT an identity container
    * fill — inside a disclosure that is already about one governing radio, two
    * tinted blocks re-introduce exactly the "large empty slab" the strip above

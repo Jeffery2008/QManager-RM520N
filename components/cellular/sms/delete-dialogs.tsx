@@ -69,7 +69,7 @@ function DeleteProgress({ steps }: { steps: DeleteStep[] }) {
         <li
           key={step.storage}
           // A row reporting a step is a METRIC-ROW shape, so it takes the pill
-          // radius rather than the 20px field radius a text input wears.
+          // radius rather than the 10px field radius a text input wears.
           //
           // The tone comes from `DELETE_STEP_TONE`, which keys onto
           // `ConditionTone` and resolves through the one exported container

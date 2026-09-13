@@ -19,7 +19,7 @@ import type { BadgeVariant } from "@/components/ui/badge";
 //
 // The values below are the system's, verbatim:
 //
-//   104px pinned tile   28px radius   52px disc   42px control   36px card
+//   104px pinned tile   12px radius   52px disc   42px control   16px card
 //
 // -----------------------------------------------------------------------------
 // WHAT THIS FILE REPLACES
@@ -29,7 +29,7 @@ import type { BadgeVariant } from "@/components/ui/badge";
 //
 //   * the card was the raw primitive — `card.tsx` ships `rounded-xl border
 //     shadow-sm`, so a 12px radius, a hairline and a shadow outside the
-//     vocabulary shipped on a system whose card role is 36px / border-0 /
+//     vocabulary shipped on a system whose card role is 16px / border-0 /
 //     `--shadow-whisper`.
 //   * the loading skeleton promised `h-[68px]` and four `h-9` boxes. Not one of
 //     those is a height this system ships, and none of them mirrored the loaded
@@ -292,7 +292,7 @@ export const STATE_BADGE: Record<DnsState, BadgeVariant> = {
 // -----------------------------------------------------------------------------
 
 /**
- * The card shell. A PEER, not the anchor: `rounded-card` (36px) and the whisper
+ * The card shell. A PEER, not the anchor: `rounded-card` (16px) and the whisper
  * shadow, which is the only card lift in the vocabulary and is never
  * load-bearing. `border-0` is explicit — a tonal surface never also carries a
  * hairline (The No-Hairline-On-Fill Rule).

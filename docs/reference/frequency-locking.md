@@ -406,7 +406,7 @@ Beneath the sentence sits a chip row (`VERDICT.FOOT`, pinned with `mt-auto` so p
 
 ### Skeletons mirror by import
 
-Every loading measurement comes from `SKELETON_SHAPE`, so the placeholder mirrors the loaded geometry rather than estimating it. The incumbent guessed `h-9 w-full rounded-md` for inputs that render at 42px with a 20px radius. Sizes are the loaded element's **line box**, not its font size — a skeleton sized to the glyph reflows the moment real text lands.
+Every loading measurement comes from `SKELETON_SHAPE`, so the placeholder mirrors the loaded geometry rather than estimating it. The incumbent guessed `h-9 w-full rounded-md` for inputs that render at 42px with a 10px radius. Sizes are the loaded element's **line box**, not its font size — a skeleton sized to the glyph reflows the moment real text lands.
 
 ## No enable switch, on either card
 

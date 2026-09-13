@@ -33,7 +33,7 @@
 //
 // The values below are the system's, verbatim:
 //
-//   104px pinned tile   28px radius   52px disc   42px control   36px card
+//   104px pinned tile   12px radius   52px disc   42px control   16px card
 //
 // -----------------------------------------------------------------------------
 // THERE IS NO `min-h-` IN THIS FILE, AND THAT IS DELIBERATE
@@ -72,10 +72,10 @@
 // The comp is drawn in raw pixels; this surface ships the role scale, mapped by
 // SHAPE ROLE rather than by nearest number:
 //
-//   comp 36px  card shell        -> `rounded-card` (36px) — PEER cards
-//   comp 40px  condition screen  -> `rounded-hero` (40px) — the anchor
-//   comp 28px  tile              -> `rounded-tile` (28px)
-//   comp 20px  field, banner     -> `rounded-field` (20px)
+//   comp 36px  card shell        -> `rounded-card` (16px) — PEER cards
+//   comp 40px  condition screen  -> `rounded-hero` (20px) — the anchor
+//   comp 28px  tile              -> `rounded-tile` (12px)
+//   comp 20px  field, banner     -> `rounded-field` (10px)
 //   comp 999px rows, chips, disc -> `rounded-pill`
 //
 // The strip is the anchor on the installed page, so the cards below it are
@@ -507,7 +507,7 @@ export const FIELD_ROW = "flex flex-col gap-2.5 @lg/card:flex-row";
 // -----------------------------------------------------------------------------
 
 /**
- * The card shell. A PEER, not the anchor: `rounded-card` (36px) and the whisper
+ * The card shell. A PEER, not the anchor: `rounded-card` (16px) and the whisper
  * shadow, which is the only card lift in the vocabulary and is never
  * load-bearing. `border-0` is explicit — a tonal surface never also carries a
  * hairline (The No-Hairline-On-Fill Rule).

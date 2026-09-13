@@ -1151,28 +1151,28 @@
     "radii": [
       {
         "name": "rounded-inline",
-        "value": "0.75rem",
-        "purpose": "12px: small inline affordances, code blocks, skeleton slivers."
+        "value": "0.5rem",
+        "purpose": "8px: small inline affordances, code blocks, skeleton slivers."
       },
       {
         "name": "rounded-field",
-        "value": "1.25rem",
-        "purpose": "20px: inputs, selects, small popovers, banners — a banner never out-rounds the card it sits on."
+        "value": "0.625rem",
+        "purpose": "10px: inputs, selects, small popovers, banners — a banner never out-rounds the card it sits on."
       },
       {
         "name": "rounded-tile",
-        "value": "1.75rem",
-        "purpose": "28px: inner tiles, carrier tiles, alignment slots."
+        "value": "0.75rem",
+        "purpose": "12px: inner tiles, carrier tiles, alignment slots."
       },
       {
         "name": "rounded-card",
-        "value": "2.25rem",
-        "purpose": "36px: standard cards in a grid, dialogs."
+        "value": "1rem",
+        "purpose": "16px: standard cards in a grid, dialogs."
       },
       {
         "name": "rounded-hero",
-        "value": "2.5rem",
-        "purpose": "40px: the anchor card on a surface, the aggregation strip, condition state screens. The card/hero distinction is real and used: a grid of peers takes `card`, the one card that anchors a surface takes `hero`."
+        "value": "1.25rem",
+        "purpose": "20px: the anchor card on a surface, the aggregation strip, condition state screens. The card/hero distinction is real and used: a grid of peers takes `card`, the one card that anchors a surface takes `hero`."
       },
       {
         "name": "rounded-pill",
@@ -1248,17 +1248,17 @@
       "name": "Hero Card",
       "kind": "card",
       "refersTo": "card-hero",
-      "description": "The anchor card on a surface: 40px radius, `border-0` explicit, `surface` fill, 28px horizontal padding, tonal separation only, with an optional whisper shadow that is never load-bearing. A grid of peer cards takes `rounded-card` (36px) and 24px padding instead. The header is plain `CardTitle` plus `CardDescription` — never an icon in a card header.",
+      "description": "The anchor card on a surface: 20px radius, `border-0` explicit, `surface` fill, 28px horizontal padding, tonal separation only, with an optional whisper shadow that is never load-bearing. A grid of peer cards takes `rounded-card` (16px) and 24px padding instead. The header is plain `CardTitle` plus `CardDescription` — never an icon in a card header.",
       "html": "<section class=\"ds-card-hero\"><h3 class=\"ds-card-hero__title\">Network Status</h3><p class=\"ds-card-hero__desc\">Registration, carrier, and link state.</p></section>",
-      "css": ".ds-card-hero{display:flex;flex-direction:column;gap:1.25rem;padding:1.625rem 1.75rem;border:none;border-radius:2.5rem;background:var(--surface);color:var(--on-surface);box-shadow:var(--shadow-whisper)}.ds-card-hero__title{margin:0;font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);font-size:1.125rem;font-weight:600;line-height:1}.ds-card-hero__desc{margin:0;font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);font-size:.875rem;font-weight:400;line-height:1.5;color:var(--on-surface-variant)}"
+      "css": ".ds-card-hero{display:flex;flex-direction:column;gap:1.25rem;padding:1.625rem 1.75rem;border:none;border-radius:1.25rem;background:var(--surface);color:var(--on-surface);box-shadow:var(--shadow-whisper)}.ds-card-hero__title{margin:0;font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);font-size:1.125rem;font-weight:600;line-height:1}.ds-card-hero__desc{margin:0;font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);font-size:.875rem;font-weight:400;line-height:1.5;color:var(--on-surface-variant)}"
     },
     {
       "name": "Glance Tile",
       "kind": "custom",
       "refersTo": "tile",
-      "description": "The inner unit of a glance surface: a 28px block at a PINNED 104px height (`TILE_SHAPE` in components/cellular/tile-shape.ts), holding a 52px full-round glyph disc beside eyebrow -> value -> caption. THE BODY IS NEUTRAL AND THE DISC CARRIES THE COLOUR — the previous four-tinted-tile strip encoded category without encoding importance, so it flattened to equal weight with nowhere for the eye to land; a neutral body with a saturated disc gives the tile a focal point at 1/8th the tinted area. The disc uses the role's strong FILL, never the pale container. The height is pinned rather than floored because a floor cannot be a mirror: live tiles measured 118 / 98 / 95px against a 92px skeleton.",
+      "description": "The inner unit of a glance surface: a 12px block at a PINNED 104px height (`TILE_SHAPE` in components/cellular/tile-shape.ts), holding a 52px full-round glyph disc beside eyebrow -> value -> caption. THE BODY IS NEUTRAL AND THE DISC CARRIES THE COLOUR — the previous four-tinted-tile strip encoded category without encoding importance, so it flattened to equal weight with nowhere for the eye to land; a neutral body with a saturated disc gives the tile a focal point at 1/8th the tinted area. The disc uses the role's strong FILL, never the pale container. The height is pinned rather than floored because a floor cannot be a mirror: live tiles measured 118 / 98 / 95px against a 92px skeleton.",
       "html": "<div class=\"ds-tile\"><span class=\"ds-tile__disc\"><svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M12 2 8 8h3v6H5l-3 8h20l-3-8h-6V8h3z\"/></svg></span><div class=\"ds-tile__col\"><span class=\"ds-tile__eyebrow\">Bandwidth</span><span class=\"ds-tile__value\">70<span class=\"ds-tile__unit\">MHz</span></span><span class=\"ds-tile__caption\">20 + 30 + 20 MHz</span></div></div>",
-      "css": ".ds-tile{display:flex;align-items:center;gap:.875rem;height:6.5rem;padding:1rem 1.25rem;border-radius:1.75rem;background:var(--surface-container);color:var(--on-surface);font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif)}.ds-tile__disc{display:grid;place-items:center;flex:none;width:3.25rem;height:3.25rem;border-radius:9999px;background:var(--downlink);color:var(--downlink-foreground)}.ds-tile__disc>svg{width:1.75rem;height:1.75rem}.ds-tile__col{display:flex;min-width:0;flex-direction:column;gap:3px}.ds-tile__eyebrow{font-size:.75rem;font-weight:600;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-tile__value{font-size:1.375rem;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;display:inline-flex;align-items:baseline;gap:.25rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-tile__unit{font-size:.875rem;font-weight:600}.ds-tile__caption{font-size:.75rem;font-variant-numeric:tabular-nums;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+      "css": ".ds-tile{display:flex;align-items:center;gap:.875rem;height:6.5rem;padding:1rem 1.25rem;border-radius:0.75rem;background:var(--surface-container);color:var(--on-surface);font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif)}.ds-tile__disc{display:grid;place-items:center;flex:none;width:3.25rem;height:3.25rem;border-radius:9999px;background:var(--downlink);color:var(--downlink-foreground)}.ds-tile__disc>svg{width:1.75rem;height:1.75rem}.ds-tile__col{display:flex;min-width:0;flex-direction:column;gap:3px}.ds-tile__eyebrow{font-size:.75rem;font-weight:600;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-tile__value{font-size:1.375rem;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;display:inline-flex;align-items:baseline;gap:.25rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-tile__unit{font-size:.875rem;font-weight:600}.ds-tile__caption{font-size:.75rem;font-variant-numeric:tabular-nums;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
     },
     {
       "name": "Metric Row Pill",
@@ -1280,17 +1280,17 @@
       "name": "Input Field",
       "kind": "input",
       "refersTo": "input",
-      "description": "20px radius, 42px tall, no visible border at rest. THE FILL IS THE ENTIRE AFFORDANCE, so it is one tonal step above the field's HOST rather than a fixed token (The Field-Step Rule): `surface-container` on a `surface` or `card` host, `surface-container-high` on a `surface-container` host. A fixed token is only accidentally correct and renders at 1.00:1 — a field with no edge at all — on every other host; six controls on Tower Locking painted their host's exact colour that way. `-high` is the top rung, so a would-be `-high` host steps DOWN instead of the field growing a border. An explicit fill is always written as a light/dark pair, with the dark half marked important (`dark:bg-surface-container-high!`), because the primitives ship their own `dark:bg-input/30` and two `dark:`-prefixed rules tie on specificity — the winner is Tailwind's by-name candidate sort, which is an observed outcome rather than a guarantee. Focus adds a 3px `--ring` ring at 50%; the fill does not change. Invalid draws a destructive ring plus border, driven by `aria-invalid`. The 44px coarse-pointer floor applies to a `Switch` too: the primitive paints 18x32px and reaches the floor with a pseudo-element overlay, never a layout box.",
+      "description": "10px radius, 42px tall, no visible border at rest. THE FILL IS THE ENTIRE AFFORDANCE, so it is one tonal step above the field's HOST rather than a fixed token (The Field-Step Rule): `surface-container` on a `surface` or `card` host, `surface-container-high` on a `surface-container` host. A fixed token is only accidentally correct and renders at 1.00:1 — a field with no edge at all — on every other host; six controls on Tower Locking painted their host's exact colour that way. `-high` is the top rung, so a would-be `-high` host steps DOWN instead of the field growing a border. An explicit fill is always written as a light/dark pair, with the dark half marked important (`dark:bg-surface-container-high!`), because the primitives ship their own `dark:bg-input/30` and two `dark:`-prefixed rules tie on specificity — the winner is Tailwind's by-name candidate sort, which is an observed outcome rather than a guarantee. Focus adds a 3px `--ring` ring at 50%; the fill does not change. Invalid draws a destructive ring plus border, driven by `aria-invalid`. The 44px coarse-pointer floor applies to a `Switch` too: the primitive paints 18x32px and reaches the floor with a pseudo-element overlay, never a layout box.",
       "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"internet.carrier.com\" />",
-      "css": ".ds-input{width:100%;height:2.625rem;padding:0 .875rem;border:1px solid transparent;border-radius:1.25rem;background:var(--surface-container);color:var(--on-surface);font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);font-size:.875rem;outline:none;transition:box-shadow var(--duration-quick,360ms) ease-out,border-color var(--duration-quick,360ms) ease-out}.ds-input--on-container{background:var(--surface-container-high)}.ds-input::placeholder{color:var(--on-surface-variant)}.ds-input:focus-visible{border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in oklab,var(--ring) 50%,transparent)}.ds-input[aria-invalid=true]{border-color:var(--destructive);box-shadow:0 0 0 3px color-mix(in oklab,var(--destructive) 20%,transparent)}"
+      "css": ".ds-input{width:100%;height:2.625rem;padding:0 .875rem;border:1px solid transparent;border-radius:0.625rem;background:var(--surface-container);color:var(--on-surface);font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);font-size:.875rem;outline:none;transition:box-shadow var(--duration-quick,360ms) ease-out,border-color var(--duration-quick,360ms) ease-out}.ds-input--on-container{background:var(--surface-container-high)}.ds-input::placeholder{color:var(--on-surface-variant)}.ds-input:focus-visible{border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in oklab,var(--ring) 50%,transparent)}.ds-input[aria-invalid=true]{border-color:var(--destructive);box-shadow:0 0 0 3px color-mix(in oklab,var(--destructive) 20%,transparent)}"
     },
     {
       "name": "Tonal Banner",
       "kind": "custom",
       "refersTo": "banner",
-      "description": "One of the three sanctioned container uses, because a banner IS its state — the tint is the message, not decoration on top of one. A solid role container, never a wash (a 10% alpha over a tinted surface collapses in dark mode), at 20px radius so it cannot out-round its host, with the glyph in a filled disc on the role's STRONG fill. Two primitives split by where they mount: page-level `Banner` (named roles, CTA slot, dismiss slot, 36px disc, lucide because it mounts on every route) and card-scoped `TonalBanner` (three tones, no CTA, no dismiss, 32px disc, Material glyphs). Entrance is `emphasized` with a 6px rise; there is no exit. A dismiss X only where the banner is a notification — a standing condition has none.",
+      "description": "One of the three sanctioned container uses, because a banner IS its state — the tint is the message, not decoration on top of one. A solid role container, never a wash (a 10% alpha over a tinted surface collapses in dark mode), at 10px radius so it cannot out-round its host, with the glyph in a filled disc on the role's STRONG fill. Two primitives split by where they mount: page-level `Banner` (named roles, CTA slot, dismiss slot, 36px disc, lucide because it mounts on every route) and card-scoped `TonalBanner` (three tones, no CTA, no dismiss, 32px disc, Material glyphs). Entrance is `emphasized` with a 6px rise; there is no exit. A dismiss X only where the banner is a notification — a standing condition has none.",
       "html": "<div class=\"ds-banner\" role=\"alert\"><span class=\"ds-banner__disc\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg></span><div class=\"ds-banner__body\"><p class=\"ds-banner__title\">No SIM detected</p><p class=\"ds-banner__desc\">Insert a SIM and reseat the tray, then retry.</p></div></div>",
-      "css": ".ds-banner{display:flex;align-items:flex-start;gap:.75rem;padding:.875rem 1rem;border-radius:1.25rem;background:var(--warning-container);color:var(--on-warning-container);font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);animation:ds-banner-in var(--duration-emphasized,800ms) var(--ease-emphasized,cubic-bezier(0.05,0.7,0.1,1))}.ds-banner__disc{display:grid;place-items:center;flex:none;width:2rem;height:2rem;border-radius:9999px;background:var(--warning);color:var(--warning-foreground)}.ds-banner__disc>svg{width:1.125rem;height:1.125rem}.ds-banner__body{display:flex;flex-direction:column;gap:.125rem}.ds-banner__title{margin:0;font-size:.9375rem;font-weight:600;letter-spacing:-0.005em}.ds-banner__desc{margin:0;font-size:.8125rem;line-height:1.5}@keyframes ds-banner-in{from{opacity:0;transform:translateY(-6px)}}@media (prefers-reduced-motion:reduce){.ds-banner{animation:none}}"
+      "css": ".ds-banner{display:flex;align-items:flex-start;gap:.75rem;padding:.875rem 1rem;border-radius:0.625rem;background:var(--warning-container);color:var(--on-warning-container);font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);animation:ds-banner-in var(--duration-emphasized,800ms) var(--ease-emphasized,cubic-bezier(0.05,0.7,0.1,1))}.ds-banner__disc{display:grid;place-items:center;flex:none;width:2rem;height:2rem;border-radius:9999px;background:var(--warning);color:var(--warning-foreground)}.ds-banner__disc>svg{width:1.125rem;height:1.125rem}.ds-banner__body{display:flex;flex-direction:column;gap:.125rem}.ds-banner__title{margin:0;font-size:.9375rem;font-weight:600;letter-spacing:-0.005em}.ds-banner__desc{margin:0;font-size:.8125rem;line-height:1.5}@keyframes ds-banner-in{from{opacity:0;transform:translateY(-6px)}}@media (prefers-reduced-motion:reduce){.ds-banner{animation:none}}"
     }
   ],
   "narrative": {
@@ -1434,7 +1434,7 @@
       },
       {
         "name": "The Radius-Follows-Size Rule",
-        "body": "A surface's radius is a function of its size and role, not of taste. A 28px tile never sits inside a 20px field, and a banner never out-rounds the card it sits on.",
+        "body": "A surface's radius is a function of its size and role, not of taste. A 12px tile never sits inside a 10px field, and a banner never out-rounds the card it sits on.",
         "section": "shapes"
       },
       {
@@ -1565,7 +1565,7 @@
       {
         "name": "The Three-State Rule",
         "section": "components",
-        "body": "Every data surface ships loading, empty and error — never a blank panel. Non-registered modes REPLACE the body rather than render it empty: a 40px-radius container in the condition's tone, a 56px filled disc, a headline, a description, and an optional retry pill drawn from the container's own ink at 10-15% (never a white wash, which is invisible on a light container). Tone is chosen per condition: no-SIM is `warning`, no-service is `destructive`, searching is `info`, unknown is neutral, and the table is `CONDITION_TONE` in `components/cellular/condition-screen.tsx` — exported, keyed onto `ConditionTone`, so a tone without a matching role is a build failure. The retry re-runs the read that failed, so where that read is only safe in some windows the button gates on the surface's own write guard and carries the reason rather than routing around it."
+        "body": "Every data surface ships loading, empty and error — never a blank panel. Non-registered modes REPLACE the body rather than render it empty: a 20px-radius container in the condition's tone, a 56px filled disc, a headline, a description, and an optional retry pill drawn from the container's own ink at 10-15% (never a white wash, which is invisible on a light container). Tone is chosen per condition: no-SIM is `warning`, no-service is `destructive`, searching is `info`, unknown is neutral, and the table is `CONDITION_TONE` in `components/cellular/condition-screen.tsx` — exported, keyed onto `ConditionTone`, so a tone without a matching role is a build failure. The retry re-runs the read that failed, so where that read is only safe in some windows the button gates on the surface's own write guard and carries the reason rather than routing around it."
       }
     ],
     "dos": [

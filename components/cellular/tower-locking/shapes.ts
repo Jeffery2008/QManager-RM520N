@@ -120,7 +120,7 @@ import type { MaterialSymbolName } from "@/components/ui/material-symbol";
 // -----------------------------------------------------------------------------
 
 /**
- * The "Right now" section, and the page's anchor. `rounded-hero` (40px) — one
+ * The "Right now" section, and the page's anchor. `rounded-hero` (20px) — one
  * per surface, claimed by the section that LEADS the page.
  *
  * It establishes `@container/section`, which is what `STRIP_GRID` below queries.
@@ -136,7 +136,7 @@ export const TOWER_HERO =
 
 /**
  * The "While nobody is watching" section. Identical to `TOWER_HERO` in every
- * respect except its radius: `rounded-card` (36px), because it is a peer of the
+ * respect except its radius: `rounded-card` (16px), because it is a peer of the
  * leg cards below it and not a second anchor.
  *
  * It declares the SAME `@container/section` name, so `SECTION_HEAD` and
@@ -147,7 +147,7 @@ export const TOWER_SECTION =
   "@container/section flex flex-col gap-5 rounded-card border-0 bg-surface p-7 shadow-[var(--shadow-whisper)]";
 
 /**
- * One leg card (LTE / NR-SA). `rounded-card` (36px) — a peer in a grid, never a
+ * One leg card (LTE / NR-SA). `rounded-card` (16px) — a peer in a grid, never a
  * second hero. Imported by the loaded, loading AND gated branches so the three
  * can never again disagree about their own radius.
  */
@@ -233,8 +233,8 @@ export const STRIP_GRID =
   "grid grid-cols-1 gap-3 @3xl/section:grid-cols-[18.5rem_minmax(0,1fr)]";
 
 /**
- * The carrier half of the strip. `rounded-tile` (28px) rather than the retired
- * match panel's `rounded-card` (36px) — Radius-Follows-Size, and it makes the
+ * The carrier half of the strip. `rounded-tile` (12px) rather than the retired
+ * match panel's `rounded-card` (16px) — Radius-Follows-Size, and it makes the
  * strip a peer of the automation tiles in the next section rather than a third
  * rank between them and the `rounded-hero` shell. `TOWER_HERO` claims the page's
  * one hero exception on its own.
@@ -792,7 +792,7 @@ export const FIELD_LABEL =
   "flex items-center gap-1.5 text-xs font-medium text-on-surface-variant";
 
 /**
- * FIELD GEOMETRY, WITHOUT A FILL. 20px radius, 42px tall, no visible border at
+ * FIELD GEOMETRY, WITHOUT A FILL. 10px radius, 42px tall, no visible border at
  * rest. Restated here because `components/ui/input.tsx` still defaults to the
  * legacy `rounded-md` (DESIGN.md > Migration Deltas: "Shape lives at the call
  * site, not in the primitives").
@@ -999,7 +999,7 @@ export const AUTO_GRID =
   "grid grid-cols-1 gap-3 @xl/section:grid-cols-2 @4xl/section:grid-cols-[1fr_1fr_1.5fr] @xl/section:items-stretch";
 
 /**
- * One automation tile. `rounded-tile` (28px) inside the 36px section, per
+ * One automation tile. `rounded-tile` (12px) inside the 16px section, per
  * Radius-Follows-Size, on the `surface-container` step so it reads as an inner
  * unit of the section rather than as a card of its own — and so it matches the
  * live strip's panels in the section above.
@@ -1106,7 +1106,7 @@ export function dayChipFill(selected: boolean): string {
  * dark mode and it is the first thing to wash out in sunlight, which is the
  * exact ambient condition this product is designed against.
  *
- * `rounded-field` (20px) so it never out-rounds the 36px card hosting it.
+ * `rounded-field` (10px) so it never out-rounds the 16px card hosting it.
  */
 export const NOTICE = {
   ROOT: "flex items-start gap-3 rounded-field px-4 py-3 text-sm",
@@ -1440,7 +1440,7 @@ export function persistPosture(
 /**
  * Loaded geometry, restated once so the skeletons mirror it by IMPORT rather
  * than by estimate. The incumbent loading branches guessed `h-9 w-full
- * rounded-md` for inputs that render at 42px with a 20px radius, and `h-5 w-20`
+ * rounded-md` for inputs that render at 42px with a 10px radius, and `h-5 w-20`
  * for a Switch-plus-Label pair — a skeleton that mirrors nothing makes the
  * handoff jump worse, not better.
  *

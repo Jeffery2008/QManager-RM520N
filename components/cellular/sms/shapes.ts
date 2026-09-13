@@ -107,12 +107,12 @@ export const INBOX_PAD = "px-7";
 export const INBOX_TITLE = "text-lg";
 
 /**
- * The SMS Forwarding cards. `rounded-card` (36px), NOT `rounded-hero`.
+ * The SMS Forwarding cards. `rounded-card` (16px), NOT `rounded-hero`.
  *
  * Both forwarding cards previously wore the hero radius. DESIGN.md > Shapes:
  * "a grid of peer cards takes `card`; the one card that anchors a surface takes
  * `hero`." Two co-equal, height-locked peers in a 2-up grid means NEITHER
- * anchors, and giving both 40px spends the distinction without buying anything.
+ * anchors, and giving both 20px spends the distinction without buying anything.
  *
  * `@container/card` is declared here even though nothing queries it yet. Without
  * it on the shell, the first `@md/card:` a contributor writes inside one of these
@@ -239,7 +239,7 @@ export const TABLE_SHAPE = {
   ROW: "border-outline border-b last:border-0",
   /**
    * Body cell padding — 16px, not the 12px a plain shadcn table would use,
-   * because this table sits inside its own `rounded-tile` (28px) shell rather
+   * because this table sits inside its own `rounded-tile` (12px) shell rather
    * than flush against a card's padded edge: the first/last cell needs enough
    * clearance to read as inset from that curve rather than clipped by it.
    */
@@ -284,11 +284,11 @@ export const PAGINATION_SKELETON = {
   BUTTON_COUNT: 4,
 } as const;
 
-/** Skeleton slivers take the 12px inline radius, not `Skeleton`'s legacy
+/** Skeleton slivers take the 8px inline radius, not `Skeleton`'s legacy
  *  `rounded-md` default. */
 export const SKELETON_LINE = "rounded-inline";
 
-/** The checkbox skeleton mirrors the real control's 4px radius, not the 12px
+/** The checkbox skeleton mirrors the real control's 4px radius, not the 8px
  *  inline step — at 16px square, `rounded-inline` renders a near-circle where
  *  the loaded control is a near-square. */
 export const SKELETON_CHECKBOX = "size-4 rounded-[4px]";

@@ -96,11 +96,11 @@ export const TILE_CAPTION = "text-on-surface-variant truncate text-xs";
 // Card shells
 // -----------------------------------------------------------------------------
 
-/** A card in the pair: 36px radius, no hairline, the whisper carrying the edge. */
+/** A card in the pair: 16px radius, no hairline, the whisper carrying the edge. */
 export const CARD_SHELL =
   "@container/card gap-5 rounded-card border-0 bg-card py-6 shadow-[var(--shadow-whisper)]!";
 
-/** The anchor card on the surface: 40px radius, 28px pad, one per route. */
+/** The anchor card on the surface: 20px radius, 28px pad, one per route. */
 export const HERO_SHELL =
   "@container/card gap-5 rounded-hero border-0 bg-card py-7 shadow-[var(--shadow-whisper)]!";
 
@@ -240,7 +240,7 @@ export const FIELD = {
   HINT: "text-on-surface-variant text-xs leading-[1.5]",
   HEIGHT: FIELD_HEIGHT,
   /**
-   * 42px, 20px radius, NO rest border. The bangs are not decoration: the
+   * 42px, 10px radius, NO rest border. The bangs are not decoration: the
    * `Input` primitive's own `h-9 rounded-md border` out-specifies a call site
    * whenever the utility names sort ahead of ours, and its `dark:bg-input/30`
    * is a (0,2,0) rule that beats an unprefixed fill outright.

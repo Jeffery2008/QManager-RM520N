@@ -673,7 +673,7 @@ modified by the merge.
 
 > ℹ️ NOTE: **The hero owns the surface's only `rounded-hero`.** Everything
 > below it — the Today strip, the profile list, the scenario grid — is
-> `PROFILE_CARD_PEER` (36 px `rounded-card`). A surface gets exactly one anchor,
+> `PROFILE_CARD_PEER` (16 px `rounded-card`). A surface gets exactly one anchor,
 > and the hero has it. That is why the Today strip, which reads as a second
 > banner, is deliberately a step down in radius.
 
@@ -1077,7 +1077,7 @@ not, and nothing here does that.
 
 > ℹ️ NOTE: **The two exceptional states moved UP to the loaded hero's step, not
 > the reverse.** The loaded state is what the user sees essentially always, so it
-> is the one already calibrated against the 40 px `rounded-hero` shell hosting
+> is the one already calibrated against the 20 px `rounded-hero` shell hosting
 > it — shrinking it to match a state that appears once would detune the common
 > case to tidy the rare one. And the exceptional states are not *less* important:
 > "a profile is in force and we cannot read it" is the most urgent thing this page

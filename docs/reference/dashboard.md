@@ -120,7 +120,7 @@ The surface uses three repeating units, and the canon owns all three.
   optional**: 13px is an arbitrary Tailwind size, so without an explicit line box it
   inherits whatever leading the card sits in and the row stops being 40px — which
   silently breaks the skeleton's `h-10` mirror.
-- **Tile** — 28px radius, **pinned** `h-[6.5rem]` (104px), a 52px full-round glyph disc
+- **Tile** — 12px radius, **pinned** `h-[6.5rem]` (104px), a 52px full-round glyph disc
   beside eyebrow → value → caption. **A tile body is neutral; the disc carries the
   colour.** A `min-h-` on a *tile* is a bug, not a lenient pin: a floor cannot be a
   mirror.

@@ -13,7 +13,7 @@
 // block under it, and the two tonal notes. Those are restated from the
 // SYSTEM's numbers rather than imported from a sibling family:
 //
-//   42px control   28px leg disc   20px field radius   1.5px row gap
+//   42px control   28px leg disc   10px field radius   1.5px row gap
 // =============================================================================
 
 import type { PingProfileTargets } from "@/hooks/use-ping-profile";

@@ -337,7 +337,7 @@ The hand-written selection chip in `inbox-card.tsx` was rebuilt the same way, an
 
 ### Skeletons are mirrors again
 
-Every number the loading state draws now comes from `shapes.ts`, which the loaded views read too. It had stopped being a mirror, and each guess was wrong against the view it hands off to: a **44px** tab strip against a real **38px** one (`TabsList` is `h-auto gap-1 p-1` around `h-9` triggers); **one** trailing pill where the toolbar renders **two**; rows inset `px-3` against the loaded `px-4`; **five** rows against a real `pageSize` of **ten**, so the card grew by half its height at the handoff; a checkbox at the 12px inline radius where the real Radix control is 4px (at 16px square, a near-circle standing in for a near-square); and **no pagination footer at all** against a loaded footer carrying a select, a page label and four icon buttons.
+Every number the loading state draws now comes from `shapes.ts`, which the loaded views read too. It had stopped being a mirror, and each guess was wrong against the view it hands off to: a **44px** tab strip against a real **38px** one (`TabsList` is `h-auto gap-1 p-1` around `h-9` triggers); **one** trailing pill where the toolbar renders **two**; rows inset `px-3` against the loaded `px-4`; **five** rows against a real `pageSize` of **ten**, so the card grew by half its height at the handoff; a checkbox at the 8px inline radius where the real Radix control is 4px (at 16px square, a near-circle standing in for a near-square); and **no pagination footer at all** against a loaded footer carrying a select, a page label and four icon buttons.
 
 ### Other presentation notes
 

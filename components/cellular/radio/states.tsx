@@ -50,7 +50,7 @@ import { TILE_SHAPE } from "@/components/cellular/tile-shape";
 // Skeleton
 // -----------------------------------------------------------------------------
 // Mirrors the loaded tile geometry exactly — same grid, same 92px block, same
-// 28px radius — by importing TILE_SHAPE from the shared
+// 12px radius — by importing TILE_SHAPE from the shared
 // `components/cellular/tile-shape.ts` rather than restating numbers, so the two
 // can never drift apart. Four blocks, because four tiles are what the eye sees
 // arrive. The header above is real text and is never skeletonised: the page's

@@ -100,7 +100,7 @@ import type { BandCategory } from "@/types/band-locking";
 // -----------------------------------------------------------------------------
 
 /**
- * The page's anchor card. `rounded-hero` (40px) — one per surface.
+ * The page's anchor card. `rounded-hero` (20px) — one per surface.
  *
  * `shadow-whisper` as a bare utility does NOT resolve; it must go through the
  * custom property, as written.
@@ -109,7 +109,7 @@ export const BAND_HERO =
   "@container/hero flex flex-col gap-5 rounded-hero border-0 bg-surface p-7 shadow-[var(--shadow-whisper)]";
 
 /**
- * One category card. `rounded-card` (36px) — a peer in a grid, never a second
+ * One category card. `rounded-card` (16px) — a peer in a grid, never a second
  * hero. Imported by the loaded, loading AND empty branches so the three can
  * never again disagree about their own radius.
  */
@@ -132,8 +132,8 @@ export const CARD_PAD = "px-6";
  * tallest element on the page was also the emptiest, and the most valuable
  * live fact (what the radio is actually camped on) sat last and smallest.
  *
- * Both panels are `rounded-card` (36px), ONE STEP BELOW the outer section's
- * `rounded-hero` (40px) — not a second hero. `BAND_HERO` still claims the
+ * Both panels are `rounded-card` (16px), ONE STEP BELOW the outer section's
+ * `rounded-hero` (20px) — not a second hero. `BAND_HERO` still claims the
  * page's one hero exception on its own; nesting two hero-radius panels inside
  * it would spend that exception twice. The step-down is the same nesting the
  * incumbent already used for `HERO_ROW` (`rounded-field` inside the hero).
@@ -267,7 +267,7 @@ export const HERO_ROW_MIN_H = "min-h-[3.25rem]";
  * chip sitting beside the switch. The extra hero width is not a reason to spend
  * it on prose.
  *
- * `rounded-field` (20px) rather than a metric-row pill, because this row WRAPS:
+ * `rounded-field` (10px) rather than a metric-row pill, because this row WRAPS:
  * it carries a label, a help affordance, a switch and a status chip, and on a
  * narrow container those fall to a second line. A pill that has wrapped to two
  * lines is a stadium, not a pill, and the Radius-Follows-Size Rule puts a
@@ -678,7 +678,7 @@ export const BAND_LEGEND = {
  * is the first thing to wash out in sunlight, which is the exact ambient
  * condition this product is designed against.
  *
- * `rounded-field` (20px) so it never out-rounds the 36px card hosting it.
+ * `rounded-field` (10px) so it never out-rounds the 16px card hosting it.
  */
 export const NOTICE = {
   ROOT: "flex items-start gap-3 rounded-field px-4 py-3 text-sm",

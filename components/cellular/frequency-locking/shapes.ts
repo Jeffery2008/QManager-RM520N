@@ -519,7 +519,7 @@ export function isChannelAllowed(
 /**
  * Loaded geometry, restated once so the skeletons mirror it by IMPORT rather
  * than by estimate. The incumbent loading branches guessed `h-9 w-full
- * rounded-md` for inputs that render at 42px with a 20px radius.
+ * rounded-md` for inputs that render at 42px with a 10px radius.
  *
  * Sizes are the loaded element's LINE BOX, not its font size: a skeleton sized
  * to the glyph reflows the moment real text lands.

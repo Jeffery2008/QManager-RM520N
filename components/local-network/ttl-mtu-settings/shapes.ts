@@ -26,7 +26,7 @@
 //
 // The values below are the system's, verbatim:
 //
-//   104px pinned tile   28px radius   52px disc   42px control   36px card
+//   104px pinned tile   12px radius   52px disc   42px control   16px card
 //
 // -----------------------------------------------------------------------------
 // COLOUR: NEUTRAL BODIES, COLOUR ONLY ON THE DISC
@@ -43,9 +43,9 @@
 // -----------------------------------------------------------------------------
 // The role scale, mapped by SHAPE ROLE rather than by nearest number:
 //
-//   36px  card shell        -> `rounded-card` — both cards are PEERS
-//   28px  tile, row group   -> `rounded-tile`
-//   20px  row               -> `rounded-field`
+//   16px  card shell        -> `rounded-card` — both cards are PEERS
+//   12px  tile, row group   -> `rounded-tile`
+//   10px  row               -> `rounded-field`
 //   999px fields, chips     -> `rounded-pill`
 //
 // `rounded-hero` is "the ONE card that anchors a surface". The anchor here is
@@ -275,7 +275,7 @@ export const CHIP_GLYPH = "size-3";
 // -----------------------------------------------------------------------------
 
 /**
- * The card shell. A PEER, not the anchor: `rounded-card` (36px) and the whisper
+ * The card shell. A PEER, not the anchor: `rounded-card` (16px) and the whisper
  * shadow, which is the only card lift in the vocabulary and is never
  * load-bearing. `border-0` is explicit — a tonal surface never also carries a
  * hairline (The No-Hairline-On-Fill Rule).

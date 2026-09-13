@@ -48,10 +48,10 @@ import { cn } from "@/lib/utils";
 //                         container does not.
 //   Info-Is-Brand         The informational tone uses primary-container. There
 //                         is no separate info hue.
-//   Field radius          20px (`rounded-field`), per the Banner System's own
+//   Field radius          10px (`rounded-field`), per the Banner System's own
 //                         reasoning: a banner must not out-round the surface it
 //                         sits on. The mock draws 24px/22px, which is not a step
-//                         on this repo's shape scale (12/20/28/36/40) — see the
+//                         on this repo's shape scale (8/10/12/16/20) — see the
 //                         `size` prop.
 //
 // Motion: `.animate-banner-in` (400ms emphasized, 6px rise + fade) already
@@ -97,8 +97,8 @@ export interface TonalBannerProps {
   /** Body line, or the sole line when `title` is absent. */
   children: React.ReactNode;
   /**
-   * "default" — 20px radius / 14px-16px padding / 32px disc / items-start.
-   * "compact" — 20px radius / 11px-14px padding / 30px disc / items-center.
+   * "default" — 10px radius / 14px-16px padding / 32px disc / items-start.
+   * "compact" — 10px radius / 11px-14px padding / 30px disc / items-center.
    *
    * Both land on `rounded-field`. The mock's 24px and 22px are a two-step
    * distinction the repo's shape scale does not carry, and inventing an

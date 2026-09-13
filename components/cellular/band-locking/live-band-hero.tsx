@@ -390,7 +390,7 @@ export function LiveBandHero({
                advertises work that is not happening.
 
                `rounded-tile` steps the block down from the primitive's own
-               `rounded-hero` (40px), which would out-round the `rounded-card`
+               `rounded-hero` (20px), which would out-round the `rounded-card`
                panel hosting it. `bg-surface` overrides the neutral tone's
                `bg-surface-container`, which is byte-identical to this panel's
                own ground and would leave the block with no visible edge; it also

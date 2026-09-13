@@ -113,7 +113,7 @@ Artifact CSP admits.
 
 **Also copy the shipped geometry**, not approximations of it: control heights (42px
 `PILL_ACTION`, 36px toolbar, 40px dialog), disc sizes (52px tile, 44px block, 40px row),
-tile height (104px, **pinned** not floored), the radius scale (12/20/28/36/40/pill), the chip
+tile height (104px, **pinned** not floored), the radius scale (8/10/12/16/20/pill), the chip
 and tag box (`px-2 py-0.5 text-xs font-medium`, 22px).
 
 **What the page must contain:**

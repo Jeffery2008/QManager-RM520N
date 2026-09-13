@@ -19,17 +19,17 @@
 // sibling family's module is not a shared library — what is shared is the
 // SYSTEM's numbers, not a module. The values below are those numbers, verbatim:
 //
-//   104px pinned tile   28px radius   52px disc   42px control   36px card
+//   104px pinned tile   12px radius   52px disc   42px control   16px card
 //
 // -----------------------------------------------------------------------------
 // RADIUS MAPPING
 // -----------------------------------------------------------------------------
 // The role scale, mapped by SHAPE ROLE rather than by nearest number:
 //
-//   36px  card shell        -> `rounded-card` — every card here is a PEER
-//   28px  tile, row group   -> `rounded-tile`
-//   20px  row, SIM row      -> `rounded-field`
-//   12px  skeleton slivers  -> `rounded-inline`
+//   16px  card shell        -> `rounded-card` — every card here is a PEER
+//   12px  tile, row group   -> `rounded-tile`
+//   10px  row, SIM row      -> `rounded-field`
+//   8px   skeleton slivers  -> `rounded-inline`
 //   999px fields, day pills -> `rounded-pill`
 //
 // `rounded-hero` is "the ONE card that anchors a surface". The anchor here is

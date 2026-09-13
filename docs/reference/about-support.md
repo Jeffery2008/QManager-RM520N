@@ -142,9 +142,9 @@ Confirmed in the rendered DOM at the close of the pass:
 | Symmetric-Pair Rule | `/about-device` 527 / 527 · `/support` 445 / 445 |
 | Tile pin, not a floor | 104 / 104 / 104 / 104 |
 | Metric rows | 40px · action rows 64px · pills 42px |
-| `rounded-card`, `border-0` | 36px, 0px |
+| `rounded-card`, `border-0` | 16px, 0px |
 | **`CARD_SHELL`'s whisper beat `card.tsx`'s `shadow-sm`** | `lab(7.74 -0.53 -4.00 / 0.06) 0 1px 2px` — the token, not `rgba(0,0,0,.1) 0 1px 3px` |
-| Dialog at 390px | 358px wide, 36px radius, no horizontal overflow |
+| Dialog at 390px | 358px wide, 16px radius, no horizontal overflow |
 
 That shadow row is why `CARD_SHELL` carries the important marker: `cn()` cannot dedupe an
 arbitrary shadow against the primitive's own, because `tailwind-merge` reads an arbitrary

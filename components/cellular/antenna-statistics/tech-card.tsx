@@ -62,8 +62,8 @@ import {
 /**
  * `rounded-card` + 24px padding, not `rounded-hero` + 28px.
  *
- * The Radius-Follows-Size Rule reads the ROLE, not the route: 36px is "a
- * standard card in a grid of peers" and 40px is "the one card that anchors a
+ * The Radius-Follows-Size Rule reads the ROLE, not the route: 16px is "a
+ * standard card in a grid of peers" and 20px is "the one card that anchors a
  * surface". These two are peers in a `grid-cols-2` — neither anchors anything,
  * and there is no third card for them to out-rank. The hero step was inherited
  * from `radio/active-bands-card.tsx`, which earns it honestly: that page is a

@@ -59,7 +59,7 @@ export function SkeletonBody({ loadingLabel }: { loadingLabel?: string } = {}) {
       {/* Signal section — eyebrow + toggle, then band rows. */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <Skeleton className="h-3 w-[9.875rem] rounded-[0.375rem]" />
+          <Skeleton className="h-3 w-[9.875rem] rounded-inline" />
           <Skeleton className="h-7 w-[5.875rem] rounded-pill" />
         </div>
         <div className={cn("flex flex-col", ROW_STACK_GAP)}>
@@ -79,7 +79,7 @@ export function SkeletonBody({ loadingLabel }: { loadingLabel?: string } = {}) {
               />
               <Skeleton
                 className={cn(
-                  "h-[0.9375rem] flex-none rounded-[0.5rem]",
+                  "h-[0.9375rem] flex-none rounded-inline",
                   BAND_ROW_SHAPE.VALUE_W,
                 )}
               />

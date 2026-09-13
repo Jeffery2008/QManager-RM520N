@@ -96,8 +96,8 @@ export const CHAINS_ROW = "flex flex-col";
 // -----------------------------------------------------------------------------
 
 /**
- * The two work-column cards. `rounded-card` (36px), because this surface's one
- * `rounded-hero` (40px) belongs to the console — a grid of peers takes `card`
+ * The two work-column cards. `rounded-card` (16px), because this surface's one
+ * `rounded-hero` (20px) belongs to the console — a grid of peers takes `card`
  * and the card that anchors the surface takes `hero`.
  *
  * Declared here rather than in either card, and imported by the skeleton too:

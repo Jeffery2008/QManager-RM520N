@@ -298,7 +298,7 @@ What it **keeps** from the page-level primitive, because these are rules rather 
 - **Solid-Container Rule** — `bg-{role}-container` + `text-on-{role}-container`, never a wash. The pattern it retires from `/login/` was `border-warning/30 bg-warning/10`; a 10 % alpha over a tinted surface is not a stable colour — it collapses in dark mode and washes out first in sunlight.
 - **Glyph-Disc Rule** — the icon always sits in a filled circle on the role's *strong* fill. The disc is what survives when the container fill washes out; a bare icon on the container does not.
 - **Info-Is-Brand** — the informational tone uses `primary-container`. There is no separate info hue.
-- **Field radius** — 20 px (`rounded-field`): a banner must not out-round the surface it sits on. The comp draws 24/22 px, which is not a step on this repo's shape scale (12 / 20 / 28 / 36 / 40).
+- **Field radius** — 10 px (`rounded-field`): a banner must not out-round the surface it sits on. The comp draws 24/22 px, which is not a step on this repo's shape scale (8 / 10 / 12 / 16 / 20).
 
 Motion is enter-only (`.animate-banner-in`, 400 ms emphasized, 6 px rise + fade, already reduced-motion-guarded in `globals.css`). A banner *leaving* means the condition cleared, and that should feel immediate.
 

@@ -75,7 +75,7 @@
      shadcn's --secondary is a NEUTRAL used for progress tracks and secondary
      buttons, and identity hues must never act.
    - Uplink Cyan ships as the --uplink-* family.
-   - The 12/20/28/36/40px shape scale ships as additive role radii
+   - The 8/10/12/16/20px shape scale ships as additive role radii
      (--radius-inline/field/tile/card/hero/pill). The legacy --radius chain
      stays live until components are retargeted; redefining rounded-md under
      its existing call sites would be a regression, not a migration.
@@ -213,11 +213,11 @@
   --radius-xl: calc(var(--radius) + 4px);
 
   /* Shape scale (DESIGN.md > Shapes). Radius carries size hierarchy. */
-  --radius-inline: 0.75rem; /* 12px: small inline affordances, code, skeletons */
-  --radius-field: 1.25rem; /*  20px: inputs, selects, small popovers */
-  --radius-tile: 1.75rem; /*   28px: inner tiles, carrier tiles, alignment slots */
-  --radius-card: 2.25rem; /*   36px: standard cards, dialogs */
-  --radius-hero: 2.5rem; /*    40px: hero surfaces, aggregation strip */
+  --radius-inline: 0.5rem; /*  8px: small inline affordances, code, skeletons */
+  --radius-field: 0.625rem; /* 10px: inputs, selects, small popovers */
+  --radius-tile: 0.75rem; /*   12px: inner tiles, carrier tiles, alignment slots */
+  --radius-card: 1rem; /*      16px: standard cards, dialogs */
+  --radius-hero: 1.25rem; /*   20px: hero surfaces, aggregation strip */
   --radius-pill: 9999px; /*    chips, buttons, nav items, metric rows, meters */
 
   /* Motion curves (DESIGN.md > Motion). Expressive in curve, still settled.
@@ -230,6 +230,12 @@
   --ease-ambient: ease-in-out;
 
   --breakpoint-desktop: 68.75rem;
+}
+
+/* One definition shared by Card and DialogContent. It rides on
+   background-image so a call-site bg-* override cannot defeat it. */
+@utility card-sheen {
+  background-image: var(--card-sheen);
 }
 
 :root {
@@ -478,6 +484,9 @@
      is 0.985 -> 1.000, deliberately narrow, and the whisper is what keeps that
      edge legible without reaching for a hairline. */
   --shadow-whisper: 0 1px 2px oklch(0.205 0.011 258 / 6%);
+
+  /* Deliberately flat in light: the whisper above already lifts the card. */
+  --card-sheen: none;
 }
 
 .dark {
@@ -629,6 +638,14 @@
 
   /* Tonal elevation only in dark: the whisper is absent. */
   --shadow-whisper: 0 0 #0000;
+
+  /* The material cue standing in for the shadow dark mode cannot cast. */
+  --card-sheen: linear-gradient(
+    180deg,
+    oklch(1 0 0 / 0.045) 0%,
+    oklch(1 0 0 / 0) 42%,
+    oklch(0 0 0 / 0.03) 100%
+  );
 }
 
 @layer base {
