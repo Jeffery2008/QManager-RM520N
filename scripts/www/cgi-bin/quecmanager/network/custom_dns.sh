@@ -22,7 +22,7 @@
 #   # QMANAGER-CUSTOM-DNS-END v1
 #
 # Sudoers-required commands:
-#   sudo /bin/mv /etc/data/dnsmasq.conf.qmanager.new /etc/data/dnsmasq.conf
+#   sudo /bin/mv /etc/data/qmanager/dnsmasq.conf.new /etc/data/dnsmasq.conf
 #   sudo /bin/chown radio:radio /etc/data/dnsmasq.conf
 #   sudo /usr/bin/killall -HUP dnsmasq
 #
@@ -317,8 +317,11 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     # -------------------------------------------------------------------------
     if [ "$ACTION" = "save" ]; then
 
-        ENABLED=$(printf '%s' "$POST_DATA" | jq -r '.enabled // empty')
-        IGNORE_CARRIER=$(printf '%s' "$POST_DATA" | jq -r '.ignore_carrier // "false"')
+        # has() — NOT "// empty": jq's alternative operator treats `false` as
+        # absent (false // empty → no output), so a disable request read as an
+        # empty string and failed the true|false gate below.
+        ENABLED=$(printf '%s' "$POST_DATA" | jq -r 'if has("enabled") then .enabled else empty end')
+        IGNORE_CARRIER=$(printf '%s' "$POST_DATA" | jq -r 'if has("ignore_carrier") then .ignore_carrier else "false" end')
         SERVERS_RAW=$(printf '%s' "$POST_DATA" | jq -r '.servers // empty')
 
         qlog_info "save: enabled=$ENABLED ignore_carrier=$IGNORE_CARRIER servers=$SERVERS_RAW"
