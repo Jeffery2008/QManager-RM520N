@@ -1,0 +1,74 @@
+name: Language pack
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/language-pack.yml"
+      - "public/locales/**"
+      - "scripts-dev/**"
+      - "package.json"
+      - "upstream.json"
+      - "README.md"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/language-pack.yml"
+      - "public/locales/**"
+      - "scripts-dev/**"
+      - "package.json"
+      - "upstream.json"
+      - "README.md"
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Validate locale structure
+        run: npm run language:check
+      - name: Run language tests
+        run: npm test
+
+  sync:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Synchronize upstream English source
+        run: npm run language:sync
+      - name: Validate synchronized locale tree
+        run: npm run language:check
+      - name: Run language tests
+        run: npm test
+      - name: Open synchronization pull request when needed
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: automation/upstream-language-sync
+          delete-branch: true
+          commit-message: "chore: sync upstream language source"
+          title: "chore: sync upstream language source"
+          body: |
+            Automated sync from the configured upstream language source.
+
+            Review changed English strings and translate any new or changed values in `public/locales/zh-CN/` before merging.
