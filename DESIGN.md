@@ -283,6 +283,7 @@ Both themes are first-class and each is authored. Dark is a near-black instrumen
 | ~~`/system-settings/connection-quality` carried total token drift and built a radio group out of tab semantics~~ | `components/system-settings/connection-quality/**` — the drift was total rather than partial: a grep across the three component files for `on-surface`, `surface-container` and the whole `rounded-{card,hero,tile,field,pill}` scale returned **zero** matches while `text-muted-foreground` returned six. Every measured radius was off the role scale (cards 14.4px with a 1px hairline and `shadow-sm`, fields and both buttons 8.4px, the tab strip 10.4px, `MetaPanel` 8.4px) and **every control measured 36px** against a 44px coarse floor, on a page opened from a phone beside the modem. Both preset selectors were `Tabs`/`TabsList`/`TabsTrigger` with **no `TabsContent` rendered anywhere on the page** — a tab widget announcing a panel that does not exist, where arrow keys mutated the saved value instead of moving focus. `MetaPanel` put a 1px border over `bg-muted/50`. There was no `shapes.ts`, no page-level cascade (each card started its own `staggerContainer` clock inside its own body), zero `duration-`/`transition-`/`ease-` in all three files, **zero `useTranslation`** and no keys in any of the five packs, and **no retry on either failure** — neither hook exposed a refresh, so a failed GET was terminal until a browser reload behind a bare `Alert` printing `HTTP 404` at the user. Meanwhile the page fetched the poller's whole `connectivity` block and read three of its fourteen fields. Approved 2026-09-06 from a published before/after Artifact with all five vetoable calls approved; the two-card information architecture was **preserved**. Closed 2026-09-06: this family's `shapes.ts` (importing the page shell, band and card grammar from `components/system-settings/shapes.ts`), a four-tile status band, the four-leg probe chain drawn as a numbered chain with the answering leg promoted by container, a real `role="radiogroup"` of 42px chips with one fill on a shared `layoutId`, condition screens with working Retry behind a new `refresh()` on each hook, and 137 i18n lines per pack across all five. **Two things were verified against the producer rather than assumed**, and both are the durable lesson: `PRESET_LIMIT` mirrors `_qt_apply_lat`/`_qt_apply_loss` in `events.sh` **including the comparison direction** — latency flags strictly above the cut (`$1 > t`) and loss flags at or above it (`-ge`) — so the band's chip cannot disagree with the alert that fires; and `legState()` requires `internet_available === true` on top of a `ping_target` match, because `ping_target` **falls back to `targets[0]` when nothing has answered**, so a match alone would paint leg 1 as the answering leg on a dead link. ⚠️ **One prescription was overturned by measurement.** The critique was briefed that the headroom bar's `track="muted"` measured 1.006:1 against its `surface-container-high` host and should be resolved by the Field-Step corollary. All three halves were wrong: the ratio is **1.085 light / 1.086 dark**; `--muted` and `--surface-container` are **byte-identical** in both themes, so `muted` already *is* a one-rung step; and stepping the readout down to `surface-container` would have made it identical to its own `ROW_GROUP` parent at **1.000:1**, as does `MetricBar`'s only other track role. `muted` is the better of the two available values and was left alone. Contract in [`docs/reference/connection-quality.md`](docs/reference/connection-quality.md) | **Landed** 2026-09-06 |
 | `MetricBar` has no track that is darker than its ground in both themes | `components/ui/metric-bar.tsx` — `TRACK_CLASS` offers exactly two roles, `muted` (byte-identical to `surface-container`) and `surface-container-high`. Measured L\*, light: surface 100 · background 98.25 · container 96.16 · high 92.79 · border 88.96 · input 84.67. Dark: background 1.55 · surface 4.42 · container 7.19 · high 11.22 · border 17.37 · input 22.24. **The neutral ramp runs opposite ways in the two themes**, so no single token is darker than its ground in both — on a `surface-container-high` host the track is the *lighter* of the pair in light mode, which is the "second, paler segment continuing past the end of the fill" this document names under Quality bars. The shipped default (a `-high` track on a `bg-card` host) reaches CR 1.24 / 1.20 at ΔL\* ≈ 7, which is the real bar of visibility; Connection Quality's readout reaches only 1.085 / 1.086. The consequence is that a `value={null}` empty track and a measured 0% are close to pixel-identical there, and only the `—` and the absent chip separate them. The fix is a theme-split track (light `bg-input`, dark `bg-surface`) as a third `TRACK_CLASS` entry, which touches the shared primitive's 20 call sites and stales this document's Quality bars section — **not attempted during a single route's pass** | Open |
 | One P1 finding still open from the Connection Quality pass; the other two landed | ~~(1) **The focus ring failed the non-text contrast floor.**~~ **Landed.** The product-wide ring was one decision written 53 times, byte-identical, and it carried a half-strength alpha: **1.968:1** at its worst ground and **2.006:1** at its best, under SC 1.4.11's 3:1. Dropping the alpha modifier takes the same ring to **4.004:1** worst / **5.083:1** best in the two themes — 85% was rejected at **3.270:1** worst, 0.27 of headroom, the same thin margin the retired border row was bitten by. A second half was needed and was found by looking rather than by measuring: `--ring` is byte-identical to `--primary`, so on a brand-filled control a ring with no gap is the same colour as the fill and the button simply grows 3px. All 53 sites now carry a 2px page-coloured gap under the ring, the idiom the repo already used in 17 other places. ⚠️ A contrast check alone would have passed the unoffset ring — the outer edge still measures 4.6:1 against the page. (2) **The preset rail's transit is illegible for 600ms.** Chips wear `PRESET.OFF` while a `layoutId` thumb travels on `standard`; mid-flight the incoming chip is partly uncovered with `ON_INK` on the rest fill, endpoints measuring **1.144:1**. The fix is the two-layer label so ink travels with the fill, which is a change to approved motion. ⚠️ The Browser pane freezes CSS transitions as well as rAF, so a mid-transition `getComputedStyle` returns the **start** value — the transit itself could not be measured, only its endpoints. ~~(3) **The fallback-leg diagnosis is `sr-only`.**~~ **Landed.** When the chain falls through to an IPv4 literal the tile now spends its one 18px meta line on the CAUSE rather than on the probe target, in `warning-on-surface` ink (**5.014:1** light, **9.958:1** dark on `surface-container`). The target was the cheaper thing to lose: the probe chain card one card down promotes the answering leg and shows it. The tile is still pinned at 104px and the full sentence still reaches assistive technology through `srNote`. Only (2) is still open, and it stays open on purpose — a polish pass may not re-decide an approved design | Open |
+| Numeric device labels still render in `font-mono` under the retired Machine-Voice tell | The 2026-09-26 tell (Typography > The Machine-Voice Rule) moves EARFCN, NR-ARFCN, PCI, band, TAC and decimal cell ID to `font-sans tabular-nums`. Censused the same day from `grep -rn font-mono components/` (line numbers as of that census), deliberately not swept. **Fixed in this run:** the Frequency Calculator (`components/cellular/cell-scanner/freq-calculator/**`, on its own `CALC_IDENT` in `cell-scanner/shapes.ts`). **Open — the class is set in 12 files under `components/`:** `cellular/band-locking/shapes.ts:454,478,575`; `cellular/cell-scanner/shapes.ts:588` `IDENT`, via `TABLE.IDENT` in `scan-result.tsx:123,135,141,147,153`, `neighbourcell/neighbour-scan-result.tsx:130,140` and `lock-cell-dialog.tsx:169`, plus `:472` `DETAIL_IDENT` (the band list from `scanner.tsx:234`); `cellular/radio/active-bands-card.tsx:426`; `cellular/radio/cellular-information-card.tsx:571,582,588,593` (the `0x` TAC pill at `:595` stays mono); `cellular/tower-locking/lte-tower-card.tsx:881,902,971,1015,1038`; `cellular/tower-locking/nr-sa-tower-card.tsx:270,1060,1106,1354`; `cellular/tower-locking/shapes.ts:496,642,645`; `cellular/frequency-locking/shapes.ts:271,273,298,308,387`; `cellular/custom-profiles/shapes.ts:133` `MACHINE_VALUE`, which is mixed — band tags at `active-profile-hero.tsx:597,602` and the band rows of `connection-scenarios/active-config-card.tsx` share it with ICCID and APN consumers that stay mono, so the constant splits; `dashboard/carrier-aggregation.tsx:447,481,497`; `dashboard/signal-status-card.tsx:331,345`; `public/overview/band-rows.tsx:222`. Measurements in mono fall to the same tell: `band-locking/shapes.ts:475` (bandwidth) and `radio/active-bands-card.tsx:787,795,807,859` (MHz, kHz). Most of these sites carry a comment citing the old tell; correct it in the same change | Open |
 
 **The token layer is in and the component layer is complete: both halves — identity and quality — have landed.** Every surface renders the new neutrals, inks and fills automatically, because components resolve `bg-surface`, `text-on-surface-variant`, `bg-primary` and so on. On top of that, the shapes that were wrong rather than merely mis-coloured have been rebuilt on the identity axis — identity and metadata now render as outline tags through `components/ui/tag.tsx`, the radio summary strip is neutral-bodied with colour only on its discs, and `--primary` no longer stands in for a health state anywhere.
 
@@ -430,7 +431,7 @@ Series colour comes from the **ink** tokens directly — `--primary-on-surface` 
 **Machine font:** JetBrains Mono (`--font-jetbrains-mono` → `font-mono`), self-hosted at build time.
 **Icon typefaces:** Material Symbols Rounded on the shell and converted routes; lucide elsewhere. An icon font is not a voice and does not count against the Two-Voice Rule.
 
-**Character:** Rethink Sans's rounder terminals and open counters read as warmer than geometric humanist forms, while keeping enough weight contrast to stay legible in dense label stacks at 12px. JetBrains Mono is the machine's voice: identifiers and raw strings the device emits verbatim. The pairing is the product's thesis in two fonts — a human interface reporting machine truth.
+**Character:** Rethink Sans's rounder terminals and open counters read as warmer than geometric humanist forms, while keeping enough weight contrast to stay legible in dense label stacks at 12px. JetBrains Mono is the machine's voice: opaque identifiers and raw strings the device emits verbatim. The pairing is the product's thesis in two fonts — a human interface reporting machine truth.
 
 **Loaded weights:** 400 body, inputs, descriptions · 500 labels, chips, buttons, table headers · 600 card titles, section headings, numeric readouts · 700 page titles only. Rethink Sans is a true variable font (wght 400–800), so it self-hosts as two files — normal and italic — rather than a static cut per weight.
 
@@ -442,7 +443,7 @@ Series colour comes from the **ink** tokens directly — `--primary-on-surface` 
 - **Body** (400, 0.875rem / 14px): descriptions, prose, card copy, table cells. `leading-relaxed` and `text-pretty` on any paragraph over one line.
 - **Row** (600, 0.8125rem / 13px on a **20px** line box): metric-row keys and values on a glance card. **The explicit leading is not optional** — 13px is an arbitrary Tailwind size, so it would otherwise inherit whatever leading the card sits in; pinning the line box is what holds the row at exactly 40px and keeps its skeleton's `h-10` mirroring it. Do not reach for 13px outside a dense metric row.
 - **Label** (500, 0.75rem / 12px): chips, tags, table headers, button text, form labels, tile eyebrows. Tiny uppercase section labels run 11px with `tracking-wider` in the sidebar.
-- **Numeric** (600, `tabular-nums`): any figure that changes. **This is the one step deliberately not on a fixed ramp** — a numeral is read at the distance its container implies, so its size derives from the slot holding it, and a literal `text-[Npx]` on a `tabular-nums` numeral is correct by construction. It renders in `--font-sans`, not `font-mono`. A numeral *not* sized to a slot still takes the ramp, and prose never qualifies.
+- **Numeric** (600, `tabular-nums`): any figure the interface reports — a live measurement or a short numeric label such as an EARFCN or PCI (The Machine-Voice Rule). **This is the one step deliberately not on a fixed ramp** — a numeral is read at the distance its container implies, so its size derives from the slot holding it, and a literal `text-[Npx]` on a `tabular-nums` numeral is correct by construction. It renders in `--font-sans`, not `font-mono`. A numeral *not* sized to a slot still takes the ramp, and prose never qualifies.
 
 ### The banner-scoped step
 
@@ -470,7 +471,13 @@ The scale itself lives in `components/pre-auth-type.ts` and is **type-only by de
 
 **The Two-Voice Rule.** Rethink Sans is the interface, JetBrains Mono is the machine. There is no third typeface. Pairing Rethink Sans with another UI sans (Inter, Geist Sans, IBM Plex, Roboto, Manrope) is forbidden.
 
-**The Machine-Voice Rule.** `font-mono` is scoped to machine truth that is not itself a changing figure: identifiers (band, EARFCN, PCI, ICCID, IMEI, MAC/IP), static facts read back from config, raw AT responses, log lines, copyable commands. A human-authored label never wears it. A live measurement — RSRP, throughput, a countdown — is the interface *reporting* a number, so it takes `--font-sans` and `tabular-nums`. The tell: does the value change while the user watches without them acting? Then `font-sans`. Does it hold steady until something reconfigures it? Then `font-mono`.
+**The Machine-Voice Rule.** `font-mono` is scoped to strings whose *character grid carries meaning*: content the user compares character by character or would paste into a terminal. That is raw AT responses and the AT terminal itself, log lines, copyable commands, file paths, IPv4/IPv6/MAC addresses, interface names, hostnames, APN strings, MCC-MNC codes, hex values and bitmasks (the `0x` TAC pill, a band bitmask), and long opaque identifiers — ICCID, IMEI, IMSI — which stay mono *even though they are all digits*, because they are compared, not read as a quantity. A human-authored label never wears it.
+
+Everything the interface reports as a **figure** takes `font-sans` + `tabular-nums`: measurements (RSRP, RSRQ, SINR, throughput, latency, temperature, percentages, counts, durations, data volumes, bandwidth and frequency in MHz) **and short numeric device labels** — EARFCN, NR-ARFCN, PCI, band number (`B3`, `n78`), TAC, decimal cell ID and the eNodeB / sector IDs derived from it, channel and slot numbers.
+
+The tell: **is this a quantity you read, or an opaque string you compare?** A quantity, however static, is `font-sans tabular-nums`. An opaque string, however numeric, is `font-mono`. Rethink Sans's tabular numerals give the column alignment mono used to be borrowed for, so a short numeric label loses nothing by moving.
+
+> ⚠️ The tell changed on 2026-09-26. It used to be *"does the value change while the user watches?"*, which put band, EARFCN and PCI in mono. The code has not been swept to the new tell, and many `shapes.ts` comments still cite the old one; the open sites are listed in Migration Deltas. Move a site when you next touch its surface, and correct its comment in the same change.
 
 **The Weight-Discipline Rule.** 400 body, 500 labels and medium emphasis, 600 headings and numerics, 700 page titles only.
 
@@ -514,6 +521,8 @@ Three facts about it are load-bearing, and all three live in `components/cellula
 
 **The Card-Wrapped Surface Rule.** The unit of composition is the **card that wraps a settings group**, not the page. The card owns its whole content; the page only arranges cards. A feature that scatters loose fragments across the viewport has skipped the card.
 
+**The Full-Width Page Rule (hard rule).** A feature page's content column spans the full width of the shell's content area — `@container/main mx-auto flex flex-col gap-5 p-2`, the shape every feature page shares (`PAGE_ROOT` in `components/about-device/shapes.ts`, `PAGE_SHELL` in `components/cellular/antenna-alignment/shapes.ts`). **Never cap the page column with a `max-w-*` container**, however few cards the page has: a narrow centred column reads as a different app beside its full-width siblings and breaks the Consistent-Layout Rule. Full width is not a licence to stretch. A card whose layout was drawn for a phone column must **recompose itself on a wide card** through a step on its own `@container/card` (`@3xl/card:`, `@5xl/card:`): put side by side what was stacked, and show at once what was hidden. `SEGMENTED_BREAKPOINTS` in `components/cellular/settings/shapes.ts` is the pattern — a select on a narrow card, every option visible as a segmented group on a wide one. A column count is a proposal, not a reflex; a single column recomposed inside its cards often reads better than a two-up grid. Readability limits belong *inside* a card or header (the `max-w-[41rem]` description column in `components/cellular/page-header.tsx`, a capped paragraph), never on the page. The pre-auth pair and the onboarding flow run their own single-card shells and are not feature pages.
+
 **The Container-Query Rule.** New responsive behavior is a container query against `@container/main` or a card-local `@container/card`. Reach for a viewport breakpoint only for the page gutter or the shell itself.
 
 **The Sticky-Slack Rule.** A sticky pane's travel is its parent's height minus its own, so the column holding it stretches. When a "pinned" element never moves, check the column's alignment before the offsets.
@@ -521,6 +530,37 @@ Three facts about it are load-bearing, and all three live in `components/cellula
 **The Symmetric-Pair Rule.** Two or more cards on one desktop-width row, and every card in a bento group, resolve to a single height. Reach for `items-stretch`, never `items-start`. The obligation that creates is on the content: each card nominates exactly one region to absorb the slack, in every one of its three states. Where a card has nothing to fill with, the row is the wrong container, and the answer is to promote it to a full-width band rather than accept ragged heights.
 
 **The Grid-Step-Costing Rule.** Cost a responsive grid step against the narrowest cell it produces **in the column it actually lives in**, never against the page width. A 4-up step that is safe full-width at `@3xl` collapses the bar lane to nothing inside a 7-of-12 column at the same breakpoint — which is the named bug of ramp ink on a numeral with no bar beside it.
+
+### The Scanning Rules
+
+PRODUCT.md Principle 8 says a surface is scanned, not read: the user arrives with one question and hunts for its answer. These rules are how a card makes that hunt short. A receipt is the model. Item names run hard against the left edge and prices hard against the right, with no dividers and almost no whitespace, and two edges hold the whole thing together. Nearly every "why does this card feel off" has one of four causes: a missing edge, an undifferentiated run, a glyph that has to be decoded, or a default value dressed as loudly as a changed one. Awkward whitespace is a symptom of one of them, so before proposing padding, find what sets the empty region's size — a sibling's `min-h`, an `mt-auto` note, an `h-full` stretch, an equal-height row with one sparse card, a phone-width control on a wide card — and fix that.
+
+> ℹ️ NOTE: **Target rules, adopted from QManager-the101 on 2026-09-26** together with the Full-Width Page Rule, Copy & Help and the amended Machine-Voice tell. Most shipped surfaces predate them. Apply them when you build or rework a surface; don't sweep untouched pages to enforce them.
+
+**The Two-Edge Rule.** Every element aligns to at least two edges. An edge is a card edge, a column edge, or the edge of the row above it. Content that gets read aligns to an edge: a row's key sits on the left edge and its value on the right, like a receipt. Centre only what stands alone and isn't scanned as part of a set: a meter's readout inside its dial, an empty state, a dialog's lead glyph. Once two edges are holding, separators mostly become unnecessary; reach for a `Separator` only between groups that alignment and a section label can't split on their own.
+
+**The Manufactured-Edge Rule.** When a region has nothing to align to — actions floating somewhere between the title and the body — don't scatter them. Create an edge: put the actions in `CardAction` on the header's right edge, sharing the title's line, or in a footer row on the card's bottom edge. Moving secondary actions into a `⋯` menu doesn't fix a loose card, because hiding an element isn't aligning it. Collapse into an overflow menu only after the one or two primary actions already hold an edge, and only when what's left is genuinely occasional.
+
+**The Stack-Height Rule.** A leading element (a glyph disc, logo plate or avatar) is only as tall as the text stack beside it. A 32px disc next to a single line of text leaves its bottom edge hanging. Either give it a two-line stack (a label plus a meta line) so disc and text share a top and bottom edge, or drop to an inline glyph at text size. The 52px tile disc beside its eyebrow → value → caption stack is the shape done right; don't vertically centre a tall disc against one short line and call that aligned.
+
+**The Row-Span Rule.** The distance between a row's left and right edges has a ceiling. Stretch a key/value row across a 1400px card and every edge is still technically there, but the key and its value no longer read as a pair, because the eye can't carry across the gap. This is the in-card half of the Full-Width Page Rule. Once a row gets wide enough that its pair starts to separate (about 600px of row is the working limit), **recompose the card**: split the rows into two or three columns on a card step (`GRID` in `components/local-network/traffic-engine/shapes.ts` steps `@xl/card:grid-cols-2 @3xl/card:grid-cols-3`). Don't let the gap keep growing, and never answer it by capping the page.
+
+**The Group-Before-You-Pad Rule.** When a dense list or settings group is hard to read, the problem is undifferentiated content, not too much content. Fix it in this order:
+1. **Group it** with a section label (Label style, `on-surface-variant`) over each run. Five related rows under a label are one glance; fifteen unlabelled rows are fifteen reads.
+2. **Vary it** with a glyph, a tag or a coloured numeral that carries a real fact, so rows are told apart by shape before they're read.
+3. Only then consider spacing.
+
+Adding whitespace first makes the surface longer without making the answer easier to find. Density is still the product (Overview); this rule is how density stays scannable.
+
+**The Recognition Rule.** A visual replaces text only when it's recognised without help. A universal glyph (trash, pencil, copy, a direction arrow), a bar whose length is the value, a status chip whose glyph is the state and a band `Tag` all qualify. An icon-only control whose meaning you learn from its tooltip hasn't replaced text; it has hidden it behind a hover a touchscreen can't do. Give that control a visible label. The Convention-First Rule governs words; this rule governs glyphs. `aria-label` stays mandatory either way.
+
+**The Quiet-Default Rule.** Emphasis isn't something an element has; it's the difference between the element and its neighbours. So a value in its default or expected state renders **quiet** (`on-surface-variant` ink, no fill, no role colour), and a value that differs from it stands out without any extra treatment. A checkbox is the model: off is a thin outline and nothing else, and the fill is the signal that something changed. Nobody ships a checkbox that's blue when it's off.
+
+- **Settings summaries and read-only rows.** A setting still at its factory default is muted. One the user changed takes normal ink, and a role colour where the value genuinely carries one.
+- **Lists where the expected state dominates.** Say eight services are Running and one is Stopped. The exception keeps its filled chip; the expected rows may drop to glyph plus plain ink without the container. The glyph stays (The Every-Chip-Has-A-Glyph Rule), but the fill is saved for the row that needs finding. A status-first hero's single state chip is the page's first answer and stays filled.
+- **To make one thing stand out, quiet its neighbours.** Don't turn it up with bolder weight, a bigger size or more saturation. If everything is emphasised, nothing is. That is why each card gets one primary-filled action at most, and why `--primary` is the only hue that acts.
+
+**The One-Nest Rule.** Inside a card there is at most one level of inner container: a `surface-container` tile at `rounded-tile`. A group inside a card is set apart by a section label and spacing along the card's own column edge, not by another box. A card holding a tile holding a bordered box stacks three tones and three radii, and none of them help. When the one inner level is warranted, its radius steps down with it (The Radius-Follows-Size Rule) so the corners read as concentric rather than competing.
 
 ## Elevation & Depth
 
@@ -687,7 +727,7 @@ The inner unit of a glance surface: a 12px-radius block at a **pinned** 104px he
 
 Two answers, and this is the one place the system deliberately has two.
 
-- **Glance surfaces** use full-round pills on `surface-container`: 40px tall, 16px horizontal padding, a 13px/600 `on-surface-variant` key against a 13px value — `font-mono` when that value is an identifier, `font-sans tabular-nums` when it is a live measurement. No dividers. **A value that carries quality takes its ramp ink here**, which is the row-level equivalent of WiFiman's coloured dBm figure.
+- **Glance surfaces** use full-round pills on `surface-container`: 40px tall, 16px horizontal padding, a 13px/600 `on-surface-variant` key against a 13px value — `font-mono` when that value is an opaque string (ICCID, IMEI, an address), `font-sans tabular-nums` when it is a figure, whether a live measurement or a numeric label like an EARFCN or PCI. No dividers. **A value that carries quality takes its ramp ink here**, which is the row-level equivalent of WiFiman's coloured dBm figure.
 - **Genuine data tables** (cell scanner results, SMS inbox, log views) keep hairline rows on `--border`, because density survives there where pills would not.
 
 ### Quality bars
@@ -773,7 +813,7 @@ Two libraries, and the boundary is **per route**, never per directory.
 | Library | Owns |
 |---------|------|
 | **Material Symbols Rounded** | The sidebar, `/dashboard`, the two pre-auth routes, and the **entire `/cellular/` family** — index plus all 17 sub-routes |
-| **lucide-react** | Every other route: `/local-network/`, `/monitoring/`, `/system-settings/`, `/about-device`, `/support`, onboarding — plus every route-agnostic primitive wherever it mounts |
+| **lucide-react** | Every other route: `/local-network/`, `/monitoring/`, `/system-settings/`, `/about-device`, `/support`, onboarding — plus every route-agnostic primitive wherever it mounts, `HintIcon` excepted (below) |
 
 Mixing two icon sets inside one screen is precisely what the rule prevents, so a lucide glyph on an unconverted route is *correct code*, not a defect — and a route-agnostic component stays on lucide even when it mounts inside a Material route, because it cannot know where it will appear. Convert a whole route or none of it.
 
@@ -781,11 +821,53 @@ Mixing two icon sets inside one screen is precisely what the rule prevents, so a
 
 Three deliberate exceptions survive on the dashboard's Network Status card: the SIM orb keeps lucide `CardSimIcon`/`Plane`, and the RAT marks keep `react-icons/md`, because "5G", "4G+" and "3G" are typographic marks Material Symbols has no equivalent for.
 
+**One exception runs the other way: `HintIcon` is Material on every route, lucide routes included.** `HintIcon` (`components/ui/hint-icon.tsx`) is a route-agnostic primitive, yet its info/warning glyph is a `MaterialSymbol` wherever it mounts — so on `/local-network/`, `/monitoring/` and `/system-settings/` it is the one Material glyph on a lucide screen. That is deliberate: a single glyph for "there is more to know here" everywhere beats one that changes shape between routes. It does not widen the boundary above, and it is not a precedent for any other primitive. Don't make `HintIcon` route-aware, and don't convert it to lucide.
+
 ### The three-state pattern
 
 Every data surface ships **loading**, **empty**, and **error** — never a blank panel.
 
 Skeletons mirror the loaded geometry *exactly*, and by shared constant rather than by estimate. Sizes are the loaded element's **line box**, not its font size — a skeleton sized to the glyph reflows the moment real text lands. The handoff is a pure crossfade on `quick` with the outgoing skeleton overlaid *on top of* real content, so the card is sized by its content from the first frame and the crossfade contributes zero layout shift.
+
+### Copy & Help
+
+Convention carries the interface; copy explains only what a convention cannot (PRODUCT.md, Principle 7). A clear label and a sensible default beat a sentence of helper text, and a paragraph on the surface is a design failure, not thoroughness.
+
+**Length budgets** (English; ceilings, not targets — translations run longer, which is one more reason to start short):
+
+| Surface | Budget |
+|---------|--------|
+| Page description (`h1` subtitle) | One sentence, ~100 chars |
+| `CardDescription` | One sentence, ~80 chars. Optional — omit it when the title says it all |
+| Field / row hint | One line, ~60 chars. Omit it if it restates the label |
+| Dialog description | At most two short sentences: what happens, and whether it can be undone |
+| Empty state | Title + one line + one action |
+| Toast | One sentence |
+| Info tip body | At most two sentences |
+
+Say a message once. The same error shown in a banner, a field hint and a toast is three reads of one fact; pick the slot nearest the cause.
+
+**Info tips** — the `HintIcon` primitive (`components/ui/hint-icon.tsx`), a small ⓘ beside a label or value — hold the explanation the surface doesn't need to carry.
+
+**The default is no tip.** Most settings need none; a clear label is enough. A tip is an exception justified for one specific control, never a slot every row fills for consistency, and a settings group where most rows carry no tip is the expected shape.
+
+- **Use one for** a domain term the user may not know (TTL/HL, EN-DC, DPI, IP Passthrough, PCI), or a caveat that is non-obvious but not dangerous ("resets on reboot").
+- **Never use one for** restating the label, explaining a standard pattern (what a switch or Save does), or hiding a risk. Anything that can drop the connection stays visible on the surface (PRODUCT.md, Principle 6).
+- **Sparingly.** Roughly one per settings group at most. If every row wants a tip, the labels are wrong.
+- **Never the only home of required information.** If the user cannot act correctly without reading it, it is not a tip.
+- **Must open on tap.** A hover-only tooltip is unreachable on a touchscreen.
+
+`HintIcon` is a **toggletip built on `Popover`, never on `Tooltip`**: tap, click or Enter toggles it; tapping outside or Esc closes it; a mouse hover may also open it on desktop, and focus stays on the trigger. The tip box is width-capped so longer text wraps into a short paragraph rather than one long line. Don't rebuild it on `Tooltip` — a Radix Tooltip never opens on tap.
+
+> ℹ️ NOTE: most shipped copy predates these budgets — 136 of 4,088 `en` strings exceed 120 characters (measured 2026-09-26). Trim a surface when you next touch it rather than copying its length.
+
+**Before / after** — the shape of a trim:
+
+| Before | After |
+|--------|-------|
+| A page description listing every sub-feature and its edge cases | One sentence naming what the page is for |
+| A row hint explaining when a setting applies, why, and what resets it | A short hint for the one fact that changes behaviour; the rest behind a tip |
+| A confirm dialog narrating the backend (rebinding, leases, where to browse next) | "Your connection will drop briefly." plus the one thing the user must do |
 
 ### Named Rules
 
@@ -811,6 +893,16 @@ Skeletons mirror the loaded geometry *exactly*, and by shared constant rather th
 
 **The No-Dot-Separator Rule.** A meta line joining two or more short facts (`PCI 135`, `EARFCN 9485`) uses plain spacing, never a `·` glue character. Give the facts room instead of punctuating between them.
 
+**The One-Sentence Rule.** Every piece of surface copy fits its budget in Copy & Help. A second paragraph is a signal to move content into an info tip or the docs, never to shrink the type.
+
+**The Convention-First Rule.** Don't explain a pattern the user already knows. When a control seems to need explaining, fix the control — label, default, grouping — before adding words.
+
+**The Consequence-Not-Mechanism Rule.** Dialogs and warnings say what will happen to the user, not how the backend does it.
+
+**The Tip-Is-Optional Rule.** An info tip can be skipped without harm. Anything the user must read to act correctly lives on the surface.
+
+**The No-Default-Tip Rule.** Not every option earns a `HintIcon`. A setting gets no tip unless its term or side effect genuinely needs one; adding tips to every row "so it looks consistent" is the failure this rule names.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -827,7 +919,7 @@ Skeletons mirror the loaded geometry *exactly*, and by shared constant rather th
 - **Do** write responsive behavior as a container query against `@container/main`.
 - **Do** wrap a settings group in a card and let the page arrange cards.
 - **Do** put `min-w-0 truncate` on every text node in a paired card's header.
-- **Do** mark every changing figure `tabular-nums` in `font-sans`, and reserve `font-mono` for identifiers.
+- **Do** set every figure — measurements and numeric labels such as EARFCN, PCI, band and TAC — `tabular-nums` in `font-sans`, and reserve `font-mono` for opaque strings you compare (ICCID, IMEI, MAC, IP, paths, raw AT output).
 - **Do** mirror a skeleton's geometry from the same exported shape constant the loaded view uses.
 - **Do** build the loading, empty, and error state in the same change as the loaded one.
 - **Do** pass `size` explicitly at every `MaterialSymbol` call site.
@@ -858,6 +950,9 @@ Skeletons mirror the loaded geometry *exactly*, and by shared constant rather th
 - **Don't** loop an animation where nothing is genuinely live.
 - **Don't** put an icon in a `CardHeader`.
 - **Don't** invent a bespoke hero-driven layout for one screen.
-- **Don't** mix Material Symbols and lucide inside a single route.
+- **Don't** mix Material Symbols and lucide inside a single route (`HintIcon` is the one sanctioned exception).
+- **Don't** cap a feature page with a `max-w-*` wrapper; recompose the cards instead.
+- **Don't** fix a hard-to-scan card with padding or more words; find the missing edge or the ungrouped run.
+- **Don't** give every setting a `HintIcon`, or build an info tip on `Tooltip`.
 - **Don't** introduce a third typeface, or set a human-authored label in mono.
 - **Don't** reach for 13px outside a dense metric row, or for the pre-auth scale outside `/` and `/login/`.
