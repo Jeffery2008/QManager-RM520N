@@ -1,5 +1,5 @@
 # Run: Port the101 design-rule amendments, Frequency Calculator redesign, and redesign-review skill
-status: active
+status: closed
 lane: full
 base: 11b75e46   branch: wt/the101-design-port @ .claude/worktrees/the101-design-port (BASE_OK verified)   opened: 2026-09-26   lead: opus (Opus 5.5, conductor session rooted in QManager-the101)
 
@@ -7,6 +7,7 @@ base: 11b75e46   branch: wt/the101-design-port @ .claude/worktrees/the101-design
 "Now, can you please orchestrate a team to properly port these design changes and new skill to QManager-RG520N? Basically all of the amendments we changed for our design language / rules."
 
 ## Decisions taken — do not re-ask
+- 2026-09-26 Close-out: user chose "Merge to development (Recommended)"; development had not moved (11b75e46), fast-forward. Token split not metered: the conductor session is rooted in QManager-the101, so .claude/token-meter.mjs does not see it.
 - 2026-09-26 Target repo: user chose QManager-RM520N (no repo named RG520N exists; QManager-RG520 was the other candidate).
 - 2026-09-26 Identity: user chose "Keep its fonts" — port layout / scanning / copy+help rules, Card-Wrapped, HintIcon, the skill and the calculator redesign; keep RM520N's typefaces (Rethink Sans + JetBrains Mono) and colours. the101's Three-Voice rule is adapted, not adopted.
 - Routing override (rail 1): this conductor session is rooted in QManager-the101, so RM520N's qm-scout / qm-worker / qm-verifier / qm-advocate are not dispatchable by name. Substitute: orchestra-scout / orchestra-worker / orchestra-verifier with an explicit `model` and a ticket line making the matching `.claude/agents/qm-*.md` file the binding role contract. Reason: the rail's cause is inherited seat + no project contract; both are fixed explicitly.
@@ -54,5 +55,4 @@ base: 11b75e46   branch: wt/the101-design-port @ .claude/worktrees/the101-design
 Frontend + docs only; no device touched. DEVICE: none on every ticket.
 
 ## Handoff — NEXT ACTION
-All tasks VERIFIED/ACCEPTED on wt/the101-design-port. Next: close-out AskUserQuestion (merge into development / keep / discard). On merge: re-check development tip, rebase if it moved, ff-merge from the main checkout without stashing peers' files, re-run tsc + i18n:check + build on development, remove worktree + branch, set status: closed. Also remove the rm520n-port-static entry from QManager-the101/.claude/launch.json and stop the preview server.
-Open (not in scope): Migration Deltas row (DESIGN.md:286) lists mono EARFCN/PCI/band sites on other pages; HintIcon has no consumer yet.
+Closed. Merged to development. Open follow-ups (not scheduled): migrate the mono EARFCN/PCI/band sites listed in DESIGN.md Migration Deltas; give HintIcon its first consumer when a settings group needs a tip.
