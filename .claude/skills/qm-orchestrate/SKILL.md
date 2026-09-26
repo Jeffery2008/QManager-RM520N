@@ -46,7 +46,7 @@ A flag names WHICH agent fires, not how big the change is.
 | Is a shell script or unit | Conductor runs it on the device FIRST (both devices, diffed, for portability); `busybox-portability-checker` only for the residue a run cannot show (CRLF, shebang/arithmetic, offline second target) | …a script was edited |
 | Is frontend only (`components/ hooks/ lib/ app/ types/ constants/ public/locales/`, reading only existing poller fields) | `ui-builder`; gates `bun run i18n:check`, `bunx tsc --noEmit`, `bun run build` (read the CSS optimizer warnings), page load in the Browser pane; `modem-investigator` skipped | …if it needs a NEW backend field it has stopped qualifying — re-lane to Full |
 | Is an investigation, a bug with unknown cause, or a plan that rests on one unproven hypothesis | `qm-advocate` before the gate — mandatory, never trimmed, always Opus | — |
-| Is "apply the design language to X" / "redesign X" | `docs/reference/redesign-proposal-playbook.md` governs recon + plan (a published before/after Artifact the user approves before any component is written); everything after the gate is normal Full | …a UI bug fix, a copy change, or one added card — those are Lite |
+| Is "apply the design language to X" / "redesign X" / "polish X" | the `qm-redesign-review` skill runs recon + plan (a published Artifact — measured findings, working mock, before/after — the user approves before any component is written); everything after the gate is normal Full | …a UI bug fix, a copy change, or one added card — those are Lite |
 
 ## Roster
 

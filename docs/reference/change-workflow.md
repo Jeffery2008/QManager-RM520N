@@ -16,5 +16,5 @@ Where each section went:
 - Branch model and worktree discipline → `references/worktree.md`
 - The recording rule and Orchestration Mode's durable state → `references/ledger.md`
 
-[`redesign-proposal-playbook.md`](redesign-proposal-playbook.md) still stands unchanged and is
-referenced from `references/lanes.md`: it governs recon and plan for a "redesign surface X" request.
+Redesign / polish requests run through the `qm-redesign-review` skill
+(`.claude/skills/qm-redesign-review/SKILL.md`), which replaced `redesign-proposal-playbook.md` as the recon-and-plan process.

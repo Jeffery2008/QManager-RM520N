@@ -55,4 +55,4 @@ Everything above cuts dispatches whose *subject matter* is not at risk. `qm-advo
 
 ## Redesigns
 
-A request of the shape "apply our finalized design language to surface X" or "redesign the Y page" runs `docs/reference/redesign-proposal-playbook.md` for recon and plan instead of the default triage. It adds one deliverable the standard flow has no slot for: a published sample-design Artifact the user approves before any component is written. Everything after the gate is a normal Full-lane run. It does not cover a UI bug fix, a copy change, or one added card — those are Lite.
+A request of the shape "apply our finalized design language to surface X" or "redesign the Y page" runs the `qm-redesign-review` skill (`.claude/skills/qm-redesign-review/SKILL.md`) for recon and plan instead of the default triage. It adds one deliverable the standard flow has no slot for: a published sample-design Artifact the user approves before any component is written. Everything after the gate is a normal Full-lane run. It does not cover a UI bug fix, a copy change, or one added card — those are Lite.
