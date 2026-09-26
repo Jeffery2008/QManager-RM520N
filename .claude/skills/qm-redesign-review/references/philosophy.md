@@ -164,6 +164,8 @@ The user's instinct, over and over, is to take things away:
 - a dot or a caption that says what's obvious
 - a colour that repeats a badge: "Dont colorize the PCI and EARFCN also since we already have the
   badges above for the color differences." That is the Neutral-Default Rule in the user's words.
+- an ellipsis on a button that opens no dialog: "let Reset Usage use the regular button size and
+  remove the ellipses."
 
 Two related instincts:
 

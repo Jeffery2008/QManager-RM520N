@@ -574,8 +574,8 @@
         "idle_body": "其頻率與頻段會顯示在這裡。",
         "failed_title": "沒有可顯示的內容",
         "failed_body": "修正通道號碼後再計算一次。",
-        "channel_lte": "EARFCN {{value}} · 下行",
-        "channel_nr": "NR-ARFCN {{value}} · 下行",
+        "channel_lte": "EARFCN {{value}} 下行",
+        "channel_nr": "NR-ARFCN {{value}} 下行",
         "several_bands_one": "有 {{count}} 個頻段可以承載此通道。",
         "several_bands_other": "有 {{count}} 個頻段可以承載此通道。"
       }
