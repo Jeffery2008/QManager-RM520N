@@ -6,6 +6,7 @@ Upstream resolvers can be switched back off again, and a visual pass: every page
 
 ## 🛠️ Improvements
 
+- **The Frequency Calculator has a new layout.** In **Cellular → Cell Scanner → Frequency Calculator**, the channel field and its answer now sit side by side, each matching band lists its downlink/uplink frequencies with a marker for where your channel falls in the band, and Possible Bands and Calculation History now sit side by side on a wide screen — tap a history entry to run it again (the band table still fits inside its card on a phone).
 - **Corners are tighter across the whole app, and dark mode cards now catch a little light.** Cards, tiles, inputs and dialogs everywhere moved to a smaller corner radius, so a panel reads as a panel rather than a lozenge; in dark mode each card also picks up a faint highlight along its top edge that lifts it off the background. (One radius scale in the stylesheet — no page was re-laid-out.)
 - **Confirmation prompts and slide-out panels no longer look flatter than the dialogs beside them.** In dark mode the same top-edge highlight now reaches every panel that opens over the page, not just the main dialog, so a "are you sure?" prompt sits at the same depth as the window it came from.
 
