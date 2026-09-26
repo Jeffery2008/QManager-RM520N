@@ -10,31 +10,10 @@ import { Tag } from "@/components/ui/tag";
 import { DUR, EASE_QUICK, EASE_STANDARD } from "@/lib/motion";
 
 import { HISTORY_ROW, networkIdentity } from "../shapes";
-import type { HistoryEntry, NetworkType } from "./calc-model";
+import { relativeTimeBucket, type HistoryEntry, type NetworkType } from "./calc-model";
 
-// =============================================================================
-// The calculation history
-// =============================================================================
-// THIS IS THE ONE PLACE ON THE SURFACE THAT EARNS AN EXIT ANIMATION, and it is
-// worth saying why, because the Enter-Only Rule bans them nearly everywhere.
-// That rule is about CONDITIONS and NAVIGATION: a banner leaving means the
-// condition cleared and should feel immediate, and an outgoing route is already
-// gone. Neither applies to a row the user just deleted. Here the deletion IS
-// the event, the row is the thing that was acted on, and a row that vanishes
-// between two frames while the four below it jump up is indistinguishable from
-// having deleted the wrong one.
-//
-// So: enter on `standard`, exit on `quick`. The exit is deliberately the faster
-// leg — the same input-latency reasoning behind the Modal-Exit Rule. A row
-// leaving is confirmation of something already decided, and confirmation should
-// not be slower than the decision.
-//
-// `initial={false}` on the list keeps the first paint silent. Rows restored
-// from localStorage arrive with the card's own entrance cascade; replaying an
-// insert animation for ten stored rows would claim ten things just happened.
-// Only a row that arrives AFTER mount animates in, which is exactly the one the
-// user just created.
-// =============================================================================
+// History as hairline rows in one well; each row is two SIBLING buttons (recall, delete), never nested.
+// A deleted row is the one exit animation this surface earns; `initial={false}` keeps restored rows silent.
 
 const HISTORY_BAND_KEY = {
   LTE: "cell_scanner.calculator.history.band_lte",
@@ -57,73 +36,86 @@ const ROW_MOTION = {
 
 export function HistoryList({
   history,
+  onRecall,
   onDelete,
 }: {
   history: HistoryEntry[];
+  /** Puts `entry.channel` back in the field and re-derives it without recording. */
+  onRecall: (entry: HistoryEntry) => void;
   onDelete: (id: string) => void;
 }) {
   const { t } = useTranslation("cellular");
 
   return (
-    <ul className="flex flex-col gap-2">
+    <ul className={HISTORY_ROW.LIST}>
       <AnimatePresence initial={false}>
-        {history.map((entry) => (
-          <motion.li
-            key={entry.id}
-            layout="position"
-            initial={ROW_MOTION.initial}
-            animate={ROW_MOTION.animate}
-            exit={ROW_MOTION.exit}
-            transition={{ duration: DUR.standard, ease: EASE_STANDARD }}
-            className={HISTORY_ROW.ROOT}
-          >
-            <div className={HISTORY_ROW.MAIN}>
-              <div className={HISTORY_ROW.HEAD}>
-                <span className={HISTORY_ROW.CHANNEL}>{entry.channel}</span>
-                <Tag variant={networkIdentity(entry.networkType)}>
-                  {entry.networkType}
-                </Tag>
+        {history.map((entry) => {
+          const bucket = entry.timestamp ? relativeTimeBucket(entry.timestamp) : null;
+          const relativeLabel = !bucket
+            ? t("cell_scanner.calculator.history.no_timestamp")
+            : bucket.unit === "now"
+              ? t("cell_scanner.calculator.history.time_now")
+              : bucket.unit === "yesterday"
+                ? t("cell_scanner.calculator.history.time_yesterday")
+                : t(`cell_scanner.calculator.history.time_${bucket.unit}`, {
+                    count: bucket.count,
+                  });
+          const absoluteTitle = entry.timestamp
+            ? new Date(entry.timestamp).toLocaleString()
+            : undefined;
+
+          return (
+            <motion.li
+              key={entry.id}
+              layout="position"
+              initial={ROW_MOTION.initial}
+              animate={ROW_MOTION.animate}
+              exit={ROW_MOTION.exit}
+              transition={{ duration: DUR.standard, ease: EASE_STANDARD }}
+              className={HISTORY_ROW.ROOT}
+            >
+              <button
+                type="button"
+                onClick={() => onRecall(entry)}
+                aria-label={t("cell_scanner.calculator.a11y.recall_entry", {
+                  value: entry.channel,
+                })}
+                title={absoluteTitle}
+                className={HISTORY_ROW.RECALL}
+              >
+                <span className={HISTORY_ROW.LEAD}>
+                  <span className={HISTORY_ROW.CHANNEL}>{entry.channel}</span>
+                  <Tag variant={networkIdentity(entry.networkType)}>
+                    {entry.networkType}
+                  </Tag>
+                </span>
                 <span className={HISTORY_ROW.FIGURE}>
                   {t("cell_scanner.calculator.units.mhz", {
                     value: entry.frequency,
                   })}
                 </span>
-              </div>
 
-              {entry.bands.length > 0 ? (
-                <p className={HISTORY_ROW.BANDS}>
-                  <span className={HISTORY_ROW.BANDS_KEY}>
-                    {t("cell_scanner.calculator.history.bands")}
-                  </span>{" "}
-                  <span className={HISTORY_ROW.BANDS_VALUE}>
-                    {entry.bands
-                      .map((band) =>
-                        t(HISTORY_BAND_KEY[entry.networkType], { band }),
-                      )
-                      .join(", ")}
-                  </span>
-                </p>
-              ) : null}
+                <span className={HISTORY_ROW.BANDS}>
+                  {entry.bands
+                    .map((band) => t(HISTORY_BAND_KEY[entry.networkType], { band }))
+                    .join(", ")}
+                </span>
+                <span className={HISTORY_ROW.TIME}>{relativeLabel}</span>
+              </button>
 
-              <p className={HISTORY_ROW.TIME}>
-                {entry.timestamp
-                  ? new Date(entry.timestamp).toLocaleString()
-                  : t("cell_scanner.calculator.history.no_timestamp")}
-              </p>
-            </div>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete(entry.id)}
-              aria-label={t("cell_scanner.calculator.a11y.delete_entry")}
-              className={HISTORY_ROW.DELETE}
-            >
-              <MaterialSymbol name="close" size={16} />
-            </Button>
-          </motion.li>
-        ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => onDelete(entry.id)}
+                aria-label={t("cell_scanner.calculator.a11y.delete_entry")}
+                className={HISTORY_ROW.DELETE}
+              >
+                <MaterialSymbol name="close" size={16} />
+              </Button>
+            </motion.li>
+          );
+        })}
       </AnimatePresence>
     </ul>
   );

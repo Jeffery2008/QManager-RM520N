@@ -10,15 +10,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tag } from "@/components/ui/tag";
 import { staggerItem } from "@/lib/motion";
 
 import { ScanEmptyState } from "../scan-states";
 import {
+  BAND_TILE,
   CALC_HERO,
+  CALC_SPLIT,
   FORM,
-  HERO_SPLIT,
+  HISTORY_CLEAR,
   PILL_ACTION,
-  PILL_QUIET,
   RESULTS_CARD,
   SECTION_HEAD,
 } from "../shapes";
@@ -42,30 +44,8 @@ import {
 import { CalcReadout, type ReadoutState } from "./calc-readout";
 import { HistoryList } from "./history-list";
 
-// =============================================================================
-// Frequency Calculator — the anchor, its bands, and its history
-// =============================================================================
-// THIS FILE USED TO ARGUE AGAINST ITS OWN ANCHOR, and the argument is worth
-// leaving on the record because it was half right. It said a `rounded-hero`
-// radius here would be "a promise of importance the page cannot keep", on the
-// grounds that the family's heroes are RUN heroes and nothing here runs. True
-// about runs, wrong about heroes: what an anchor promises is that one object is
-// the thing the reader came for. On this page that is unambiguous — you came to
-// turn a channel number into a frequency. Two peer cards claimed the converter
-// and its own history were equally important, which is the single thing this
-// page is certain they are not.
-//
-// The anchor therefore takes `CALC_HERO` (which IS `RUN_HERO`, deliberately the
-// same object) and `HERO_SPLIT`, and none of the run vocabulary: no posture, no
-// elapsed clock, no spinner, and no cost statement, because nothing is spent.
-// `shapes.ts` carries the long form of that decision.
-//
-// THREE CARDS, AND THE MIDDLE ONE NEVER DISAPPEARS. The bands card is present
-// before the first calculation, carrying an empty state, exactly as the sweep's
-// results card is. A card that pops into existence on the first result shifts
-// everything below it and makes the page feel like it is assembling itself; a
-// card that is always there simply fills in.
-// =============================================================================
+// Frequency Calculator: controls left, answer rail right; a failure prints once, in the rail.
+// Bands and history are always-present peer cards, paired on a wide screen.
 
 const MODE_LABEL_KEY = {
   auto: "cell_scanner.calculator.form.label_auto",
@@ -87,6 +67,9 @@ const CHANNEL_READOUT_KEY = {
   NR: "cell_scanner.calculator.readout.channel_nr",
 } as const;
 
+/** The rail's own id — the field's `aria-describedby` target while it is invalid. */
+const RAIL_ID = "calc-rail";
+
 const FrequencyCalculator = () => {
   const { t } = useTranslation("cellular");
 
@@ -96,11 +79,7 @@ const FrequencyCalculator = () => {
   const [mode, setMode] = React.useState<CalcMode>("auto");
   const [history, setHistory] = React.useState<HistoryEntry[]>([]);
 
-  // The saved history is read AFTER mount, not in a lazy `useState` initialiser.
-  // The initialiser runs during render, which on a statically exported page means
-  // the server produces an empty list and the client's first render produces ten
-  // rows — a hydration mismatch React resolves by throwing the server's markup
-  // away. Seeding empty and filling in an effect costs one paint and is correct.
+  // Read after mount, not in a lazy initialiser: the static export would otherwise hydrate-mismatch.
   React.useEffect(() => {
     const saved = readHistory();
     if (saved.length > 0) setHistory(saved);
@@ -110,14 +89,7 @@ const FrequencyCalculator = () => {
     writeHistory(history);
   }, [history]);
 
-  /**
-   * Run the calculation and put the surface into one consistent state.
-   *
-   * `record` is what separates an ASKED-FOR calculation from a re-derivation.
-   * Pressing Calculate or Enter is a request and lands in the history; switching
-   * the mode tab re-answers a question already on screen and does not, or ten
-   * tab presses would bury the ten calculations the reader actually made.
-   */
+  // `record` is true only for an asked-for calculation; mode switches and recalls re-derive silently.
   const run = React.useCallback(
     (value: string, nextMode: CalcMode, record: boolean) => {
       try {
@@ -153,19 +125,22 @@ const FrequencyCalculator = () => {
 
   const handleModeChange = (next: CalcMode) => {
     setMode(next);
-    // Only re-answer a question already on screen. With nothing resolved yet the
-    // tab is just a preference for the next calculation, and raising an error
-    // for an empty field the user has not submitted would be scolding them for
-    // reading the options.
+    // Only re-answer a question already on screen; with nothing resolved the tab is a preference.
     if (result || error) run(channel, next, false);
   };
 
   const handleChannelChange = (value: string) => {
     setChannel(value);
-    // Typing is the recovery. Leaving the strip up — and `aria-invalid` on —
-    // while the reader corrects the value makes the field claim the new input is
-    // wrong before anything has looked at it.
+    // Typing is the recovery, so the failure state clears as soon as the value changes.
     if (error) setError(null);
+  };
+
+  /** Recall a history row: restore its channel, force `auto`, and re-derive without recording. */
+  const handleRecall = (entry: HistoryEntry) => {
+    const value = String(entry.channel);
+    setChannel(value);
+    setMode("auto");
+    run(value, "auto", false);
   };
 
   const errorText = error
@@ -194,6 +169,7 @@ const FrequencyCalculator = () => {
       bandLabel: single
         ? t(BAND_LABEL_KEY[result.networkType], { band: single.band })
         : null,
+      bandName: single ? single.name : null,
       caption: single
         ? null
         : t("cell_scanner.calculator.readout.several_bands", {
@@ -202,15 +178,14 @@ const FrequencyCalculator = () => {
     };
   }, [result, error, t]);
 
-  // The spec citation, and ONLY once there is a result to cite. The
-  // pre-calculation hint that used to fill this slot ("Auto picks LTE or NR from
-  // the number's range") was removed on 2026-08-14 by user decision — the three
-  // mode tabs sitting directly above it already say Auto is one of three
-  // choices. The slot stays empty until the reader has an answer.
-  const noteText = result
-    ? t("cell_scanner.calculator.result.method", {
-        spec: result.networkType === "NR" ? NR_SPEC : LTE_SPEC,
-      })
+  // The spec citation sits on the bands card it cites, once there is a result.
+  const specTag = result
+    ? {
+        text: result.networkType === "NR" ? NR_SPEC : LTE_SPEC,
+        title: t("cell_scanner.calculator.result.method", {
+          spec: result.networkType === "NR" ? NR_SPEC : LTE_SPEC,
+        }),
+      }
     : null;
 
   return (
@@ -236,178 +211,152 @@ const FrequencyCalculator = () => {
             </div>
           </div>
 
-          <div className={HERO_SPLIT}>
-            <CalcReadout
-              state={readout}
-              idleTitle={t("cell_scanner.calculator.readout.idle_title")}
-              idleBody={t("cell_scanner.calculator.readout.idle_body")}
-              failedTitle={t("cell_scanner.calculator.readout.failed_title")}
-              failedBody={t("cell_scanner.calculator.readout.failed_body")}
-            />
-
+          <div className={CALC_SPLIT}>
             <div className={FORM.ROOT}>
               <Tabs
                 value={mode}
                 onValueChange={(value) => handleModeChange(value as CalcMode)}
               >
-                <TabsList className={FORM.TABS}>
-                  <TabsTrigger value="auto" className={FORM.TAB}>
-                    {t("cell_scanner.calculator.form.mode_auto")}
-                  </TabsTrigger>
-                  <TabsTrigger value="lte" className={FORM.TAB}>
-                    {t("cell_scanner.calculator.form.mode_lte")}
-                  </TabsTrigger>
-                  <TabsTrigger value="nr" className={FORM.TAB}>
-                    {t("cell_scanner.calculator.form.mode_nr")}
-                  </TabsTrigger>
-                </TabsList>
+                <div className={FORM.TOP}>
+                  <Label htmlFor="earfcn" className={FORM.LABEL}>
+                    {t(MODE_LABEL_KEY[mode])}
+                  </Label>
+                  <TabsList className={FORM.TABS}>
+                    <TabsTrigger value="auto" className={FORM.TAB}>
+                      {t("cell_scanner.calculator.form.mode_auto")}
+                    </TabsTrigger>
+                    <TabsTrigger value="lte" className={FORM.TAB}>
+                      {t("cell_scanner.calculator.form.mode_lte")}
+                    </TabsTrigger>
+                    <TabsTrigger value="nr" className={FORM.TAB}>
+                      {t("cell_scanner.calculator.form.mode_nr")}
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
               </Tabs>
 
-              <div className={FORM.FIELD}>
-                <Label htmlFor="earfcn">{t(MODE_LABEL_KEY[mode])}</Label>
-                <div className={FORM.ROW}>
-                  <Input
-                    id="earfcn"
-                    type="number"
-                    inputMode="numeric"
-                    className={FORM.INPUT}
-                    placeholder={t("cell_scanner.calculator.form.placeholder")}
-                    value={channel}
-                    onChange={(e) => handleChannelChange(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") run(channel, mode, true);
-                    }}
-                    aria-invalid={error ? true : undefined}
-                    aria-describedby={error ? "earfcn-error" : undefined}
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => run(channel, mode, true)}
-                    className={PILL_ACTION}
-                  >
-                    {t("cell_scanner.calculator.form.submit")}
-                  </Button>
-                </div>
-              </div>
-
-              {errorText ? (
-                <p id="earfcn-error" role="alert" className={FORM.ERROR}>
-                  <MaterialSymbol
-                    name="error"
-                    size={18}
-                    filled
-                    className="mt-px flex-none"
-                  />
-                  {errorText}
-                </p>
-              ) : null}
-
-              {/*
-               * The quiet sentence and the error are ONE SLOT, never both. Both
-               * failure codes that can reach this column already end with the
-               * recovery ("Pick LTE or NR to calculate it anyway"), so leaving
-               * the hint up beneath a red strip prints the same advice twice in
-               * two different voices and makes the reader check whether they
-               * disagree. The error is the more specific of the two, so it wins
-               * and the hint stands down until it clears.
-               */}
-              {errorText || !noteText ? null : (
-                <div className={FORM.NOTE}>
-                  <MaterialSymbol
-                    name="info"
-                    size={18}
-                    className="text-on-surface-variant flex-none"
-                  />
-                  <p className={FORM.NOTE_TEXT}>{noteText}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </Card>
-      </motion.div>
-
-      {/* ── The matching bands ───────────────────────────────────────────── */}
-      <motion.div variants={staggerItem}>
-        <Card className={RESULTS_CARD}>
-          <div className={SECTION_HEAD.ROOT}>
-            <div className={SECTION_HEAD.TITLES}>
-              <h2 className={SECTION_HEAD.TITLE}>
-                {t("cell_scanner.calculator.result.bands_title")}
-              </h2>
-              <p className={SECTION_HEAD.DESC}>
-                {t("cell_scanner.calculator.result.bands_description")}
-              </p>
-            </div>
-          </div>
-
-          {result ? (
-            <BandTiles result={result} />
-          ) : (
-            <ScanEmptyState
-              title={t(
-                error
-                  ? "cell_scanner.calculator.result.bands_failed_title"
-                  : "cell_scanner.calculator.result.bands_empty_title",
-              )}
-              body={t(
-                error
-                  ? "cell_scanner.calculator.result.bands_failed_body"
-                  : "cell_scanner.calculator.result.bands_empty_body",
-              )}
-            />
-          )}
-        </Card>
-      </motion.div>
-
-      {/* ── The history ──────────────────────────────────────────────────── */}
-      <motion.div variants={staggerItem}>
-        <Card className={RESULTS_CARD}>
-          {/*
-           * The Clear action sits in the section header's META slot, not inside
-           * a `CardHeader`. The canon's CardHeader is plain title + description:
-           * an action nested in it competes with the title for the same reading
-           * position and, when the row wraps, lands under the description as if
-           * it belonged to it.
-           */}
-          <div className={SECTION_HEAD.ROOT}>
-            <div className={SECTION_HEAD.TITLES}>
-              <h2 className={SECTION_HEAD.TITLE}>
-                {t("cell_scanner.calculator.history.title")}
-              </h2>
-              <p className={SECTION_HEAD.DESC}>
-                {t("cell_scanner.calculator.history.description")}
-              </p>
-            </div>
-            {history.length > 0 ? (
-              <div className={SECTION_HEAD.META}>
+              <div className={FORM.ROW}>
+                <Input
+                  id="earfcn"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="off"
+                  className={FORM.INPUT}
+                  placeholder={t("cell_scanner.calculator.form.placeholder")}
+                  value={channel}
+                  onChange={(e) => handleChannelChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") run(channel, mode, true);
+                  }}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? RAIL_ID : undefined}
+                />
                 <Button
                   type="button"
-                  variant="tonal-destructive"
-                  className={PILL_QUIET}
-                  onClick={() => setHistory([])}
+                  onClick={() => run(channel, mode, true)}
+                  className={PILL_ACTION}
                 >
-                  <MaterialSymbol name="delete" size={16} />
-                  {t("cell_scanner.calculator.history.clear")}
+                  {t("cell_scanner.calculator.form.submit")}
                 </Button>
               </div>
-            ) : null}
-          </div>
+            </div>
 
-          {history.length === 0 ? (
-            <ScanEmptyState
-              title={t("cell_scanner.calculator.history.empty_title")}
-              body={t("cell_scanner.calculator.history.empty_body")}
+            <CalcReadout
+              id={RAIL_ID}
+              state={readout}
+              idleTitle={t("cell_scanner.calculator.readout.idle_title")}
+              idleBody={t("cell_scanner.calculator.readout.idle_body")}
+              failedTitle={t("cell_scanner.calculator.readout.failed_title")}
+              failedBody={errorText ?? t("cell_scanner.calculator.readout.failed_body")}
             />
-          ) : (
-            <HistoryList
-              history={history}
-              onDelete={(id) =>
-                setHistory((prev) => prev.filter((entry) => entry.id !== id))
-              }
-            />
-          )}
+          </div>
         </Card>
       </motion.div>
+
+      {/* ── Bands and history, paired on a wide screen ──────────────────── */}
+      <div className="grid grid-cols-1 gap-5 @4xl/main:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl/main:items-stretch">
+        <motion.div variants={staggerItem} className="flex">
+          <Card className={`${RESULTS_CARD} h-full min-w-0 flex-1`}>
+            <div className={SECTION_HEAD.ROOT}>
+              <div className={SECTION_HEAD.TITLES}>
+                <h2 className={SECTION_HEAD.TITLE}>
+                  {t("cell_scanner.calculator.result.bands_title")}
+                </h2>
+                <p className={SECTION_HEAD.DESC}>
+                  {t("cell_scanner.calculator.result.bands_description")}
+                </p>
+              </div>
+              {specTag ? (
+                <div className={SECTION_HEAD.META}>
+                  <Tag className="font-mono text-[11.5px]" title={specTag.title}>
+                    {specTag.text}
+                  </Tag>
+                </div>
+              ) : null}
+            </div>
+
+            {result ? (
+              <BandTiles result={result} />
+            ) : (
+              <div className={BAND_TILE.WELL}>
+                <ScanEmptyState
+                  title={t("cell_scanner.calculator.result.bands_empty_title")}
+                  body={t("cell_scanner.calculator.result.bands_empty_body")}
+                />
+              </div>
+            )}
+          </Card>
+        </motion.div>
+
+        {/* ── The history ────────────────────────────────────────────────── */}
+        <motion.div variants={staggerItem} className="flex">
+          <Card className={`${RESULTS_CARD} h-full min-w-0 flex-1`}>
+            <div className={SECTION_HEAD.ROOT}>
+              <div className={SECTION_HEAD.TITLES}>
+                <h2 className={SECTION_HEAD.TITLE}>
+                  {t("cell_scanner.calculator.history.title")}
+                </h2>
+                <p className={SECTION_HEAD.DESC}>
+                  {t("cell_scanner.calculator.history.description")}
+                </p>
+              </div>
+              {history.length > 0 ? (
+                <div className={SECTION_HEAD.META}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className={HISTORY_CLEAR}
+                    onClick={() => setHistory([])}
+                  >
+                    <MaterialSymbol name="delete" size={16} />
+                    {t("cell_scanner.calculator.history.clear")}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+
+            {/* `BAND_TILE.WELL` is the one inner-container shape both cards share. */}
+            <div className={BAND_TILE.WELL}>
+              {history.length === 0 ? (
+                <ScanEmptyState
+                  title={t("cell_scanner.calculator.history.empty_title")}
+                  body={t("cell_scanner.calculator.history.empty_body")}
+                />
+              ) : (
+                <HistoryList
+                  history={history}
+                  onRecall={handleRecall}
+                  onDelete={(id) =>
+                    setHistory((prev) => prev.filter((entry) => entry.id !== id))
+                  }
+                />
+              )}
+            </div>
+          </Card>
+        </motion.div>
+      </div>
     </>
   );
 };

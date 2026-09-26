@@ -337,3 +337,54 @@ export function toHistoryEntry(
     id,
   };
 }
+
+// --- Band table derived facts ----------------------------------------------
+
+/** Where a channel sits inside a band's channel range, clamped to 0..1. */
+export function positionInBand(channel: number, range: [number, number]): number {
+  const [low, high] = range;
+  if (high === low) return 0;
+  return Math.min(1, Math.max(0, (channel - low) / (high - low)));
+}
+
+/**
+ * The band's uplink channel range, shifted by the DL-to-UL offset (TS 36.101 §5.7.3).
+ * `null` for SDL (no uplink) and TDD (offset 0: UL shares the DL numbering).
+ */
+export function uplinkChannelRange(
+  band: MatchingBand,
+  channel: number,
+): [number, number] | null {
+  if (band.ulChannel === null) return null;
+  const offset = band.ulChannel - channel;
+  if (offset === 0) return null;
+  const [low, high] = band.channelRange;
+  return [low + offset, high + offset];
+}
+
+// --- History row relative time --------------------------------------------
+
+/** A timestamp's age, bucketed here and worded by `history-list.tsx` via i18n plurals. */
+export type RelativeTimeBucket =
+  | { unit: "now" }
+  | { unit: "yesterday" }
+  | { unit: "minutes" | "hours" | "days"; count: number };
+
+export function relativeTimeBucket(
+  timestamp: string,
+  now: number = Date.now(),
+): RelativeTimeBucket {
+  const then = Date.parse(timestamp);
+  if (Number.isNaN(then)) return { unit: "now" };
+
+  const minutes = Math.round((now - then) / 60_000);
+  if (minutes < 1) return { unit: "now" };
+  if (minutes < 60) return { unit: "minutes", count: minutes };
+
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return { unit: "hours", count: hours };
+
+  const days = Math.round(hours / 24);
+  if (days === 1) return { unit: "yesterday" };
+  return { unit: "days", count: days };
+}

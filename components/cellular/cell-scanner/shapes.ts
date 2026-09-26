@@ -572,17 +572,8 @@ export const VERDICT_TONE: Record<VerdictTone, string> = {
 // -----------------------------------------------------------------------------
 // Machine voice
 // -----------------------------------------------------------------------------
-// The Machine-Voice Rule applied VALUE BY VALUE, as two classes rather than a
-// habit. The test is whether a figure changes while the reader watches without
-// them acting on it: a channel number and a band's fixed edges hold still until
-// something reconfigures them (mono), while anything derived from what was just
-// typed or last measured is a reading (interface font, tabular figures).
-//
-// These are module-level because THREE surfaces on this prefix need them and
-// only one of the three is a table. `TABLE.IDENT` / `TABLE.FIGURE` now alias
-// these rather than restating the strings — the calculator had drifted to five
-// different mono treatments precisely because the contract's copy lived inside
-// a constant named for a component it does not use.
+// Pre-amendment mono split, kept for the scan tables until they migrate (DESIGN.md > Migration Deltas);
+// the calculator uses its own CALC_IDENT under the quantity-vs-opaque-string test.
 
 /** Identifiers: band, EARFCN, PCI, Cell ID, TAC, channel and frequency ranges. */
 export const IDENT = "font-mono text-[13px] tabular-nums";
@@ -924,24 +915,11 @@ export const SKELETON_SHAPE = {
 // -----------------------------------------------------------------------------
 // The frequency calculator
 // -----------------------------------------------------------------------------
-// THE ANCHOR GEOMETRY WITHOUT THE RUN VOCABULARY.
-//
-// This surface used to argue, in its own file header, that it should have no
-// 40px radius anywhere: "a hero radius with no hero behind it is a promise of
-// importance the page cannot keep." The premise was right and the conclusion
-// was wrong. What a hero promises is not that something RAN — it is that one
-// object on the page is the thing you came for and everything else reports on
-// it. That is exactly true here: the reader came to turn a channel number into
-// a frequency, and the bands and the history are both readings of that answer.
-// Two peer cards said the converter and its own history were equally important,
-// which is the one thing this page is certain they are not.
-//
-// So the calculator takes `RUN_HERO`'s geometry and none of its semantics. It
-// has no posture (nothing runs), no cost statement (nothing is spent), no
-// elapsed clock and no spinner. The left rail holds a resolved frequency where
-// the scanner holds a posture; the right column holds the form. Reusing the
-// value rather than restating it is what keeps the two anchors one object when
-// the geometry is retuned — and `HERO_SPLIT` is shared outright.
+// The anchor geometry without the run vocabulary: no posture, clock, spinner or cost — nothing runs here.
+// Controls sit left and the answer rail right (`CALC_SPLIT`); readings are Rethink + tabular-nums.
+
+/** Channel numbers and bands are quantities you read, so interface face, not the scanner's mono `IDENT`. */
+const CALC_IDENT = "text-[13px] tabular-nums";
 
 /**
  * `HERO_SHELL` PLUS THE GAP, rather than `RUN_HERO`, which it used to alias.
@@ -955,27 +933,35 @@ export const SKELETON_SHAPE = {
  */
 export const CALC_HERO = `${HERO_SHELL} gap-5`;
 
-/**
- * The readout rail — the answer, at the size the answer deserves.
- *
- * `FIGURE` is 44px rather than `POSTURE.CLOCK`'s 48: a frequency runs to seven
- * characters ("3489.42") where an elapsed clock runs to four ("1:23"), and at
- * 48px the longest value collides with the 17rem rail on the narrow view the
- * modem serves to a phone. Slot-derived, per the Numeric rule.
- *
- * The unit is a SEPARATE node at label size. Baking "MHz" into the 44px figure
- * would make the unit shout as loudly as the number and cost three characters
- * of the width the number actually needs.
- */
+/** Controls first, answer second; calculator-only so a retune of `HERO_SPLIT` never moves it. */
+export const CALC_SPLIT =
+  "grid grid-cols-1 gap-4 @3xl/section:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] @3xl/section:items-stretch";
+
+/** The answer rail: a horizontal row whose min height matches the sweep's `RAIL.ROOT`. */
+export const CALC_RAIL = {
+  ROOT: "flex min-h-[6.5rem] min-w-0 flex-wrap items-center gap-x-4 gap-y-3 rounded-tile bg-surface-container px-5 py-4",
+  /** 56px; the glyph is 28px at the call site. */
+  DISC: "grid size-14 flex-none place-items-center rounded-pill",
+  /** The swapped value, then the unanimated channel caption under it. */
+  FIGURE: "flex min-w-0 flex-col gap-1.5",
+  FIGURE_VALUE: "flex items-baseline gap-1.5",
+  /** Pinned to the rail's right edge, mirroring the figure block on the left. */
+  IDENTITY: "ms-auto flex flex-col items-end gap-1.5 text-right",
+  IDENTITY_ROW: "flex flex-wrap items-center justify-end gap-2",
+  /** The idle/failed message column; `flex-1` claims the row's slack. */
+  MESSAGE: "flex min-w-[12rem] flex-1 flex-col gap-0.5",
+} as const;
+
+/** The rail's type. 40px figure: the widest value ("3489.42") plus unit still fits beside the identity block. */
 export const READOUT = {
-  FIGURE: "text-[44px] font-semibold leading-none tabular-nums tracking-tight",
+  FIGURE: "text-[40px] font-semibold leading-none tabular-nums tracking-tight",
   UNIT: "text-sm font-semibold text-on-surface-variant",
-  /** The channel that produced the figure. An identifier, so machine voice. */
-  CHANNEL: `${IDENT} text-on-surface-variant`,
-  /** The band the figure belongs to, when exactly one band claims it. */
-  BAND: "font-mono text-sm font-semibold tabular-nums",
-  /** Pre-calculation copy, and the "several bands" line. */
-  CAPTION: "max-w-[16rem] text-xs/relaxed text-on-surface-variant text-pretty",
+  CHANNEL: `${CALC_IDENT} text-on-surface-variant`,
+  BAND: "text-sm font-semibold tabular-nums",
+  /** The band's name, or the "several bands" line. */
+  CAPTION: "text-xs text-on-surface-variant",
+  TITLE: "text-sm font-semibold",
+  BODY: "text-xs/relaxed text-on-surface-variant text-pretty",
 } as const;
 
 /**
@@ -998,106 +984,67 @@ export const READOUT_DISC: Record<"idle" | "lte" | "nr" | "failed", string> = {
   failed: "bg-tone-destructive-1 text-destructive-on-surface",
 };
 
-/**
- * The form column of the anchor.
- *
- * `NOTE` is the quiet sentence under the controls, and it is now a SPEC CITATION
- * ONLY — it names the standard a computed frequency came from, and it renders
- * only once there is a result to cite. The pre-calculation hint that used to
- * occupy the same slot ("Auto picks LTE or NR from the number's range") went
- * away with the scanner's cost statement, in the same 2026-08-14 pass and for
- * the same reason: the three mode tabs sitting directly above it already say
- * that Auto is one of three choices.
- */
+/** The form column: a label/mode row over an input/button row, centred in the rail-height cell. */
 export const FORM = {
-  /**
-   * `h-full` so the column fills the rail's 13rem beside it, which is what lets
-   * `NOTE` sit on the bottom edge instead of leaving a void under the field.
-   */
-  ROOT: "flex h-full flex-col gap-4",
-  TABS: "grid h-[2.625rem] w-full grid-cols-3 rounded-pill bg-surface-container p-1",
-  TAB: "rounded-pill",
-  FIELD: "flex flex-col gap-2",
-  ROW: "flex flex-wrap gap-2",
-  /**
-   * The VALUE is an identifier and takes machine voice; the PLACEHOLDER is
-   * human-authored instruction and does not. `placeholder:font-sans` is the
-   * whole of that distinction — without it the field asks "Enter channel
-   * number" in the modem's voice, which the Machine-Voice Rule reserves for
-   * things the device actually said.
-   */
-  INPUT: `h-[2.625rem] min-w-0 flex-1 rounded-field ${IDENT} placeholder:font-sans placeholder:text-sm`,
-  /** `mt-auto` — see `ROOT`. */
-  NOTE: "mt-auto flex items-start gap-2.5 rounded-field bg-surface-container px-4 py-3",
-  NOTE_TEXT: "text-xs/relaxed text-on-surface-variant text-pretty",
-  ERROR:
-    "flex items-start gap-2.5 rounded-field bg-destructive-container px-4 py-3 text-sm/relaxed text-on-destructive-container text-pretty",
+  ROOT: "flex h-full flex-col justify-center gap-3",
+  TOP: "flex flex-wrap items-center justify-between gap-2",
+  LABEL: "text-sm font-medium",
+  /** Fixed 13.5rem so three one-word choices read as one control, not three stretched buttons. */
+  TABS: "grid h-[2.125rem] w-[13.5rem] grid-cols-3 rounded-pill bg-surface-container p-1",
+  TAB: "rounded-pill text-xs",
+  ROW: "flex gap-2",
+  INPUT: `h-[2.625rem] min-w-0 flex-1 rounded-field ${CALC_IDENT} placeholder:text-sm`,
 } as const;
 
 /**
- * A matching band, as a tile in a grid.
- *
- * The incumbent stacked these full-width, one per row, so four matching NR
- * bands pushed the method note two screens down and the reader compared them by
- * scrolling. They are peers answering the same question, so they belong side by
- * side — and the grid is the same 1 / 2 / 3 progression `SUMMARY.GRID` uses,
- * against `/section` because `RESULTS_CARD` declares it.
- *
- * `LIST` keeps the label column narrower than the scanner's 9.5rem: these keys
- * are short ("Duplex", "DL frequency") and the values carry ranges that wrap
- * badly, so the value column gets the difference.
+ * Matching bands: ONE well (the card's one inner container), a hairline section per band,
+ * each a Downlink/Uplink table. `@container/band` lets a phone-width section drop the note column.
  */
 export const BAND_TILE = {
-  /**
-   * Declares its OWN container. `LIST` below keys off the tile rather than off
-   * the card, because the tile's width is a function of how many bands matched
-   * — three tiles share the row at ~23rem each, one tile takes the whole 70rem.
-   * A query against `/section` cannot tell those apart: the card is the same
-   * width either way, so the lone tile would inherit a layout tuned for a third
-   * of the row and leave the other two thirds empty.
-   */
-  ROOT: "@container/tile flex min-w-0 flex-col gap-3 rounded-tile bg-surface-container p-5",
+  /** `flex-1` so the well grows with the paired card's equal-height row. */
+  WELL: "flex min-w-0 flex-1 flex-col rounded-tile bg-surface-container",
   HEAD: "flex flex-wrap items-baseline gap-x-2 gap-y-1",
-  BAND: "font-mono text-sm font-semibold tabular-nums",
+  BAND: "text-sm font-semibold tabular-nums",
   NAME: "min-w-0 text-sm text-on-surface-variant",
-  /**
-   * `auto-fit`, not a fixed 1 / 2 / 3 progression, because the COUNT is data.
-   *
-   * LTE EARFCN ranges are disjoint, so an LTE answer is always exactly one band
-   * — under a fixed three-column grid that tile sits in the first third with
-   * two empty columns beside it, which reads as two tiles that failed to load.
-   * NR ranges overlap and routinely return two or three. `auto-fit` collapses
-   * the empty tracks, so one band fills the row and three share it, with no
-   * count-aware branch in the component.
-   */
-  GRID: "grid grid-cols-[repeat(auto-fit,minmax(17rem,1fr))] gap-3",
-  /**
-   * One key/value column at phone width, one PAIR of them once the tile is wide
-   * enough to carry both. The four-column step is what a lone matching band
-   * gets: seven rows down the left half of a 70rem tile is a column of facts
-   * with a column of nothing beside it.
-   */
-  LIST: "grid grid-cols-1 gap-x-4 gap-y-1 text-[13px]/5 @xs/tile:grid-cols-[7.5rem_minmax(0,1fr)] @xs/tile:gap-y-2 @3xl/tile:grid-cols-[7.5rem_minmax(0,1fr)_7.5rem_minmax(0,1fr)] @3xl/tile:gap-x-8",
-  KEY: "text-on-surface-variant",
-  VALUE: "min-w-0 font-medium",
+  DUPLEX: "ms-auto",
+  SECTION: "@container/band flex flex-col gap-3 border-t border-border p-5 first:border-t-0",
+  TABLE: "w-full border-collapse text-[13px]",
+  /** Fixed key column so Downlink/Uplink start at the same x band to band. */
+  TH: "w-[5.5rem] @md/band:w-[7.5rem] px-0 pt-0 pb-2 pr-3 text-left align-bottom text-xs font-medium whitespace-nowrap text-on-surface-variant",
+  TH_DIRECTION: "pr-3 pb-2 text-left align-bottom text-xs font-medium whitespace-nowrap text-on-surface-variant",
+  TD: "border-t border-border py-1.5 pr-3 align-middle leading-5",
+  TD_KEY: "text-on-surface-variant",
+  TD_VALUE: `${FIGURE} font-medium @md/band:whitespace-nowrap`,
+  /** The quiet "of low – high" half of a channel cell. */
+  OF_RANGE: "block font-normal text-on-surface-variant @md/band:inline",
+  TD_NOTE: "border-t border-border py-1.5 align-top text-xs/relaxed text-pretty text-on-surface-variant",
+  /** TDD/SDL note: a spanning third column from `@md/band` up, a closing full-width row below it. */
+  WIDE_ONLY: "hidden @md/band:table-cell",
+  NOTE_ROW: "@md/band:hidden",
+  POSITION_TRACK: "relative h-1.5 max-w-48 rounded-pill bg-surface-container-high",
+  POSITION_DOT: "absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface-container",
 } as const;
 
-/**
- * A history row.
- *
- * `rounded-tile` on `surface-container`, matching a band tile — the two lists
- * are the same kind of object (a past answer, a possible answer) and reading
- * one should teach the other.
- */
+/** Identity ink for the DL frequency cell and position dot; keyed so a missing radio fails the build. */
+export const BAND_HIT_INK: Record<"lte" | "nr", { text: string; bg: string }> = {
+  lte: { text: "text-lte-on-surface", bg: "bg-lte-on-surface" },
+  nr: { text: "text-primary-on-surface", bg: "bg-primary-on-surface" },
+};
+
+/** A history row: recall and delete are sibling buttons in one `<li>`; `RECALL` is a 2x2 receipt grid. */
 export const HISTORY_ROW = {
-  ROOT: "flex items-start justify-between gap-3 rounded-tile bg-surface-container p-4",
-  MAIN: "flex min-w-0 flex-col gap-1",
-  HEAD: "flex flex-wrap items-center gap-2",
-  CHANNEL: `${IDENT} font-semibold`,
-  FIGURE: `${FIGURE} text-sm font-medium text-on-surface-variant`,
-  BANDS: "text-[13px]/5 text-pretty",
-  BANDS_KEY: "text-on-surface-variant",
-  BANDS_VALUE: IDENT,
-  TIME: "text-xs tabular-nums text-on-surface-variant",
-  DELETE: "size-9 flex-none rounded-pill text-on-surface-variant",
+  LIST: "flex flex-col divide-y divide-border",
+  ROOT: "group/row flex items-center",
+  RECALL: "grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-0.5 rounded-tile py-2.5 pr-1 pl-4 text-left hover:bg-surface-container-high",
+  LEAD: "flex min-w-0 items-center gap-2",
+  CHANNEL: `${CALC_IDENT} font-semibold`,
+  FIGURE: `${FIGURE} text-right text-[13px] font-medium text-on-surface-variant`,
+  BANDS: "min-w-0 truncate text-xs text-on-surface-variant",
+  TIME: "text-right text-xs tabular-nums whitespace-nowrap text-on-surface-variant",
+  /** Revealed on hover/focus, always shown under a coarse pointer, which has no hover. */
+  DELETE: "mx-1 size-8 flex-none rounded-pill text-on-surface-variant opacity-0 transition-opacity duration-[var(--duration-quick)] ease-out group-hover/row:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100",
 } as const;
+
+/** Clearing local history is not a modem action: a quiet ghost pill, destructive only on hover. */
+export const HISTORY_CLEAR =
+  "text-on-surface-variant hover:bg-destructive-container hover:text-on-destructive-container";
