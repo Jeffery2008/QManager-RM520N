@@ -36,8 +36,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SEGMENTED, SegmentedField } from "@/components/ui/segmented-field";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { Tag } from "@/components/ui/tag";
 import { staggerRowItem, staggerRows } from "@/lib/motion";
 import type { CarrierComponent } from "@/types/modem-status";
@@ -132,16 +132,16 @@ const STORAGE_KEY_LTE_SIMPLE_MODE = "qmanager_tower_lte_simple_mode";
 const CONTROL_ROW =
   "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-field bg-surface-container px-4 py-3";
 
-/**
- * The 44px coarse-pointer target for a `Switch`.
- *
- * The primitive paints at 18x32px, which is well under this project's floor. An
- * overlay reaches the target without adding a layout box that would push the
- * row's label off its baseline — the same construction `HERO_REFRESH_BUTTON`
- * uses, restated because it is a different element with a different paint size.
- */
-const SWITCH_TARGET =
-  "relative before:absolute before:-inset-x-3 before:-inset-y-3.5 before:content-['']";
+/** The SegmentedField check glyph, from this route's icon set. */
+const renderCheckGlyph = (className: string) => (
+  <MaterialSymbol
+    name="check"
+    filled
+    size={SEGMENTED.GLYPH}
+    aria-hidden="true"
+    className={className}
+  />
+);
 
 /**
  * A slot's clear affordance. 20px glyph, `before:` overlay to 44px.
@@ -719,7 +719,7 @@ export default function LteTowerCard({
           {/* --- Simple Mode ------------------------------------------------- */}
           <div className="flex flex-col gap-1.5">
             <div className={CONTROL_ROW}>
-              <Label htmlFor="lte-simple-mode" className="min-w-0 gap-1.5">
+              <Label id="lte-simple-mode-label" className="min-w-0 gap-1.5">
                 <MaterialSymbol
                   name="tune"
                   size={18}
@@ -733,22 +733,30 @@ export default function LteTowerCard({
                     key to be missing). A defaultValue is how that hides. */}
                 {t("tower_locking.card.simple_mode")}
               </Label>
-              <Switch
-                id="lte-simple-mode"
-                className={SWITCH_TARGET}
-                checked={simpleActive}
-                onCheckedChange={handleSimpleModeToggle}
-                disabled={!hasOptions || isLocking}
-                /* The sentence under this row is the ONLY thing that says why
-                   the switch is off and stuck. It sat there unlinked, so a
-                   screen-reader user met a forced-off control with no reason
-                   attached — this surface had no `aria-describedby` at all. */
+              {/* The group carries the note's link: SegmentedField takes no
+                  `aria-describedby`, and the note is the only reason given. */}
+              <div
+                role="group"
+                aria-labelledby="lte-simple-mode-label"
                 {...(!hasOptions
                   ? { "aria-describedby": "lte-simple-mode-note" }
                   : null)}
-              />
+              >
+                <SegmentedField
+                  value={simpleActive ? "on" : "off"}
+                  onValueChange={(next) => handleSimpleModeToggle(next === "on")}
+                  options={[
+                    { value: "on", label: t("state.on", { ns: "common" }) },
+                    { value: "off", label: t("state.off", { ns: "common" }) },
+                  ]}
+                  ariaLabel={t("tower_locking.card.simple_mode")}
+                  disabled={!hasOptions || isLocking}
+                  breakpoint="never"
+                  glyph={renderCheckGlyph}
+                />
+              </div>
             </div>
-            {/* Not decoration: with the switch forced off and disabled, this is
+            {/* Not decoration: with the control forced off and disabled, this is
                 the only thing that says WHY. */}
             {!hasOptions ? (
               <p

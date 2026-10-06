@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useCallback, useId, useMemo, useState } from "react";
+import { CheckIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -15,8 +16,12 @@ import {
 } from "@/components/ui/card";
 import { CardFoot } from "@/components/ui/card-foot";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
+import {
+  SegmentedField,
+  SEGMENTED,
+  type SegmentedOption,
+} from "@/components/ui/segmented-field";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { MutationResult } from "@/types/mutation-result";
 
@@ -75,6 +80,13 @@ import {
 // =============================================================================
 
 const K = "ttlMtu";
+
+type OnOff = "on" | "off";
+
+/** The lucide check that SegmentedField reserves on every segment. */
+const renderCheckGlyph = (className: string) => (
+  <CheckIcon size={SEGMENTED.GLYPH} className={className} aria-hidden="true" />
+);
 
 /**
  * The interfaces the write lands on.
@@ -160,8 +172,10 @@ export function MtuSettingsCard({
   const { saved, markSaved } = useSaveFlash();
 
   const formId = useId();
-  const switchId = useId();
-  const switchLabelId = useId();
+  const onOffOptions: SegmentedOption<OnOff>[] = [
+    { value: "on", label: t(`${K}.values.on`) },
+    { value: "off", label: t(`${K}.values.off`) },
+  ];
   const mtuId = useId();
   const mtuHintId = useId();
 
@@ -317,7 +331,7 @@ export function MtuSettingsCard({
             <div className={ROW.ROOT}>
               <div className={cn(ROW.TEXT, unread && ROW.HELD)}>
                 <span className={ROW.LABEL_LINE}>
-                  <span id={switchLabelId} className={ROW.LABEL}>
+                  <span className={ROW.LABEL}>
                     {t(`${K}.rows.mtu_toggle.label`)}
                   </span>
                   <DeltaChip
@@ -334,12 +348,14 @@ export function MtuSettingsCard({
                 </span>
               </div>
               <div className={ROW.CONTROL}>
-                <Switch
-                  id={switchId}
-                  aria-labelledby={switchLabelId}
-                  checked={draft.enabled}
-                  onCheckedChange={(next) => setField("enabled", next)}
+                <SegmentedField
+                  value={draft.enabled ? "on" : "off"}
+                  onValueChange={(next) => setField("enabled", next === "on")}
+                  options={onOffOptions}
+                  ariaLabel={t(`${K}.rows.mtu_toggle.label`)}
                   disabled={unread}
+                  breakpoint="never"
+                  glyph={renderCheckGlyph}
                 />
               </div>
             </div>
