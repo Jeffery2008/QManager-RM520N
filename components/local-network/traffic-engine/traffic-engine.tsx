@@ -38,7 +38,6 @@ import {
   CARD_PAIR_WIDE,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   TILE,
 } from "./shapes";
 import type { DpiEngineStatus, DpiMode } from "@/types/traffic-engine";
@@ -321,7 +320,7 @@ const TrafficEngine = () => {
                     type="button"
                     variant="tonal-neutral"
                     disabled={videoOptimizer.isUninstalling}
-                    className={PILL_ACTION}
+                    size="action"
                   >
                     {videoOptimizer.isUninstalling ? (
                       <Loader2Icon className="size-4 animate-spin" />

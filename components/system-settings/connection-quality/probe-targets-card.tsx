@@ -55,7 +55,6 @@ import {
   LEG,
   NOTE,
   NOTICE,
-  PILL_ACTION,
   PILL_GLYPH,
   ROW_GROUP,
   SKELETON,
@@ -398,7 +397,7 @@ function ProbeChain({ profile, targets }: ProbeChainProps): React.JSX.Element {
         <Button
           type="button"
           variant="tonal-neutral"
-          className={PILL_ACTION}
+          size="action"
           onClick={restoreDefaults}
         >
           <RotateCcwIcon className={PILL_GLYPH} aria-hidden="true" />
@@ -467,6 +466,7 @@ function ProbeChain({ profile, targets }: ProbeChainProps): React.JSX.Element {
               <div className={LEG.CONTROL}>
                 <Input
                   id={fieldId}
+                  host="container"
                   className={FIELD_MONO}
                   value={values[slot]}
                   onChange={(event) => setSlot(slot, event.target.value)}
@@ -505,7 +505,7 @@ function ProbeChain({ profile, targets }: ProbeChainProps): React.JSX.Element {
             saved={saved}
             label={t(`${K}.save`)}
             disabled={!canSave}
-            className={PILL_ACTION}
+            size="action"
           />
         }
       />

@@ -12,7 +12,7 @@ import { staggerItem } from "@/lib/motion";
 import packageJson from "@/package.json";
 import QManagerMark from "@/public/qmanager-mark.svg";
 
-import { PILL_ACTION, PILL_GLYPH, WIDE } from "./shapes";
+import { PILL_GLYPH, WIDE } from "./shapes";
 
 const K = "aboutDevice";
 
@@ -71,7 +71,7 @@ export function QManagerBand({
           </p>
 
           <div className={WIDE.ACTIONS}>
-            <Button asChild variant="tonal" className={PILL_ACTION}>
+            <Button asChild variant="tonal" size="action">
               <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
                 <GitHubIcon className={PILL_GLYPH} />
                 {t(`${K}.qmanager.repository`)}
@@ -82,7 +82,7 @@ export function QManagerBand({
               </a>
             </Button>
 
-            <Button asChild variant="outline" className={PILL_ACTION}>
+            <Button asChild variant="outline" size="action">
               <a href={RELEASES_URL} target="_blank" rel="noopener noreferrer">
                 <FileTextIcon className={PILL_GLYPH} aria-hidden="true" />
                 {t(`${K}.qmanager.release_notes`)}
@@ -96,7 +96,7 @@ export function QManagerBand({
             <Button
               type="button"
               variant="outline"
-              className={PILL_ACTION}
+              size="action"
               onClick={onSupport}
             >
               <HeartIcon

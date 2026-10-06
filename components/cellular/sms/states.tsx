@@ -22,7 +22,6 @@ import {
   INBOX_PAD,
   INBOX_TITLE,
   PAGINATION_SKELETON,
-  PILL_ACTION,
   ROWS_PER_PAGE,
   SKELETON_CHECKBOX,
   SKELETON_LINE,
@@ -212,7 +211,7 @@ export function InboxErrorNotice({
           variant="destructive"
           onClick={onRetry}
           disabled={isRetrying}
-          className={PILL_ACTION}
+          size="action"
         >
           <MaterialSymbol
             name={isRetrying ? "progress_activity" : "refresh"}
@@ -288,7 +287,7 @@ export function InboxEmptyState({ isSaving, onCompose }: InboxEmptyStateProps) {
           {t("sms.inbox.empty_state.description")}
         </p>
       </div>
-      <Button onClick={onCompose} disabled={isSaving} className={PILL_ACTION}>
+      <Button onClick={onCompose} disabled={isSaving} size="action">
         <MaterialSymbol name="edit" size={18} />
         {t("sms.inbox.buttons.new_message")}
       </Button>

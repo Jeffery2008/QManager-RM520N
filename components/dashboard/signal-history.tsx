@@ -331,7 +331,7 @@ export function SignalHistoryComponent() {
         </ToggleGroup>
         <Select value={signalType} onValueChange={setSignalType}>
           <SelectTrigger
-            className="flex w-32 rounded-pill **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[540px]/card:hidden"
+            className="flex w-32 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[540px]/card:hidden"
             size="sm"
             aria-label={t("signal_history.select_aria")}
           >

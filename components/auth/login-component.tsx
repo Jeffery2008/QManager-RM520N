@@ -342,7 +342,7 @@ export default function LoginComponent() {
               className={cn(
                 // Fill-only at rest: no border, no shadow. A 1px outline around
                 // a filled field is two containers describing one control.
-                "bg-surface-container dark:bg-surface-container rounded-field h-12 border-0 pr-12 pl-4 shadow-none",
+                "h-12 pr-12 pl-4",
                 "placeholder:text-on-surface-variant/75",
                 // Recipe 10: the ring arrives on `quick`, and is never animated
                 // away — focus leaving should feel like it already left.
@@ -373,7 +373,7 @@ export default function LoginComponent() {
               aria-label={
                 showPassword ? t("login.hide_password") : t("login.show_password")
               }
-              className="text-on-surface-variant hover:text-foreground absolute right-[7px] size-[34px] rounded-full"
+              className="text-on-surface-variant hover:text-foreground absolute right-[7px] size-[34px]"
             >
               <MaterialSymbol
                 name={showPassword ? "visibility_off" : "visibility"}
@@ -425,7 +425,7 @@ export default function LoginComponent() {
               // splash gives its CTA. What that argument actually rejected is
               // the BANNER System's 15px -- a different rule about a different
               // surface.
-              "rounded-pill grid h-12 w-full place-items-center",
+              "grid h-12 w-full place-items-center",
               EMPHASIS,
               // The locked state is a designed state, not a disabled one — the
               // default 50% disabled wash would make it look broken rather than

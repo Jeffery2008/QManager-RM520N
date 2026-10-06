@@ -43,7 +43,6 @@ import {
   LOCK_BADGE,
   NOTICE,
   NOTICE_TONE,
-  PILL_ACTION_PLAIN,
   PILL_QUIET,
   PILL_USE_CURRENT,
   SKELETON_SHAPE,
@@ -513,6 +512,7 @@ export function LteFreqCard({
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
+                    host={isOptional && !filled ? "surface" : "container"}
                     className={SLOT_INPUT}
                     placeholder={t(
                       "frequency_locking.slots.earfcn_placeholder",
@@ -600,7 +600,7 @@ export function LteFreqCard({
             <Button
               type="button"
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               onClick={() => setShowUnlockDialog(true)}
               disabled={isLocking || posture !== "locked"}
             >
@@ -618,7 +618,7 @@ export function LteFreqCard({
                 stagedChannels.length === 0 ||
                 (posture === "locked" && !hasChanges)
               }
-              className={PILL_ACTION_PLAIN}
+              size="action"
             />
           </div>
         </div>
@@ -640,14 +640,14 @@ export function LteFreqCard({
           <AlertDialogFooter>
             <AlertDialogCancel
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               disabled={isLocking}
             >
               {t("frequency_locking.dialog.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmLock}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             >
               {t("frequency_locking.dialog.confirm_lock")}
             </AlertDialogAction>
@@ -697,7 +697,7 @@ export function LteFreqCard({
           <AlertDialogFooter>
             <AlertDialogCancel
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               disabled={isLocking}
             >
               {t("frequency_locking.dialog.cancel")}
@@ -705,7 +705,7 @@ export function LteFreqCard({
             <AlertDialogAction
               variant="destructive"
               onClick={confirmLock}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             >
               {t("frequency_locking.dialog.unsupported_confirm")}
             </AlertDialogAction>
@@ -727,14 +727,14 @@ export function LteFreqCard({
           <AlertDialogFooter>
             <AlertDialogCancel
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               disabled={isLocking}
             >
               {t("frequency_locking.dialog.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmUnlock}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             >
               {t("frequency_locking.dialog.confirm_unlock")}
             </AlertDialogAction>

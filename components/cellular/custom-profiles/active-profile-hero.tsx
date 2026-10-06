@@ -39,7 +39,8 @@ import {
   HERO_TILE_VALUE_MONO,
   HERO_TOP,
   MACHINE_VALUE,
-  PILL_ACTION_SM,
+  INLINE_ACTION_SKELETON,
+  INLINE_ACTION_TYPE,
   PROFILE_STATUS_BADGE,
 } from "./shapes";
 
@@ -394,7 +395,7 @@ export function ActiveProfileHero({
               auto-reapplies it, so Edit is a modem mutation as well. */}
           <Button
             variant="ghost"
-            className={PILL_ACTION_SM}
+            className={INLINE_ACTION_TYPE}
             onClick={onEdit}
             disabled={busy}
           >
@@ -403,7 +404,7 @@ export function ActiveProfileHero({
           </Button>
           <Button
             variant="ghost"
-            className={PILL_ACTION_SM}
+            className={INLINE_ACTION_TYPE}
             onClick={onDeactivate}
             disabled={busy}
           >
@@ -448,7 +449,7 @@ export function ActiveProfileHero({
             onReapply ? (
               <Button
                 variant="tonal-neutral"
-                className={PILL_ACTION_SM}
+                className={INLINE_ACTION_TYPE}
                 onClick={onReapply}
                 disabled={busy}
               >
@@ -730,8 +731,8 @@ export function ActiveProfileHeroSkeleton() {
         </div>
         <div className="ms-auto flex flex-none items-center gap-2">
           <Skeleton className="h-5 w-20 rounded-pill" />
-          <Skeleton className={cn(PILL_ACTION_SM, "w-20")} />
-          <Skeleton className={cn(PILL_ACTION_SM, "w-28")} />
+          <Skeleton className={cn(INLINE_ACTION_SKELETON, "w-20")} />
+          <Skeleton className={cn(INLINE_ACTION_SKELETON, "w-28")} />
         </div>
       </div>
 

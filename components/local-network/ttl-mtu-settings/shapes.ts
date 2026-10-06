@@ -45,8 +45,8 @@
 //
 //   16px  card shell        -> `rounded-card` — both cards are PEERS
 //   12px  tile, row group   -> `rounded-tile`
-//   10px  row               -> `rounded-field`
-//   999px fields, chips     -> `rounded-pill`
+//   10px  row, fields       -> `rounded-field`
+//   999px chips             -> `rounded-pill`
 //
 // `rounded-hero` is "the ONE card that anchors a surface". The anchor here is
 // the band, so neither write card wears it. The retired cards wore the raw
@@ -88,15 +88,6 @@ export const PAGE_HEAD = {
   DESC: "text-on-surface-variant text-sm leading-relaxed text-pretty",
   ACTIONS: "flex flex-wrap items-center gap-2.5 @3xl/main:ml-auto",
 } as const;
-
-/**
- * The page-header action pill (Refresh).
- *
- * Restated per family, never imported across one — the same 42px pill the two
- * sibling headers use, and the same reason it is not shared.
- */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
 
 // -----------------------------------------------------------------------------
 // Band A — "In force on rmnet"
@@ -237,9 +228,9 @@ export const DISC_TRANSITION =
  */
 export const NOTICE_SPAN = "@xl/main:col-span-3";
 export const NOTICE_TITLE = "truncate text-lg font-semibold";
-/** The Retry pill inside a notice tile. 36px, one step under `PILL_ACTION`. */
+/** The Retry pill inside a notice tile. 36px, one step under the `action` size. */
 export const NOTICE_ACTION =
-  "h-9 flex-none gap-2 rounded-pill px-4 text-[0.8125rem] font-semibold";
+  "h-9 flex-none gap-2 px-4 text-[0.8125rem] font-semibold";
 
 /**
  * Status-chip tones for the band, keyed onto the exported `BadgeVariant` type
@@ -390,45 +381,9 @@ export const ROW = {
   HELD: "opacity-60",
 } as const;
 
-/**
- * The 42px pill box and the type it speaks in. Module-private — the API is
- * `FIELD`.
- *
- * THE HEIGHT IS IMPORTANT-MARKED, and both markers here are the family's
- * contract rather than decoration at this one call site. `select.tsx:40` ends
- * with `data-[size=default]:h-9`, and Tailwind v4 compiles that attribute
- * modifier to specificity **(0,2,0)** against a bare `h-[2.625rem]`'s
- * **(0,1,0)**; `tailwind-merge` keeps both, because they sit in different
- * modifier groups, and the primitive simply wins. Measured on the sibling
- * surface: `getBoundingClientRect().height` returned **36** against a call site
- * asking for 42. It looks approximately right, which is exactly why it survives
- * review.
- *
- * The dark fill is written explicitly AND important-marked for the same reason
- * on a different axis. A light-only override loses outright in dark mode against
- * `input.tsx`'s `dark:bg-input/30`; and once both rules are `dark:`-prefixed
- * they TIE at (0,2,0), where the winner is Tailwind's deterministic name sort —
- * `bg-input…` before `bg-surface-…` only because *i* precedes *s*. That is an
- * observed outcome, not a constructed one, so the marker makes it constructed.
- *
- * The fields on this surface are handed to a raw `<input>` rather than to the
- * `Input` primitive, which is the same call `traffic-engine/shapes.ts` made:
- * `Input`'s base string carries `dark:bg-input/30` and `md:text-sm`, and `cn()`
- * cannot let an unprefixed class displace a variant-prefixed one — so the fill
- * silently reverts in dark mode and the type step reverts at a 768px VIEWPORT,
- * which is a viewport breakpoint leaking into a container-query surface. The
- * markers stay anyway: they are what keeps this constant correct if it is ever
- * handed to a primitive, and the whole point of a shapes module is that the next
- * consumer does not have to rediscover the collision.
- */
-const FIELD_BOX =
-  "h-[2.625rem]! w-full min-w-0 rounded-pill border-0 px-4.5 text-[0.875rem] font-medium tabular-nums @2xl/card:w-[9.5rem]";
-
-/** Ink, focus ring and disabled. Rides whatever is the box. */
-const FIELD_STATE =
-  "text-on-surface placeholder:text-on-surface-variant focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
-
-export const FIELD = `${FIELD_BOX} bg-surface-container-high dark:bg-surface-container-high! ${FIELD_STATE}`;
+/** The number fields. They sit on `ROW_GROUP` (`surface-container`), so each call site passes `host="container"`. */
+export const FIELD =
+  "font-medium text-[0.875rem] tabular-nums @2xl/card:w-[9.5rem]";
 
 /**
  * The invalid state, as an INSET ring rather than a border.
@@ -492,6 +447,5 @@ export const PROVENANCE_BLOCKED = "text-destructive-on-surface px-1 text-xs";
 /** The footer action height, on its own so the footer skeleton mirrors it by reference. */
 export const ACTION_HEIGHT = "h-[2.625rem]";
 
-/** The `CardFoot` ghost Discard: the same 42px pill, no fill until hovered. */
-export const DISCARD =
-  "h-[2.625rem] rounded-pill px-5 text-sm font-semibold hover:bg-surface-container";
+/** The `CardFoot` ghost Discard's hover fill; its shape is `size="action"`. */
+export const DISCARD = "hover:bg-surface-container";

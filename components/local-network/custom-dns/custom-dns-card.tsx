@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { CardFoot } from "@/components/ui/card-foot";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SaveButton } from "@/components/ui/save-button";
@@ -41,7 +42,7 @@ import {
   ERROR_TEXT,
   FIELD,
   FIELD_REMOVE,
-  PILL_ACTION,
+  ACTION_SKELETON,
   PROVENANCE,
   ROW,
   ROW_GROUP,
@@ -440,7 +441,8 @@ export function CustomDnsCard({
                     ) : null}
                   </div>
                   <div className={cn(ROW.CONTROL, "w-full @2xl/card:w-auto")}>
-                    <input
+                    <Input
+                      host="container"
                       id={inputId}
                       type="text"
                       inputMode="text"
@@ -553,7 +555,7 @@ export function CustomDnsCard({
             <Button
               type="button"
               variant="tonal-neutral"
-              className={PILL_ACTION}
+              size="action"
               onClick={addRow}
               disabled={rowsDisabled || localServers.length >= MAX_RESOLVERS}
             >
@@ -568,7 +570,7 @@ export function CustomDnsCard({
               saved={saved}
               label={t(`${K}.card.save`)}
               blockedReason={blockedReason}
-              className={PILL_ACTION}
+              size="action"
             />
           </>
         }
@@ -610,7 +612,7 @@ export function CustomDnsCardSkeleton() {
                 <Skeleton className="h-3 w-full max-w-[26rem] rounded-pill" />
               </div>
               <div className={ROW.CONTROL}>
-                <Skeleton className="h-[2.625rem] w-[11rem] rounded-pill" />
+                <Skeleton className="h-[2.625rem] w-[11rem] rounded-field" />
               </div>
             </div>
           ))}
@@ -625,8 +627,8 @@ export function CustomDnsCardSkeleton() {
         status={<Skeleton className="h-3 w-[18rem] max-w-full rounded-pill" />}
         actions={
           <>
-            <Skeleton className={cn(PILL_ACTION, "w-[8.5rem]")} />
-            <Skeleton className={cn(PILL_ACTION, "w-[9.5rem]")} />
+            <Skeleton className={cn(ACTION_SKELETON, "w-[8.5rem]")} />
+            <Skeleton className={cn(ACTION_SKELETON, "w-[9.5rem]")} />
           </>
         }
       />

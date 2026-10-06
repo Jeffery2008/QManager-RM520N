@@ -398,7 +398,7 @@ export const RAIL = {
 export const HERO_LINK = {
   /** `aria-disabled`, never `disabled`: a disabled button is not focusable and
    *  cannot host the tooltip that carries the reason. */
-  ROOT: "h-9 gap-2 rounded-pill px-4 text-xs font-semibold aria-disabled:opacity-60",
+  ROOT: "h-9 gap-2 px-4 text-xs font-semibold aria-disabled:opacity-60",
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -634,7 +634,7 @@ export const TABLE = {
  */
 export const TOOLBAR = {
   ROOT: "flex flex-wrap items-center gap-3",
-  FILTER: "h-[2.625rem] max-w-[18rem] rounded-field",
+  FILTER: "max-w-[18rem]",
   ACTIONS: "ms-auto flex flex-wrap items-center gap-2",
   COUNT: "text-xs tabular-nums text-on-surface-variant",
 } as const;
@@ -682,12 +682,7 @@ export const PAGER = {
 // Actions
 // -----------------------------------------------------------------------------
 
-/** Primary and secondary pill actions. Restated from the sibling contracts by convention. */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
-export const PILL_ACTION_PLAIN =
-  "h-[2.625rem] rounded-pill px-5 text-sm font-semibold";
-export const PILL_QUIET = "h-9 rounded-pill px-3.5 text-xs font-semibold";
+export const PILL_QUIET = "h-9 px-3.5 text-xs font-semibold";
 
 /**
  * Never `variant="ghost"` for a third action here. On the frequency-locking
@@ -908,7 +903,7 @@ export const SKELETON_SHAPE = {
   FILTER: "h-[2.625rem] w-[18rem] max-w-full rounded-field",
   /** Mirrors `TABLE.ROW`'s resolved 40px height. */
   ROW: "h-10 w-full rounded-inline",
-  /** Mirrors `PILL_ACTION`'s height. */
+  /** Mirrors the action Button size's height. */
   ACTION: "h-[2.625rem] w-32 rounded-pill",
 } as const;
 
@@ -993,7 +988,7 @@ export const FORM = {
   TABS: "grid h-[2.125rem] w-[13.5rem] grid-cols-3 rounded-pill bg-surface-container p-1",
   TAB: "rounded-pill text-xs",
   ROW: "flex gap-2",
-  INPUT: `h-[2.625rem] min-w-0 flex-1 rounded-field ${CALC_IDENT} placeholder:text-sm`,
+  INPUT: `min-w-0 flex-1 ${CALC_IDENT} placeholder:text-sm`,
 } as const;
 
 /**
@@ -1042,7 +1037,7 @@ export const HISTORY_ROW = {
   BANDS: "min-w-0 truncate text-xs text-on-surface-variant",
   TIME: "text-right text-xs tabular-nums whitespace-nowrap text-on-surface-variant",
   /** Revealed on hover/focus, always shown under a coarse pointer, which has no hover. */
-  DELETE: "mx-1 size-8 flex-none rounded-pill text-on-surface-variant opacity-0 transition-opacity duration-[var(--duration-quick)] ease-out group-hover/row:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100",
+  DELETE: "mx-1 size-8 flex-none text-on-surface-variant opacity-0 transition-opacity duration-[var(--duration-quick)] ease-out group-hover/row:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100",
 } as const;
 
 /** Clearing local history is not a modem action: a quiet ghost pill, destructive only on hover. */

@@ -28,7 +28,6 @@ import {
   FOCUS_RING,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
 } from "../shapes";
 
 export {
@@ -39,7 +38,6 @@ export {
   FOCUS_RING,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
 };
 
 // -----------------------------------------------------------------------------
@@ -81,9 +79,8 @@ export const CONSOLE_BODY = "flex min-w-0 flex-col gap-3";
 export const HEAD_ACTIONS =
   "col-span-full flex flex-wrap items-center gap-2 pt-1 @2xl/card:pt-0 @2xl/card:justify-end";
 
-/** A 36px header action, the family's action pill one step down. */
-export const HEAD_ACTION =
-  "h-9 gap-1.5 rounded-pill px-3.5 text-[0.8125rem] font-medium pointer-coarse:h-11";
+/** A default-size header action, tightened to the family's 13px voice. */
+export const HEAD_ACTION = "gap-1.5 px-3.5 text-[0.8125rem] font-medium";
 
 /** The glyph inside a header action, and inside the game chip. */
 export const HEAD_GLYPH = "size-4";
@@ -137,7 +134,7 @@ export const ROW = {
    * and on a coarse pointer neither fires at all, so touch gets it outright at
    * the 44px floor.
    */
-  COPY: "size-7 flex-none rounded-pill opacity-0 transition-opacity duration-[var(--duration-quick)] ease-out group-hover/row:opacity-100 group-focus-within/row:opacity-100 pointer-coarse:size-11 pointer-coarse:opacity-100",
+  COPY: "size-7 flex-none opacity-0 transition-opacity duration-[var(--duration-quick)] ease-out group-hover/row:opacity-100 group-focus-within/row:opacity-100 pointer-coarse:size-11 pointer-coarse:opacity-100",
   COPY_GLYPH: "size-3.5",
 } as const;
 
@@ -225,7 +222,8 @@ export const GATE = {
    * compiles to a `:is(.dark *)`-qualified selector and outranks a plain
    * `hover:` override, so the tonal hover silently loses in dark mode.
    */
-  ACTION_BASE: `inline-flex items-center justify-center transition-colors duration-[var(--duration-quick)] ease-out ${PILL_ACTION}`,
+  ACTION_BASE:
+    "inline-flex h-[2.625rem] items-center justify-center gap-2 rounded-pill px-5 text-sm font-semibold transition-colors duration-[var(--duration-quick)] ease-out",
   CONFIRM:
     "bg-on-warning-container text-warning-container hover:bg-on-warning-container/90 focus-visible:ring-on-warning-container",
   DISMISS:
@@ -276,7 +274,7 @@ export const PROMPT = {
    * The Send pill, inset inside the bar. It paints 34px and cannot grow inside
    * a 42px bar, so the coarse-pointer floor is met by the family's overlay.
    */
-  SEND: `h-[2.125rem] flex-none gap-1.5 rounded-pill px-4 text-[0.8125rem] font-semibold ${COARSE_TARGET}`,
+  SEND: `h-[2.125rem] flex-none gap-1.5 px-4 text-[0.8125rem] font-semibold ${COARSE_TARGET}`,
   SEND_GLYPH: "size-4",
 } as const;
 
@@ -309,17 +307,15 @@ export const MANAGE = {
   ROW_TEXT: "flex min-w-0 flex-1 flex-col",
   ROW_LABEL: "truncate text-sm font-medium",
   ROW_COMMAND: "text-on-surface-variant truncate font-mono text-xs",
-  DELETE: "size-8 flex-none rounded-pill pointer-coarse:size-11",
+  DELETE: "size-8 flex-none pointer-coarse:size-11",
   DELETE_GLYPH: "size-3.5",
   EMPTY: "text-on-surface-variant py-4 text-center text-sm",
   FORM: "flex flex-wrap items-center gap-2",
   /**
-   * Two text fields on a dialog ground; `surface-container` is host + 1. The
-   * basis is what makes the row wrap instead of squeezing a mono AT command
-   * into ~90px beside a flex-none Add pill.
+   * Two `Input`s on the dialog ground. The basis makes the row wrap instead of
+   * squeezing a mono AT command into ~90px beside a flex-none Add pill.
    */
-  FIELD: `${PROMPT_HEIGHT} min-w-0 flex-1 basis-40 rounded-pill border-0 bg-surface-container px-4 text-[0.84375rem] dark:bg-surface-container! aria-invalid:ring-[3px] aria-invalid:ring-destructive/40 ${FOCUS_RING_ON_SURFACE}`,
+  FIELD: `min-w-0 flex-1 basis-40 text-[0.84375rem] aria-invalid:ring-[3px] aria-invalid:ring-destructive/40 ${FOCUS_RING_ON_SURFACE}`,
   FIELD_MONO: "font-mono",
-  ADD: PILL_ACTION,
   ERROR: "text-destructive-on-surface text-xs",
 } as const;

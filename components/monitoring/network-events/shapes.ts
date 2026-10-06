@@ -14,10 +14,6 @@ export const PAGE_ROOT =
 /** The device's event ring holds 300; the CGI serves the newest 50 of them. */
 export const RING_CAP = 300;
 
-/** A 36px header pill. The coarse-pointer bump is what reaches the 44px floor. */
-export const PILL_ACTION =
-  "h-9 gap-2 rounded-pill px-4 text-sm font-medium pointer-coarse:h-11";
-
 /** The pill's lucide glyph. */
 export const PILL_GLYPH = "size-4";
 
@@ -76,9 +72,8 @@ export const CARD_DESC = "text-on-surface-variant text-sm";
 /** The filter and sort rail. Wraps rather than scrolling. */
 export const RAIL = "flex flex-wrap items-center gap-2";
 
-/** A 36px filter chip. The active state is a fill, never a border. */
-export const FILTER_PILL =
-  "h-9 gap-1.5 rounded-pill px-3.5 text-[0.8125rem] font-medium pointer-coarse:h-11";
+/** A default-size filter Button. The active state is a fill, never a border. */
+export const FILTER_PILL = "gap-1.5 px-3.5 text-[0.8125rem]";
 export const FILTER_PILL_REST =
   "bg-surface-container text-on-surface-variant hover:bg-surface-container-high";
 export const FILTER_PILL_ACTIVE =
@@ -165,7 +160,7 @@ export const CONDITION = {
   GLYPH: "size-7",
   TITLE: "text-base font-semibold",
   DESC: "max-w-sm text-sm leading-relaxed text-pretty opacity-90",
-  ACTION: "mt-1 h-9 gap-2 rounded-pill px-4 text-sm font-medium pointer-coarse:h-11",
+  ACTION: "mt-1 px-4",
 } as const;
 
 /**

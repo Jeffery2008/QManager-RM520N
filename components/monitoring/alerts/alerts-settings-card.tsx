@@ -33,7 +33,6 @@ import type { AlertChannel, AlertsState } from "@/types/alerts";
 import { ALERT_CHANNEL_ORDER } from "@/types/alerts";
 
 import {
-  CHANNEL_BUTTON,
   ChannelField,
   ChannelNotice,
   ChannelSecretField,
@@ -299,7 +298,8 @@ export function AlertsSettingsCard({
               <Button
                 type="button"
                 variant="ghost"
-                className={cn(CHANNEL_BUTTON, "text-on-surface-variant")}
+                size="action"
+                className="text-on-surface-variant"
                 onClick={form.discard}
                 disabled={!form.isDirty || form.isSaving}
               >
@@ -307,7 +307,7 @@ export function AlertsSettingsCard({
               </Button>
               <SaveButton
                 type="button"
-                className={CHANNEL_BUTTON}
+                size="action"
                 label={t("alerts.channels.save.action")}
                 isSaving={form.isSaving}
                 saved={form.saved}
@@ -648,7 +648,7 @@ function TestAction({
         <Button
           type="button"
           variant="tonal-neutral"
-          className={CHANNEL_BUTTON}
+          size="action"
           disabled={!!blockedReason || isSending}
           onClick={onSend}
         >
@@ -703,7 +703,7 @@ function MailerInstall({ hook }: { hook: UseAlertsReturn }) {
       <div className="flex flex-wrap items-center gap-2.5">
         <Button
           type="button"
-          className={CHANNEL_BUTTON}
+          size="action"
           onClick={hook.runInstall}
           disabled={running}
         >
@@ -722,7 +722,7 @@ function MailerInstall({ hook }: { hook: UseAlertsReturn }) {
         <Button
           type="button"
           variant="tonal-neutral"
-          className={CHANNEL_BUTTON}
+          size="action"
           onClick={hook.refresh}
           disabled={running}
         >
@@ -869,7 +869,7 @@ export function AlertsSettingsCardSkeleton() {
             </div>
           ))}
           <div className="pt-1">
-            <Skeleton className={cn(CHANNEL_BUTTON, "w-44")} />
+            <Skeleton className={cn(SKELETON.ACTION, "w-44")} />
           </div>
         </div>
       </CardContent>
@@ -881,8 +881,8 @@ export function AlertsSettingsCardSkeleton() {
         status={<Skeleton className={cn(SKELETON.LINE, "h-4 w-36")} />}
         actions={
           <>
-            <Skeleton className={cn(CHANNEL_BUTTON, "w-24")} />
-            <Skeleton className={cn(CHANNEL_BUTTON, "w-36")} />
+            <Skeleton className={cn(SKELETON.ACTION, "w-24")} />
+            <Skeleton className={cn(SKELETON.ACTION, "w-36")} />
           </>
         }
       />

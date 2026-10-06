@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 
 import { StatusBand } from "./status-band";
 import { TranscriptCard } from "./transcript-card";
-import { PAGE_HEAD, PAGE_ROOT, PILL_ACTION, PILL_GLYPH } from "./shapes";
+import { PAGE_HEAD, PAGE_ROOT, PILL_GLYPH } from "./shapes";
 
 const K = "logs";
 
@@ -73,7 +73,7 @@ export function SystemLogs(): React.JSX.Element {
               variant="outline"
               onClick={() => void handleRefresh()}
               disabled={isRefreshing}
-              className={PILL_ACTION}
+              size="action"
             >
               <RefreshCcwIcon
                 className={cn(PILL_GLYPH, isRefreshing && "animate-spin")}
@@ -84,7 +84,7 @@ export function SystemLogs(): React.JSX.Element {
               type="button"
               variant="destructive"
               onClick={() => setClearOpen(true)}
-              className={PILL_ACTION}
+              size="action"
             >
               <Trash2Icon className={PILL_GLYPH} />
               {t(`${K}.page.clear`)}

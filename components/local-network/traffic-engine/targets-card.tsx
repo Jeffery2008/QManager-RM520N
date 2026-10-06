@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Banner } from "@/components/ui/banner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tag } from "@/components/ui/tag";
@@ -44,7 +45,6 @@ import {
   HOST_MAX_COLUMNS,
   HOST_VISIBLE_ROWS,
   ICON_ACTION,
-  PILL_ACTION,
   SKELETON,
 } from "./shapes";
 import type { UseCdnHostlistReturn } from "@/hooks/use-cdn-hostlist";
@@ -594,12 +594,7 @@ export function TargetsCard({ hostlist, mode }: TargetsCardProps) {
         )}
 
         <div className={FIELD_ROW}>
-          {/* A raw input, deliberately not the `Input` primitive — its base
-              string carries `dark:bg-input/30` and `md:text-sm`, so the fill
-              reverts in dark mode and the size reverts at a 768px VIEWPORT,
-              which is a viewport breakpoint leaking into a container-query
-              surface. See `FIELD` in shapes.ts. */}
-          <input
+          <Input
             type="text"
             placeholder="example.com"
             className={FIELD}
@@ -620,7 +615,7 @@ export function TargetsCard({ hostlist, mode }: TargetsCardProps) {
           <Button
             onClick={addDomain}
             disabled={!draft.trim() || listBusy}
-            className={PILL_ACTION}
+            size="action"
           >
             {hostlist.isSaving ? (
               <Loader2Icon className="size-4 animate-spin" />

@@ -205,6 +205,7 @@ export function VersionManagementCard({
               </Select>
 
               <Button
+                size="action"
                 className={cn(FIELD_ACTION, FOCUS_RING_ON_SURFACE)}
                 onClick={() => onDialogOpenChange(true)}
                 disabled={!selectedVersion || busy}

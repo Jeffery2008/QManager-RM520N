@@ -293,7 +293,7 @@ export function FreqLockHero({
             type="button"
             variant="tonal-neutral"
             size="icon"
-            className="ms-auto rounded-pill"
+            className="ms-auto"
             onClick={onRefresh}
             disabled={isLoading || isRefreshing}
             aria-label={t("frequency_locking.a11y.refresh")}

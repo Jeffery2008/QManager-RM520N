@@ -32,7 +32,6 @@ import {
   CMP_ROW,
   FOOTNOTE,
   HEADLINE,
-  PILL_ACTION,
   RESTING,
   SKELETON,
 } from "./shapes";
@@ -300,7 +299,7 @@ export function VerifyCard({ binaryInstalled }: VerifyCardProps) {
               variant="tonal"
               onClick={runVerify}
               disabled={!binaryInstalled || isRunning}
-              className={PILL_ACTION}
+              size="action"
             >
               <RefreshCcwIcon className="size-4" />
               {t("trafficEngine.verify.run_again")}
@@ -459,7 +458,8 @@ export function VerifyCard({ binaryInstalled }: VerifyCardProps) {
               <Button
                 variant="tonal"
                 onClick={runVerify}
-                className={cn(PILL_ACTION, RESTING.ACTION)}
+                size="action"
+                className={RESTING.ACTION}
               >
                 <RefreshCcwIcon className="size-4" />
                 {t("trafficEngine.verify.run")}

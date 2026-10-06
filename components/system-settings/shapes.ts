@@ -28,9 +28,10 @@
 //
 //   16px  card shell        -> `rounded-card` — every card here is a PEER
 //   12px  tile, row group   -> `rounded-tile`
-//   10px  row, SIM row      -> `rounded-field`
+//   10px  row, SIM row,     -> `rounded-field`
+//         field
 //   8px   skeleton slivers  -> `rounded-inline`
-//   999px fields, day pills -> `rounded-pill`
+//   999px day pills         -> `rounded-pill`
 //
 // `rounded-hero` is "the ONE card that anchors a surface". The anchor here is
 // the status band, so the four cards below it are peers. It survives on the
@@ -57,10 +58,6 @@ export const PAGE_HEAD = {
   DESC: "text-on-surface-variant text-sm leading-relaxed text-pretty",
   ACTIONS: "flex flex-wrap items-center gap-2.5 @3xl/main:ml-auto",
 } as const;
-
-/** The 42px action pill. Restated per family, never imported across one. */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
 
 /** The lucide glyph inside an action pill. */
 export const PILL_GLYPH = "size-4";
@@ -309,16 +306,8 @@ export const ROW = {
 /** A row's label and its unsaved marker, paired tighter than the row's gap. */
 export const LABEL_LINE = "flex items-center gap-2";
 
-/**
- * The 42px control height, IMPORTANT-MARKED and written exactly once so the
- * field and its skeleton placeholder cannot drift.
- *
- * `select.tsx` ships a default-size `h-9` behind a data-attribute selector,
- * which Tailwind v4 compiles at (0,2,0) against a bare arbitrary height's
- * (0,1,0); `tailwind-merge` keeps both and the primitive wins. Measured on the
- * sibling surface at 36px, against a call site asking for 42.
- */
-const FIELD_HEIGHT = "h-[2.625rem]!";
+/** The 42px field height, mirrored by the skeleton placeholders. */
+const FIELD_HEIGHT = "h-[2.625rem]";
 
 /**
  * The field's resting width above the row flip. `SKELETON.*.FIELD` bakes it in,
@@ -346,9 +335,6 @@ export const FIELD_WIDTH = "@2xl/card:w-auto @2xl/card:min-w-[13.5rem]";
 export const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
-/** Focus ring and disabled. Rides whatever is the box. */
-const FIELD_STATE = `${FOCUS_RING} disabled:cursor-not-allowed disabled:opacity-50`;
-
 /**
  * The 44px coarse-pointer target, as a pseudo-element overlay rather than a
  * layout box, so the control keeps its painted size and its row keeps its
@@ -361,21 +347,10 @@ export const COARSE_TARGET =
   "relative before:absolute before:-inset-x-3 before:-inset-y-3.5 before:content-['']";
 
 /**
- * The family's ONE control shape — every select, time input and text field on
- * this surface.
- *
- * THE DARK HALF IS EXPLICIT AND IMPORTANT-MARKED. The field primitives ship
- * their own dark fill at (0,2,0), so an unprefixed call-site fill loses in dark
- * mode outright; once both rules are prefixed they TIE, and a tie is decided by
- * Tailwind's name sort, where `bg-input` precedes `bg-surface-container-high`
- * only because *i* precedes *s*. The marker makes the call site win by
- * construction instead of by alphabet.
- *
- * The fill is one step above THIS host: the field sits inside a `ROW`, inside
- * `ROW_GROUP`, which is `bg-surface-container` — so `surface-container-high` is
- * exactly host + 1 and the Field-Step Rule is satisfied by the composition.
+ * The family's field voice and width; shape and fill come from the primitive.
+ * Every field here sits in `ROW_GROUP`, so call sites pass `host="container"`.
  */
-export const FIELD = `${FIELD_HEIGHT} w-full rounded-pill border-0 px-4 text-[0.84375rem] font-medium bg-surface-container-high dark:bg-surface-container-high! ${FIELD_WIDTH} ${FIELD_STATE}`;
+export const FIELD = `w-full text-[0.84375rem] font-medium ${FIELD_WIDTH}`;
 
 /** The glyph riding inside a field or trigger. */
 export const FIELD_GLYPH = "size-3.5";
@@ -566,7 +541,7 @@ export const SKELETON = {
     CONSEQUENCE: LINE.CONSEQUENCE,
     /** The second line the timezone consequence wraps to at real widths. */
     CONSEQUENCE_2: LINE.CONSEQUENCE,
-    FIELD: `${FIELD_HEIGHT} w-full rounded-pill ${FIELD_WIDTH}`,
+    FIELD: `${FIELD_HEIGHT} w-full rounded-field ${FIELD_WIDTH}`,
     /** The Save row. Absent from the skeleton, the card jumps by 42px + gap. */
     ACTION: `${FIELD_HEIGHT} w-36 rounded-pill`,
   },
@@ -580,7 +555,7 @@ export const SKELETON = {
     SWITCH: "h-6 w-10 rounded-pill",
     /** The autosave receipt strip: a 16px line, shorter than a consequence. */
     RECEIPT: "h-4 w-32 rounded-inline",
-    FIELD: `${FIELD_HEIGHT} w-full rounded-pill ${FIELD_WIDTH}`,
+    FIELD: `${FIELD_HEIGHT} w-full rounded-field ${FIELD_WIDTH}`,
     /** Wears a `DAY_PILL.RAIL` cell, so it tracks the grid, not a flex basis. */
     DAY: `${DAY_PILL_HEIGHT} min-w-0 rounded-pill`,
   },
@@ -589,5 +564,7 @@ export const SKELETON = {
     LABEL: LINE.LABEL,
     ID: LINE.CONSEQUENCE,
     CHIP: "h-[1.375rem] w-20 rounded-pill",
+    /** The footer's Clear action. */
+    ACTION: `${FIELD_HEIGHT} w-28 rounded-pill`,
   },
 } as const;

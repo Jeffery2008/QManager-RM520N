@@ -32,7 +32,6 @@ import {
   CARD_TITLE,
   DELTA,
   NOTICE,
-  PILL_ACTION,
   PILL_GLYPH,
   SPIN,
   VALUE_NONE,
@@ -130,7 +129,7 @@ export function UpdateCard({
     switch (view) {
       case "available":
         return (
-          <Button className={PILL_ACTION} onClick={onDownload}>
+          <Button size="action" onClick={onDownload}>
             <DownloadIcon className={PILL_GLYPH} aria-hidden="true" />
             {t(`${K}.actions.download`, { version })}
           </Button>
@@ -138,7 +137,7 @@ export function UpdateCard({
 
       case "staged":
         return (
-          <Button className={PILL_ACTION} onClick={onInstall}>
+          <Button size="action" onClick={onInstall}>
             <DownloadIcon className={PILL_GLYPH} aria-hidden="true" />
             {t(`${K}.actions.install`, { version })}
           </Button>
@@ -147,7 +146,7 @@ export function UpdateCard({
       case "downloading":
       case "verifying":
         return (
-          <Button className={PILL_ACTION} disabled>
+          <Button size="action" disabled>
             <Loader2Icon className={cn(PILL_GLYPH, SPIN)} aria-hidden="true" />
             {t(`${K}.actions.${view}`)}
           </Button>
@@ -160,7 +159,7 @@ export function UpdateCard({
           return (
             <Button
               variant="outline"
-              className={PILL_ACTION}
+              size="action"
               onClick={onDownload}
             >
               <DownloadIcon className={PILL_GLYPH} aria-hidden="true" />
@@ -170,7 +169,7 @@ export function UpdateCard({
         }
         if (failure?.kind === "install") {
           return (
-            <Button className={PILL_ACTION} onClick={onInstall}>
+            <Button size="action" onClick={onInstall}>
               <DownloadIcon className={PILL_GLYPH} aria-hidden="true" />
               {t(`${K}.actions.install`, { version })}
             </Button>

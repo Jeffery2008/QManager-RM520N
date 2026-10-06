@@ -20,7 +20,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
-import { PILL_ACTION } from "./shapes";
 
 // =============================================================================
 // SmsComposeDialog — compose and send
@@ -34,8 +33,6 @@ import { PILL_ACTION } from "./shapes";
 // crossing the cap silently changes what the modem sends. A multi-part segment
 // counter is deliberately NOT added; that is new behaviour, not a restyle.
 // =============================================================================
-
-const FIELD = "rounded-field bg-surface-container border-0";
 
 interface SmsComposeDialogProps {
   open: boolean;
@@ -113,7 +110,7 @@ export default function SmsComposeDialog({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               disabled={isSaving}
-              className={cn(FIELD, "h-[2.625rem] font-mono tabular-nums")}
+              className="font-mono tabular-nums"
             />
           </div>
 
@@ -172,7 +169,7 @@ export default function SmsComposeDialog({
               rows={4}
               aria-invalid={isOverLimit || undefined}
               aria-describedby="sms-message-hint"
-              className={cn(FIELD, "min-h-[6.5rem] resize-none px-4 py-3.5")}
+              className="min-h-[6.5rem] resize-none px-4 py-3.5"
             />
             <p
               id="sms-message-hint"
@@ -221,14 +218,14 @@ export default function SmsComposeDialog({
               variant="tonal"
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
-              className={PILL_ACTION}
+              size="action"
             >
               {t("actions.cancel", { ns: "common" })}
             </Button>
             <Button
               type="submit"
               disabled={isSaving || !isValid}
-              className={PILL_ACTION}
+              size="action"
             >
               {isSaving ? (
                 <>

@@ -20,7 +20,6 @@ import {
   CARD_GRID,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_GLYPH,
   SPIN,
 } from "./shapes";
@@ -55,7 +54,7 @@ const AboutDeviceComponent = () => {
           <Button
             type="button"
             variant="outline"
-            className={PILL_ACTION}
+            size="action"
             onClick={refresh}
             disabled={busy}
           >

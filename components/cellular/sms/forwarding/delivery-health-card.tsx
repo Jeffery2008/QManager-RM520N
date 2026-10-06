@@ -27,7 +27,6 @@ import {
   HEALTH_SHAPE,
   HEALTH_SKELETON,
   HEALTH_TONE,
-  PILL_ACTION,
 } from "../shapes";
 import {
   ForwardingCardHeader,
@@ -344,7 +343,7 @@ const DeliveryHealthCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
             <Button
               type="button"
               variant="tonal"
-              className={cn(PILL_ACTION, "w-fit")}
+              size="action" className="w-fit"
               disabled={!canSendTest}
               onClick={handleSendTest}
             >
@@ -453,7 +452,7 @@ const DeliveryHealthCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
                 <Button
                   type="button"
                   variant="tonal-neutral"
-                  className={cn(PILL_ACTION, "w-fit")}
+                  size="action" className="w-fit"
                   disabled={isClearing}
                   onClick={handleClear}
                 >

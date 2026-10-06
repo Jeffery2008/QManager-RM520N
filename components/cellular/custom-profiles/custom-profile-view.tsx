@@ -13,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Tag, tagVariants } from "@/components/ui/tag";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,9 +64,7 @@ import {
   SUGGESTION_ROW,
   SUGGESTION_DISC,
   MACHINE_VALUE,
-  PILL_ACTION,
-  PILL_ACTION_PLAIN,
-  PILL_ACTION_SM,
+  INLINE_ACTION_TYPE,
   ICON_ACTION,
   RIBBON_MINI,
   profileRowTone,
@@ -130,14 +128,6 @@ import {
 // `staggerItem` in the page-level cascade: variants only, no local
 // `initial`/`animate`, so the sequence inherits the parent clock. Reduced
 // motion is handled globally by `<MotionConfig reducedMotion="user">`.
-
-/** The destructive pill, from the button variant — matches
- *  `sms/delete-dialogs.tsx`'s `DESTRUCTIVE_ACTION`/`CANCEL_ACTION` constants. */
-const DESTRUCTIVE_ACTION = cn(
-  buttonVariants({ variant: "destructive" }),
-  PILL_ACTION,
-);
-const CANCEL_ACTION = PILL_ACTION_PLAIN;
 
 /**
  * How many band tags a row shows before collapsing the tail into a `+N`.
@@ -679,7 +669,7 @@ const CustomProfileViewComponent = ({
             <AlertDialogCancel
               variant="tonal"
               disabled={isDeleting}
-              className={CANCEL_ACTION}
+              size="action"
             >
               {t("custom_profiles.view.delete_keep")}
             </AlertDialogCancel>
@@ -689,7 +679,8 @@ const CustomProfileViewComponent = ({
                 void confirmDelete();
               }}
               disabled={isDeleting}
-              className={DESTRUCTIVE_ACTION}
+              variant="destructive"
+              size="action"
             >
               {isDeleting
                 ? t("custom_profiles.table.delete_confirm.deleting")
@@ -1216,7 +1207,7 @@ const SuggestionRow = ({
       <div className={PROFILE_ROW_SHAPE.ACTIONS}>
         <Button
           variant="tonal"
-          className={PILL_ACTION_SM}
+          className={INLINE_ACTION_TYPE}
           onClick={onCreate}
           disabled={disabled}
           aria-label={t("custom_profiles.suggestions.create_aria", {
@@ -1311,7 +1302,7 @@ const SkeletonRow = () => (
       >
         <span className="invisible">&nbsp;</span>
       </Skeleton>
-      <Skeleton className={ICON_ACTION} />
+      <Skeleton className={cn(ICON_ACTION, "rounded-pill")} />
     </div>
   </div>
 );

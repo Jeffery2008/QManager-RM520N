@@ -25,6 +25,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tag } from "@/components/ui/tag";
 import { cn } from "@/lib/utils";
@@ -308,7 +309,7 @@ export default function CommandsPopover({
           <Separator />
 
           <div className={MANAGE.FORM}>
-            <input
+            <Input
               placeholder={t(`${K}.manage_dialog.label_placeholder`)}
               aria-label={t(`${K}.manage_dialog.label_field`)}
               value={newLabel}
@@ -320,7 +321,7 @@ export default function CommandsPopover({
               aria-describedby={labelInvalid ? errorId : undefined}
               className={MANAGE.FIELD}
             />
-            <input
+            <Input
               placeholder={t(`${K}.manage_dialog.command_placeholder`)}
               aria-label={t(`${K}.manage_dialog.command_field`)}
               value={newCommand}
@@ -335,7 +336,7 @@ export default function CommandsPopover({
                 if (e.key === "Enter") handleAdd();
               }}
             />
-            <Button type="button" onClick={handleAdd} className={MANAGE.ADD}>
+            <Button type="button" onClick={handleAdd} size="action">
               {t(`${K}.manage_dialog.add`)}
             </Button>
           </div>

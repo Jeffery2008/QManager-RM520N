@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import type { ModemStatus } from "@/types/modem-status";
 import type { FreqLockModemState } from "@/types/frequency-locking";
 
-import { APPLY_BAR, PILL_ACTION_PLAIN, SKELETON_SHAPE } from "./shapes";
+import { APPLY_BAR, SKELETON_SHAPE } from "./shapes";
 
 // =============================================================================
 // The apply bar
@@ -226,7 +226,7 @@ export function FreqApplyBar({
         <Button
           type="button"
           variant="outline"
-          className={PILL_ACTION_PLAIN}
+          size="action"
           onClick={onClearAll}
           disabled={!isLocked}
         >

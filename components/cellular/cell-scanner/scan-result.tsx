@@ -202,7 +202,7 @@ export function createCellScanColumns(
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="text-on-surface-variant data-[state=open]:bg-surface-container-high rounded-pill"
+              className="text-on-surface-variant data-[state=open]:bg-surface-container-high"
               aria-label={labels.rowMenu}
             >
               <MaterialSymbol name="more_vert" size={16} />

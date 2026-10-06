@@ -13,7 +13,7 @@ import { staggerContainer, staggerItem } from "@/lib/motion";
 import { useSms } from "@/hooks/use-sms";
 import { useSmsReadState, parseSmsTimestamp } from "@/hooks/use-sms-read-state";
 
-import { PAGE_SHELL, PILL_ACTION } from "./shapes";
+import { PAGE_SHELL } from "./shapes";
 import SmsInboxCard from "./inbox-card";
 import SmsComposeDialog from "./sms-compose-dialog";
 import { SmsSummaryTiles } from "./summary-tiles";
@@ -106,7 +106,7 @@ const SmsCenterComponent = () => {
             <>
               {/* `Link`, never an `<a>` — an anchor here would full-reload the
                   static export and drop every bit of client state. */}
-              <Button asChild variant="tonal" className={PILL_ACTION}>
+              <Button asChild variant="tonal" size="action">
                 <Link href="/cellular/sms/forwarding">
                   <MaterialSymbol name="send" size={18} />
                   {t("sms.page.forwarding")}
@@ -115,7 +115,7 @@ const SmsCenterComponent = () => {
               <Button
                 type="button"
                 onClick={() => openCompose()}
-                className={PILL_ACTION}
+                size="action"
               >
                 <MaterialSymbol name="edit" size={18} />
                 {t("sms.inbox.buttons.new_message")}

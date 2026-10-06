@@ -30,7 +30,6 @@ import {
   META_INK_ON_TONAL,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION as PILL_ACTION_BASE,
   PILL_GLYPH,
 } from "../shapes";
 
@@ -45,11 +44,6 @@ export {
   PILL_GLYPH,
 };
 
-/**
- * The family's 42px pill, taken to the 44px coarse-pointer floor — the spelling
- * `connection-quality` and `tailscale` already use.
- */
-export const PILL_ACTION = `${PILL_ACTION_BASE} pointer-coarse:h-11`;
 
 // -----------------------------------------------------------------------------
 // The console

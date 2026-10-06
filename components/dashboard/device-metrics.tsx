@@ -380,7 +380,7 @@ const DeviceMetricsComponent = ({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-5 rounded-pill text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+                    className="size-5 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
                     aria-label={t("metrics.reset_counter_aria")}
                     disabled={isResetting}
                   >

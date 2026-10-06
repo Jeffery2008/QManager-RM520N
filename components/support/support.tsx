@@ -34,7 +34,6 @@ import {
   FOCUS_RING,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_GLYPH,
 } from "./shapes";
 
@@ -218,7 +217,7 @@ export function SupportComponent(): React.JSX.Element {
                     className={COMMUNITY.IMAGE}
                   />
                 </div>
-                <Button asChild variant="tonal" className={PILL_ACTION}>
+                <Button asChild variant="tonal" size="action">
                   <a
                     href={LINKS.DISCORD}
                     target="_blank"

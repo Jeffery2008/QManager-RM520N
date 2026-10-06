@@ -21,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { staggerItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
-import { PAGE_HEAD, PILL_ACTION, PILL_GLYPH, SKELETON, SPIN } from "./shapes";
+import { PAGE_HEAD, PILL_GLYPH, SKELETON, SPIN } from "./shapes";
 
 const K = "actions";
 
@@ -69,7 +69,7 @@ export function PageHeader({
           <Skeleton className={SKELETON.ACTION} />
         ) : (
           <>
-            <Button className={PILL_ACTION} onClick={onRun} disabled={busy}>
+            <Button size="action" onClick={onRun} disabled={busy}>
               {busy ? (
                 <>
                   <Loader2Icon
@@ -89,7 +89,7 @@ export function PageHeader({
             {canDownload && (
               <Button
                 variant="outline"
-                className={PILL_ACTION}
+                size="action"
                 onClick={onDownload}
                 disabled={isDownloading}
               >
@@ -115,7 +115,7 @@ export function PageHeader({
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="tonal-destructive"
-                    className={PILL_ACTION}
+                    size="action"
                     disabled={isClearing}
                   >
                     {isClearing ? (

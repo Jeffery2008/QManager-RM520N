@@ -26,7 +26,6 @@ import {
   LANG_ROW,
   META_INK_ON_TONAL,
   MONO_TAG,
-  PILL_ACTION,
   PILL_GLYPH,
   ROW_REMOVE_TARGET,
   SPIN,
@@ -193,7 +192,7 @@ export function LanguageRow({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={removing} className={PILL_ACTION}>
+            <AlertDialogCancel disabled={removing} size="action">
               {t(`${K}.remove.cancel`)}
             </AlertDialogCancel>
             <AlertDialogAction
@@ -202,10 +201,10 @@ export function LanguageRow({
                 void handleRemove();
               }}
               disabled={removing}
-              className={cn(
-                buttonVariants({ variant: "destructive" }),
-                PILL_ACTION,
-              )}
+              className={buttonVariants({
+                variant: "destructive",
+                size: "action",
+              })}
             >
               {removing ? (
                 <Loader2Icon className={cn(PILL_GLYPH, SPIN)} aria-hidden="true" />

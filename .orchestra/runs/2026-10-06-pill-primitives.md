@@ -1,7 +1,7 @@
 # Run: Button and field primitives to pill
 status: active
 lane: full
-base: 62287c50   branch: (none yet: review stage)   opened: 2026-10-06   lead: Opus 5.5
+base: f135bd25 (BASE for diffs)   branch: worktree-pill-primitives @ .claude/worktrees/pill-primitives   opened: 2026-10-06   lead: Opus 5.5
 
 ## Request
 "Button and field primitives. `button.tsx` is still `rounded-md` and 36px, while the canon says pill. `input`, `select` and `textarea` have the same gap. Fixing the primitives would remove the per-family `PILL_ACTION` constants (25 files) and the field overrides. This is the largest and riskiest change because it touches every route. It needs a visual review pass first, through `qm-redesign-review`." + "Lets properly plan out and implement these changes."
@@ -18,13 +18,20 @@ base: 62287c50   branch: (none yet: review stage)   opened: 2026-10-06   lead: O
 | R-A | call-site census (constants, inline overrides, sizes) | list | qm-scout | scratchpad/recon-census.md | ACCEPTED |
 | R-B | canon extract (DESIGN/PRODUCT/globals/the101) | list | qm-scout | scratchpad/recon-canon.md | ACCEPTED |
 | G | redesign-review Artifact + gate | judgment | conductor | scratchpad only | AT GATE: https://claude.ai/artifact/Du1ZetgEBj4hbRqDgvgKbq |
-| W0 | primitives: button (pill base, size=action, coarse floor), input/select/textarea/input-group (42px, rounded-field, no border, fill, host prop) | build | ui-builder | components/ui/** | PENDING (gate) |
-| W1-W3 | call-site sweep by family: cellular / local-network+monitoring / system-settings+rest | build | ui-builder | components/<family>/** | PENDING (gate) |
+| W0 | primitives: button (pill base, size=action, coarse floor), input/select/textarea/input-group (42px, rounded-field, no border, fill, host prop) | build | conductor inline (5 short files, defines the API every wave uses) | components/ui/{button,input,select,textarea,input-group}.tsx | ACCEPTED, committed 81aa3366 (tsc 0) |
+| W1a | sweep cellular/{settings,sms,custom-profiles,radio,antenna-alignment,antenna-statistics} + cellular/*.ts(x) | build | ui-builder | those dirs | DISPATCHED |
+| W1b | sweep cellular/{band-locking,frequency-locking,tower-locking,cell-scanner} | build | ui-builder | those dirs | DISPATCHED |
+| W2 | sweep local-network, monitoring | build | ui-builder | components/{local-network,monitoring}/** | DISPATCHED |
+| W3 | sweep system-settings, about-device, support, auth, dashboard, public, onboarding, nav-menu/nav-user, ui/segmented-field.tsx | build | ui-builder | those | DISPATCHED |
+Shared brief: .orchestra/scratch/pill-sweep-brief.md (gitignored; the rules are restated in the 81aa3366 commit + this ledger's Decisions).
 | V, D | qm-verifier; docs-writer (DESIGN.md deltas+Buttons+Inputs, ip-passthrough/ethernet/tower-locking select-height notes) | | | | PENDING |
 
 ## Attempts   (append-only)
 | task | # | seat | ticket rev | outcome | checks run | evidence path |
 |---|---|---|---|---|---|---|
+| W1b | 1 | ui-builder | r1 | DONE_WITH_CONCERNS (coarse 44px now reaches PILL_QUIET/size-7 icon recipes: approved floor; tower-locking.md trap note stale -> docs) 21 files +81/-248 | tsc 0, eslint 0 err, both census greps empty | uncommitted in worktree |
+| W3 | 1 | ui-builder | r1 | DONE_WITH_CONCERNS (tsc err was W1a mid-edit in cellular/settings/shapes.ts; eslint 29 errors claimed pre-existing -> verify vs base; web-console ACTION_COARSE pointer-coarse:h-11 on size=action is redundant -> fix pass) 41 files +124/-212 | census empty except at-terminal PROMPT (SHELL) | uncommitted |
+| W2 | 1 | ui-builder | r1 | DONE_WITH_CONCERNS (only the W1a mid-edit tsc error; TTL/MTU raw inputs -> <Input host="container">, Apply size=action; MAC field stays raw on fieldVariants) 35 files +165/-435 | tsc clean pre-W1a edit, eslint 1 pre-existing (sim-swap-banner), census empty | uncommitted |
 
 ## Findings that survive
 - QManager-the101 button.tsx is rounded-pill but kept h-9; its input/select/textarea stay rounded-md.

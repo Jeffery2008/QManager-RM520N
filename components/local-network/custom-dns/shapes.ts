@@ -102,14 +102,8 @@ export const PAGE_HEAD = {
   ACTIONS: "flex flex-wrap items-center gap-2.5 @3xl/main:ml-auto",
 } as const;
 
-/**
- * The page-header action pill (Refresh).
- *
- * Restated per family, never imported across one — the same 42px pill the
- * sibling headers use, and the same reason it is not shared.
- */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
+/** Placeholder for a `size="action"` Button in a skeleton. */
+export const ACTION_SKELETON = "h-[2.625rem] rounded-pill";
 
 // -----------------------------------------------------------------------------
 // Band A — the live upstream strip
@@ -387,46 +381,12 @@ export const ROW = {
   ERROR: "text-destructive text-[0.78125rem] leading-relaxed text-pretty",
 } as const;
 
-/**
- * The 42px pill field a resolver address is typed into.
- *
- * -----------------------------------------------------------------------------
- * IT IS A RAW `<input>`, NOT THE `Input` PRIMITIVE
- * -----------------------------------------------------------------------------
- * `input.tsx` ships `dark:bg-input/30` and `md:text-sm`, and NEITHER is
- * displaced by an unprefixed override passed through `cn()`: `tailwind-merge`
- * keeps classes in different modifier groups, and Tailwind v4 compiles `dark:`
- * to `&:is(.dark *)` — specificity (0,2,0) against a bare fill's (0,1,0). The
- * result is a field that looks right in light mode at every width the author
- * tested and quietly reverts in dark mode and at 768px and up.
- *
- * -----------------------------------------------------------------------------
- * THE HEIGHT AND THE DARK FILL BOTH CARRY THE IMPORTANT MARKER
- * -----------------------------------------------------------------------------
- * Kept even on a raw input, because this constant is the family's ONE control
- * shape and the next control on this surface may well be a `Select` — whose
- * primitive ends with `data-[size=default]:h-9` at (0,2,0), beating a bare
- * `h-[2.625rem]` at (0,1,0) and rendering 36px on a 42px system. That was
- * measured on the sibling surface at `getBoundingClientRect().height === 36`,
- * against a call site asking for 42.
- *
- * The dark fill needs it for a subtler reason: once BOTH rules are
- * `dark:`-prefixed they TIE at (0,2,0), and a tie is decided by emission order,
- * i.e. Tailwind's deterministic name sort. `bg-input…` sorts before
- * `bg-surface-…` only because *i* precedes *s*. That is an observed outcome, not
- * a constructed one, so the marker makes it win by construction.
- *
- * The fill is one step above its host: the field sits inside a `ROW`, inside
- * `ROW_GROUP`, which is `bg-surface-container` — so `surface-container-high` is
- * exactly host + 1 and the Field-Step Rule is satisfied by the composition.
- *
- * Kept on ONE line for the same reason `CARD_SHELL` is.
- */
-export const FIELD = "h-[2.625rem]! w-full min-w-0 rounded-pill border-0 bg-surface-container-high dark:bg-surface-container-high! px-4.5 font-mono text-sm text-on-surface tabular-nums placeholder:font-mono placeholder:text-on-surface-variant focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50";
+/** The resolver field. It sits on `ROW_GROUP` (`surface-container`), so the call site passes `host="container"`. */
+export const FIELD = "font-mono text-sm tabular-nums placeholder:font-mono";
 
 /** The ghost remove button beside a resolver field. 42px, so it matches. */
 export const FIELD_REMOVE =
-  "size-[2.625rem] flex-none rounded-pill text-on-surface-variant";
+  "size-[2.625rem] flex-none text-on-surface-variant";
 
 /**
  * The unsaved-change marker beside a row's label.

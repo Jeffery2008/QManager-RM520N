@@ -34,7 +34,6 @@ import {
   CARD_SHELL,
   CARD_TITLE,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_ACTION_GLYPH,
   READOUT_ROW,
 } from "../shapes";
@@ -695,7 +694,7 @@ const APNSettingsComponent = () => {
               refresh();
               refreshMbn();
             }}
-            className={PILL_ACTION}
+            size="action"
           >
             <MaterialSymbol name="refresh" size={PILL_ACTION_GLYPH} />
             {t(`${K}.readout.reread`)}

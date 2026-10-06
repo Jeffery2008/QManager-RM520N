@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { ConditionScreen } from "@/components/cellular/condition-screen";
-import { PILL_ACTION } from "@/components/cellular/custom-profiles/shapes";
 
 // =============================================================================
 // EmptyProfileViewComponent — the TRUE empty state
@@ -120,7 +119,7 @@ const EmptyProfileViewComponent = ({
               two buttons on the card. */}
           {onNewProfile && (
             <div className="flex justify-center">
-              <Button type="button" className={PILL_ACTION} onClick={onNewProfile}>
+              <Button type="button" size="action" onClick={onNewProfile}>
                 <MaterialSymbol name="add" size={17} />
                 {t("custom_profiles.empty_state.cta_new")}
               </Button>

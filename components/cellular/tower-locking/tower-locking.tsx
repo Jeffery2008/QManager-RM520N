@@ -30,7 +30,6 @@ import {
   HERO_REFRESH_BUTTON,
   NOTICE,
   NOTICE_TONE,
-  PILL_ACTION,
   SECTION_HEAD,
   SKELETON_SHAPE,
   TOWER_CARD,
@@ -305,7 +304,7 @@ const TowerLockingComponent = () => {
              and the page's real primary actions are the leg cards' Lock
              buttons. Same key and same route as the band-locking hero's link —
              one translated sentence for one destination. */
-          <Button asChild variant="tonal" className={PILL_ACTION}>
+          <Button asChild variant="tonal" size="action">
             <Link href="/cellular/cell-scanner">
               <MaterialSymbol name="radar" size={18} />
               {t("radio_info.bands.scanner.link")}
@@ -362,7 +361,8 @@ const TowerLockingComponent = () => {
                       ? `${t("tower_locking.error.retry")} — ${t("tower_locking.blocked.refresh_in_flight")}`
                       : t("tower_locking.error.retry")
                   }
-                  className={`${PILL_ACTION} aria-disabled:cursor-not-allowed aria-disabled:opacity-55`}
+                  size="action"
+                  className="aria-disabled:cursor-not-allowed aria-disabled:opacity-55"
                 >
                   <MaterialSymbol
                     name={tower.isRefreshing ? "progress_activity" : "refresh"}

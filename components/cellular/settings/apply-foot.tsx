@@ -13,7 +13,6 @@ import {
   APPLY_FOOT_SKELETON,
   APPLY_LEDGER,
   CARD_PAD,
-  PILL_ACTION,
 } from "./shapes";
 
 // The settings family's persistent apply footer: change count, consequence or
@@ -118,7 +117,7 @@ export function ApplyFoot({
             variant="ghost"
             onClick={onDiscard}
             disabled={isSaving || changeCount === 0}
-            className={cn(PILL_ACTION, "gap-0")}
+            size="action" className="gap-0"
           >
             {copy.discard}
           </Button>
@@ -129,7 +128,7 @@ export function ApplyFoot({
             saved={saved}
             label={copy.save}
             disabled={changeCount === 0}
-            className={PILL_ACTION}
+            size="action"
           />
         </>
       }

@@ -40,10 +40,6 @@ export const PAGE_HEAD = {
   ACTIONS: "flex flex-wrap items-center gap-2.5 @3xl/main:ml-auto",
 } as const;
 
-/** The 42px action pill. Restated per family, never imported across one. */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
-
 /** The lucide glyph inside an action pill. */
 export const PILL_GLYPH = "size-4";
 

@@ -45,7 +45,6 @@ import {
   NOTICE,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_GLYPH,
   ROW,
   ROW_GROUP,
@@ -84,7 +83,6 @@ export {
   NOTICE,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_GLYPH,
   ROW_GROUP,
   SKELETON,
@@ -200,12 +198,6 @@ export const LEG = {
 /**
  * The family `FIELD` in machine voice: a probe target is an identifier the
  * device echoes back verbatim, so it is mono (The Machine-Voice Rule).
- *
- * The coarse bump is IMPORTANT-MARKED and written INSIDE the constant.
- * `input.tsx` ships its own height behind a higher-specificity selector, and a
- * marker written outside the constant never reaches Tailwind's scanner at all.
- * The 42px height and the explicit light/dark fill pair come from `FIELD`
- * unchanged — do not restate either here.
  */
 export const FIELD_MONO = `${FIELD} font-mono pointer-coarse:h-11!`;
 
@@ -336,9 +328,8 @@ export const SKELETON_LOCAL = {
     DISC: LEG.DISC,
     LABEL: LINE.LABEL,
     KIND: LINE.KIND,
-    /** The family's field placeholder plus this route's coarse bump — MARKED,
-     *  because `SKELETON.TIME.FIELD` carries `h-[2.625rem]!` and would win. */
-    FIELD: `${SKELETON.TIME.FIELD} pointer-coarse:h-11!`,
+    /** The family's field placeholder plus this route's coarse bump. */
+    FIELD: `${SKELETON.TIME.FIELD} pointer-coarse:h-11`,
   },
   BLOCK: {
     TITLE: LINE.LABEL,

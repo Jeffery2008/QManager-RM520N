@@ -118,7 +118,7 @@ export function InboxToolbar({
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={t("sms.inbox.search.placeholder")}
             aria-label={t("sms.inbox.search.aria")}
-            className="rounded-field bg-surface-container h-9 w-full border-0 pl-10 pointer-coarse:h-11"
+            className="h-9 w-full pl-10 pointer-coarse:h-11"
           />
         </div>
 

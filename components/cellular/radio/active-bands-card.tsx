@@ -567,9 +567,7 @@ export function ActiveBandsCard({
             variant="outline"
             onClick={() => setShowReference((open) => !open)}
             aria-expanded={showReference}
-            // `button.tsx` still defaults to the legacy rounded-md, so the pill
-            // metrics are applied at the call site, as on the page header.
-            className="ml-auto h-[2.375rem] shrink-0 gap-2 rounded-pill px-4 text-[13px] font-semibold"
+            className="ml-auto h-[2.375rem] shrink-0 gap-2 px-4 text-[13px] font-semibold"
           >
             <MaterialSymbol
               name={showReference ? "visibility_off" : "visibility"}

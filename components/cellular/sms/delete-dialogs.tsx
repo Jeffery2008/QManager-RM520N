@@ -3,7 +3,6 @@
 import { useTranslation } from "react-i18next";
 
 import { MaterialSymbol } from "@/components/ui/material-symbol";
-import { buttonVariants } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { CONDITION_TONE } from "@/components/cellular/condition-screen";
-import { DELETE_STEP_TONE, PILL_ACTION } from "./shapes";
+import { DELETE_STEP_TONE } from "./shapes";
 import type { SmsMessage } from "@/types/sms";
 
 // =============================================================================
@@ -50,15 +49,6 @@ export interface DeleteStep {
   count: number;
   status: DeleteStepStatus;
 }
-
-/** The destructive pill, from the button variant — not three hand-written copies
- *  of `bg-destructive text-destructive-foreground hover:bg-destructive/90` — on
- *  the family's own action geometry. */
-const DESTRUCTIVE_ACTION = cn(
-  buttonVariants({ variant: "destructive" }),
-  PILL_ACTION,
-);
-const CANCEL_ACTION = PILL_ACTION;
 
 function DeleteProgress({ steps }: { steps: DeleteStep[] }) {
   const { t } = useTranslation("cellular");
@@ -187,14 +177,15 @@ export function SmsDeleteDialogs({
             <AlertDialogCancel
               variant="tonal"
               disabled={isDeleting}
-              className={CANCEL_ACTION}
+              size="action"
             >
               {t("actions.cancel", { ns: "common" })}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={onConfirmDelete}
               disabled={isDeleting}
-              className={DESTRUCTIVE_ACTION}
+              variant="destructive"
+              size="action"
             >
               {isDeleting ? (
                 <>
@@ -247,14 +238,15 @@ export function SmsDeleteDialogs({
             <AlertDialogCancel
               variant="tonal"
               disabled={isDeleting}
-              className={CANCEL_ACTION}
+              size="action"
             >
               {t("sms.inbox.delete_all_confirm.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={onConfirmDeleteAll}
               disabled={isDeleting}
-              className={DESTRUCTIVE_ACTION}
+              variant="destructive"
+              size="action"
             >
               {isDeleting ? (
                 <>
@@ -307,14 +299,15 @@ export function SmsDeleteDialogs({
             <AlertDialogCancel
               variant="tonal"
               disabled={isDeleting}
-              className={CANCEL_ACTION}
+              size="action"
             >
               {t("sms.inbox.delete_all_confirm.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={onConfirmDeleteSelected}
               disabled={isDeleting}
-              className={DESTRUCTIVE_ACTION}
+              variant="destructive"
+              size="action"
             >
               {isDeleting ? (
                 <>

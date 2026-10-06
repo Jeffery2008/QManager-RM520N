@@ -39,7 +39,6 @@ import {
   DIALOG_PANEL,
   FOCUS_RING_ON_SURFACE,
   NOTES,
-  PILL_ACTION,
   VALUE_MONO,
 } from "./shapes";
 
@@ -113,7 +112,8 @@ export function ReleaseNotesCard({
               <div className={NOTES.FOOTER}>
                 <Button
                   variant="outline"
-                  className={cn(PILL_ACTION, FOCUS_RING_ON_SURFACE)}
+                  size="action"
+                  className={FOCUS_RING_ON_SURFACE}
                   onClick={() => setDialogOpen(true)}
                 >
                   {t("software_update.actions.read_full_notes")}

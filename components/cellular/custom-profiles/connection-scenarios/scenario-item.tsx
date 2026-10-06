@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Tag } from "@/components/ui/tag";
-import { buttonVariants } from "@/components/ui/button";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { DUR, EASE_STANDARD } from "@/lib/motion";
 import {
@@ -22,8 +21,6 @@ import { resolveScenarioIcon } from "./scenario-icons";
 import {
   BADGE_GLYPH_SIZE,
   MACHINE_VALUE,
-  PILL_ACTION,
-  PILL_ACTION_PLAIN,
   PROFILE_STATUS_BADGE,
   SCENARIO_DISC_ACTIVE,
   SCENARIO_DISC_IDLE,
@@ -68,16 +65,6 @@ import {
 // schedule. There is no local fallback: a fabricated "18:00" on a scenario
 // nothing has scheduled is exactly the claim the State-Honesty Rule forbids.
 // =============================================================================
-
-/** The destructive pill, from the button variant — matches
- *  `sms/delete-dialogs.tsx`'s `DESTRUCTIVE_ACTION`/`CANCEL_ACTION` constants
- *  rather than a hand-written `bg-destructive text-destructive-foreground
- *  hover:bg-destructive/90` copy. */
-const DESTRUCTIVE_ACTION = cn(
-  buttonVariants({ variant: "destructive" }),
-  PILL_ACTION,
-);
-const CANCEL_ACTION = PILL_ACTION_PLAIN;
 
 /** Count the members of a colon-delimited band list. "" is zero, not one. */
 function bandCount(colonDelimited: string): number {
@@ -288,12 +275,13 @@ export const ScenarioItem = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel variant="tonal" className={CANCEL_ACTION}>
+            <AlertDialogCancel variant="tonal" size="action">
               {t("actions.cancel", { ns: "common" })}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              className={DESTRUCTIVE_ACTION}
+              variant="destructive"
+              size="action"
             >
               {t("scenarios.tile.delete_dialog.confirm")}
             </AlertDialogAction>

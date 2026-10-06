@@ -27,7 +27,6 @@ import {
 
 import BandGridCard from "./band-grid-card";
 import LiveBandHero from "./live-band-hero";
-import { PILL_ACTION } from "./shapes";
 
 // =============================================================================
 // BandLockingComponent — page coordinator for /cellular/cell-locking
@@ -323,7 +322,7 @@ const BandLockingComponent = () => {
             aria-description={
               isWatcherRunning ? watcherBlockedReason : undefined
             }
-            className={PILL_ACTION}
+            size="action"
           >
             <MaterialSymbol
               name="refresh"

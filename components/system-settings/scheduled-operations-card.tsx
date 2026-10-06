@@ -432,6 +432,7 @@ const ScheduledRebootCard = ({
               <Input
                 id="scheduled-reboot-time"
                 type="time"
+                host="container"
                 className={FIELD}
                 value={rebootTime}
                 onChange={(e) => handleRebootTimeChange(e.target.value)}

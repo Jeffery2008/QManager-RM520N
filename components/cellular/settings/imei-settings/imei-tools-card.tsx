@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +50,6 @@ import {
   CHECK_GROUP,
   FIELD_SHELL,
   INLINE_ERROR,
-  PILL_ACTION,
   READOUT_ICON_ACTION,
   READOUT_ICON_GLYPH,
   READOUT_ROW,
@@ -148,6 +148,7 @@ const IMEIToolsCard = () => {
               control={
                 <Select value={presetId} onValueChange={setPresetId}>
                   <SelectTrigger
+                    host="container"
                     className={cn(SELECT_TRIGGER, "@2xl/card:w-[13rem]")}
                     aria-labelledby="imei-tac-label"
                   >
@@ -198,7 +199,8 @@ const IMEIToolsCard = () => {
                   consequence={t(`${K}.generate.prefix_consequence`)}
                   labelId="imei-prefix-label"
                   control={
-                    <input
+                    <Input
+                      host="container"
                       id="imei-prefix-input"
                       type="text"
                       inputMode="numeric"
@@ -237,7 +239,7 @@ const IMEIToolsCard = () => {
               type="button"
               onClick={handleGenerate}
               disabled={!isValidPrefix}
-              className={PILL_ACTION}
+              size="action"
             >
               {t(`${K}.generate.action`)}
             </Button>
@@ -263,7 +265,7 @@ const IMEIToolsCard = () => {
 
           {/* ONE ROW, ONE BOX. The field and the two things you can do to the
               number inside it are a single control — see `CHECK_GROUP` for why
-              this is composed from the family's own `CONTROL_BOX` rather than
+              this is a hand-drawn field box rather than
               from `components/ui/input-group.tsx`, and why the focus ring sits
               on the shell instead of on the input.
 

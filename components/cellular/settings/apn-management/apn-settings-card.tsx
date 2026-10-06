@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,7 +58,6 @@ import {
   CARD_SHELL,
   CARD_TITLE,
   FIELD_SHELL,
-  PILL_ACTION,
   ROW_GROUP,
   SELECT_TRIGGER,
   SETTING_ROW,
@@ -155,24 +155,7 @@ const FALLBACK_RESERVED_CIDS: readonly number[] = [2, 3];
  */
 type PendingReserved = { cid: number; kind: "ims" | "emergency" | "unverified" };
 
-/**
- * The APN input: the family's shared field shells plus the comp's 260px
- * minimum, which is what stops a long `internet.talkntext.ph` truncating on a
- * half-width card. Nothing else is added.
- *
- * THIS WAS `components/ui/input.tsx` AND A LOCAL PATCH. The patch covered only
- * the `dark:` axis, and the primitive smuggles four more things past
- * tailwind-merge on axes an unprefixed override cannot displace or does not
- * touch at all: `md:text-sm` (so this one field rendered 14px above 768px while
- * every sibling rendered 13.5px), `transition-[color,box-shadow]` with NO
- * duration (a raw Tailwind 150ms — off the scale, so it silently would not
- * retune), `shadow-xs` (a cast shadow on an input, which DESIGN.md > Inputs
- * forbids) and `placeholder:text-muted-foreground` (a legacy token surviving in
- * the rest state). A raw `<input>` on `FIELD_SHELL` removes all five at once —
- * and picks up `placeholder:font-sans` for free, without which the
- * human-authored placeholder rendered in JetBrains Mono and read as though the
- * field were already filled.
- */
+/** The APN input: the family field plus the comp's 260px minimum, so a long APN does not truncate. */
 const APN_INPUT = cn(FIELD_SHELL, "@2xl/card:w-[16.25rem]");
 
 export function ApnSettingsCard({
@@ -413,7 +396,8 @@ export function ApnSettingsCard({
               delta={apnDelta}
               control={
                 <div className="flex w-full flex-col gap-1.5 @2xl/card:w-auto">
-                  <input
+                  <Input
+                    host="container"
                     id="apn-input"
                     type="text"
                     aria-labelledby="apn-name-label"
@@ -483,6 +467,7 @@ export function ApnSettingsCard({
                     disabled={isSaving}
                   >
                     <SelectTrigger
+                      host="container"
                       id="apn-cid"
                       aria-labelledby="apn-cid-label"
                       className={SELECT_TRIGGER}
@@ -552,7 +537,7 @@ export function ApnSettingsCard({
                 variant="secondary"
                 onClick={() => setConfirmDeactivate(true)}
                 disabled={isSaving}
-                className={PILL_ACTION}
+                size="action"
               >
                 {t(`${K}.carrier_default.button`)}
               </Button>
@@ -573,7 +558,7 @@ export function ApnSettingsCard({
             saved={saved}
             label={t(`${K}.save_apn`)}
             disabled={changeCount === 0}
-            className={PILL_ACTION}
+            size="action"
           />
         }
       />

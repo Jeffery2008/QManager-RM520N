@@ -32,7 +32,6 @@ import {
   CONDITION_TONE,
   HEADER_PILL,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_GLYPH,
 } from "./shapes";
 import { StatusBand, StatusBandSkeleton } from "./status-band";
@@ -88,7 +87,8 @@ const WatchdogComponent = () => {
               variant="ghost"
               onClick={reload}
               disabled={isLoading}
-              className={cn(PILL_ACTION, HEADER_PILL)}
+              size="action"
+              className={HEADER_PILL}
             >
               <RefreshCcwIcon
                 className={cn(

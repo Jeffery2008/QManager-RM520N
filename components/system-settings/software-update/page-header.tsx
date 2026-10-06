@@ -11,7 +11,7 @@ import { staggerItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 import type { FailureDetail, UpdateView } from "./derive";
-import { PAGE_HEAD, PILL_ACTION, PILL_GLYPH, SKELETON, SPIN } from "./shapes";
+import { PAGE_HEAD, PILL_GLYPH, SKELETON, SPIN } from "./shapes";
 
 const K = "software_update";
 
@@ -66,7 +66,7 @@ export function PageHeader({
         ) : (
           offersCheck && (
             <Button
-              className={PILL_ACTION}
+              size="action"
               onClick={onCheck}
               disabled={isChecking}
             >

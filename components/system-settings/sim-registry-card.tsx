@@ -60,7 +60,6 @@ import {
   CONDITION_PANEL,
   FOCUS_RING,
   NOTICE,
-  PILL_ACTION,
   PILL_GLYPH,
   ROW_GROUP,
   SIM_LIST,
@@ -260,7 +259,7 @@ function ClearKnownSimsFooter({
                 size="icon-xs"
                 // -ml-1.5 cancels the icon button's own box inset so the glyph
                 // sits on the card's content column, flush with the title above.
-                className="text-on-surface-variant hover:text-on-surface -ml-1.5 rounded-pill"
+                className="text-on-surface-variant hover:text-on-surface -ml-1.5"
                 aria-label={t("known_sims.info_aria")}
               >
                 <InfoIcon className="size-4" aria-hidden="true" />
@@ -284,7 +283,7 @@ function ClearKnownSimsFooter({
 
         <Button
           variant="destructive"
-          className={PILL_ACTION}
+          size="action"
           onClick={() => setOpen(true)}
           disabled={isLoading || isClearing}
         >
@@ -304,12 +303,12 @@ function ClearKnownSimsFooter({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isClearing} className={PILL_ACTION}>
+            <AlertDialogCancel disabled={isClearing} size="action">
               {t("actions.cancel", { ns: "common" })}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              className={PILL_ACTION}
+              size="action"
               disabled={isClearing}
               onClick={(e) => {
                 // Keep the dialog mounted through the request so the button can
@@ -451,7 +450,7 @@ export default function SimRegistryCard({
           className={cn(CARD_PAD, "flex items-center justify-between gap-4")}
         >
           <Skeleton className={cn(SKELETON.SIMS.LABEL, "w-36")} />
-          <Skeleton className={cn(PILL_ACTION, "w-28")} />
+          <Skeleton className={SKELETON.SIMS.ACTION} />
         </CardFooter>
       </Card>
     );

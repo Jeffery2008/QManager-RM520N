@@ -20,7 +20,7 @@ import { SaveButton } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-import { FOOT, HERO_PAD, PILL_ACTION, SKELETON } from "./shapes";
+import { FOOT, HERO_PAD, SKELETON } from "./shapes";
 import { FIELD_LABEL_KEY, type WatchdogForm } from "./use-watchdog-form";
 
 /** A real list for the active locale: separator and conjunction are language facts. */
@@ -105,7 +105,8 @@ export function WatchdogFoot({ form }: { form: WatchdogForm }) {
             <Button
               type="button"
               variant="ghost"
-              className={cn(PILL_ACTION, "text-on-surface-variant")}
+              size="action"
+              className="text-on-surface-variant"
               onClick={form.discard}
               disabled={!form.isDirty || form.isSaving}
             >
@@ -114,7 +115,7 @@ export function WatchdogFoot({ form }: { form: WatchdogForm }) {
             <span ref={saveWrapRef} className="contents" onClickCapture={jumpToBlocked}>
               <SaveButton
                 type="button"
-                className={PILL_ACTION}
+                size="action"
                 label={t("watchdog.save.action")}
                 isSaving={form.isSaving}
                 saved={form.saved}

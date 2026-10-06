@@ -36,9 +36,8 @@ export interface CellularPageHeaderProps {
   /** The muted one-line description directly beneath it. */
   description?: React.ReactNode;
   /**
-   * Optional right-aligned pill actions. Callers style their own buttons with
-   * `PILL_ACTION` from their surface's shapes contract — the header does not
-   * impose a button shape it cannot see the content of.
+   * Optional right-aligned pill actions. Callers pass `size="action"` buttons;
+   * the header imposes no button shape of its own.
    */
   actions?: React.ReactNode;
   className?: string;

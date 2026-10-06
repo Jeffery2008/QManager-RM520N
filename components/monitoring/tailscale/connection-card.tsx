@@ -42,7 +42,6 @@ import { cn } from "@/lib/utils";
 
 import { ConditionBlock } from "./condition-block";
 import {
-  ACTION,
   CARD_BODY,
   CARD_DESC,
   CARD_HEAD,
@@ -219,7 +218,7 @@ export function ConnectionCard({
           type="button"
           variant="destructive"
           disabled={isDisconnecting}
-          className={ACTION}
+          size="action"
         >
           {t("tailscale.connection.logout")}
         </Button>
@@ -261,7 +260,7 @@ export function ConnectionCard({
     rail = (
       <Button
         type="button"
-        className={ACTION}
+        size="action"
         disabled={isTogglingService}
         onClick={() =>
           run(
@@ -283,7 +282,7 @@ export function ConnectionCard({
         {authUrl ? null : (
           <Button
             type="button"
-            className={ACTION}
+            size="action"
             disabled={isConnecting}
             onClick={() =>
               run(
@@ -302,7 +301,8 @@ export function ConnectionCard({
         <Button
           type="button"
           variant="ghost"
-          className={cn(ACTION, PILL_REST)}
+          size="action"
+          className={PILL_REST}
           disabled={isTogglingService}
           onClick={() =>
             run(
@@ -325,7 +325,8 @@ export function ConnectionCard({
         <Button
           type="button"
           variant="ghost"
-          className={cn(ACTION, PILL_REST)}
+          size="action"
+          className={PILL_REST}
           disabled={isDisconnecting}
           onClick={() =>
             run(
@@ -348,7 +349,7 @@ export function ConnectionCard({
       <>
         <Button
           type="button"
-          className={ACTION}
+          size="action"
           disabled={isConnecting}
           onClick={() =>
             run(

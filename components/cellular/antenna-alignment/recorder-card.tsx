@@ -43,7 +43,6 @@ import {
   CARD_TITLE,
   GLYPH,
   ICON_TARGET,
-  PILL_ACTION,
   RECORD_GLYPH,
   SEGMENTED_ITEM,
   SLOT,
@@ -660,7 +659,7 @@ export function PositionsCard({
           )}
 
           <Button
-            className={cn(PILL_ACTION, "w-full @sm/card:w-fit @sm/card:shrink-0")}
+            size="action" className="w-full @sm/card:w-fit @sm/card:shrink-0"
             disabled={recordBlockedReason !== null}
             onClick={() => {
               if (nextEmpty !== -1) recordInto(nextEmpty);
@@ -695,7 +694,7 @@ export function PositionsCard({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className={PILL_ACTION}>
+            <AlertDialogCancel size="action">
               {t("antenna_alignment.recorder.confirm_cancel")}
             </AlertDialogCancel>
             {/* The role's own pair, never `bg-destructive/90`: an alpha wash of
@@ -703,10 +702,8 @@ export function PositionsCard({
                 dialog happens to sit on. */}
             <AlertDialogAction
               onClick={confirmPending}
-              className={cn(
-                PILL_ACTION,
-                "bg-destructive text-destructive-foreground hover:bg-destructive-container hover:text-on-destructive-container"
-              )}
+              size="action"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive-container hover:text-on-destructive-container"
             >
               {pending?.kind === "reset"
                 ? t("antenna_alignment.recorder.reset_confirm_action")

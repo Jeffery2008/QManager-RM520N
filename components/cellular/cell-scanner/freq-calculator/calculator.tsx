@@ -20,7 +20,6 @@ import {
   CALC_SPLIT,
   FORM,
   HISTORY_CLEAR,
-  PILL_ACTION,
   RESULTS_CARD,
   SECTION_HEAD,
 } from "../shapes";
@@ -255,7 +254,7 @@ const FrequencyCalculator = () => {
                 <Button
                   type="button"
                   onClick={() => run(channel, mode, true)}
-                  className={PILL_ACTION}
+                  size="action"
                 >
                   {t("cell_scanner.calculator.form.submit")}
                 </Button>

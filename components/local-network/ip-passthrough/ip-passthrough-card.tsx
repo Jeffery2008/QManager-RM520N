@@ -41,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { fieldVariants } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DUR, EASE_STANDARD } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -60,7 +61,6 @@ import {
   DELTA,
   FIELD,
   MAC_FIELD,
-  PILL_ACTION,
   PROVENANCE,
   ROW,
   ROW_GROUP,
@@ -518,6 +518,7 @@ export function IPPassthroughCard({
                       disabled={controlsHeld}
                     >
                       <SelectTrigger
+                        host="container"
                         aria-labelledby={MODE_ID}
                         className={FIELD}
                       >
@@ -565,6 +566,7 @@ export function IPPassthroughCard({
                       disabled={controlsHeld || !macRequired}
                     >
                       <SelectTrigger
+                        host="container"
                         aria-labelledby={TARGET_ID}
                         className={FIELD}
                       >
@@ -595,13 +597,7 @@ export function IPPassthroughCard({
                             ease: EASE_STANDARD,
                           }}
                         >
-                          {/* A raw input, deliberately not the `Input`
-                              primitive: its base string carries
-                              `dark:bg-input/30` and `md:text-sm`, and `cn()`
-                              cannot let an unprefixed class displace a
-                              variant-prefixed one — so the fill reverts in dark
-                              mode and the size reverts at a 768px VIEWPORT on a
-                              container-query surface. Both were live here. */}
+                          {/* Raw input on `fieldVariants`: `Input`'s `md:text-sm` would override the row's type. */}
                           <input
                             type="text"
                             autoComplete="off"
@@ -613,7 +609,10 @@ export function IPPassthroughCard({
                             aria-label={t(`${K}.card.mac_label`)}
                             aria-invalid={!macValid || undefined}
                             placeholder={t(`${K}.card.mac_placeholder`)}
-                            className={MAC_FIELD}
+                            className={cn(
+                              fieldVariants({ host: "container" }),
+                              MAC_FIELD,
+                            )}
                           />
                           {!macValid ? (
                             <span className={ROW.ERROR} role="alert">
@@ -643,7 +642,11 @@ export function IPPassthroughCard({
                       onValueChange={(v) => setField("nat", v as NatMode)}
                       disabled={controlsHeld}
                     >
-                      <SelectTrigger aria-labelledby={NAT_ID} className={FIELD}>
+                      <SelectTrigger
+                        host="container"
+                        aria-labelledby={NAT_ID}
+                        className={FIELD}
+                      >
                         <SelectValue
                           placeholder={t(`${K}.options.placeholder`)}
                         />
@@ -677,7 +680,11 @@ export function IPPassthroughCard({
                       onValueChange={(v) => setField("usb", v as UsbModeLocal)}
                       disabled={controlsHeld}
                     >
-                      <SelectTrigger aria-labelledby={USB_ID} className={FIELD}>
+                      <SelectTrigger
+                        host="container"
+                        aria-labelledby={USB_ID}
+                        className={FIELD}
+                      >
                         <SelectValue
                           placeholder={t(`${K}.options.placeholder`)}
                         />
@@ -717,7 +724,11 @@ export function IPPassthroughCard({
                       onValueChange={(v) => setField("dns", v as DnsProxy)}
                       disabled={controlsHeld}
                     >
-                      <SelectTrigger aria-labelledby={DNS_ID} className={FIELD}>
+                      <SelectTrigger
+                        host="container"
+                        aria-labelledby={DNS_ID}
+                        className={FIELD}
+                      >
                         <SelectValue
                           placeholder={t(`${K}.options.placeholder`)}
                         />
@@ -762,7 +773,7 @@ export function IPPassthroughCard({
                 variant="ghost"
                 onClick={handleDiscard}
                 disabled={isSaving || dirtyCount === 0}
-                className={PILL_ACTION}
+                size="action"
               >
                 {t(`${K}.card.discard`)}
               </Button>
@@ -776,7 +787,7 @@ export function IPPassthroughCard({
                 saved={saved}
                 label={t(`${K}.card.apply`)}
                 blockedReason={blockedReason}
-                className={PILL_ACTION}
+                size="action"
               />
             </>
           }

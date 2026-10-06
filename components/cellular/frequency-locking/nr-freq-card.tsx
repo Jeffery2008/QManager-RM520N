@@ -62,7 +62,6 @@ import {
   LOCK_BADGE,
   NOTICE,
   NOTICE_TONE,
-  PILL_ACTION_PLAIN,
   PILL_QUIET,
   PILL_USE_CURRENT,
   SKELETON_SHAPE,
@@ -126,16 +125,8 @@ function entryKey(entries: readonly NrFreqLockEntry[]): string {
     .join("|");
 }
 
-/**
- * SCS picker geometry.
- *
- * `SLOT_INPUT`'s `h-[2.625rem]` cannot beat the Select primitive's
- * `data-[size=default]:h-9` on its own — different variant groups, so
- * `tailwind-merge` keeps both and the data-attribute rule wins. The override has
- * to be written in the same variant. `flex-none` likewise replaces the shared
- * constant's `flex-1`, since this control has a fixed measure.
- */
-const SCS_CONTROL = `${SLOT_INPUT} w-32 flex-none data-[size=default]:h-[2.625rem]`;
+/** SCS picker: a fixed measure instead of the slot input's `flex-1`. */
+const SCS_CONTROL = `${SLOT_INPUT} w-32 flex-none`;
 
 /** The remove button's interaction layer. `SLOT.DROP` is shape only. */
 const DROP_INTERACT =
@@ -777,7 +768,7 @@ export function NrFreqCard({
             <Button
               type="button"
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               onClick={() => setShowUnlockDialog(true)}
               disabled={isLocking || posture !== "locked"}
             >
@@ -794,7 +785,7 @@ export function NrFreqCard({
                 draft.length === 0 ||
                 (posture === "locked" && !hasChanges)
               }
-              className={PILL_ACTION_PLAIN}
+              size="action"
             />
           </div>
         </div>
@@ -816,14 +807,14 @@ export function NrFreqCard({
           <AlertDialogFooter>
             <AlertDialogCancel
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               disabled={isLocking}
             >
               {t("frequency_locking.dialog.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmLock}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             >
               {t("frequency_locking.dialog.confirm_lock")}
             </AlertDialogAction>
@@ -871,7 +862,7 @@ export function NrFreqCard({
           <AlertDialogFooter>
             <AlertDialogCancel
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               disabled={isLocking}
             >
               {t("frequency_locking.dialog.cancel")}
@@ -879,7 +870,7 @@ export function NrFreqCard({
             <AlertDialogAction
               variant="destructive"
               onClick={confirmLock}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             >
               {t("frequency_locking.dialog.unsupported_confirm")}
             </AlertDialogAction>
@@ -901,14 +892,14 @@ export function NrFreqCard({
           <AlertDialogFooter>
             <AlertDialogCancel
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               disabled={isLocking}
             >
               {t("frequency_locking.dialog.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmUnlock}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             >
               {t("frequency_locking.dialog.confirm_unlock")}
             </AlertDialogAction>

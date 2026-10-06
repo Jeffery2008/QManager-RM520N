@@ -278,72 +278,9 @@ export const ROW = {
   CONTROL: "flex flex-none items-center @2xl/card:ml-auto",
 } as const;
 
-/**
- * The speed-limit Select's trigger.
- *
- * -----------------------------------------------------------------------------
- * THE FILL IS ONE STEP ABOVE **THIS** HOST, WHICH IS NOT THE HOST IT WAS COPIED
- * FROM
- * -----------------------------------------------------------------------------
- * The retired constant was a byte-copy of `cellular/settings/shapes.ts`'s
- * `SELECT_TRIGGER`, which is authored for a `surface-container` host. There the
- * control sat directly on `bg-surface` inside `CardContent`, so it painted two
- * steps above its host and read as a floating chip rather than as a field.
- *
- * Here the control lives inside a `ROW`, inside `ROW_GROUP`, which is
- * `bg-surface-container` — so `surface-container-high` is exactly host + 1, and
- * the Field-Step Rule is satisfied by the composition rather than in spite of
- * it. The fill IS the whole affordance on a borderless field; get the step
- * wrong and the control renders at 1.00:1 against its own background, with no
- * edge at all.
- *
- * -----------------------------------------------------------------------------
- * THE DARK HALF IS EXPLICIT, AND IMPORTANT-MARKED
- * -----------------------------------------------------------------------------
- * `select.tsx` ships its own `dark:bg-input/30`. Tailwind v4 compiles `dark` to
- * `&:is(.dark *)` — specificity (0,2,0) against a bare call-site fill's (0,1,0)
- * — so a light-only override simply LOSES in dark mode, and `tailwind-merge`
- * cannot dedupe the two because they sit in different modifier groups. It then
- * looks approximately right in dark mode, which is exactly why it survives
- * review.
- *
- * Writing the `dark:` half is necessary and not sufficient. Once both rules are
- * `dark:`-prefixed they TIE at (0,2,0), and a tie is decided by emission order —
- * Tailwind's deterministic candidate sort, i.e. by name. `bg-input…` sorts
- * before `bg-surface-…` only because *i* precedes *s*. That is an observed
- * outcome, not a constructed one, so the dark half carries the important
- * modifier and wins by construction instead of by alphabet.
- *
- * The primitives' `rounded-md` / `h-9` / `dark:bg-input/30` remain an OPEN
- * product-wide Migration Delta. This fixes them at this one call site and does
- * not sweep them.
- */
-/**
- * The 42px pill box and the type it speaks in. Module-private — the API is `FIELD`.
- *
- * THE HEIGHT IS IMPORTANT-MARKED FOR THE SAME REASON THE DARK FILL IS, on a
- * different axis. `select.tsx:40` ends with `data-[size=default]:h-9`, and
- * Tailwind v4 compiles that attribute modifier to specificity **(0,2,0)** against
- * a bare `h-[2.625rem]`'s **(0,1,0)**. `tailwind-merge` keeps both — they sit in
- * different modifier groups — and the primitive simply wins.
- *
- * Measured, not reasoned: `getBoundingClientRect().height` on the rendered
- * trigger returned **36**, against a call site asking for 42. It looks
- * approximately right, which is exactly why it survives review — the same
- * sentence `cellular/settings/shapes.ts` writes about the fill.
- *
- * `select.tsx`'s `rounded-md` / `h-9` / `dark:bg-input/30` are an OPEN
- * product-wide Migration Delta. This corrects them at this one call site and
- * does not sweep them; migrating the primitive retires the marker with it.
- */
-const FIELD_BOX =
-  "h-[2.625rem]! w-full rounded-pill border-0 px-4 text-[0.84375rem] font-medium @2xl/card:w-auto @2xl/card:min-w-[13.5rem]";
-
-/** Focus ring and disabled. Rides whatever is the box. */
-const FIELD_STATE =
-  "focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
-
-export const FIELD = `${FIELD_BOX} bg-surface-container-high dark:bg-surface-container-high! ${FIELD_STATE}`;
+/** The speed-limit Select trigger. It sits on `ROW_GROUP` (`surface-container`), so the call site passes `host="container"`. */
+export const FIELD =
+  "w-full text-[0.84375rem] font-medium @2xl/card:w-auto @2xl/card:min-w-[13.5rem]";
 
 /** The glyph riding inside the trigger during the applying state. */
 export const FIELD_GLYPH = "size-3.5";
@@ -368,6 +305,3 @@ export const PROVENANCE = "text-on-surface-variant px-1 text-xs";
 
 /** The route wrapper. Container queries key off `@container/main`. */
 export const PAGE_ROOT = "@container/main mx-auto flex flex-col gap-5 p-2";
-
-/** The page-header action pill. Restated per family, never imported across one. */
-export const PILL_ACTION = "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";

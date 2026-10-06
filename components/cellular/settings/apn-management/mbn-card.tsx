@@ -42,7 +42,6 @@ import {
   CARD_SHELL,
   CARD_TITLE,
   CHOICE_ROW,
-  PILL_ACTION,
   ROW_GROUP,
   SETTING_ROW,
 } from "../shapes";
@@ -434,7 +433,7 @@ export function MBNCard({
               variant="ghost"
               onClick={discard}
               disabled={isSaving || changeCount === 0}
-              className={cn(PILL_ACTION, "gap-0")}
+              size="action" className="gap-0"
             >
               {t("core_settings.basic.save_bar.discard")}
             </Button>
@@ -445,7 +444,7 @@ export function MBNCard({
               saved={saved}
               label={t(`${K}.save`)}
               disabled={changeCount === 0}
-              className={PILL_ACTION}
+              size="action"
             />
           </>
         }

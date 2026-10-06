@@ -210,6 +210,7 @@ function Rung({
               onValueChange={form.setBackupSimSlot}
             >
               <SelectTrigger
+                host="container"
                 id={FIELD_ID.backupSim}
                 ref={registerField(FIELD_ID.backupSim)}
                 aria-invalid={form.errors.backupSim !== null}
@@ -219,7 +220,7 @@ function Rung({
                     : `${FIELD_ID.backupSim}-hint`
                 }
                 className={cn(
-                  FIELD.SHELL_ON_CONTAINER,
+                  FIELD.SHELL,
                   FIELD.INVALID,
                   FIELD.NARROW,
                 )}
@@ -254,6 +255,7 @@ function Rung({
               {t("watchdog.ladder.tier4.capLabel")}
             </label>
             <Input
+              host="container"
               id={FIELD_ID.maxReboots}
               ref={registerField(FIELD_ID.maxReboots)}
               type="number"
@@ -269,7 +271,7 @@ function Rung({
                   : `${FIELD_ID.maxReboots}-hint`
               }
               className={cn(
-                FIELD.SHELL_ON_CONTAINER,
+                FIELD.SHELL,
                 FIELD.INVALID,
                 FIELD.NUM,
                 FIELD.NARROW,

@@ -18,7 +18,7 @@ import {
   AUTO_TILE,
   BADGE_GLYPH_SIZE,
   DAY_CHIP,
-  FIELD_CONTROL_ON_CONTAINER,
+  FIELD_CONTROL,
   FIELD_LABEL,
   NOTICE,
   NOTICE_TONE,
@@ -268,7 +268,8 @@ export function ScheduleTile({ config, onScheduleChange }: ScheduleTileProps) {
               setStartTime(e.target.value);
               commit({ start_time: e.target.value });
             }}
-            className={FIELD_CONTROL_ON_CONTAINER}
+            host="container"
+            className={FIELD_CONTROL}
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -283,7 +284,8 @@ export function ScheduleTile({ config, onScheduleChange }: ScheduleTileProps) {
               setEndTime(e.target.value);
               commit({ end_time: e.target.value });
             }}
-            className={FIELD_CONTROL_ON_CONTAINER}
+            host="container"
+            className={FIELD_CONTROL}
           />
         </div>
       </div>

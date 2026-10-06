@@ -147,6 +147,7 @@ export function SpeedLimitCard({
                 disabled={isSaving || held}
               >
                 <SelectTrigger
+                  host="container"
                   aria-labelledby={SPEED_LIMIT_LABEL_ID}
                   className={FIELD}
                 >

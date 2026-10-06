@@ -22,8 +22,6 @@ import {
   LEDGER_SHAPE,
   LEDGER_VALUE,
   MACHINE_VALUE,
-  PILL_ACTION,
-  PILL_ACTION_PLAIN,
   ledgerStepTone,
 } from "./shapes";
 
@@ -468,7 +466,7 @@ export function ApplyProgressDialog({
                 <Button
                   variant="tonal"
                   onClick={onRetry}
-                  className={PILL_ACTION}
+                  size="action"
                 >
                   <MaterialSymbol name="restart_alt" size={16} />
                   {t("custom_profiles.apply_dialog.reapply_action")}
@@ -477,7 +475,7 @@ export function ApplyProgressDialog({
               <Button
                 variant={canRetry ? "default" : "tonal"}
                 onClick={onClose}
-                className={PILL_ACTION_PLAIN}
+                size="action"
               >
                 {t("actions.close", { ns: "common" })}
               </Button>

@@ -65,7 +65,6 @@ import {
 import { DUR, EASE_STANDARD } from "@/lib/motion";
 import {
   MACHINE_VALUE,
-  PILL_ACTION,
 } from "@/components/cellular/custom-profiles/shapes";
 
 // =============================================================================
@@ -1263,7 +1262,7 @@ const CustomProfileFormComponent = ({
                       ? t("custom_profiles.form.submit_edit")
                       : t("custom_profiles.form.submit_add")
                   }
-                  className={PILL_ACTION}
+                  size="action"
                 />
               ) : (
                 <Button key="profile-next" type="button" onClick={goNext}>

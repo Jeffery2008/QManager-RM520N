@@ -41,7 +41,6 @@ import {
   CHIP_GLYPH,
   CONSOLE,
   FAILURE_FACE,
-  PILL_ACTION,
   PILL_GLYPH,
   SKELETON,
   SPIN,
@@ -301,7 +300,7 @@ export function WebConsoleCard(): React.JSX.Element {
               <Button
                 type="button"
                 variant="outline"
-                className={PILL_ACTION}
+                size="action"
                 onClick={handleClear}
                 disabled={failed}
               >
@@ -312,7 +311,7 @@ export function WebConsoleCard(): React.JSX.Element {
                 ref={fullscreenButtonRef}
                 type="button"
                 variant="outline"
-                className={PILL_ACTION}
+                size="action"
                 onClick={toggleFullscreen}
               >
                 {isFullscreen ? (

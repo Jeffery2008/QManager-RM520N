@@ -32,7 +32,6 @@ import {
   NOTICE_GLYPH,
   NOTICE_TONE,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_GLYPH,
   PILL_REST,
   STATUS_LABEL_KEY,
@@ -266,7 +265,8 @@ const TailscaleComponent = () => {
                 variant="ghost"
                 onClick={reload}
                 disabled={isLoading}
-                className={cn(PILL_ACTION, PILL_REST)}
+                size="action"
+                className={PILL_REST}
               >
                 <RefreshCcwIcon
                   className={cn(

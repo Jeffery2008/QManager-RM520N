@@ -29,7 +29,8 @@ import type { ScenarioSchedule, SimProfile } from "@/types/sim-profile";
 import { resolveScenarioIcon } from "./connection-scenarios/scenario-icons";
 import {
   LIVE_DOT,
-  PILL_ACTION_SM,
+  INLINE_ACTION_SKELETON,
+  INLINE_ACTION_TYPE,
   PROFILE_CARD_PEER,
   PROFILE_PAD,
   RIBBON_MINI,
@@ -248,7 +249,7 @@ export function ScheduleTodayCard({
           <CardAction>
             <Button
               variant="ghost"
-              className={PILL_ACTION_SM}
+              className={INLINE_ACTION_TYPE}
               onClick={onEditSchedule}
             >
               <MaterialSymbol name="edit_calendar" size={16} aria-hidden />
@@ -422,7 +423,7 @@ export function ScheduleTodayCardSkeleton() {
       <CardHeader className={PROFILE_PAD}>
         <Skeleton className="h-5 w-40 rounded-pill" />
         <CardAction>
-          <Skeleton className={cn(PILL_ACTION_SM, "w-32")} />
+          <Skeleton className={cn(INLINE_ACTION_SKELETON, "w-32")} />
         </CardAction>
       </CardHeader>
       <CardContent className={cn(PROFILE_PAD, "flex flex-col gap-4")}>

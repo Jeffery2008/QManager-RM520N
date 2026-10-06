@@ -697,18 +697,6 @@ export const NOTICE_TONE = {
 // -----------------------------------------------------------------------------
 
 /**
- * The action pill. Identical string to `radio/page-header.tsx`'s `PILL_ACTION`
- * and the custom-profiles contract — restated rather than imported so this
- * surface takes no dependency on an unrelated route's module graph.
- */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
-
-/** The same pill without a leading-glyph gap, for a text-only action. */
-export const PILL_ACTION_PLAIN =
-  "h-[2.625rem] rounded-pill px-5 text-sm font-semibold";
-
-/**
  * The quick-select affordances (Select all / Clear). Deliberately smaller than
  * the two real actions: they change a selection, they do not write to the
  * modem, and sizing them like `Apply` would put three equal-weight pills in
@@ -721,7 +709,7 @@ export const PILL_ACTION_PLAIN =
  * real (if muted) presence — `surface-container` — instead of asking the
  * reader to discover it by hovering.
  */
-export const PILL_QUIET = "h-9 rounded-pill px-3.5 text-xs font-semibold";
+export const PILL_QUIET = "h-9 px-3.5 text-xs font-semibold";
 
 // -----------------------------------------------------------------------------
 // Status chips

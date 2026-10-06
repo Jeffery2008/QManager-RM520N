@@ -703,13 +703,13 @@ const LiveLatencyComponent = ({
           {/* The play control lives in the LABEL cell, which is the whole
               reason `PillRow.label` is a node rather than a string — Data Used
               puts its counter reset in the same position, with the same
-              `size-5 rounded-pill` ghost treatment. The 34px filled disc the
+              `size-5` ghost treatment. The 34px filled disc the
               tile used was the affordance for an 88px block; at row scale a
               second filled disc would outweigh the reading beside it. */}
           <Button
             variant="ghost"
             size="icon"
-            className="size-5 rounded-pill text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
+            className="size-5 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
             aria-label={t("speedtest.start_button_aria")}
             onClick={handleSpeedtestOpen}
           >

@@ -27,7 +27,6 @@ import {
   CARD_GRID,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_GLYPH,
 } from "./shapes";
 
@@ -85,7 +84,7 @@ const SystemSettings = () => {
               variant="outline"
               onClick={handleRefresh}
               disabled={isLoading}
-              className={PILL_ACTION}
+              size="action"
             >
               <RefreshCcwIcon
                 className={cn(PILL_GLYPH, isLoading && "animate-spin")}

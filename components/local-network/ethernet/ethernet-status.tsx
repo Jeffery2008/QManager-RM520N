@@ -12,7 +12,7 @@ import { staggerContainer, staggerItem } from "@/lib/motion";
 
 import { LinkStateStrip } from "./link-state-strip";
 import { SpeedLimitCard } from "./speed-limit-card";
-import { PAGE_ROOT, PILL_ACTION } from "./shapes";
+import { PAGE_ROOT } from "./shapes";
 import type { EthernetStatus } from "./types";
 
 // =============================================================================
@@ -278,7 +278,7 @@ const EthernetStatusComponent = () => {
               variant="outline"
               onClick={() => fetchStatus()}
               disabled={isSaving}
-              className={PILL_ACTION}
+              size="action"
             >
               <RefreshCcwIcon className="size-4" />
               {t(`${K}.header.refresh`)}

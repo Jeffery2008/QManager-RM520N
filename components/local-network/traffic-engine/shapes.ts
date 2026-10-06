@@ -105,15 +105,6 @@ import type { DpiEngineStatus } from "@/types/traffic-engine";
 export const PAGE_ROOT = "mx-auto flex flex-col gap-5 p-2";
 
 /**
- * The page-header action pill (Uninstall engine).
- *
- * Restated per family, never imported across one — same 42px pill the ethernet
- * header uses, and the same reason it is not shared.
- */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
-
-/**
  * The page title, ON the Display step.
  *
  * Finding 10: `text-3xl font-bold mb-2` appears in 26 files and is missing the
@@ -446,7 +437,7 @@ export const HOST_ROW = {
   HEIGHT: "h-10",
   TEXT: "min-w-0 flex-1 truncate font-mono text-[0.78125rem]",
   REMOVE:
-    "size-8 flex-none rounded-pill text-on-surface-variant hover:bg-surface-container-high",
+    "size-8 flex-none text-on-surface-variant hover:bg-surface-container-high",
   GLYPH: "size-3.5",
 } as const;
 
@@ -480,24 +471,8 @@ export const HOST_VISIBLE_ROWS = 5;
  */
 export const HOST_MAX_COLUMNS = 3;
 
-/**
- * The add-a-domain field.
- *
- * Handed to a raw `<input>`, deliberately NOT to the `Input` primitive.
- * `Input`'s base string carries `dark:bg-input/30` and `md:text-sm`, and `cn()`
- * cannot let an unprefixed class displace a variant-prefixed one — so the fill
- * silently reverts in dark mode, and the size reverts at a 768px VIEWPORT,
- * which is a viewport breakpoint leaking into a container-query surface. The
- * focus ring is folded in here so the next consumer cannot forget it.
- *
- * The fill is one step above its host: this field sits directly on the card's
- * `bg-surface`, so `surface-container` is host + 1 and the Field-Step Rule is
- * satisfied by the composition. On a borderless field the fill IS the whole
- * affordance; get the step wrong and the control renders at 1.00:1 against its
- * own background, with no edge at all.
- */
-export const FIELD =
-  "h-[2.625rem] w-full min-w-0 flex-1 rounded-field border-0 bg-surface-container px-4.5 font-mono text-sm text-on-surface placeholder:text-on-surface-variant focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+/** The add-a-domain field. It sits on the card, so it takes the default `host`. */
+export const FIELD = "flex-1 font-mono text-sm";
 
 /** The field and its Add button, side by side once the CARD is wide enough. */
 export const FIELD_ROW = "flex flex-col gap-2.5 @lg/card:flex-row";
@@ -570,7 +545,7 @@ export const CARD_HEAD = {
  * glyph alone. Three unlabelled icons in a row is a guessing game.
  */
 export const ICON_ACTION =
-  "size-10 flex-none rounded-pill text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface";
+  "size-10 flex-none text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface";
 
 /**
  * The two-up band: the mode decision beside the test that measures it.
@@ -702,7 +677,7 @@ export const SKELETON = {
   /** The mark on a choice row and the disc on a resting block, as plain circles. */
   MARK: "size-5 flex-none rounded-pill",
   DISC: "size-14 flex-none rounded-pill",
-  /** A control standing in for `PILL_ACTION`, which is 42px. */
+  /** A control standing in for a `size="action"` Button, which is 42px. */
   PILL: "h-[2.625rem] rounded-pill",
 } as const;
 
@@ -760,11 +735,11 @@ export const CONDITION = {
    */
   BODY: "max-w-[44ch] text-sm leading-relaxed text-pretty",
   /**
-   * The CTA's GEOMETRY only. The fill comes from the `Button` primitive's
+   * The CTA's spacing over `size="action"`. The fill comes from the `Button` primitive's
    * default variant — a strong `bg-primary` on the `primary-container` ground,
    * which is the same pairing `bannerActionVariants` uses for its `primary`
    * tone on the same container. A `currentColor` alpha would have been a
    * request to whatever happens to be behind it rather than to a token.
    */
-  ACTION: "mt-2 h-[2.625rem] gap-2 rounded-pill px-6 text-sm font-semibold",
+  ACTION: "mt-2 px-6",
 } as const;

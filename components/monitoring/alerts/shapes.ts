@@ -12,15 +12,10 @@ import type { BadgeVariant } from "@/components/ui/badge";
 /** The route wrapper. Container queries key off `@container/main`. */
 export const PAGE_ROOT = "@container/main flex flex-col gap-5 px-4 pb-6 lg:px-6";
 
-/** A 36px header pill. The coarse-pointer bump is what reaches the 44px floor. */
-export const PILL_ACTION =
-  "h-9 gap-2 rounded-pill px-4 text-sm font-medium pointer-coarse:h-11";
+/** An icon-only card action, on `size="icon"`. */
+export const PILL_ICON = "grid place-items-center";
 
-/** The same pill with no label, for an icon-only card action. */
-export const PILL_ICON =
-  "grid size-9 place-items-center rounded-pill pointer-coarse:size-11";
-
-/** The lucide glyph inside either pill. */
+/** The lucide glyph inside a header or icon pill. */
 export const PILL_GLYPH = "size-4";
 
 /**
@@ -226,27 +221,17 @@ export type RailDotTone = keyof typeof RAIL_DOT_TONE;
 // Fields and the channel switch
 // -----------------------------------------------------------------------------
 
-/**
- * 42px. Named once so `SHELL` and the skeleton box cannot drift apart.
- *
- * The `!` lives INSIDE the constant: Tailwind scans raw source text, so a marker
- * appended to the interpolation would never appear as a literal candidate here.
- */
-const FIELD_HEIGHT = "h-[2.625rem]!";
+/** 42px, the `Input` primitive's height, for the skeleton box. */
+const FIELD_HEIGHT = "h-[2.625rem]";
 
 export const FIELD = {
   ROW: "flex flex-col gap-[7px]",
   LABEL: "text-[0.8125rem] font-semibold",
   HINT: "text-on-surface-variant text-xs leading-[1.5]",
   HEIGHT: FIELD_HEIGHT,
-  /**
-   * 42px, 10px radius, NO rest border. The bangs are not decoration: the
-   * `Input` primitive's own `h-9 rounded-md border` out-specifies a call site
-   * whenever the utility names sort ahead of ours, and its `dark:bg-input/30`
-   * is a (0,2,0) rule that beats an unprefixed fill outright.
-   */
-  SHELL: `${FIELD_HEIGHT} w-full rounded-field! border-0! bg-surface-container dark:bg-surface-container! px-4 text-sm text-on-surface shadow-none! placeholder:text-on-surface-variant`,
-  /** `SHELL` drops the rest border, so the ring alone has to carry invalid. */
+  /** The type over the `Input` primitive; the card is its host, so `host` stays default. */
+  SHELL: "text-sm",
+  /** A stronger invalid ring than the primitive's own. */
   INVALID: "aria-invalid:ring-[3px] aria-invalid:ring-destructive/50",
   /** Machine voice: a phone number, an address, a Discord id. */
   MONO: "font-mono text-[0.8125rem]",
@@ -441,6 +426,8 @@ export const SKELETON = {
   ROW: `${ROW_HEIGHT} rounded-tile`,
   SWITCH: `${SWITCH_MIN_HEIGHT} rounded-tile`,
   FIELD: `${FIELD_HEIGHT} rounded-field`,
+  /** A `size="action"` Button. */
+  ACTION: "h-[2.625rem] rounded-pill",
   /** A text placeholder takes the small role radius, not the row's. */
   LINE: "rounded-inline",
 } as const;

@@ -11,7 +11,7 @@
 // canon predicts — none of them visible in any single file, which is why they
 // survived review:
 //
-//   - `PILL_ACTION` existed in FOUR byte-identical copies across THREE files:
+//   - The 42px page action existed in FOUR byte-identical copies across THREE files:
 //     `sms-center.tsx`, `sms-compose-dialog.tsx`, and twice inline in
 //     `states.tsx`. A fifth lived in `forwarding/sms-forwarding-card.tsx`.
 //   - THREE unrelated control heights inside one card — 42px, 40px and 36px —
@@ -54,25 +54,15 @@ export const PAGE_DESCRIPTION =
   "text-on-surface-variant text-sm leading-relaxed text-pretty";
 
 /**
- * The house pill action: 42px on the role scale, clearing the 44px coarse-pointer
- * target once its 2px focus ring is counted.
+ * The dense in-card control, 36px. DELIBERATELY one step under the 42px `action`
+ * size: the inbox toolbar and card-header actions sit inside a table-bearing card
+ * where a 42px control row would out-weigh the rows it filters.
  */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
-
-/**
- * The dense in-card control, 36px. DELIBERATELY one step under `PILL_ACTION`:
- * the inbox toolbar and card-header actions sit inside a table-bearing card
- * where a 42px control row would out-weigh the rows it filters. The
- * `pointer-coarse:` bump is what keeps it a legal touch target at 44px, so the
- * two facts travel together rather than the height looking like an accident.
- */
-export const TOOLBAR_PILL =
-  "h-9 gap-2 rounded-pill px-4 text-sm font-medium pointer-coarse:h-11";
+export const TOOLBAR_PILL = "h-9 gap-2 px-4 text-sm font-medium";
 
 /** The 36px icon-only twin of TOOLBAR_PILL, on a fill (the Fill-Over-Stroke Rule). */
 export const ICON_PILL =
-  "size-9 rounded-pill bg-surface-container text-on-surface-variant hover:bg-surface-container-high pointer-coarse:size-11";
+  "size-9 bg-surface-container text-on-surface-variant hover:bg-surface-container-high";
 
 /**
  * The dialog action, 40px — one step under the primary pill, because a dialog
@@ -83,7 +73,7 @@ export const ICON_PILL =
  * make. A tonal dialog action is this constant plus `variant="tonal"`.
  */
 export const DIALOG_ACTION =
-  "h-10 gap-2 rounded-pill px-4 text-sm font-semibold pointer-coarse:h-11";
+  "h-10 gap-2 px-4 text-sm font-semibold";
 
 // -----------------------------------------------------------------------------
 // Cards
@@ -329,38 +319,13 @@ export const INLINE_ERROR = "text-destructive-on-surface text-sm leading-relaxed
 export const INLINE_ERROR_ON_FILL =
   "text-on-primary-container text-sm leading-relaxed opacity-90";
 
-/**
- * THE FIELD SHELL, AND WHY IT IS SPENT ON A RAW `<input>`.
- *
- * `components/ui/input.tsx` ships `dark:bg-input/30`. The `dark` variant compiles
- * to `&:is(.dark *)`, giving it specificity (0,2,0) against a bare
- * `bg-surface-container`'s (0,1,0) — and tailwind-merge cannot fold the two
- * because they sit in different modifier scopes. So a call site that "overrides"
- * the fill does not: EVERY forwarding field was rendering `input/30` in dark
- * mode instead of the container step. It looks approximately right, which is
- * exactly why it survived review. The primitive also ships `md:text-sm`, which
- * leaks a VIEWPORT breakpoint into a container-query surface, and
- * `transition-[color,box-shadow]` with no duration (off-scale 150ms).
- *
- * Handing this string to a raw `<input>` is the only spelling that closes all
- * three. `settings/shapes.ts` and `tower-locking/shapes.ts` independently
- * document the identical trap.
- *
- * Restated here rather than imported from `settings/shapes.ts` — sibling
- * families restate.
- */
+/** The voice an `<Input>` takes on this surface; shape and fill come from the primitive. */
 const FIELD_BASE =
-  "h-[2.625rem] w-full rounded-field border-0 px-4 text-sm shadow-none outline-none " +
-  "font-mono tracking-[0.06em] tabular-nums " +
+  "text-sm font-mono tracking-[0.06em] tabular-nums " +
   "placeholder:font-sans placeholder:tracking-normal " +
-  "focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background " +
-  "aria-invalid:ring-[3px] aria-invalid:ring-destructive/40 " +
-  "disabled:cursor-not-allowed disabled:opacity-50";
+  "aria-invalid:ring-[3px] aria-invalid:ring-destructive/40";
 
-export const FIELD_SHELL = cn(
-  FIELD_BASE,
-  "bg-surface-container text-on-surface placeholder:text-on-surface-variant",
-);
+export const FIELD_SHELL = FIELD_BASE;
 
 /**
  * The promoted twin. THESE EXIST AS A PAIR: a free-text field is the one control
@@ -369,8 +334,8 @@ export const FIELD_SHELL = cn(
  * one role's ink on another role's container, the most common way this pattern
  * goes wrong.
  *
- * The placeholder ink is appended LAST on purpose: it lands in the same
- * tailwind-merge group as FIELD_BASE's own placeholder rules, so order decides.
+ * The placeholder ink is appended LAST on purpose: it shares a tailwind-merge
+ * group with the primitive's own placeholder ink, so order decides.
  */
 export const FIELD_SHELL_ON_FILL = cn(
   FIELD_BASE,

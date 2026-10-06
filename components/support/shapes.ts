@@ -127,12 +127,6 @@ export const BAND = {
 /** The row the three donation pills sit in. Wraps rather than scrolling. */
 export const DONATE_ACTIONS = "flex flex-wrap items-center gap-2.5";
 
-/**
- * The 42px donation pill — the coarse-pointer floor, which sm would fall under.
- */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
-
 /** The glyph inside a donation pill. */
 export const PILL_GLYPH = "size-4";
 

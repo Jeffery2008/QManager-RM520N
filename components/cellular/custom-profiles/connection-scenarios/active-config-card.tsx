@@ -14,7 +14,7 @@ import {
   CONFIG_CARD_SHAPE,
   ICON_ACTION,
   MACHINE_VALUE,
-  PILL_ACTION_SM,
+  INLINE_ACTION_TYPE,
   PROFILE_STATUS_BADGE,
   SCENARIO_DISC_ACTIVE,
   SCENARIO_DISC_IDLE,
@@ -162,7 +162,7 @@ export const ActiveConfigCard = ({
           {!isActive && !isActivating && (
             <Button
               onClick={onActivate}
-              className={PILL_ACTION_SM}
+              className={INLINE_ACTION_TYPE}
               disabled={activateDisabled}
               title={disabledTooltip}
             >

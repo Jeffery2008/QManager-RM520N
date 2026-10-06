@@ -21,8 +21,6 @@ import { copyText } from "@/lib/clipboard";
 // coming back without a fresh design pass.
 // =============================================================================
 
-const PILL_ACTION = "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
-
 export interface RadioPageHeaderProps {
   /** Returns the diagnostics blob to place on the clipboard. */
   buildDiagnostics: () => string;
@@ -72,7 +70,7 @@ export function RadioPageHeader({ buildDiagnostics }: RadioPageHeaderProps) {
           type="button"
           variant="outline"
           onClick={handleCopy}
-          className={PILL_ACTION}
+          size="action"
         >
           <MaterialSymbol name={copied ? "check" : "content_copy"} size={18} />
           {copied

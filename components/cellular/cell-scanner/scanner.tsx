@@ -21,7 +21,6 @@ import { ScanEmptyState, ScanErrorState } from "./scan-states";
 import { ScannerSkeleton } from "./scanner-skeleton";
 import SiblingRouteLink from "./sibling-link";
 import {
-  PILL_ACTION,
   POSTURE_DISC,
   POSTURE_GLYPH,
   RESULTS_CARD,
@@ -360,7 +359,7 @@ export function FullScanner() {
                   type="button"
                   onClick={startScan}
                   disabled={isScanning}
-                  className={PILL_ACTION}
+                  size="action"
                 >
                   <MaterialSymbol
                     name={isScanning ? "progress_activity" : "radar"}
@@ -427,7 +426,7 @@ export function FullScanner() {
                 <Button
                   type="button"
                   variant="tonal-neutral"
-                  className={PILL_ACTION}
+                  size="action"
                   onClick={handleDownload}
                 >
                   <MaterialSymbol name="download" size={18} />

@@ -37,7 +37,7 @@ import {
   AUTO_TILE,
   BADGE_GLYPH_SIZE,
   FAILOVER_BADGE,
-  FIELD_CONTROL_ON_CONTAINER,
+  FIELD_CONTROL,
   HERO_HELP_BUTTON,
   PERSIST_BADGE,
   SKELETON_SHAPE,
@@ -352,7 +352,7 @@ export function TowerAutomationTiles({
 
         <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap items-center gap-2">
-            <InputGroup className={`${FIELD_CONTROL_ON_CONTAINER} w-[6.5rem]`}>
+            <InputGroup host="container" className={`${FIELD_CONTROL} w-[6.5rem]`}>
               <InputGroupInput
                 id="tower-failover-threshold"
                 inputMode="numeric"
@@ -396,7 +396,7 @@ export function TowerAutomationTiles({
                       ? null
                       : t("tower_locking.live.threshold_invalid")
                 }
-                className="h-[2.625rem] rounded-pill px-4 text-sm font-semibold"
+                size="action"
               />
             ) : null}
           </div>

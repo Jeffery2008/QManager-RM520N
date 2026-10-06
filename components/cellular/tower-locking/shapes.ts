@@ -791,97 +791,8 @@ export const FIELD_GRID = "grid grid-cols-1 gap-x-4 gap-y-4 @md/card:grid-cols-2
 export const FIELD_LABEL =
   "flex items-center gap-1.5 text-xs font-medium text-on-surface-variant";
 
-/**
- * FIELD GEOMETRY, WITHOUT A FILL. 10px radius, 42px tall, no visible border at
- * rest. Restated here because `components/ui/input.tsx` still defaults to the
- * legacy `rounded-md` (DESIGN.md > Migration Deltas: "Shape lives at the call
- * site, not in the primitives").
- *
- * The incumbent fields were `h-9` text inputs and a `w-10 h-6` threshold box —
- * 24px against this project's stated 44px floor, on a page used roadside on a
- * tablet.
- *
- * A `SelectTrigger` needs two MORE overrides than an `Input` does, because
- * `components/ui/select.tsx` sets its height as `data-[size=default]:h-9` and
- * its hover as `dark:hover:bg-input/50`. Those live at the one call site that
- * actually renders a select against this shape.
- */
-const FIELD_SHAPE =
-  "h-[2.625rem] rounded-field border-0 px-3.5 text-sm shadow-none focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:ring-[3px]";
-
-/**
- * THE FIELD-STEP RULE: A FIELD'S RESTING FILL IS ONE TONAL STEP ABOVE ITS HOST,
- * NEVER A FIXED TOKEN.
- *
- *   host `surface` / `card`   →  field `surface-container`      (FIELD_CONTROL)
- *   host `surface-container`  →  field `surface-container-high` (…_ON_CONTAINER)
- *
- * DESIGN.md gives an input no border at rest, so THE FILL IS THE ENTIRE
- * AFFORDANCE — there is nothing else on screen saying where the box is. A fixed
- * fill token is therefore only ACCIDENTALLY correct: it works on the one host
- * whose own fill happens to sit a step below it, and renders at 1.00:1 — a
- * field with no edge at all — on every other. This is the Tonal-Elevation Rule
- * that already governs surfaces, extended to the controls sitting on them.
- *
- * `FIELD_CONTROL` shipped as the only answer, and NOT ONE CALL SITE ON THIS
- * SURFACE HAD THE HOST IT DESCRIBED: every field here lives inside `SLOT_ROW`
- * or `AUTO_TILE`, both `bg-surface-container`, so all six painted their own
- * background and disappeared into it. The doc comment above it described a host
- * that did not exist, which is how it survived.
- *
- * `surface-container-high` is the top rung, so a field can never be hosted by a
- * `surface-container-high` block: when that happens the HOST steps DOWN and the
- * field takes `-high`. Never a border — an outlined field beside three
- * unbordered ones reads as a different KIND of control, not as the same control
- * on a different background.
- *
- * The other legal resolution is SHELL rather than STEP: the host carries the
- * fill AND the focus ring (`focus-within:ring`) while the control inside is
- * painted transparent, which is what the NR card's `FIELD_TILE` does. One or
- * the other per card, never both — see `nr-sa-tower-card.tsx` > FIELD_TILE.
- *
- * THE `dark:` RESTATEMENT IS NOT REDUNDANT, AND THE `!` IS NOT DECORATION.
- *
- * `components/ui/input.tsx` ships `dark:bg-input/30`. Two separate facts, and
- * the second is the one that bites:
- *
- * 1. WHY THE `dark:` LINE EXISTS AT ALL. `@custom-variant dark (&:is(.dark *))`
- *    compiles the primitive's rule to specificity (0,2,0) — one for the utility
- *    class, one for `.dark` inside `:is()`. A BARE `bg-surface-container-high`
- *    is (0,1,0) and simply loses in dark mode: the field is correct in light,
- *    and approximately-right-looking in dark, which is exactly why it survives
- *    review. tailwind-merge cannot fold the two either — different modifier
- *    scopes, and it only collapses conflicts within one scope.
- *
- * 2. WHY THE `dark:` LINE ALONE IS NOT ENOUGH. Restating it as `dark:` makes
- *    OURS (0,2,0) too. The two rules TIE. Nothing about specificity decides a
- *    tie — the winner is whichever Tailwind emits LAST, and for two candidates
- *    of the same utility that order is Tailwind's deterministic candidate SORT,
- *    i.e. by NAME. `bg-input…` sorts before `bg-surface-…` purely because `i`
- *    precedes `s`, so ours happened to land second and win. That is an OBSERVED
- *    outcome, not a constructed one: rename `--color-input`, add a token that
- *    sorts between them, or change the sort, and every one of these fills flips
- *    in dark mode ONLY, with no error anywhere. It is the same family as the
- *    recorded twMerge/custom-`rounded-*` trap, where alphabetical order decides
- *    a conflict the tooling cannot see.
- *
- *    The trailing `!` (Tailwind v4's important modifier) is what replaces luck
- *    with a rule: `!important` beats a same-specificity rule regardless of
- *    emission order. It is used ONLY where a fill collides with a primitive's
- *    own `dark:` fill — never as a general escape hatch.
- *
- * So an explicit field fill on this surface is ALWAYS written as a light/dark
- * PAIR with the dark half marked important, or the control is a native element
- * rather than the shadcn primitive.
- */
-export const FIELD_CONTROL = `${FIELD_SHAPE} bg-surface-container dark:bg-surface-container!`;
-
-/**
- * The same field one rung up, for a `surface-container` host — which on this
- * surface means every `SLOT_ROW` and every `AUTO_TILE`, i.e. all of them.
- * `FIELD_CONTROL` is kept for a field that lands directly on a card or section.
- */
-export const FIELD_CONTROL_ON_CONTAINER = `${FIELD_SHAPE} bg-surface-container-high dark:bg-surface-container-high!`;
+/** A field's type voice. Shape and fill come from the primitive; a `surface-container` host passes `host="container"`. */
+export const FIELD_CONTROL = "text-sm";
 
 /**
  * The 44px coarse-pointer target for a `Switch`.
@@ -1151,18 +1062,6 @@ export const NOTICE_TONE: Record<
 // -----------------------------------------------------------------------------
 
 /**
- * The action pill. Identical string to `radio/page-header.tsx`'s `PILL_ACTION`
- * and the band-locking contract — restated rather than imported so this surface
- * takes no dependency on an unrelated route's module graph.
- */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
-
-/** The same pill without a leading-glyph gap, for a text-only action. */
-export const PILL_ACTION_PLAIN =
-  "h-[2.625rem] rounded-pill px-5 text-sm font-semibold";
-
-/**
  * The quiet affordances (Clear all, Fill from scan). Deliberately smaller than
  * the real actions: they change a FORM, they do not write to the modem, and
  * sizing them like `Lock` would put three equal-weight pills in one footer and
@@ -1172,7 +1071,7 @@ export const PILL_ACTION_PLAIN =
  * never `variant="ghost"`. A ghost button has no resting fill, so next to a
  * filled primary it reads as disabled rather than as a quieter action.
  */
-export const PILL_QUIET = "h-9 rounded-pill px-3.5 text-xs font-semibold";
+export const PILL_QUIET = "h-9 px-3.5 text-xs font-semibold";
 
 // -----------------------------------------------------------------------------
 // Status chips

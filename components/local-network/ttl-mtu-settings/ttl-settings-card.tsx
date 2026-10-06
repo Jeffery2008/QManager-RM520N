@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -436,7 +437,8 @@ export function TtlSettingsCard({
                 </span>
               </div>
               <div className={ROW.CONTROL}>
-                <input
+                <Input
+                  host="container"
                   id={ttlId}
                   type="number"
                   inputMode="numeric"
@@ -475,7 +477,8 @@ export function TtlSettingsCard({
                 </span>
               </div>
               <div className={ROW.CONTROL}>
-                <input
+                <Input
+                  host="container"
                   id={hlId}
                   type="number"
                   inputMode="numeric"
@@ -524,6 +527,7 @@ export function TtlSettingsCard({
               variant="ghost"
               onClick={handleDiscard}
               disabled={isSaving || dirtyCount === 0}
+              size="action"
               className={DISCARD}
             >
               {t(`${K}.footer.discard`)}
@@ -535,6 +539,7 @@ export function TtlSettingsCard({
               saved={saved}
               label={t("actions.apply")}
               disabled={!canApply}
+              size="action"
             />
           </>
         }

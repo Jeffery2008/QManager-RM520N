@@ -15,7 +15,6 @@ import {
   BAND,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   STATE_BADGE,
   type IpptBandState,
 } from "./shapes";
@@ -125,7 +124,7 @@ const IPPassthroughComponent = () => {
               variant="outline"
               onClick={() => refresh()}
               disabled={isSaving}
-              className={PILL_ACTION}
+              size="action"
             >
               <RefreshCcwIcon className="size-4" aria-hidden="true" />
               {t(`${K}.header.refresh`)}

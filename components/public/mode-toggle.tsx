@@ -66,7 +66,7 @@ export function ModeToggle({
           size={size}
           aria-label={t("overview.actions.theme_toggle_aria")}
           className={cn(
-            "text-on-surface-variant rounded-pill bg-surface-container",
+            "text-on-surface-variant bg-surface-container",
             "hover:bg-surface-container-high hover:text-foreground",
             className,
           )}

@@ -21,10 +21,6 @@ import {
 // The channel form's controls. One box shape, one label/hint stack, one
 // switch row — shared by all three channels so a field cannot drift per tab.
 
-/** A 42px pill action. The coarse-pointer bump is what clears the 44px floor. */
-export const CHANNEL_BUTTON =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold pointer-coarse:h-11";
-
 /** The adornment sitting inside the field box, right-aligned. */
 const ADORNMENT = "absolute top-1/2 right-3 flex -translate-y-1/2 items-center";
 

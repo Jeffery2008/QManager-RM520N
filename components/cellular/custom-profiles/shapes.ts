@@ -75,35 +75,14 @@ export const PROFILE_CARD_PEER =
 /** Card padding: 28px. */
 export const PROFILE_PAD = "px-7";
 
-/**
- * The page-header action pill. Identical string to `radio/page-header.tsx`'s
- * PILL_ACTION and `sms-center.tsx` — restated rather than imported so a profiles
- * consumer does not take a dependency on an unrelated route's module graph.
- */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
+/** Type for an inline default-size action (the hero's Edit / Deactivate, a scenario's Apply). */
+export const INLINE_ACTION_TYPE = "text-[0.8125rem] font-semibold";
 
-/**
- * Same pill, no leading-glyph gap. A dialog Cancel never carries an icon, so
- * the `gap-2` in `PILL_ACTION` would reserve space for a glyph that isn't
- * there.
- */
-export const PILL_ACTION_PLAIN =
-  "h-[2.625rem] rounded-pill px-5 text-sm font-semibold";
+/** Skeleton for a default-size `Button`: mirrors its 36px / coarse 44px pill. */
+export const INLINE_ACTION_SKELETON = "h-9 rounded-pill pointer-coarse:h-11";
 
-/**
- * The compact pill an inline action takes: the hero's Edit / Deactivate, a
- * scenario tile's Apply. 36px, so a cluster of them beside a 22px status chip
- * does not out-weigh the chip it sits next to.
- */
-export const PILL_ACTION_SM =
-  "h-9 gap-1.5 rounded-pill px-3.5 text-[0.8125rem] font-semibold";
-
-/**
- * A square icon-only button — the row's overflow menu. Same 36px height as
- * `PILL_ACTION_SM` so a row's trailing cluster sits on one optical baseline.
- */
-export const ICON_ACTION = "size-9 rounded-pill p-0";
+/** A square icon-only button: the row's overflow menu, at the default 36px. */
+export const ICON_ACTION = "size-9 p-0";
 
 /**
  * The Display triple every migrated page `h1` carries.

@@ -394,7 +394,7 @@ export function InboxTable({
               >
                 <SelectTrigger
                   size="sm"
-                  className="rounded-field bg-surface-container w-18 border-0 font-mono tabular-nums"
+                  className="w-18 font-mono tabular-nums"
                 >
                   <SelectValue />
                 </SelectTrigger>

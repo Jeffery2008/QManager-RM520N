@@ -51,7 +51,6 @@ import {
   GROUP_FILL,
   NOTE,
   NOTICE,
-  PILL_ACTION,
   PRESET,
   PRESET_LIMIT,
   READOUT,
@@ -432,7 +431,7 @@ function ThresholdsForm({
             saved={flashed}
             label={t(`${K}.save`)}
             disabled={!canSave}
-            className={PILL_ACTION}
+            size="action"
           />
         }
       />

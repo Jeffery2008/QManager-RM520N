@@ -52,11 +52,8 @@ export const CARD_GRID =
 /** One grid cell. Each card cascades on its own step, so it needs a wrapper. */
 export const CARD_CELL = "flex min-w-0 flex-col";
 
-/** The 42px control height every pill, field and their skeletons compose from. */
+/** The 42px control height the skeleton placeholders compose from. */
 const CONTROL_HEIGHT = "h-[2.625rem]";
-
-/** The 42px action pill. Restated per family, never imported across one. */
-export const PILL_ACTION = `${CONTROL_HEIGHT} gap-2 rounded-pill px-5 text-sm font-semibold`;
 
 /** The lucide glyph inside an action pill. */
 export const PILL_GLYPH = "size-4";
@@ -389,31 +386,15 @@ export const ROW = {
   CONTROL: "flex flex-none items-center @2xl/card:ml-auto",
 } as const;
 
-/**
- * `CONTROL_HEIGHT`'s number, important-marked INSIDE the string. `select.tsx`
- * ships a default 36px behind a data-attribute selector, which outranks a bare
- * arbitrary height; a marker appended to an interpolation never appears in
- * source and is never generated, which is why this one literal is restated.
- */
-const FIELD_HEIGHT = "h-[2.625rem]!";
-
-/**
- * The version select. THE FIELD-STEP RULE: this control's host is the card's
- * own surface rather than a row group, so its fill is one step up from there.
- * The dark half is written as a PAIR and important-marked, because the field
- * primitives ship their own dark fill at higher specificity.
- */
-export const FIELD = `${FIELD_HEIGHT} w-full rounded-pill border-0 bg-surface-container dark:bg-surface-container! px-4 text-[0.84375rem] font-medium ${FOCUS_RING_ON_SURFACE} disabled:cursor-not-allowed disabled:opacity-50`;
+/** The version select's voice and width. Its host is the card, so the default fill. */
+export const FIELD = `w-full text-[0.84375rem] font-medium ${FOCUS_RING_ON_SURFACE}`;
 
 /** The select and its Install button: stacked until the card can seat them. */
 export const FIELD_ROW =
   "flex flex-col gap-2.5 @2xl/card:flex-row @2xl/card:items-center";
 
-/**
- * The Install button beside the select. Unmarked: `button.tsx` declares its
- * default height plainly, so `twMerge` dedupes it and the call site wins.
- */
-export const FIELD_ACTION = `${CONTROL_HEIGHT} w-full gap-2 rounded-pill px-5 text-sm font-semibold @2xl/card:w-auto`;
+/** The Install button beside the select, at `size="action"`. */
+export const FIELD_ACTION = "w-full @2xl/card:w-auto";
 
 /** One version row inside `SelectContent`: tag left, its state pushed right. */
 export const SELECT_ITEM = {
@@ -643,7 +624,7 @@ export const SKELETON = {
     SWITCH: `${SWITCH_BOX} rounded-pill`,
   },
   /** Mirrors `FIELD`'s height and radius, and the button beside it. */
-  FIELD: `${CONTROL_HEIGHT} w-full rounded-pill`,
+  FIELD: `${CONTROL_HEIGHT} w-full rounded-field`,
   FIELD_ACTION: `${CONTROL_HEIGHT} w-full rounded-pill @2xl/card:w-28`,
 } as const;
 

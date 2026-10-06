@@ -264,7 +264,7 @@ export const CARRIER_TILE = {
   VALUE_LABEL: "text-xs text-on-surface-variant",
   META: "font-mono text-xs tabular-nums text-on-surface-variant",
   /** The add/locked affordance in the tile's top-right. */
-  ACTION: "ms-auto flex size-7 items-center justify-center rounded-pill",
+  ACTION: "ms-auto flex size-7 items-center justify-center",
   ACTION_FREE: "bg-primary-container text-on-primary-container",
   ACTION_HELD: "bg-warning-container text-on-warning-container",
   ACTION_OFF: "bg-surface-container text-on-surface-variant opacity-60",
@@ -295,9 +295,9 @@ export const SLOT = {
     "flex size-7 flex-none items-center justify-center rounded-pill bg-surface-container-high text-on-surface-variant",
 } as const;
 
-/** Input inside a slot row. Role radius and the 42px action height. */
+/** Input inside a slot row; shape and fill come from the primitive. */
 export const SLOT_INPUT =
-  "h-[2.625rem] min-w-0 flex-1 rounded-field bg-surface-container-high font-mono text-[13px] tabular-nums";
+  "min-w-0 flex-1 font-mono text-[13px] tabular-nums";
 
 /**
  * The "Use current" control.
@@ -310,7 +310,7 @@ export const SLOT_INPUT =
  * toast: the incumbent fired a toast after the click to say nothing happened.
  */
 export const PILL_USE_CURRENT =
-  "h-8 flex-none gap-1.5 rounded-pill px-3 text-xs font-semibold";
+  "h-8 flex-none gap-1.5 px-3 text-xs font-semibold";
 
 // -----------------------------------------------------------------------------
 // The empty list
@@ -382,10 +382,8 @@ export const APPLY_BAR = {
   ACTIONS: "ms-auto flex flex-wrap items-center gap-2",
 } as const;
 
-/** Action pills. Matches tower locking's scale so the two pages feel like one. */
-export const PILL_ACTION_PLAIN =
-  "h-[2.625rem] rounded-pill px-5 text-sm font-semibold";
-export const PILL_QUIET = "h-9 rounded-pill px-3.5 text-xs font-semibold";
+/** The quiet third action. Matches tower locking's scale. */
+export const PILL_QUIET = "h-9 px-3.5 text-xs font-semibold";
 
 /** Badge glyph size. Material Symbols need an explicit `size` at every site. */
 export const BADGE_GLYPH_SIZE = 12;
@@ -532,6 +530,6 @@ export const SKELETON_SHAPE = {
   VERDICT: "h-[13rem] w-full rounded-tile",
   /** `CAMPED.LABEL`'s text-sm/600 line box ("Camped on now"). */
   CAMPED_LABEL: "h-5 w-32 rounded-inline",
-  /** An action pill at `PILL_ACTION_PLAIN`'s 42px height. */
+  /** An action pill at the action Button size's 42px height. */
   ACTION: "h-[2.625rem] w-32 rounded-pill",
 } as const;

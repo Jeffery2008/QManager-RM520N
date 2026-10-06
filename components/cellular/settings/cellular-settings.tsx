@@ -17,7 +17,7 @@ import CellularSettingsCard from "./cellular-settings-card";
 import LiveStateStrip from "./live-state-strip";
 import ApplyFoot from "./apply-foot";
 import RateCeilingDisclosure from "./rate-ceiling-disclosure";
-import { CARD_CELL, PAGE_ROOT, PILL_ACTION } from "./shapes";
+import { CARD_CELL, PAGE_ROOT } from "./shapes";
 
 // =============================================================================
 // Cellular Basic Settings — the route shell
@@ -139,7 +139,7 @@ const CellularSettingsComponent = () => {
               variant="ghost"
               size="sm"
               onClick={form.refresh}
-              className="h-8 rounded-pill px-3 text-xs font-semibold underline-offset-4"
+              className="h-8 px-3 text-xs font-semibold underline-offset-4"
             >
               {t(`${K}.page.retry`)}
             </Button>
@@ -220,7 +220,7 @@ const CellularSettingsComponent = () => {
                       variant="ghost"
                       onClick={form.refresh}
                       disabled={form.isSaving}
-                      className={PILL_ACTION}
+                      size="action"
                     >
                       {t(`${K}.footer.reread`)}
                     </Button>

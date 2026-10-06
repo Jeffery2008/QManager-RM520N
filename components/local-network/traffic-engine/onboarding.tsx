@@ -96,7 +96,7 @@ export function Onboarding({
             onDismissError();
             onInstall();
           }}
-          className={CONDITION.ACTION}
+          size="action" className={CONDITION.ACTION}
         >
           <DownloadIcon className="size-4" />
           {t("trafficEngine.onboarding.install")}
@@ -112,7 +112,7 @@ export function Onboarding({
       </span>
       <h2 className={CONDITION.TITLE}>{t("trafficEngine.onboarding.heading")}</h2>
       <p className={CONDITION.BODY}>{t("trafficEngine.onboarding.body")}</p>
-      <Button onClick={onInstall} className={CONDITION.ACTION}>
+      <Button onClick={onInstall} size="action" className={CONDITION.ACTION}>
         <DownloadIcon className="size-4" />
         {t("trafficEngine.onboarding.install")}
       </Button>

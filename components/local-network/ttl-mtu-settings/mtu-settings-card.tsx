@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -372,7 +373,8 @@ export function MtuSettingsCard({
                 </span>
               </div>
               <div className={ROW.CONTROL}>
-                <input
+                <Input
+                  host="container"
                   id={mtuId}
                   type="number"
                   inputMode="numeric"
@@ -420,6 +422,7 @@ export function MtuSettingsCard({
               variant="ghost"
               onClick={handleDiscard}
               disabled={isSaving || dirtyCount === 0}
+              size="action"
               className={DISCARD}
             >
               {t(`${K}.footer.discard`)}
@@ -431,6 +434,7 @@ export function MtuSettingsCard({
               saved={saved}
               label={t("actions.apply")}
               disabled={!canApply}
+              size="action"
             />
           </>
         }

@@ -18,7 +18,6 @@ import { TtlSettingsCard } from "./ttl-settings-card";
 import {
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   STATE_BADGE,
   type TtlMtuState,
 } from "./shapes";
@@ -181,7 +180,7 @@ const TTLandMTUSettingsComponent = () => {
               variant="outline"
               onClick={() => refreshBoth()}
               disabled={isBusy}
-              className={PILL_ACTION}
+              size="action"
             >
               <RefreshCcwIcon className="size-4" />
               {t(`${K}.header.refresh`)}

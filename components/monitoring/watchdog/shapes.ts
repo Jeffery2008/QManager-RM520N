@@ -12,10 +12,6 @@ import type { BadgeVariant } from "@/components/ui/badge";
 /** The route wrapper. Container queries key off `@container/main`. */
 export const PAGE_ROOT = "@container/main flex flex-col gap-5 px-4 pb-6 lg:px-6";
 
-/** A 36px pill. The coarse-pointer bump is what reaches the 44px floor. */
-const PILL_HEIGHT = "h-9 pointer-coarse:h-11";
-export const PILL_ACTION = `${PILL_HEIGHT} gap-2 rounded-pill px-4 text-sm font-medium`;
-
 /** The lucide glyph inside a pill. */
 export const PILL_GLYPH = "size-4";
 
@@ -207,19 +203,13 @@ export const RUNG = {
 
 const FIELD_HEIGHT = "h-[2.625rem]";
 
-/**
- * The `!` markers are load-bearing. `Select` ships `data-[size=default]:h-9` at
- * (0,2,0) and both it and `Input` ship a `dark:` fill, so a bare call-site
- * height or fill loses — silently, and in dark mode only.
- */
 export const FIELD = {
   ROW: "flex flex-col gap-[7px]",
   LABEL: "text-[0.8125rem] font-semibold",
   HINT: "text-on-surface-variant text-xs leading-[1.5]",
   HEIGHT: FIELD_HEIGHT,
-  SHELL: `${FIELD_HEIGHT}! w-full rounded-field! border-0! bg-surface-container dark:bg-surface-container! px-4 text-sm text-on-surface shadow-none! placeholder:text-on-surface-variant`,
-  /** A field hosted by a `surface-container` rung steps to `-high` instead. */
-  SHELL_ON_CONTAINER: `${FIELD_HEIGHT}! w-full rounded-field! border-0! bg-surface-container-high dark:bg-surface-container-high! px-4 text-sm text-on-surface shadow-none! placeholder:text-on-surface-variant`,
+  /** The type over the field primitives. A field on a `surface-container` rung passes `host="container"`. */
+  SHELL: "text-sm",
   INVALID: "aria-invalid:ring-[3px] aria-invalid:ring-destructive/50",
   NUM: "tabular-nums",
   NARROW: "max-w-[17.5rem]",
@@ -320,8 +310,7 @@ export const CONDITION = {
   GLYPH: "size-7",
   TITLE: "text-base font-semibold",
   DESC: "max-w-sm text-sm leading-relaxed text-pretty opacity-90",
-  ACTION:
-    "mt-1 h-9 gap-2 rounded-pill px-4 text-sm font-medium pointer-coarse:h-11",
+  ACTION: "mt-1 px-4",
 } as const;
 
 /**
@@ -368,5 +357,6 @@ export const SKELETON = {
   ROW: `${ROW_HEIGHT} rounded-tile`,
   FIELD: `${FIELD_HEIGHT} rounded-field`,
   LINE: "rounded-inline",
-  PILL: `${PILL_HEIGHT} rounded-pill`,
+  /** A `size="action"` Button. */
+  PILL: "h-[2.625rem] rounded-pill",
 } as const;

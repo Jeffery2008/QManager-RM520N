@@ -17,7 +17,6 @@ import {
   BAND,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   STATE_BADGE,
   type DnsState,
 } from "./shapes";
@@ -160,7 +159,7 @@ const CustomDnsComponent = () => {
               variant="outline"
               onClick={() => refresh()}
               disabled={isSaving}
-              className={PILL_ACTION}
+              size="action"
             >
               <RefreshCcwIcon className="size-4" />
               {t(`${K}.header.refresh`)}

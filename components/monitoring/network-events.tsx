@@ -31,7 +31,6 @@ import {
   FILTER_PILL_ACTIVE,
   FILTER_PILL_REST,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_GLYPH,
   RING_CAP,
 } from "./network-events/shapes";
@@ -154,10 +153,10 @@ const NetworkEventsComponent = () => {
                 variant="ghost"
                 aria-pressed={autoRefresh}
                 onClick={() => setAutoRefresh((on) => !on)}
-                className={cn(
-                  PILL_ACTION,
-                  autoRefresh ? FILTER_PILL_ACTIVE : FILTER_PILL_REST,
-                )}
+                size="action"
+                className={
+                  autoRefresh ? FILTER_PILL_ACTIVE : FILTER_PILL_REST
+                }
               >
                 {autoRefresh ? (
                   <ZapIcon className={PILL_GLYPH} />
@@ -174,7 +173,8 @@ const NetworkEventsComponent = () => {
                 variant="ghost"
                 onClick={refresh}
                 disabled={isRefreshing}
-                className={cn(PILL_ACTION, FILTER_PILL_REST)}
+                size="action"
+                className={FILTER_PILL_REST}
               >
                 <RefreshCwIcon
                   className={cn(PILL_GLYPH, isRefreshing && "animate-spin")}

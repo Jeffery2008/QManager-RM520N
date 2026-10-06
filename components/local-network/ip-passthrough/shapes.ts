@@ -58,8 +58,8 @@
 //
 //   16px  card shell    -> `rounded-card` — a PEER card; the band is the anchor
 //   12px  tile, group   -> `rounded-tile`
-//   10px  row           -> `rounded-field`
-//   999px chips, fields -> `rounded-pill`
+//   10px  row, fields   -> `rounded-field`
+//   999px chips         -> `rounded-pill`
 //
 // `rounded-hero` is "the ONE card that anchors a surface". The anchor here is
 // Band A, so the single write card is a peer.
@@ -90,15 +90,6 @@ export const PAGE_HEAD = {
   DESC: "text-on-surface-variant text-sm leading-relaxed text-pretty",
   ACTIONS: "flex flex-wrap items-center gap-2.5 @3xl/main:ml-auto",
 } as const;
-
-/**
- * The 42px action pill — the header's Refresh, the card's Apply and Discard.
- *
- * Restated per family, never imported across one; the two sibling modules carry
- * the identical string for the identical reason.
- */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
 
 // -----------------------------------------------------------------------------
 // Band A — what was last applied
@@ -213,7 +204,7 @@ export const DISC_TRANSITION =
 export const NOTICE_SPAN = "@xl/main:col-span-2 @5xl/main:col-span-4";
 export const NOTICE_TITLE = "truncate text-lg font-semibold";
 export const NOTICE_ACTION =
-  "h-9 flex-none gap-2 rounded-pill px-4 text-[0.8125rem] font-semibold";
+  "h-9 flex-none gap-2 px-4 text-[0.8125rem] font-semibold";
 
 /**
  * Status-chip tones for the band header, keyed onto the exported `BadgeVariant`
@@ -344,67 +335,12 @@ export const DELTA = {
   CLEAN: "invisible",
 } as const;
 
-/**
- * The 42px pill box and the type it speaks in. Module-private — the API is
- * `FIELD`.
- *
- * -----------------------------------------------------------------------------
- * THE HEIGHT IS IMPORTANT-MARKED, AND WITHOUT IT ALL FIVE SELECTS RENDER 36px
- * -----------------------------------------------------------------------------
- * `select.tsx:40` ends with `data-[size=default]:h-9`, and Tailwind v4 compiles
- * that attribute modifier to specificity **(0,2,0)** against a bare
- * `h-[2.625rem]`'s **(0,1,0)**. `tailwind-merge` keeps both — they sit in
- * different modifier groups — and the primitive simply wins. Measured on the
- * sibling surface: `getBoundingClientRect().height` returned **36** against a
- * call site asking for 42. It looks approximately right, which is exactly why
- * it survives review.
- *
- * -----------------------------------------------------------------------------
- * THE DARK FILL IS EXPLICIT **AND** IMPORTANT-MARKED
- * -----------------------------------------------------------------------------
- * `select.tsx` ships its own `dark:bg-input/30`. Writing an unprefixed fill
- * loses in dark mode outright (that rule is (0,2,0) too). Writing the `dark:`
- * half is necessary and still not sufficient: once BOTH rules are
- * `dark:`-prefixed they TIE, and a tie is decided by emission order — Tailwind's
- * deterministic name sort, where `bg-input…` precedes `bg-surface-…` only
- * because *i* precedes *s*. That is an observed outcome, not a constructed one,
- * so the dark half carries the important modifier and wins by construction
- * instead of by alphabet.
- *
- * The primitives' `rounded-md` / `h-9` / `dark:bg-input/30` remain an OPEN
- * product-wide Migration Delta. This corrects them at these call sites and does
- * not sweep them; migrating the primitive retires both markers with it.
- *
- * THE FILL IS ONE STEP ABOVE **THIS** HOST. The control sits inside a `ROW`,
- * inside `ROW_GROUP`, which is `bg-surface-container` — so
- * `surface-container-high` is exactly host + 1. On a borderless field the fill
- * IS the whole affordance; get the step wrong and the control renders at
- * 1.00:1 against its own background, with no edge at all.
- */
-const FIELD_BOX = "h-[2.625rem]! w-full rounded-pill border-0 px-4 text-[0.84375rem] font-medium @2xl/card:w-auto @2xl/card:min-w-[15rem]";
+/** The Select triggers. They sit on `ROW_GROUP` (`surface-container`), so each call site passes `host="container"`. */
+export const FIELD =
+  "w-full text-[0.84375rem] font-medium @2xl/card:w-auto @2xl/card:min-w-[15rem]";
 
-/** Focus ring and disabled. Rides whatever is the box. */
-const FIELD_STATE =
-  "focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
-
-export const FIELD = `${FIELD_BOX} bg-surface-container-high dark:bg-surface-container-high! ${FIELD_STATE}`;
-
-/**
- * The manual MAC entry, handed to a RAW `<input>` rather than to the `Input`
- * primitive.
- *
- * `Input`'s base string carries `dark:bg-input/30` and `md:text-sm`, and `cn()`
- * cannot let an unprefixed class displace a variant-prefixed one — so the fill
- * silently reverts in dark mode and the size reverts at a 768px VIEWPORT, which
- * is a viewport breakpoint leaking into a container-query surface. Both were
- * live in the retired card.
- *
- * A MAC address is an identifier the device matches byte-for-byte, so it is one
- * of the places the Machine-Voice Rule genuinely sends text to `font-mono`. The
- * placeholder is a FORMAT hint rather than a value, so it drops back out of the
- * uppercase transform.
- */
-export const MAC_FIELD = `${FIELD} font-mono uppercase placeholder:normal-case placeholder:font-sans placeholder:text-on-surface-variant`;
+/** The manual MAC entry: a raw `<input>` on `fieldVariants`, so `Input`'s `md:text-sm` cannot override the row's type. */
+export const MAC_FIELD = `${FIELD} h-[2.625rem] px-3.5 font-mono uppercase placeholder:normal-case placeholder:font-sans`;
 
 /** The glyph riding inside a trigger or an action pill. */
 export const FIELD_GLYPH = "size-3.5";

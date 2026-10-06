@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { staggerItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
-import { PAGE_HEAD, PILL_ACTION, PILL_GLYPH, SKELETON, SPIN } from "./shapes";
+import { PAGE_HEAD, PILL_GLYPH, SKELETON, SPIN } from "./shapes";
 
 const K = "languages";
 
@@ -45,7 +45,7 @@ export function PageHeader({
           <Button
             type="button"
             variant="outline"
-            className={PILL_ACTION}
+            size="action"
             onClick={onRefresh}
             disabled={isLoading || isRefetching}
             aria-label={t(`${K}.actions.refresh_aria`)}

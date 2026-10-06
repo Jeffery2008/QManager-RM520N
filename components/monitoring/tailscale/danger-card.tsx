@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
-import { ACTION, DANGER } from "./shapes";
+import { DANGER } from "./shapes";
 
 // -----------------------------------------------------------------------------
 // Remove Tailscale — a low-emphasis row. Destructive is the button, not the row.
@@ -57,7 +57,7 @@ export function DangerRow({
             type="button"
             variant="destructive"
             disabled={isUninstalling}
-            className={ACTION}
+            size="action"
           >
             {isUninstalling ? (
               <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />

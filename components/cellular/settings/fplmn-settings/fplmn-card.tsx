@@ -38,7 +38,6 @@ import {
   CONDITION_ACTIONS,
   INLINE_LINK,
   INLINE_LINK_GLYPH,
-  PILL_ACTION,
   PILL_ACTION_GLYPH,
 } from "../shapes";
 
@@ -314,7 +313,7 @@ export function FPLMNCard() {
                 <Button
                   type="button"
                   variant="destructive"
-                  className={PILL_ACTION}
+                  size="action"
                   onClick={() => setConfirmOpen(true)}
                   disabled={isClearing}
                 >
@@ -346,7 +345,7 @@ export function FPLMNCard() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className={PILL_ACTION}
+                  size="action"
                   onClick={() => void fetchStatus()}
                   disabled={isClearing}
                 >

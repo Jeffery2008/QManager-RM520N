@@ -63,7 +63,6 @@ export function LoginLanguagePicker({
           // text-foreground (not muted) for outdoor-readable contrast against a
           // tablet glass in direct sunlight.
           className={cn(
-            "rounded-pill",
             variant === "ghost" && "text-foreground",
             // Ghost at rest, tonal while its menu is open, so the trigger reads
             // as the origin of the surface hanging beneath it.

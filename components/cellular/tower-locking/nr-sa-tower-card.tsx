@@ -63,7 +63,6 @@ import {
   LEG_BADGE,
   NOTICE,
   NOTICE_TONE,
-  PILL_ACTION_PLAIN,
   PILL_QUIET,
   READBACK,
   SKELETON_SHAPE,
@@ -252,16 +251,8 @@ const FIELD_TILE_LABEL = `${FIELD_LABEL} w-full`;
  * a channel reads identically whether the modem reported it or the user typed
  * it.
  *
- * `dark:bg-transparent!` is NOT redundant: `input.tsx` ships `dark:bg-input/30`
- * and `select.tsx` adds `dark:hover:bg-input/50`, both lifted by the `dark`
- * custom variant, so a bare `bg-transparent` loses to them and the control
- * renders as a visible second box in dark mode only.
- *
- * The `!` is what makes the restatement WIN rather than merely tie. `dark:` on
- * our side compiles to the same specificity as theirs, and a tie is decided by
- * emission order — Tailwind's name sort, where `bg-input…` happens to precede
- * `bg-transparent`. That is luck, not construction; `!important` is the rule.
- * See `shapes.ts` > FIELD_CONTROL for the full note.
+ * SHELL resolution: these overrides beat the primitive's own 42px shape and
+ * host fill, so the tile, not the control, is the field.
  */
 const FIELD_TILE_CONTROL = [
   "h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-0 py-0 shadow-none",
@@ -270,15 +261,7 @@ const FIELD_TILE_CONTROL = [
   "focus-visible:ring-0",
 ].join(" ");
 
-/**
- * The same control as a `SelectTrigger`.
- *
- * Two overrides an `Input` does not need, both because `select.tsx` writes them
- * inside a variant scope that a bare utility cannot reach: `data-[size=default]:h-9`
- * (a class plus an attribute, so it outranks a plain `h-8` and tailwind-merge
- * cannot fold the two) and `dark:hover:bg-input/50` — the latter marked
- * important for the tie-break reason above.
- */
+/** The same control as a `SelectTrigger`. */
 const TILE_SELECT = [
   FIELD_TILE_CONTROL,
   "data-[size=default]:h-8 dark:hover:bg-transparent!",
@@ -1262,7 +1245,7 @@ export default function NrSaTowerCard({
             <Button
               type="button"
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               onClick={() => setShowUnlockDialog(true)}
               disabled={isLocking || posture !== "locked"}
             >
@@ -1275,7 +1258,7 @@ export default function NrSaTowerCard({
               saved={saved}
               label={t("tower_locking.actions.lock")}
               blockedReason={lockBlockedReason}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             />
           </div>
         </div>

@@ -15,10 +15,6 @@ export const PAGE_ROOT = "@container/main flex flex-col gap-5 px-4 pb-6 lg:px-6"
 export const COLS =
   "grid grid-cols-1 items-stretch gap-5 *:data-[slot=card]:h-full @3xl/main:grid-cols-2";
 
-/** A 36px header pill. The coarse-pointer bump is what reaches the 44px floor. */
-export const PILL_ACTION =
-  "h-9 gap-2 rounded-pill px-4 text-sm font-medium pointer-coarse:h-11";
-
 /** The rest tone for a header or card-header pill. */
 export const PILL_REST =
   "bg-surface-container text-on-surface-variant hover:bg-surface-container-high";
@@ -26,12 +22,8 @@ export const PILL_REST =
 /** The lucide glyph inside a pill. */
 export const PILL_GLYPH = "size-4";
 
-/** 42px, extracted so the rail's skeleton mirrors the action it stands in for.
- *  The coarse bump is what reaches the 44px floor, as `PILL_ACTION` does. */
-const ACTION_HEIGHT = "h-[2.625rem] pointer-coarse:h-11";
-
-/** A 42px primary or secondary action in a card's rail. */
-export const ACTION = `${ACTION_HEIGHT} gap-2 rounded-pill px-5 text-sm font-semibold`;
+/** The `size="action"` Button height, so the rail's skeleton mirrors it. */
+const ACTION_HEIGHT = "h-[2.625rem]";
 
 /** The control rail. Wraps rather than scrolling. */
 export const RAIL = "flex flex-wrap items-center gap-2.5";
@@ -274,7 +266,7 @@ export const COMMAND = {
     "text-on-surface-variant text-[0.6875rem] font-semibold tracking-[0.02em] uppercase",
   BOX: "flex items-center gap-2 rounded-tile bg-surface-container px-4 py-2.5",
   TEXT: "text-on-surface min-w-0 flex-1 overflow-x-auto font-mono text-xs select-all",
-  COPY: "text-on-surface-variant hover:bg-surface-container-high grid size-9 flex-none place-items-center rounded-pill pointer-coarse:size-11",
+  COPY: "text-on-surface-variant hover:bg-surface-container-high flex-none",
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -308,8 +300,7 @@ export const CONDITION = {
   GLYPH: "size-7",
   TITLE: "text-base font-semibold",
   DESC: "max-w-sm text-sm leading-relaxed text-pretty opacity-90",
-  ACTION:
-    "mt-1 h-9 gap-2 rounded-pill px-4 text-sm font-medium pointer-coarse:h-11",
+  ACTION: "mt-1 px-4",
   /** A line beneath the action — the auth wait, and nothing else. */
   FOOT: "flex items-center gap-2 text-xs font-medium",
 } as const;

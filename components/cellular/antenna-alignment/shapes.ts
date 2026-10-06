@@ -245,14 +245,7 @@ export const SLOT = {
   /** The winning position. Highlight-by-Container, never a ring around a block. */
   BEST: "bg-primary-container text-on-primary-container",
   /**
-   * Deliberately NOT for the `Input` primitive — hand it to a raw `<input>`.
-   *
-   * `Input`'s base string carries `dark:bg-input/30` and `md:text-sm`, and
-   * `cn()` cannot let an unprefixed class displace a variant-prefixed one. So
-   * the fill silently reverts in dark mode, and the size reverts at a **768px
-   * viewport** — a viewport breakpoint leaking into a container-query surface,
-   * which is the one thing this file's header forbids. The focus ring is folded
-   * in here so the next consumer cannot forget it.
+   * For a raw `<input>`, not `Input`: the primitive's `md:text-sm` is a viewport step on a container-query surface.
    */
   /**
    * A SHELL around the input, not the input itself — the page's only text field
@@ -282,7 +275,7 @@ export const SLOT = {
   LANE: "min-w-0 flex-1",
   CAPTION: "text-xs",
   /** 44px, the coarse-pointer floor. Every slot-level action uses this. */
-  ICON_TARGET: "size-11 shrink-0 rounded-pill",
+  ICON_TARGET: "size-11 shrink-0",
   /** Sample progress is dots, never a fill — a bar would make a count look measured. */
   DOT: "size-2 rounded-pill transition-colors duration-(--duration-standard) ease-standard",
 } as const;
@@ -346,11 +339,8 @@ export const PORT = {
 // Controls — one height each, named once
 // -----------------------------------------------------------------------------
 
-/** 42px. The house pill, byte-identical across every /cellular/ route. */
-export const PILL_ACTION = "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
-export const PILL_ACTION_PLAIN = "h-[2.625rem] rounded-pill px-5 text-sm font-semibold";
 /** 44px icon-only target. The coarse-pointer floor wins over the 42px pill. */
-export const ICON_TARGET = "size-11 shrink-0 rounded-pill";
+export const ICON_TARGET = "size-11 shrink-0";
 export const SEGMENTED_ITEM =
   "h-[2.125rem] gap-1.5 rounded-pill px-4 text-[0.84375rem] font-medium";
 

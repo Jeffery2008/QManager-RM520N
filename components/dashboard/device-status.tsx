@@ -214,7 +214,7 @@ const DeviceStatusComponent = ({
               size="icon"
               onClick={() => setHidePrivate((prev) => !prev)}
               aria-pressed={hidePrivate}
-              className="size-9 rounded-pill bg-surface-container text-on-surface-variant transition-colors duration-(--duration-quick) ease-quick hover:bg-surface-container-high"
+              className="size-9 bg-surface-container text-on-surface-variant transition-colors duration-(--duration-quick) ease-quick hover:bg-surface-container-high"
               aria-label={
                 hidePrivate
                   ? t("device_status.show_private")

@@ -58,8 +58,6 @@ import {
   SCENARIO_TILE_IDLE,
   SCENARIO_TILE_SHAPE,
   CONFIG_CARD_SHAPE,
-  PILL_ACTION,
-  PILL_ACTION_PLAIN,
   TILE_CAPTION,
 } from "../shapes";
 
@@ -590,7 +588,7 @@ const ConnectionScenariosCard = ({
               variant="destructive"
               onClick={refresh}
               disabled={isLoading}
-              className={PILL_ACTION}
+              size="action"
             >
               <MaterialSymbol
                 name={isLoading ? "progress_activity" : "refresh"}
@@ -870,7 +868,7 @@ const ConnectionScenariosCard = ({
             <DialogClose asChild>
               <Button
                 variant="tonal"
-                className={PILL_ACTION_PLAIN}
+                size="action"
               >
                 {t("actions.cancel", { ns: "common" })}
               </Button>
@@ -878,7 +876,7 @@ const ConnectionScenariosCard = ({
             <Button
               onClick={handleAddScenario}
               disabled={!addName.trim() || isSaving}
-              className={PILL_ACTION}
+              size="action"
             >
               {isSaving ? (
                 <>
@@ -1067,7 +1065,7 @@ const ConnectionScenariosCard = ({
             <DialogClose asChild>
               <Button
                 variant="tonal"
-                className={PILL_ACTION_PLAIN}
+                size="action"
               >
                 {t("actions.cancel", { ns: "common" })}
               </Button>
@@ -1075,7 +1073,7 @@ const ConnectionScenariosCard = ({
             <Button
               onClick={handleSaveEdit}
               disabled={!editName.trim() || isSaving}
-              className={PILL_ACTION}
+              size="action"
             >
               {isSaving ? (
                 <>

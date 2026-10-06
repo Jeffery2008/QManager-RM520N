@@ -38,7 +38,6 @@ import {
   CATEGORY_BADGE,
   NOTICE,
   NOTICE_TONE,
-  PILL_ACTION_PLAIN,
   PILL_QUIET,
   SKELETON_SHAPE,
   bandChipA11yKey,
@@ -526,7 +525,7 @@ export function BandGridCard({
               variant="tonal-neutral"
               onClick={handleRestoreAll}
               disabled={isFrozen || isUnrestricted}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             >
               {t("band_locking.actions.restore_all")}
             </Button>
@@ -536,7 +535,7 @@ export function BandGridCard({
               saved={saved}
               label={t("band_locking.actions.lock_selected")}
               disabled={isFrozen || noneSelected || !hasChanges}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             />
           </>
         }

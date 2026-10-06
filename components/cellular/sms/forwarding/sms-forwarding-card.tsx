@@ -19,6 +19,7 @@ import {
   FieldError,
   FieldLabel,
 } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
@@ -39,7 +40,6 @@ import {
   HEADER_SHAPE,
   INLINE_ERROR,
   INLINE_ERROR_ON_FILL,
-  PILL_ACTION,
   ROW_DIRTY,
   TOGGLE_LABEL,
   TOGGLE_ROW,
@@ -300,19 +300,7 @@ const SmsForwardingCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
             </Field>
           </motion.div>
 
-          {/* Target phone.
-
-              A RAW `<input>`, not `components/ui/input.tsx`. The primitive ships
-              `dark:bg-input/30`, which compiles to `&:is(.dark *)` — specificity
-              (0,2,0) against a bare `bg-surface-container`'s (0,1,0) — and
-              tailwind-merge cannot fold the two because they sit in different
-              modifier scopes. Every field on this card was rendering `input/30`
-              in dark mode instead of the container step. It looks approximately
-              right, which is exactly why it survived review. The primitive also
-              ships `md:text-sm` (a VIEWPORT breakpoint leaking into a
-              container-query surface) and `transition-[color,box-shadow]` with
-              no duration (an off-scale 150ms). `FIELD_SHELL` closes all three,
-              and is composed with a width and nothing else. */}
+          {/* Target phone. */}
           <motion.div variants={staggerRowItem}>
             <Field className="gap-2">
               <FieldLabel
@@ -321,7 +309,7 @@ const SmsForwardingCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
               >
                 {t("sms.forwarding.fields.target_label")}
               </FieldLabel>
-              <input
+              <Input
                 id="sms-forwarding-target"
                 type="tel"
                 inputMode="tel"
@@ -375,7 +363,7 @@ const SmsForwardingCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
             saved={saved}
             disabled={!canSave}
             label={t("sms.forwarding.buttons.save")}
-            className={PILL_ACTION}
+            size="action"
           />
         </div>
       </div>

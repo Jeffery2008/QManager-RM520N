@@ -26,7 +26,7 @@ import {
 import { AlertsLogCard } from "./alerts-log-card";
 import { useCoverageModel } from "./coverage-model";
 import { blockedChannels, useAlertsForm } from "./use-alerts-form";
-import { COLS, PAGE_ROOT, PILL_ACTION, PILL_GLYPH } from "./shapes";
+import { COLS, PAGE_ROOT, PILL_GLYPH } from "./shapes";
 
 // -----------------------------------------------------------------------------
 // Alerts — the page shell.
@@ -122,7 +122,8 @@ const AlertsComponent = () => {
               variant="ghost"
               onClick={reload}
               disabled={isLoading}
-              className={cn(PILL_ACTION, HEADER_PILL)}
+              size="action"
+              className={HEADER_PILL}
             >
               <RefreshCcwIcon
                 className={cn(PILL_GLYPH, isLoading && "animate-spin")}

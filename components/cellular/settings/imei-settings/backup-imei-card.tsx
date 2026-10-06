@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,7 +44,6 @@ import {
   FIELD_COUNTER,
   FIELD_SHELL,
   INLINE_ERROR,
-  PILL_ACTION,
   REVEAL,
   ROW_GROUP,
   SETTING_ROW,
@@ -64,8 +64,7 @@ import {
 // and reports inline, exactly like the device field, because the two fields do
 // the same job and a user who learns one should not have to learn the other.
 //
-// The field shape comes from the shared `FIELD_SHELL` in `../shapes`, which is
-// also where the note about not using `components/ui/input.tsx` lives.
+// The field voice comes from the shared `FIELD_SHELL` in `../shapes`.
 // =============================================================================
 
 export interface BackupIMEICardProps {
@@ -211,7 +210,8 @@ const BackupIMEICard = ({
               labelId="backup-imei-value-label"
               control={
                 <div className={FIELD_CLUSTER}>
-                  <input
+                  <Input
+                    host="container"
                     id="backup-imei-input"
                     type="text"
                     inputMode="numeric"
@@ -288,7 +288,7 @@ const BackupIMEICard = ({
               variant="ghost"
               onClick={handleReset}
               disabled={isSaving || !hasChanged}
-              className={cn(PILL_ACTION, "gap-0")}
+              size="action" className="gap-0"
             >
               {t(`${K}.actions.reset`)}
             </Button>
@@ -299,7 +299,7 @@ const BackupIMEICard = ({
               saved={saved}
               label={t(`${K}.actions.save`)}
               disabled={!canSave}
-              className={PILL_ACTION}
+              size="action"
             />
           </div>
         </div>

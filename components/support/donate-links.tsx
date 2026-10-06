@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 
 import {
   DONATE_ACTIONS,
-  PILL_ACTION,
   PILL_GLYPH,
   PILL_PAYPAL,
   PILL_SPONSOR,
@@ -71,7 +70,7 @@ export function DonateLinks({
       role="group"
       aria-label={t(`${K}.links.group_label`)}
     >
-      <Button asChild className={cn(PILL_ACTION, PILL_WISE)}>
+      <Button asChild size="action" className={PILL_WISE}>
         <a href={LINKS.WISE} target="_blank" rel="noopener noreferrer">
           <WiseIcon className={PILL_GLYPH} />
           Wise
@@ -79,7 +78,7 @@ export function DonateLinks({
         </a>
       </Button>
 
-      <Button asChild className={cn(PILL_ACTION, PILL_PAYPAL)}>
+      <Button asChild size="action" className={PILL_PAYPAL}>
         <a href={LINKS.PAYPAL} target="_blank" rel="noopener noreferrer">
           <PayPalIcon className={PILL_GLYPH} />
           PayPal
@@ -87,7 +86,7 @@ export function DonateLinks({
         </a>
       </Button>
 
-      <Button asChild className={cn(PILL_ACTION, PILL_SPONSOR)}>
+      <Button asChild size="action" className={PILL_SPONSOR}>
         <a href={LINKS.SPONSORS} target="_blank" rel="noopener noreferrer">
           <HeartIcon className={cn(PILL_GLYPH, "fill-current")} />
           GitHub Sponsors

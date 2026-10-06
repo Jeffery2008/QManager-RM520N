@@ -483,12 +483,8 @@ export const SLOT_GLYPH = {
   empty: "sim_card_alert",
 } as const satisfies Record<string, MaterialSymbolName>;
 
-/** The page-header action pill. Restated, not imported — see custom-profiles. */
-export const PILL_ACTION_HEIGHT = "h-[2.625rem]";
-export const PILL_ACTION = `${PILL_ACTION_HEIGHT} gap-2 rounded-pill px-5 text-sm font-semibold`;
-
 /**
- * The glyph inside a `PILL_ACTION`.
+ * The glyph inside a `size="action"` button.
  *
  * Named rather than typed at each call site. Blocked Networks carried `17` in
  * three places and `14` in a fourth for what are two roles, not four sizes —
@@ -526,7 +522,7 @@ export const READOUT_ICON_GLYPH = 16;
 /**
  * The compact action that rides INSIDE a `TonalBanner`'s copy.
  *
- * A banner's CTA cannot be a `PILL_ACTION`: at 42px it out-weighs the sentence
+ * A banner's CTA cannot be a `size="action"` pill: at 42px it out-weighs the sentence
  * it belongs to and pushes the banner's own height past the card row it sits
  * above. 32px on the Label step is the shorter twin, and it keeps the pill
  * radius so it still reads as the same family of control.
@@ -538,7 +534,7 @@ export const READOUT_ICON_GLYPH = 16;
  * this change: it is on another route, and a near-identical string is a
  * judgement call rather than a mechanical one.
  */
-export const BANNER_ACTION = "h-8 rounded-pill px-3 text-xs font-semibold";
+export const BANNER_ACTION = "h-8 px-3 text-xs font-semibold";
 
 /**
  * The action row that sits BELOW a `ConditionScreen`, inside the same card.
@@ -747,72 +743,29 @@ export const SETTING_ROW_DIRTY = {
     "inline-flex h-[1.375rem] w-fit flex-none items-center rounded-pill bg-primary px-2.5 font-mono text-[0.6875rem] font-semibold text-primary-foreground",
 } as const;
 
-/**
- * The 42px box every control on this surface wears, and the type it speaks in.
- *
- * MODULE-PRIVATE, and split out for one reason: `CHECK_GROUP` below needs the
- * same box WITHOUT the input's own padding, and the same type INSIDE a
- * transparent child. Restating either would put a second copy of the surface's
- * control height in the one file whose whole job is that there is only one.
- */
-const CONTROL_BOX = "h-[2.625rem] rounded-pill border-0 bg-surface-container-high";
+/** The type every control on this surface speaks in. */
 const CONTROL_TEXT = "text-[0.84375rem] font-medium";
 
-/** The dropdown trigger for rows that stay a Select at every width. */
-export const SELECT_TRIGGER = `${CONTROL_BOX} ${CONTROL_TEXT} w-full px-4 @2xl/card:w-auto`;
+/**
+ * Layout and voice for a `SelectTrigger`; shape and fill come from the primitive.
+ * Inside a `ROW_GROUP` pass `host="container"` (The Field-Step Rule).
+ */
+export const SELECT_TRIGGER = `${CONTROL_TEXT} w-full @2xl/card:w-auto`;
 
 /**
- * A free-text field on this surface, as a RAW `<input>` rather than
- * `components/ui/input.tsx`.
- *
- * WHY THE PRIMITIVE IS NOT USED. `input.tsx` ships `dark:bg-input/30` and
- * `md:text-sm`. `tailwind-merge` groups by class type *including the modifier*,
- * so an unprefixed `bg-surface-container-high` from `SELECT_TRIGGER` does not
- * displace a `dark:`-scoped fill and an unprefixed text size does not displace
- * an `md:`-scoped one — tailwind-merge keeps BOTH and the last one wins at the
- * breakpoint. The field therefore reverts to the primitive's fill in dark mode
- * and to its type size above 768px, silently, on exactly the two axes a
- * desktop light-mode review never looks at. Overriding them at the call site
- * means restating `SELECT_TRIGGER`'s own numbers as `dark:` and `md:` variants,
- * which is the drift this file exists to prevent.
- *
- * Two independent builders hit this on two different pages in the same change
- * and each wrote their own local constant; this is that constant, promoted once
- * so the third page cannot write a fourth version of it.
- *
- * MONO IS CORRECT HERE and is not a costume: every consumer holds an identifier
- * the device emits verbatim (an IMEI, a TAC, an APN). The letter-spacing is
- * what makes fifteen undifferentiated digits scannable. The placeholder
- * deliberately drops back to the interface voice — a placeholder is
- * human-authored instruction, not machine output, and mono'd prompt text reads
- * as though the field were already filled.
- *
- * MODULE-PRIVATE ON PURPOSE. Nothing outside this file ever imported it — the
- * real API is the two `FIELD_SHELL` composites below, which is what
- * `imei-settings-card.tsx` reaches for. An exported half-a-field invites a
- * fourth local variant of exactly the drift documented above.
- */
-/**
- * The VOICE half: mono, tracked, tabular, with the placeholder dropping back to
- * the interface voice. Shared with `CHECK_GROUP.INPUT`, where the ring half
- * below moves to the group shell instead of living on the input.
+ * The machine voice: mono and tracked for an identifier the device emits
+ * verbatim, with the human-authored placeholder back in the interface voice.
  */
 const FIELD_VOICE = [
   "font-mono tracking-[0.06em] tabular-nums",
-  "placeholder:font-sans placeholder:tracking-normal placeholder:text-on-surface-variant",
+  "placeholder:font-sans placeholder:tracking-normal",
 ].join(" ");
 
-/** The STATE half: focus ring, invalid ring, disabled. Rides whatever is the box. */
-const FIELD_STATE = [
-  "focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none",
-  "aria-invalid:ring-[3px] aria-invalid:ring-destructive/40",
-  "disabled:cursor-not-allowed disabled:opacity-50",
-].join(" ");
-
-const FIELD_INPUT = `${FIELD_VOICE} ${FIELD_STATE}`;
-
-/** A complete text field. Compose with a width and nothing else. */
-export const FIELD_SHELL = `${SELECT_TRIGGER} ${FIELD_INPUT}`;
+/**
+ * An `<Input>` on this surface. Compose with a width; `host="container"` inside a `ROW_GROUP`.
+ * The `md:` size restates the primitive's own `md:text-sm`, which an unprefixed size cannot displace.
+ */
+export const FIELD_SHELL = `${SELECT_TRIGGER} md:text-[0.84375rem] ${FIELD_VOICE} aria-invalid:ring-[3px] aria-invalid:ring-destructive/40`;
 
 /**
  * The field's own cluster: the input, and whatever rides beside it.
@@ -852,19 +805,13 @@ export const FIELD_COUNTER =
  * furniture. Actions bracket the value: the outbound link leads, the number is
  * the content, copy closes.
  *
- * WHY NOT `components/ui/input-group.tsx`. The stock primitive is a hairline
- * `border` over `rounded-md` with `dark:bg-input/30` and `text-muted-foreground`
- * — a stroke where this system uses a fill (The No-Hairline-On-Fill Rule), the
- * legacy `--radius` chain where this system uses the role scale, and precisely
- * the `dark:`-scoped fill that `FIELD_VOICE`'s own note documents as surviving
- * an unprefixed override through tailwind-merge. Overriding it back would mean
- * restating every one of this file's numbers as a `dark:` variant. The group is
- * therefore composed from `CONTROL_BOX` like every other control here, so it is
- * the SAME 42px pill as the fields above it rather than a lookalike.
+ * The box is the canon field drawn by hand (SHELL resolution), the same 42px
+ * field as the ones above it. It sits on the card, so its fill is
+ * `surface-container` (The Field-Step Rule).
  *
  * THE RING MOVED TO THE SHELL. The input inside is transparent and unringed —
  * a ring drawn around a child that fills only the middle of the box would trace
- * a rectangle through the middle of a pill. `has-[input:focus-visible]` puts the
+ * a rectangle through the middle of the box. `has-[input:focus-visible]` puts the
  * ring on the group, so the whole control lights up as one object, which is what
  * it is to the user.
  *
@@ -879,7 +826,7 @@ export const FIELD_COUNTER =
  */
 export const CHECK_GROUP = {
   ROOT: [
-    CONTROL_BOX,
+    "h-[2.625rem] rounded-field border border-transparent bg-surface-container",
     "flex w-full items-center gap-1 pr-3 pl-1.5",
     "has-[input:focus-visible]:ring-[3px] has-[input:focus-visible]:ring-ring has-[input:focus-visible]:ring-offset-2 has-[input:focus-visible]:ring-offset-background",
   ].join(" "),
@@ -899,7 +846,7 @@ export const CHECK_GROUP = {
    * the app, so the ink is brand by construction — but `--primary` is the
    * STRONG FILL, and tinted text sitting directly on a container is the
    * `--{role}-on-surface` slot. Measured on the shipped tokens: `text-primary`
-   * on this group's `surface-container-high` fill is 4.18:1 in dark mode, under
+   * on a `surface-container-high` fill is 4.18:1 in dark mode, under
    * the 4.5:1 floor; `text-primary-on-surface` clears it. Picking the wrong one
    * of the five is what DESIGN.md calls the most common contrast failure in this
    * system, and it bites in dark mode where `--primary` is the lighter value and
@@ -911,7 +858,7 @@ export const CHECK_GROUP = {
    * see the note in `components/ui/button.tsx`.
    */
   LEAD: [
-    "relative h-[1.875rem] flex-none gap-1.5 rounded-pill px-3",
+    "relative h-[1.875rem] pointer-coarse:h-[1.875rem] flex-none gap-1.5 px-3",
     "text-[0.78125rem] font-semibold",
     "text-primary-on-surface hover:text-primary-on-surface",
     // The 44px coarse-pointer target, bought by an inset overlay rather than by
@@ -1027,8 +974,8 @@ export const BREAKDOWN = {
 
 /** Placeholder pills for an `ApplyFoot` while the card loads. */
 export const APPLY_FOOT_SKELETON = {
-  DISCARD: `${PILL_ACTION_HEIGHT} w-24 rounded-pill`,
-  SAVE: `${PILL_ACTION_HEIGHT} w-36 rounded-pill`,
+  DISCARD: "h-[2.625rem] w-24 rounded-pill",
+  SAVE: "h-[2.625rem] w-36 rounded-pill",
 } as const;
 
 /**

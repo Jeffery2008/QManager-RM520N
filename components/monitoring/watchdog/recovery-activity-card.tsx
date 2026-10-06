@@ -51,7 +51,6 @@ import {
   DAY,
   LOG,
   LOG_STACK,
-  PILL_ACTION,
   PILL_GLYPH,
   ROW,
   SKELETON,
@@ -223,10 +222,8 @@ export function RecoveryActivityCard() {
             onClick={() => refresh()}
             disabled={isLoading || isRefreshing}
             aria-label={t("watchdog.activity.refreshAria")}
-            className={cn(
-              PILL_ACTION,
-              "bg-surface-container text-on-surface-variant hover:bg-surface-container-high",
-            )}
+            size="action"
+            className="bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
           >
             <RefreshCcwIcon
               className={cn(

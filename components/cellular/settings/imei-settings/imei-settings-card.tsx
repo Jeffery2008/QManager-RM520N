@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +46,6 @@ import {
   FIELD_COUNTER,
   FIELD_SHELL,
   INLINE_ERROR,
-  PILL_ACTION,
   READOUT_ICON_ACTION,
   READOUT_ICON_GLYPH,
   READOUT_ROW,
@@ -76,10 +76,7 @@ import {
 // -----------------------------------------------------------------------------
 // THE FIELD SHAPE
 // -----------------------------------------------------------------------------
-// A raw <input>, not `components/ui/input.tsx`. The reasoning lives on
-// `FIELD_INPUT` in `../shapes` — in short, the primitive's `dark:` and `md:`
-// scoped classes survive tailwind-merge against unprefixed ones, so the field
-// silently reverts in dark mode and above 768px.
+// `<Input host="container">` with the family `FIELD_SHELL`: the row group is the host.
 //
 // =============================================================================
 
@@ -251,7 +248,8 @@ const IMEISettingsCard = ({
           labelId="imei-write-label"
           control={
             <div className={FIELD_CLUSTER}>
-              <input
+              <Input
+                host="container"
                 id="imei-write-input"
                 type="text"
                 inputMode="numeric"
@@ -347,7 +345,7 @@ const IMEISettingsCard = ({
                 variant="ghost"
                 onClick={handleReset}
                 disabled={isSaving || !hasChanged}
-                className={cn(PILL_ACTION, "gap-0")}
+                size="action" className="gap-0"
               >
                 {t(`${K}.actions.reset`)}
               </Button>
@@ -358,7 +356,7 @@ const IMEISettingsCard = ({
                 saved={saved}
                 label={t(`${K}.actions.write`)}
                 disabled={!canWrite}
-                className={PILL_ACTION}
+                size="action"
               />
             </>
           }

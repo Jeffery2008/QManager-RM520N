@@ -36,7 +36,6 @@ import {
   DISC_TRANSITION,
   EYEBROW,
   NOTICE,
-  PILL_ACTION,
   PILL_GLYPH,
   SKELETON,
   TILE,
@@ -139,7 +138,7 @@ export function IdentityBand({
           <Button
             type="button"
             variant="outline"
-            className={PILL_ACTION}
+            size="action"
             onClick={onRetry}
           >
             <RefreshCwIcon className={PILL_GLYPH} aria-hidden="true" />

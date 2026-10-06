@@ -26,7 +26,6 @@ import { cn } from "@/lib/utils";
 import { ConditionBlock } from "./condition-block";
 import { InstallLogViewer } from "./install-log-viewer";
 import {
-  ACTION,
   CARD_BODY,
   CARD_DESC,
   CARD_HEAD,
@@ -74,6 +73,7 @@ function CommandRow({ command }: { command: string }) {
         <Button
           type="button"
           variant="ghost"
+          size="icon"
           onClick={copy}
           className={COMMAND.COPY}
           aria-label={t("tailscale.install.copyCommand")}
@@ -152,7 +152,7 @@ export function InstallCard({
         <div className={cn(RAIL, "justify-center")}>
           <Button
             type="button"
-            className={ACTION}
+            size="action"
             onClick={runInstall}
             disabled={running}
           >
@@ -170,7 +170,8 @@ export function InstallCard({
           <Button
             type="button"
             variant="ghost"
-            className={cn(ACTION, PILL_REST)}
+            size="action"
+            className={PILL_REST}
             onClick={onRefresh}
             disabled={running}
           >

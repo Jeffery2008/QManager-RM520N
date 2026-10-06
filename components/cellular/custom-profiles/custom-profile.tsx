@@ -57,8 +57,6 @@ import {
 } from "@/types/connection-scenario";
 import { buildDayTimeline, formatMinute } from "@/lib/schedule-timeline";
 import {
-  PILL_ACTION,
-  PILL_ACTION_PLAIN,
   HERO_CARD,
   HERO_DISC,
   HERO_DISC_TONE,
@@ -83,17 +81,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CellularPageHeader } from "@/components/cellular/page-header";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { cn } from "@/lib/utils";
 import type { MutationResult } from "@/types/mutation-result";
-
-// The pill dialog-action pair, matching `sms/delete-dialogs.tsx`'s
-// `DESTRUCTIVE_ACTION`/`CANCEL_ACTION` constants: both Activate and
-// Deactivate here are non-destructive confirmations, so the action side
-// composes the `default` variant rather than `destructive`.
-const CONFIRM_ACTION = cn(buttonVariants({ variant: "default" }), PILL_ACTION);
-const CANCEL_ACTION = PILL_ACTION_PLAIN;
 
 /**
  * The hero <-> NoActiveProfile cross-fade.
@@ -985,13 +976,13 @@ const CustomProfilePageBody = () => {
             <>
               <Button
                 variant="tonal"
-                className={PILL_ACTION}
+                size="action"
                 onClick={() => setScenarioCreateSignal((n) => n + 1)}
               >
                 <MaterialSymbol name="auto_awesome" size={18} aria-hidden />
                 {t("custom_profiles.page.new_scenario")}
               </Button>
-              <Button className={PILL_ACTION} onClick={handleNewProfile}>
+              <Button size="action" onClick={handleNewProfile}>
                 <MaterialSymbol name="add" size={18} aria-hidden />
                 {t("custom_profiles.page.new_profile")}
               </Button>
@@ -1169,12 +1160,12 @@ const CustomProfilePageBody = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel variant="tonal" className={CANCEL_ACTION}>
+            <AlertDialogCancel variant="tonal" size="action">
               {tc("actions.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleActivateConfirm}
-              className={CONFIRM_ACTION}
+              size="action"
             >
               {t("custom_profiles.activate_dialog.confirm")}
             </AlertDialogAction>
@@ -1282,12 +1273,12 @@ function NoActiveProfile({
           would need a profile to pick, and picking one for the user is the one
           thing an empty state must not do. */}
       {hasSavedProfiles ? (
-        <Button className={PILL_ACTION} onClick={onActivateExisting}>
+        <Button size="action" onClick={onActivateExisting}>
           <MaterialSymbol name="play_arrow" size={18} aria-hidden />
           {t("custom_profiles.hero_empty.activate_action")}
         </Button>
       ) : (
-        <Button className={PILL_ACTION} onClick={onCreate}>
+        <Button size="action" onClick={onCreate}>
           <MaterialSymbol name="add" size={18} aria-hidden />
           {t("custom_profiles.page.new_profile")}
         </Button>
@@ -1363,7 +1354,7 @@ function ActiveProfileUnavailable({
       {detail ? (
         <span className={cn(MACHINE_VALUE, HERO_STATE.DETAIL)}>{detail}</span>
       ) : null}
-      <Button variant="tonal" className={PILL_ACTION} onClick={onRetry}>
+      <Button variant="tonal" size="action" onClick={onRetry}>
         <MaterialSymbol name="refresh" size={17} aria-hidden />
         {t("custom_profiles.hero_error.retry")}
       </Button>

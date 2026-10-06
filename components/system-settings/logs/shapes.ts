@@ -35,7 +35,6 @@ import {
   FOCUS_RING,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_GLYPH,
   SKELETON,
   TILE,
@@ -63,7 +62,6 @@ export {
   FOCUS_RING,
   PAGE_HEAD,
   PAGE_ROOT,
-  PILL_ACTION,
   PILL_GLYPH,
   SKELETON,
   TILE,
@@ -100,9 +98,8 @@ export const CARD_BODY = "flex flex-col gap-4";
 /** The level rail. Wraps rather than scrolling. */
 export const RAIL = "flex flex-wrap items-center gap-2";
 
-/** A 36px filter chip. The active state is a FILL, never a border. */
-export const FILTER_PILL =
-  "h-9 gap-1.5 rounded-pill px-3.5 text-[0.8125rem] font-medium pointer-coarse:h-11";
+/** A default-size filter chip. The active state is a FILL, never a border. */
+export const FILTER_PILL = "gap-1.5 px-3.5 text-[0.8125rem] font-medium";
 export const FILTER_PILL_REST =
   "bg-surface-container text-on-surface-variant hover:bg-surface-container-high";
 export const FILTER_PILL_ACTIVE =
@@ -122,22 +119,12 @@ export const SEARCH_GLYPH =
   "text-on-surface-variant pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2";
 
 /**
- * The family's `FIELD`, released from the settings-row width lock and padded
- * for the leading search glyph. This rail sizes controls to their content, not
- * to a row's control column.
- *
- * Two counters to `input.tsx`, written INSIDE the constant: its viewport-keyed
- * `md:text-sm` survives `twMerge` and rendered 14px beside two 13.5px selects,
- * and it has no coarse bump, so the field sat at 42px beside their 44px.
+ * The family's `FIELD`, released from the row width lock and padded for the
+ * search glyph. `md:` counters `input.tsx`'s viewport-keyed `md:text-sm`.
  */
 export const FIELD_SEARCH = `${FIELD} pl-11 pointer-coarse:h-11! md:text-[0.84375rem] @2xl/card:w-full @2xl/card:min-w-0`;
 
-/**
- * A select trigger on the rail. The coarse bump is IMPORTANT-MARKED inside the
- * constant: `select.tsx` ships its own height behind a data-attribute selector,
- * which outranks a bare media-variant utility, and a marker written outside the
- * constant never reaches Tailwind's scanner at all.
- */
+/** A select trigger on the rail, with the rail's 44px coarse bump. */
 export const FIELD_SELECT = `${FIELD} pointer-coarse:h-11!`;
 
 /** The line-budget select — a three-digit figure needs no 216px floor. */

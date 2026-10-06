@@ -51,11 +51,10 @@ import { compositeValue, parseCompositeValue } from "./simple-mode-utils";
 import {
   BADGE_GLYPH_SIZE,
   CARD_PAD,
-  FIELD_CONTROL_ON_CONTAINER,
+  FIELD_CONTROL,
   LEG_BADGE,
   NOTICE,
   NOTICE_TONE,
-  PILL_ACTION_PLAIN,
   PILL_QUIET,
   READBACK,
   SKELETON_SHAPE,
@@ -153,28 +152,8 @@ const SWITCH_TARGET =
 const SLOT_CLEAR =
   "relative -mr-1 grid size-6 flex-none place-items-center rounded-pill text-on-surface-variant transition-colors duration-[var(--duration-quick)] ease-out before:absolute before:-inset-2.5 before:content-[''] hover:bg-current/10 hover:text-on-surface focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:ring-[3px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-55";
 
-/**
- * Select trigger geometry.
- *
- * `FIELD_CONTROL_ON_CONTAINER`'s `h-[2.625rem]` cannot win against the
- * primitive's `data-[size=default]:h-9` on its own — they are different variant
- * groups, so `tailwind-merge` keeps both and the data-attribute rule applies.
- * The override has to be written in the same variant to replace it.
- *
- * `dark:hover:bg-surface-container-high!` is the SECOND override the same trap
- * demands and this line was missing: `select.tsx` ships `dark:hover:bg-input/50`,
- * so in dark mode the trigger's resting fill was correct and it flipped to
- * `input/50` the moment a pointer touched it. The `dark:` half of the base pair
- * only defends the RESTING state.
- *
- * The `!` is load-bearing for the same reason it is on the base pair: both
- * rules compile to (0,3,0) — utility + `.dark` + `:hover` — so they TIE, and a
- * tie is settled by emission order, which for two candidates of one utility is
- * Tailwind's name sort (`bg-input…` before `bg-surface-…`). Winning on the
- * letter `i` preceding `s` is an outcome we observed, not one we built. See
- * `shapes.ts` > FIELD_CONTROL for the full note.
- */
-const SELECT_CONTROL = `${FIELD_CONTROL_ON_CONTAINER} w-full data-[size=default]:h-[2.625rem] dark:hover:bg-surface-container-high!`;
+/** Select trigger layout; shape and fill come from the primitive. */
+const SELECT_CONTROL = `${FIELD_CONTROL} w-full`;
 
 /**
  * THE TWO FIELD WIDTHS INSIDE A SLOT ROW.
@@ -852,6 +831,7 @@ export default function LteTowerCard({
                         >
                           <SelectTrigger
                             id={earfcnId}
+                            host="container"
                             className={SELECT_CONTROL}
                             aria-label={t("tower_locking.fields.earfcn")}
                           >
@@ -1008,7 +988,8 @@ export default function LteTowerCard({
                           inputMode="numeric"
                           autoComplete="off"
                           placeholder={t("tower_locking.live.tile_earfcn")}
-                          className={`${FIELD_CONTROL_ON_CONTAINER} font-mono tabular-nums`}
+                          host="container"
+                          className={`${FIELD_CONTROL} font-mono tabular-nums`}
                           value={slot.earfcn}
                           onChange={(event) =>
                             setSlotField(index, "earfcn", event.target.value)
@@ -1031,7 +1012,8 @@ export default function LteTowerCard({
                         inputMode="numeric"
                         autoComplete="off"
                         placeholder={t("tower_locking.live.tile_pci")}
-                        className={`${FIELD_CONTROL_ON_CONTAINER} font-mono tabular-nums`}
+                        host="container"
+                        className={`${FIELD_CONTROL} font-mono tabular-nums`}
                         value={slot.pci}
                         onChange={(event) =>
                           setSlotField(index, "pci", event.target.value)
@@ -1109,7 +1091,7 @@ export default function LteTowerCard({
             <Button
               type="button"
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               onClick={() => setShowUnlockDialog(true)}
               disabled={isLocking || posture !== "locked"}
             >
@@ -1122,7 +1104,7 @@ export default function LteTowerCard({
               saved={saved}
               label={t("tower_locking.actions.lock")}
               blockedReason={lockBlockedReason}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             />
           </div>
         </div>
@@ -1150,14 +1132,14 @@ export default function LteTowerCard({
           <AlertDialogFooter>
             <AlertDialogCancel
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               disabled={isLocking}
             >
               {t("actions.cancel", { ns: "common" })}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmLock}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             >
               {t("tower_locking.actions.lock")}
             </AlertDialogAction>
@@ -1179,14 +1161,14 @@ export default function LteTowerCard({
           <AlertDialogFooter>
             <AlertDialogCancel
               variant="tonal-neutral"
-              className={PILL_ACTION_PLAIN}
+              size="action"
               disabled={isLocking}
             >
               {t("actions.cancel", { ns: "common" })}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmUnlock}
-              className={PILL_ACTION_PLAIN}
+              size="action"
             >
               {t("tower_locking.actions.unlock")}
             </AlertDialogAction>

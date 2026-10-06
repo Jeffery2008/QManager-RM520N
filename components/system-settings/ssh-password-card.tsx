@@ -34,7 +34,6 @@ import {
   FIELD,
   GROUP_FILL,
   NOTICE,
-  PILL_ACTION,
   ROW,
   ROW_GROUP,
 } from "./shapes";
@@ -45,17 +44,14 @@ const K = "ssh";
 // full-width password fields, so label and field stack at every width.
 const STACK_ROW = "flex flex-col gap-2.5 rounded-field px-4 py-4";
 
-// The pill now wraps the field AND its eye toggle via `InputGroup`, so
-// `FIELD`'s own px-4 would double up with the addon's built-in inset — the
-// group carries none of its own, same as the input/addon split it wraps.
 // `@2xl/card:w-full` cancels `FIELD`'s side-by-side auto-width: these rows
 // never flip, so the field always fills the row.
-const FIELD_GROUP = cn(FIELD, "px-0 @2xl/card:w-full");
+const FIELD_GROUP = cn(FIELD, "@2xl/card:w-full");
 
-// The toggle rides INSIDE the pill via `InputGroupAddon`, so it paints 32px
+// The toggle rides INSIDE the field via `InputGroupAddon`, so it paints 32px
 // and cannot grow. `COARSE_TARGET` reaches the 44px floor with a
 // pseudo-element instead of resizing the visible button.
-const FIELD_TOGGLE = `rounded-pill text-on-surface-variant hover:text-on-surface ${COARSE_TARGET}`;
+const FIELD_TOGGLE = `text-on-surface-variant hover:text-on-surface ${COARSE_TARGET}`;
 
 interface PasswordFieldProps {
   id: string;
@@ -97,7 +93,7 @@ function PasswordField({
         ) : null}
       </div>
 
-      <InputGroup className={FIELD_GROUP}>
+      <InputGroup host="container" className={FIELD_GROUP}>
         <InputGroupInput
           id={id}
           type={visible ? "text" : "password"}
@@ -262,7 +258,7 @@ export default function SSHPasswordCard() {
                 saved={saved}
                 label={t(`${K}.card.save`)}
                 disabled={!canSubmit}
-                className={PILL_ACTION}
+                size="action"
               />
             </div>
           </div>

@@ -174,9 +174,9 @@ export const segmentedBreakpoint = (
   step: SegmentedBreakpointStep = "2xl",
 ) => SEGMENTED_BREAKPOINTS[step];
 
-/** The 42px Select trigger this control falls back to, when the caller doesn't override it. */
+/** The fallback Select trigger's voice and width; it rides a container row, so `host="container"`. */
 const DEFAULT_SELECT_TRIGGER =
-  "h-[2.625rem] rounded-pill border-0 bg-surface-container-high text-[0.84375rem] font-medium w-full px-4 @2xl/card:w-auto";
+  "text-[0.84375rem] font-medium w-full px-4 @2xl/card:w-auto";
 
 export interface SegmentedFieldProps<T extends string> {
   value: T;
@@ -200,7 +200,7 @@ export interface SegmentedFieldProps<T extends string> {
    * `.GLYPH_RESERVED`) the caller's icon element must carry.
    */
   glyph: (className: string) => React.ReactNode;
-  /** Overrides the fallback Select's trigger classes. Defaults to this surface's own 42px pill. */
+  /** Overrides the fallback Select's trigger classes. Defaults to the canon 42px field. */
   selectTriggerClassName?: string;
 }
 
@@ -276,6 +276,7 @@ export function SegmentedField<T extends string>({
       >
         <SelectTrigger
           aria-label={ariaLabel}
+          host={selectTriggerClassName ? undefined : "container"}
           className={cn(selectTriggerClassName ?? DEFAULT_SELECT_TRIGGER, bp.SELECT)}
         >
           <SelectValue>{activeLabel}</SelectValue>

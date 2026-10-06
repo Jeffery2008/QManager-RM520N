@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { cn } from "@/lib/utils";
 
-import { PILL_ACTION, PILL_ACTION_PLAIN } from "./shapes";
 
 // =============================================================================
 // DeactivateProgressDialog — confirm, then STAY OPEN for the whole request
@@ -211,12 +210,12 @@ export function DeactivateProgressDialog({
             <>
               <Button
                 variant="tonal"
-                className={PILL_ACTION_PLAIN}
+                size="action"
                 onClick={() => onOpenChange(false)}
               >
                 {tc("actions.cancel")}
               </Button>
-              <Button className={PILL_ACTION} onClick={onConfirm}>
+              <Button size="action" onClick={onConfirm}>
                 <MaterialSymbol name="power_settings_new" size={16} />
                 {t("custom_profiles.deactivate_dialog.confirm")}
               </Button>

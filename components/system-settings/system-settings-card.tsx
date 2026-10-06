@@ -28,6 +28,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { fieldVariants } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -68,7 +69,6 @@ import {
   GROUP_FILL,
   LABEL_LINE,
   NOTICE,
-  PILL_ACTION,
   ROW,
   ROW_GROUP,
   SKELETON,
@@ -321,7 +321,11 @@ function PreferencesForm({
                   role="combobox"
                   aria-expanded={tzOpen}
                   aria-labelledby={TZ_LABEL_ID}
-                  className={cn(FIELD, "flex items-center justify-between gap-2")}
+                  className={cn(
+                    fieldVariants({ host: "container" }),
+                    "flex h-[2.625rem] items-center justify-between gap-2 px-3.5",
+                    FIELD,
+                  )}
                 >
                   <span className="truncate">
                     {tzLabel ?? t(`${K}.rows.timezone.placeholder`)}
@@ -415,7 +419,11 @@ function PreferencesForm({
               value={tempUnit}
               onValueChange={(v) => setTempUnit(v as "celsius" | "fahrenheit")}
             >
-              <SelectTrigger aria-labelledby={TEMP_LABEL_ID} className={FIELD}>
+              <SelectTrigger
+                aria-labelledby={TEMP_LABEL_ID}
+                host="container"
+                className={FIELD}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -452,6 +460,7 @@ function PreferencesForm({
             >
               <SelectTrigger
                 aria-labelledby={DISTANCE_LABEL_ID}
+                host="container"
                 className={FIELD}
               >
                 <SelectValue />
@@ -478,7 +487,7 @@ function PreferencesForm({
             saved={saved}
             label={t(`${K}.card.save`)}
             disabled={!canSave}
-            className={PILL_ACTION}
+            size="action"
           />
         </div>
       </div>

@@ -101,8 +101,8 @@ export interface RunHeroProps {
    */
   link?: React.ReactNode;
   /**
-   * Route-owned buttons, rendered in the header beside `link`. They style
-   * themselves with `PILL_ACTION` and friends.
+   * Route-owned buttons, rendered in the header beside `link`. They use
+   * `size="action"`.
    *
    * A route may pass NOTHING here, and the failed posture is where that
    * matters: the results card carries the recovery action in that state, and a

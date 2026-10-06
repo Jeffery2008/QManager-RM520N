@@ -37,7 +37,6 @@ import {
   MONO_TAG,
   NOTICE,
   PACK_ROW,
-  PILL_ACTION,
   PILL_GLYPH,
 } from "./shapes";
 
@@ -159,7 +158,7 @@ export function PackRow({
                 <Button
                   type="button"
                   variant="ghost"
-                  className={PILL_ACTION}
+                  size="action"
                   onClick={onCancel}
                   aria-label={t(`${K}.actions.cancel_aria`, {
                     language: pack.englishName,
@@ -172,7 +171,7 @@ export function PackRow({
           ) : (
             <Button
               type="button"
-              className={PILL_ACTION}
+              size="action"
               onClick={() => onInstall(pack.code)}
               disabled={!compatible}
               aria-label={t(
