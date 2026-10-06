@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SLOT, withSlot } from "@/components/auth/interpolation-slot";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 import { DIALOG_ACTION } from "./shapes";
@@ -77,15 +78,12 @@ export function MessageDialog({
 
   const handleCopy = React.useCallback(async () => {
     if (!message) return;
-    try {
-      await navigator.clipboard.writeText(message.content);
+    if (await copyText(message.content)) {
       setCopied(true);
+      toast.success(t("sms.inbox.view_dialog.copied"));
       if (resetRef.current) clearTimeout(resetRef.current);
       resetRef.current = setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // The app is served over plain HTTP from the modem, and some browsers
-      // block the clipboard API outside a secure context — so this path is
-      // real, not theoretical.
+    } else {
       toast.error(t("sms.inbox.view_dialog.copy_error"));
     }
   }, [message, t]);

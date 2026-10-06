@@ -2,25 +2,18 @@
 
 import { toast } from "sonner";
 
+import { copyText } from "@/lib/clipboard";
+
 interface CopyableCommandProps {
   command: string;
 }
 
 export function CopyableCommand({ command }: CopyableCommandProps) {
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(command);
+    if (await copyText(command)) {
       toast.success("Copied to clipboard");
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = command;
-      textarea.style.position = "fixed";
-      textarea.style.opacity = "0";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      toast.success("Copied to clipboard");
+    } else {
+      toast.error("Could not copy to clipboard");
     }
   };
 

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
+import { copyText } from "@/lib/clipboard";
 
 // =============================================================================
 // Radio Information page header
@@ -40,16 +41,12 @@ export function RadioPageHeader({ buildDiagnostics }: RadioPageHeaderProps) {
   );
 
   const handleCopy = React.useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(buildDiagnostics());
+    if (await copyText(buildDiagnostics())) {
       setCopied(true);
       toast.success(t("radio_info.header.copy_success"));
       if (resetRef.current) clearTimeout(resetRef.current);
       resetRef.current = setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard access is blocked on plain HTTP in some browsers, and this
-      // app is served over plain HTTP from the modem — so this path is real,
-      // not theoretical.
+    } else {
       toast.error(t("radio_info.header.copy_error"));
     }
   }, [buildDiagnostics, t]);

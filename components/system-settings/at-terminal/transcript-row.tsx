@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 import { clockTime, entryToText, type EntryStatus, type HistoryEntry } from "./derive";
@@ -52,13 +53,8 @@ export function TranscriptRow({
   }, [copied]);
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(entryToText(entry));
-      setCopied(true);
-    } catch {
-      // A denied clipboard permission is not something to shout about; the
-      // transcript is still selectable.
-    }
+    // A failed copy stays silent; the transcript is still selectable.
+    if (await copyText(entryToText(entry))) setCopied(true);
   };
 
   return (

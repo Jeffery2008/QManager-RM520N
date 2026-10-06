@@ -27,6 +27,7 @@ import {
 import { compressIPv6, decToHex } from "@/lib/ipv6";
 import { staggerRowItem, staggerRows } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { copyText } from "@/lib/clipboard";
 import type { ModemStatus } from "@/types/modem-status";
 import {
   calculateLteDistance,
@@ -227,10 +228,9 @@ function CopyButton({ value, label }: { value: string; label: string }) {
   };
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
+    if (await copyText(value)) {
       confirm();
-    } catch {
+    } else {
       toast.error(t("radio_info.copy.error"));
     }
   };
