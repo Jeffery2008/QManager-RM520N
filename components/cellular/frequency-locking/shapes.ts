@@ -110,8 +110,8 @@ export const PAGE_SHELL = "@container/main mx-auto flex flex-col gap-5 p-2";
  * row-mate instead of sizing to its own content.
  *
  * The LTE card (2 slots) and the NR card (up to 32 entries) are asymmetric by
- * nature, so pair this with `CARD_FOOT`'s `mt-auto`: the slack collects at the
- * card's floor behind its actions, rather than as a gap in the middle.
+ * nature, so the cards end in `components/ui/card-foot.tsx`'s `CARD_FOOT`, whose
+ * `mt-auto` collects the slack behind the actions rather than mid-card.
  */
 export const CARD_GRID = "grid grid-cols-1 gap-4 @3xl/main:grid-cols-2";
 export const CARD_CELL = "h-full *:data-[slot=card]:h-full";
@@ -119,14 +119,6 @@ export const CARD_CELL = "h-full *:data-[slot=card]:h-full";
 /** Peer card in the grid: role radius at the call site, no border, no shadow. */
 export const CARD_SHELL = "rounded-card border-0 shadow-none";
 export const CARD_PAD = "px-5 @lg/card:px-6";
-
-/**
- * Card footer. `mt-auto` pins actions to the card's floor — these cards sit in
- * an equal-height row, so without it a card shorter than its row-mate leaves its
- * buttons floating above a void.
- */
-export const CARD_FOOT =
-  "mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-3";
 
 // -----------------------------------------------------------------------------
 // The live strip — "Right now"
@@ -391,8 +383,6 @@ export const APPLY_BAR = {
 } as const;
 
 /** Action pills. Matches tower locking's scale so the two pages feel like one. */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
 export const PILL_ACTION_PLAIN =
   "h-[2.625rem] rounded-pill px-5 text-sm font-semibold";
 export const PILL_QUIET = "h-9 rounded-pill px-3.5 text-xs font-semibold";
@@ -542,6 +532,6 @@ export const SKELETON_SHAPE = {
   VERDICT: "h-[13rem] w-full rounded-tile",
   /** `CAMPED.LABEL`'s text-sm/600 line box ("Camped on now"). */
   CAMPED_LABEL: "h-5 w-32 rounded-inline",
-  /** An action pill at `PILL_ACTION`'s 42px height. */
+  /** An action pill at `PILL_ACTION_PLAIN`'s 42px height. */
   ACTION: "h-[2.625rem] w-32 rounded-pill",
 } as const;

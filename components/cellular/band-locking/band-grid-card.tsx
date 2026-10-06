@@ -15,10 +15,14 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  CARD_FOOT,
+  CARD_FOOT_ACTIONS,
+  CardFoot,
+} from "@/components/ui/card-foot";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,7 +38,6 @@ import {
   CATEGORY_BADGE,
   NOTICE,
   NOTICE_TONE,
-  PILL_ACTION,
   PILL_ACTION_PLAIN,
   PILL_QUIET,
   SKELETON_SHAPE,
@@ -302,10 +305,12 @@ export function BandGridCard({
             ))}
           </div>
         </CardContent>
-        <CardFooter className={`${CARD_PAD} gap-2`}>
-          <Skeleton className={SKELETON_SHAPE.ACTION} />
-          <Skeleton className={SKELETON_SHAPE.ACTION_SECONDARY} />
-        </CardFooter>
+        <div className={`${CARD_PAD} ${CARD_FOOT}`}>
+          <div className={CARD_FOOT_ACTIONS}>
+            <Skeleton className={SKELETON_SHAPE.ACTION_SECONDARY} />
+            <Skeleton className={SKELETON_SHAPE.ACTION} />
+          </div>
+        </div>
       </Card>
     );
   }
@@ -486,60 +491,56 @@ export function BandGridCard({
         {isLocking ? t("band_locking.a11y.applying", { category: shortName }) : ""}
       </div>
 
-      <CardFooter
-        className={`${CARD_PAD} flex flex-wrap items-center justify-between gap-x-2 gap-y-3`}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <SaveButton
-            onClick={handleApply}
-            isSaving={isLocking}
-            saved={saved}
-            label={t("band_locking.actions.lock_selected")}
-            disabled={isFrozen || noneSelected || !hasChanges}
-            className={PILL_ACTION_PLAIN}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleRestoreAll}
-            disabled={isFrozen || isUnrestricted}
-            className={PILL_ACTION}
-          >
-            <MaterialSymbol name="restart_alt" size={18} />
-            {t("band_locking.actions.restore_all")}
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1">
-          {/* Pending count sits with the selection controls, not in the header:
-              the header chip reports the MODEM's state and this reports the
-              FORM's. Putting them in one place would merge two different
-              truths into one line. */}
-          {hasChanges ? (
-            <span className="text-on-surface-variant mr-1 text-xs font-medium tabular-nums">
+      {/* Pending count is the FORM's state; the header chip is the MODEM's. */}
+      <CardFoot
+        className={CARD_PAD}
+        status={
+          hasChanges ? (
+            <span className="font-medium tabular-nums">
               {t("band_locking.card.pending", { count: pendingCount })}
             </span>
-          ) : null}
-          <Button
-            type="button"
-            variant="tonal-neutral"
-            onClick={() => setCheckedBands(new Set(supportedBands))}
-            disabled={isFrozen}
-            className={PILL_QUIET}
-          >
-            {t("band_locking.actions.select_all")}
-          </Button>
-          <Button
-            type="button"
-            variant="tonal-neutral"
-            onClick={() => setCheckedBands(new Set())}
-            disabled={isFrozen || noneSelected}
-            className={PILL_QUIET}
-          >
-            {t("band_locking.actions.select_none")}
-          </Button>
-        </div>
-      </CardFooter>
+          ) : null
+        }
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              onClick={() => setCheckedBands(new Set(supportedBands))}
+              disabled={isFrozen}
+              className={PILL_QUIET}
+            >
+              {t("band_locking.actions.select_all")}
+            </Button>
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              onClick={() => setCheckedBands(new Set())}
+              disabled={isFrozen || noneSelected}
+              className={PILL_QUIET}
+            >
+              {t("band_locking.actions.select_none")}
+            </Button>
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              onClick={handleRestoreAll}
+              disabled={isFrozen || isUnrestricted}
+              className={PILL_ACTION_PLAIN}
+            >
+              {t("band_locking.actions.restore_all")}
+            </Button>
+            <SaveButton
+              onClick={handleApply}
+              isSaving={isLocking}
+              saved={saved}
+              label={t("band_locking.actions.lock_selected")}
+              disabled={isFrozen || noneSelected || !hasChanges}
+              className={PILL_ACTION_PLAIN}
+            />
+          </>
+        }
+      />
     </Card>
   );
 }
