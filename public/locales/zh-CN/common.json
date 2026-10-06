@@ -95,7 +95,6 @@
       "row_label": "速度限制",
       "placeholder": "选择速度",
       "applying": "正在应用…",
-      "saved": "已保存",
       "group_label": "速度限制",
       "option_auto": "自动（最大）",
       "option_10": "10 Mbps",
@@ -986,7 +985,6 @@
         "dirty": "未保存的更改",
         "discard": "放弃",
         "failed": "设置未能保存。",
-        "saved": "已保存",
         "succeeded": "提醒设置已保存"
       },
       "secret_saved": "已保存",
@@ -1421,7 +1419,6 @@
       "action": "保存",
       "clean": "所有更改已保存",
       "dirty": "您有未保存的更改",
-      "saved": "已保存",
       "blockedIn": "保存前请检查 {{fields}}",
       "toastOk": "看门狗设置已保存",
       "toastFail": "无法保存看门狗设置",

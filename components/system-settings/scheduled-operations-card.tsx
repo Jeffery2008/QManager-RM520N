@@ -24,7 +24,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { useSaveFlash } from "@/components/ui/save-button";
 import { staggerRowItem, staggerRows } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +78,6 @@ const ScheduledRebootCard = ({
   refresh,
 }: ScheduledRebootCardProps) => {
   const { t } = useTranslation("system-settings");
-  const { saved, markSaved } = useSaveFlash();
 
   // No day is armed until the device says one is — a seeded week would be a
   // schedule the user never chose, and the switch below POSTs whatever is here.
@@ -194,7 +192,6 @@ const ScheduledRebootCard = ({
           rejectionToast(`${K}.toast.save_failed`, result.rejection, result.rejectionDetail);
           return;
         }
-        markSaved();
         // Debounced saves only fire while the schedule is enabled, so the
         // user's intent is always "armed". armed === false means it persisted
         // but no live timer was installed — warn honestly instead of a green
@@ -206,7 +203,7 @@ const ScheduledRebootCard = ({
         }
       }, 800);
     },
-    [saveScheduledReboot, markSaved, armWarning, rejectionToast, t],
+    [saveScheduledReboot, armWarning, rejectionToast, t],
   );
 
   const handleRebootEnabledChange = async (checked: boolean) => {
@@ -238,7 +235,6 @@ const ScheduledRebootCard = ({
       rejectionToast(`${K}.toast.update_failed`, result.rejection, result.rejectionDetail);
       return;
     }
-    markSaved();
     // Only warn about arming when the user is turning the schedule ON. Turning
     // it OFF disarms the timer by design, so armed === false is expected there.
     if (checked && result.armed === false) {
@@ -489,7 +485,7 @@ const ScheduledRebootCard = ({
             <span
               className={cn(
                 SAVE_LAYER,
-                isSaving || saved ? "opacity-0" : "opacity-100",
+                isSaving ? "opacity-0" : "opacity-100",
               )}
             >
               <ClockIcon className="size-3.5" />
@@ -500,10 +496,6 @@ const ScheduledRebootCard = ({
             >
               <Loader2Icon className="size-3.5 animate-spin motion-reduce:animate-none" />
               {t(`${K}.states.saving`)}
-            </span>
-            <span className={cn(SAVE_LAYER, saved ? "opacity-100" : "opacity-0")}>
-              <CheckCircle2Icon className="size-3.5" />
-              {t(`${K}.states.saved`)}
             </span>
           </span>
         </div>

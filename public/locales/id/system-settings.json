@@ -184,8 +184,7 @@
       },
       "stale": "QManager kehilangan kontak saat menyegarkan. Ini adalah nilai terakhir yang dibacanya dari perangkat.",
       "autosave": "Tersimpan otomatis",
-      "saving": "Menyimpan…",
-      "saved": "Tersimpan"
+      "saving": "Menyimpan…"
     },
     "toast": {
       "enabled": "Reboot terjadwal diaktifkan",

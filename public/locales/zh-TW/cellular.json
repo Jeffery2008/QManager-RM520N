@@ -802,6 +802,10 @@
         "save": "儲存設定",
         "failed": "無法套用 {{fields}}。您的其他變更已儲存。"
       },
+      "toast": {
+        "saved": "設定已套用。",
+        "save_failed": "無法套用您的設定。"
+      },
       "apply": {
         "writing": "正在寫入數據機",
         "recovering": "正在等待射頻穩定",

@@ -802,6 +802,10 @@
         "save": "Simpan Pengaturan",
         "failed": "Gagal menerapkan {{fields}}. Perubahan Anda yang lain telah disimpan."
       },
+      "toast": {
+        "saved": "Pengaturan diterapkan.",
+        "save_failed": "Gagal menerapkan pengaturan Anda."
+      },
       "apply": {
         "writing": "Menulis ke modem",
         "recovering": "Menunggu radio stabil",

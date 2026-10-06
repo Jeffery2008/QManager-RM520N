@@ -184,8 +184,7 @@
       },
       "stale": "QManager 在刷新时失去了联系。这些是它上次从设备读取到的值。",
       "autosave": "自动保存",
-      "saving": "保存中…",
-      "saved": "已保存"
+      "saving": "保存中…"
     },
     "toast": {
       "enabled": "已启用定时重启",

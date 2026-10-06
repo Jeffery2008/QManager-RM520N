@@ -345,7 +345,7 @@ const FIELD_STATE =
 
 export const FIELD = `${FIELD_BOX} bg-surface-container-high dark:bg-surface-container-high! ${FIELD_STATE}`;
 
-/** The glyph riding inside the trigger during the applying / saved flash. */
+/** The glyph riding inside the trigger during the applying state. */
 export const FIELD_GLYPH = "size-3.5";
 
 /**

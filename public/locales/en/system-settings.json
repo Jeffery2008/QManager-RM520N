@@ -184,8 +184,7 @@
       },
       "stale": "QManager lost contact while refreshing. These are the last values it read from the device.",
       "autosave": "Saves automatically",
-      "saving": "Saving…",
-      "saved": "Saved"
+      "saving": "Saving…"
     },
     "toast": {
       "enabled": "Scheduled reboot enabled",

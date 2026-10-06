@@ -802,6 +802,10 @@
         "save": "保存设置",
         "failed": "无法应用 {{fields}}。您的其他更改已保存。"
       },
+      "toast": {
+        "saved": "设置已应用。",
+        "save_failed": "无法应用您的设置。"
+      },
       "apply": {
         "writing": "正在写入调制解调器",
         "recovering": "正在等待射频稳定",

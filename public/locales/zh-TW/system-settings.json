@@ -184,8 +184,7 @@
       },
       "stale": "QManager 在重新整理時失去了聯繫。這些是它上次從裝置讀取到的值。",
       "autosave": "自動儲存",
-      "saving": "儲存中…",
-      "saved": "已儲存"
+      "saving": "儲存中…"
     },
     "toast": {
       "enabled": "已啟用定時重啟",

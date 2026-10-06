@@ -3,9 +3,11 @@
 import * as React from "react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
+import { useSaveFlash } from "@/components/ui/save-button";
 import { TonalBanner } from "@/components/ui/tonal-banner";
 import CellularPageHeader from "@/components/cellular/page-header";
 import { staggerContainer, staggerItem } from "@/lib/motion";
@@ -80,28 +82,41 @@ const CellularSettingsComponent = () => {
 
   const K = "core_settings.basic";
 
-  // The save bar's "saved" flash. Owned here (not by either settings card)
-  // because the bar is shared — see the header comment.
-  const [saved, setSaved] = React.useState(false);
-  const savedTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  React.useEffect(
-    () => () => {
-      if (savedTimer.current) clearTimeout(savedTimer.current);
-    },
-    [],
-  );
+  // The shared save bar's Save button flash; owned here because the bar is shared.
+  const { saved, markSaved } = useSaveFlash();
 
   const failedLabels = (form.lastApply?.failedFields ?? []).map((key) =>
     t(`${K}.rows.${key}.label`),
   );
 
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   const handleSave = async () => {
     const result = await form.saveSettings();
+    // The hook reports "unmounted" as a failure; the write may have landed.
+    if (!mountedRef.current) return;
     if (result.success) {
-      setSaved(true);
-      if (savedTimer.current) clearTimeout(savedTimer.current);
-      savedTimer.current = setTimeout(() => setSaved(false), 1800);
+      // A no-op save succeeds with nothing applied, so it confirms nothing.
+      if (result.appliedFields.length > 0) {
+        markSaved();
+        toast.success(t(`${K}.toast.saved`));
+      }
+      return;
     }
+    // One error toast, never a success then an error. `result.error` is a raw
+    // backend code, so the description names the fields that failed instead.
+    toast.error(t(`${K}.toast.save_failed`), {
+      description:
+        result.failedFields.length > 0
+          ? result.failedFields.map((key) => t(`${K}.rows.${key}.label`)).join(", ")
+          : undefined,
+    });
   };
 
   return (

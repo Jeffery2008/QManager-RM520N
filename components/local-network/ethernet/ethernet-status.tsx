@@ -8,7 +8,6 @@ import { RefreshCcwIcon } from "lucide-react";
 
 import { authFetch } from "@/lib/auth-fetch";
 import { Button } from "@/components/ui/button";
-import { useSaveFlash } from "@/components/ui/save-button";
 import { staggerContainer, staggerItem } from "@/lib/motion";
 
 import { LinkStateStrip } from "./link-state-strip";
@@ -69,7 +68,6 @@ const EthernetStatusComponent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [pollFailed, setPollFailed] = useState(false);
-  const { saved, markSaved } = useSaveFlash();
 
   const mountedRef = useRef(true);
   // Read by the interval, which closes over its first render. A state value
@@ -218,18 +216,10 @@ const EthernetStatusComponent = () => {
 
         const confirmed = await confirmSpeedChange(value, windowSec);
 
-        // markSaved() must fire after the confirm-poll resolves, in the same
-        // synchronous continuation as the finally block's setIsSaving(false)
-        // below — otherwise isSaving stays true (and wins the render ternary
-        // over saved) for the whole ~8s poll window. See issue #10.
-        //
-        // An exhausted poll is NOT a save: the link never came back at the
-        // requested speed, so claiming "updated" would be the interface lying
-        // about what the device is doing (State-Honesty Rule). The catch path
-        // below says the same thing in the same words.
+        // An exhausted poll is not a save: the link never came back at the
+        // requested speed, so it toasts the same error as the catch path below.
         if (!mountedRef.current) return;
         if (confirmed) {
-          markSaved();
           toast.success(t(`${K}.settings.toast_success`));
         } else {
           toast.error(t(`${K}.settings.toast_confirm_error`));
@@ -243,7 +233,6 @@ const EthernetStatusComponent = () => {
       if (mountedRef.current) {
         const confirmed = await confirmSpeedChange(value, 8);
         if (confirmed) {
-          markSaved();
           toast.success(t(`${K}.settings.toast_success`));
         } else {
           toast.error(t(`${K}.settings.toast_confirm_error`));
@@ -314,7 +303,6 @@ const EthernetStatusComponent = () => {
           speedLimit={status?.speed_limit ?? ""}
           supports2500={status?.supports_2500 ?? false}
           isSaving={isSaving}
-          saved={saved}
           hasStatus={status !== null}
           pollFailed={pollFailed}
           interfacePresent={status?.interface_present !== false}
