@@ -1,5 +1,5 @@
 # Run: Card-Foot Apply sweep
-status: active
+status: closed
 lane: full
 base: 57e84ea5 (rebased onto development 266d1b57 after the chips merge)   branch: worktree-card-foot-sweep @ .claude/worktrees/card-foot-sweep   opened: 2026-10-06   lead: Sonnet 5.5
 
@@ -44,4 +44,4 @@ base: 57e84ea5 (rebased onto development 266d1b57 after the chips merge)   branc
 No device touched. Frontend-only change.
 
 ## Handoff — NEXT ACTION
-All five build waves committed (7400831c, 7b65d7e1, cf7541a8, a2c0c782, 17c75e92); gates green. V (blind qm-verifier, diff 266d1b57..HEAD) DISPATCHED — do not re-dispatch; after its verdict run D (docs-writer: Migration Deltas rows, band-locking.md:663, connection-watchdog.md:371/406/418 still describe save-bar.tsx, RELEASE_NOTES recheck: scope is now all 21 sites + Cellular Settings footer on Network card), then close-out. Open defects found, out of scope, offer as spawned tasks: alerts-settings-card handleSave/handleTest read hook.error after await (stale closure, toast rule); imei-settings-card handleCopy uses navigator.clipboard not copyText. Then close-out AskUserQuestion (merge / PR / discard). Visual proof is not possible in the worktree: ask the user to run the tarball on the device, or sign in to the Browser pane against a live device. Flag in the summary: footer secondary actions lost their glyphs (visible change). Leave the worktree clean after the final commit so session 49fca9 can continue from this branch.
+RUN CLOSED 2026-10-06. Five build waves (7400831c, 7b65d7e1, cf7541a8, a2c0c782, 17c75e92), verifier FAIL on dead ICON_ACTION exports fixed in 54cdedee (not re-verified blind; tsc + eslint clean), docs 81aa97fa. User chose merge into development. Still open: (1) no page was ever rendered — the user's tarball run on the device is the real proof; (2) footer secondary actions lost their glyphs, Re-read on Cellular Settings now always shown; (3) spawned tasks for the stale hook.error reads in alerts-settings-card handleSave/handleTest and imei-settings-card handleCopy (navigator.clipboard); (4) cellular-basic-settings.md file tree still lists settings/segmented-field.tsx (moved to components/ui/), left for the SegmentedField session; (5) pre-existing eslint errors in sim-swap-banner.tsx and cellular-information.tsx, untouched. Switch -> SegmentedField is session 49fca9's job, after this merge.
