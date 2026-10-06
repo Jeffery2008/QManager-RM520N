@@ -28,6 +28,7 @@ import { FieldError } from "@/components/ui/field";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { copyText } from "@/lib/clipboard";
 import { validateImei } from "@/lib/imei-utils";
 import { staggerRowItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -149,10 +150,9 @@ const IMEISettingsCard = ({
 
   const handleCopy = async () => {
     if (!hasReading) return;
-    try {
-      await navigator.clipboard.writeText(reported);
+    if (await copyText(reported)) {
       toast.success(t(`${K}.toasts.copied`));
-    } catch {
+    } else {
       toast.error(t(`${K}.toasts.copy_failed`));
     }
   };

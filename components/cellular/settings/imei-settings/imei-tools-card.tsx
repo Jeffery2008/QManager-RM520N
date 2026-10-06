@@ -34,6 +34,7 @@ import {
   parseImeiBreakdown,
   validateImei,
 } from "@/lib/imei-utils";
+import { copyText } from "@/lib/clipboard";
 import { staggerRowItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -120,10 +121,9 @@ const IMEIToolsCard = () => {
 
   const handleCopy = async () => {
     if (!candidate) return;
-    try {
-      await navigator.clipboard.writeText(candidate);
+    if (await copyText(candidate)) {
       toast.success(t(`${K}.toasts.copied`));
-    } catch {
+    } else {
       toast.error(t(`${K}.toasts.copy_failed`));
     }
   };

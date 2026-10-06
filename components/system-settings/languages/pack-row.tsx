@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
+import { copyText } from "@/lib/clipboard";
 import { isPackCompatible } from "@/lib/i18n/app-version";
 import { installErrorKey } from "@/lib/i18n/resolve-error";
 import { staggerRowItem, transitionMeterFill } from "@/lib/motion";
@@ -81,10 +82,9 @@ export function PackRow({
   const command = `qmanager_language_install ${pack.code} ${pack.entry.url} ${pack.entry.sha256}`;
 
   const copyCommand = async () => {
-    try {
-      await navigator.clipboard.writeText(command);
+    if (await copyText(command)) {
       toast.success(t(`${K}.toast.copied`));
-    } catch {
+    } else {
       toast.error(t(`${K}.toast.copy_failed`));
     }
   };

@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 import { ConditionBlock } from "./condition-block";
@@ -58,10 +59,9 @@ function CommandRow({ command }: { command: string }) {
   const { t } = useTranslation("common");
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(command);
+    if (await copyText(command)) {
       toast.success(t("tailscale.toast.copied"));
-    } catch {
+    } else {
       toast.error(t("tailscale.toast.copyFailed"));
     }
   };
