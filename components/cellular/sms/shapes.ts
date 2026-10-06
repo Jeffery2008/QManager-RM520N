@@ -298,13 +298,12 @@ export const SKELETON_CHECKBOX = "size-4 rounded-[4px]";
 // -----------------------------------------------------------------------------
 
 /**
- * The enable row, as a metric-row pill. 44px, a coarse-pointer target in its own
- * right — and the `FieldLabel htmlFor` association is what makes the whole row
- * activatable rather than just the ~18x32px switch inside it.
+ * The enable row, as a metric-row pill. At least 44px; the On/Off pill drops
+ * under the label on a phone-width card instead of clipping it.
  */
 export const TOGGLE_ROW =
-  "flex h-11 w-full items-center gap-3 rounded-pill px-4";
-export const TOGGLE_LABEL = "min-w-0 flex-auto truncate text-sm font-semibold";
+  "flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-pill px-4 py-1";
+export const TOGGLE_LABEL = "min-w-40 flex-auto text-sm font-semibold";
 
 export const FIELD_LABEL = "text-sm font-semibold";
 
