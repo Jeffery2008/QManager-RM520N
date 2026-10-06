@@ -18,6 +18,7 @@ import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import type { MutationResult } from "@/types/mutation-result";
 
 import {
   CARD_BODY,
@@ -120,9 +121,8 @@ export interface MtuSettingsCardProps {
   value: MtuCardValue | null;
   isLoading: boolean;
   isSaving: boolean;
-  error: string | null;
-  onApply: (mtu: number) => Promise<boolean>;
-  onDisable: () => Promise<boolean>;
+  onApply: (mtu: number) => Promise<MutationResult>;
+  onDisable: () => Promise<MutationResult>;
 }
 
 /**
@@ -152,7 +152,6 @@ export function MtuSettingsCard({
   value,
   isLoading,
   isSaving,
-  error,
   onApply,
   onDisable,
 }: MtuSettingsCardProps) {
@@ -234,11 +233,11 @@ export function MtuSettingsCard({
 
       if (!draft.enabled) {
         const cleared = await onDisable();
-        if (cleared) {
+        if (cleared.ok) {
           markSaved();
           toast.success(t(`${K}.toast_mtu_cleared`));
         } else {
-          toast.error(error ?? t(`${K}.toast_mtu_error`));
+          toast.error(cleared.error ?? t(`${K}.toast_mtu_error`));
         }
         return;
       }
@@ -246,12 +245,12 @@ export function MtuSettingsCard({
       // `parsed` is proven a valid in-range integer by `blockedKey === null`
       // together with `draft.enabled`.
       const next = parsed as number;
-      const ok = await onApply(next);
-      if (ok) {
+      const result = await onApply(next);
+      if (result.ok) {
         markSaved();
         toast.success(t(`${K}.toast_mtu_applied`, { mtu: next }));
       } else {
-        toast.error(error ?? t(`${K}.toast_mtu_error`));
+        toast.error(result.error ?? t(`${K}.toast_mtu_error`));
       }
     },
     [
@@ -261,7 +260,6 @@ export function MtuSettingsCard({
       parsed,
       onApply,
       onDisable,
-      error,
       markSaved,
       t,
     ],

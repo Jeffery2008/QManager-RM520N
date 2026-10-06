@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { authFetch } from "@/lib/auth-fetch";
+import type { MutationResult } from "@/types/mutation-result";
 import type {
   SimProfile,
   ProfileSummary,
@@ -148,8 +149,8 @@ export interface UseSimProfilesReturn {
   createProfile: (data: ProfileFormData) => Promise<string | null>;
   /** Update an existing profile. Returns success boolean. */
   updateProfile: (id: string, data: ProfileFormData) => Promise<boolean>;
-  /** Delete a profile by ID. Returns success boolean. */
-  deleteProfile: (id: string) => Promise<boolean>;
+  /** Delete a profile by ID. Returns the outcome and the failure reason. */
+  deleteProfile: (id: string) => Promise<MutationResult>;
   /** Fetch a single profile by ID (full data for edit form). */
   getProfile: (id: string) => Promise<SimProfile | null>;
   /**
@@ -328,7 +329,7 @@ function useSimProfilesInternal({
   // Delete profile
   // ---------------------------------------------------------------------------
   const deleteProfile = useCallback(
-    async (id: string): Promise<boolean> => {
+    async (id: string): Promise<MutationResult> => {
       setError(null);
       try {
         const resp = await authFetch(`${CGI_BASE}/delete.sh`, {
@@ -344,17 +345,19 @@ function useSimProfilesInternal({
         const result: ProfileApiResponse = await resp.json();
 
         if (!result.success) {
-          setError(result.detail || result.error || "Failed to delete profile");
-          return false;
+          const message =
+            result.detail || result.error || "Failed to delete profile";
+          setError(message);
+          return { ok: false, error: message };
         }
 
         await fetchProfiles();
-        return true;
+        return { ok: true, error: null };
       } catch (err) {
         const msg =
           err instanceof Error ? err.message : "Failed to delete profile";
         setError(msg);
-        return false;
+        return { ok: false, error: msg };
       }
     },
     [fetchProfiles],

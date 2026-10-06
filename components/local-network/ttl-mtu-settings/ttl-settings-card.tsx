@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tag } from "@/components/ui/tag";
 import { cn } from "@/lib/utils";
+import type { MutationResult } from "@/types/mutation-result";
 
 import {
   CARD_BODY,
@@ -146,10 +147,9 @@ export interface TtlSettingsCardProps {
   value: TtlCardValue | null;
   isLoading: boolean;
   isSaving: boolean;
-  error: string | null;
   /** True when an active SIM profile writes these two values. */
   isProfileControlled: boolean;
-  onApply: (ttl: number, hl: number) => Promise<boolean>;
+  onApply: (ttl: number, hl: number) => Promise<MutationResult>;
 }
 
 /**
@@ -177,7 +177,6 @@ export function TtlSettingsCard({
   value,
   isLoading,
   isSaving,
-  error,
   isProfileControlled,
   onApply,
 }: TtlSettingsCardProps) {
@@ -290,9 +289,9 @@ export function TtlSettingsCard({
       const nextTtl = draft.enabled && ttlParsed !== null ? ttlParsed : 0;
       const nextHl = draft.enabled && hlParsed !== null ? hlParsed : 0;
 
-      const ok = await onApply(nextTtl, nextHl);
-      if (!ok) {
-        toast.error(error ?? t(`${K}.toast_ttl_error`));
+      const result = await onApply(nextTtl, nextHl);
+      if (!result.ok) {
+        toast.error(result.error ?? t(`${K}.toast_ttl_error`));
         return;
       }
 
@@ -315,7 +314,6 @@ export function TtlSettingsCard({
       ttlParsed,
       hlParsed,
       onApply,
-      error,
       markSaved,
       t,
     ],

@@ -181,15 +181,15 @@ const SmsForwardingCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
     e.preventDefault();
     if (!canSave) return;
 
-    const success = await saveSettings({
+    const result = await saveSettings({
       enabled: isEnabled,
       target_phone: targetPhone,
     });
-    if (success) {
+    if (result.ok) {
       markSaved();
       toast.success(t("sms.forwarding.toast.save_success"));
     } else {
-      toast.error(error || t("sms.forwarding.toast.save_error"));
+      toast.error(result.error || t("sms.forwarding.toast.save_error"));
     }
   };
 

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { authFetch } from "@/lib/auth-fetch";
+import type { MutationResult } from "@/types/mutation-result";
 
 // =============================================================================
 // useTtlSettings — One-Shot TTL/HL Fetch & Save Hook
@@ -36,7 +37,7 @@ export interface UseTtlSettingsReturn {
   /** Error message if fetch or save failed */
   error: string | null;
   /** Apply new TTL/HL values. Returns true on success. */
-  saveTtlHl: (ttl: number, hl: number) => Promise<boolean>;
+  saveTtlHl: (ttl: number, hl: number) => Promise<MutationResult>;
   /** Re-fetch TTL/HL data */
   refresh: () => void;
 }
@@ -104,7 +105,7 @@ export function useTtlSettings(): UseTtlSettingsReturn {
   // Save TTL/HL values
   // ---------------------------------------------------------------------------
   const saveTtlHl = useCallback(
-    async (ttl: number, hl: number): Promise<boolean> => {
+    async (ttl: number, hl: number): Promise<MutationResult> => {
       setError(null);
       setIsSaving(true);
 
@@ -120,20 +121,22 @@ export function useTtlSettings(): UseTtlSettingsReturn {
         }
 
         const json = await resp.json();
-        if (!mountedRef.current) return false;
+        if (!mountedRef.current) return { ok: false, error: null };
 
         if (!json.success) {
-          setError(json.detail || json.error || "Failed to apply TTL/HL");
-          return false;
+          const message = json.detail || json.error || "Failed to apply TTL/HL";
+          setError(message);
+          return { ok: false, error: message };
         }
 
         // Silent re-fetch to update local state
         await fetchTtl(true);
-        return true;
+        return { ok: true, error: null };
       } catch (err) {
-        if (!mountedRef.current) return false;
-        setError(err instanceof Error ? err.message : "Failed to apply TTL/HL");
-        return false;
+        if (!mountedRef.current) return { ok: false, error: null };
+        const message = err instanceof Error ? err.message : "Failed to apply TTL/HL";
+        setError(message);
+        return { ok: false, error: message };
       } finally {
         if (mountedRef.current) {
           setIsSaving(false);

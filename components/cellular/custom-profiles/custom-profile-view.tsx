@@ -55,6 +55,7 @@ import {
   type SimProfile,
 } from "@/types/sim-profile";
 import { staggerRows, staggerRowItem } from "@/lib/motion";
+import type { MutationResult } from "@/types/mutation-result";
 import {
   PROFILE_ROW_SHAPE,
   PROFILE_ROW_DISC_TONE,
@@ -255,7 +256,7 @@ export interface CustomProfileViewProps {
   isLoading: boolean;
   error: string | null;
   onEdit: (id: string) => void;
-  onDelete: (id: string) => Promise<boolean>;
+  onDelete: (id: string) => Promise<MutationResult>;
   onActivate: (id: string) => void;
   onDeactivate: () => void;
   onRefresh: () => void;
@@ -374,15 +375,15 @@ const CustomProfileViewComponent = ({
     if (!pendingDelete) return;
     const target = pendingDelete;
     setIsDeleting(true);
-    const ok = await onDelete(target.id);
+    const result = await onDelete(target.id);
     setIsDeleting(false);
     setPendingDelete(null);
-    if (ok) {
+    if (result.ok) {
       toast.success(
         t("custom_profiles.view.toast.deleted", { name: target.name }),
       );
     } else {
-      toast.error(error || t("custom_profiles.view.toast.delete_error"));
+      toast.error(result.error || t("custom_profiles.view.toast.delete_error"));
     }
   };
 

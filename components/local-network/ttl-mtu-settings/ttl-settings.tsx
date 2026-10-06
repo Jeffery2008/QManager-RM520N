@@ -78,7 +78,6 @@ const TTLandMTUSettingsComponent = () => {
     data: ttlData,
     isLoading: ttlLoading,
     isSaving: ttlSaving,
-    error: ttlError,
     saveTtlHl,
     refresh: refreshTtl,
   } = useTtlSettings();
@@ -87,7 +86,6 @@ const TTLandMTUSettingsComponent = () => {
     data: mtuData,
     isLoading: mtuLoading,
     isSaving: mtuSaving,
-    error: mtuError,
     saveMtu,
     disableMtu,
     refresh: refreshMtu,
@@ -247,7 +245,6 @@ const TTLandMTUSettingsComponent = () => {
             // write it is about to refuse.
             isLoading={ttlLoading || profilesLoading}
             isSaving={ttlSaving}
-            error={ttlError}
             isProfileControlled={isProfileControlled}
             onApply={saveTtlHl}
           />
@@ -263,7 +260,6 @@ const TTLandMTUSettingsComponent = () => {
             }
             isLoading={mtuLoading}
             isSaving={mtuSaving}
-            error={mtuError}
             onApply={saveMtu}
             onDisable={disableMtu}
           />

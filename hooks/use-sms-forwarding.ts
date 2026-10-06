@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { authFetch } from "@/lib/auth-fetch";
+import type { MutationResult } from "@/types/mutation-result";
 import type {
   SmsForwardingData,
   SmsForwardingSavePayload,
@@ -42,11 +43,11 @@ export interface UseSmsForwardingReturn {
   /** Error message if any operation failed */
   error: string | null;
   /** Persist enable + target. Returns true on success. */
-  saveSettings: (payload: SmsForwardingSavePayload) => Promise<boolean>;
+  saveSettings: (payload: SmsForwardingSavePayload) => Promise<MutationResult>;
   /** Send a test forward to the SAVED target (body is ignored server-side). */
-  sendTest: () => Promise<boolean>;
+  sendTest: () => Promise<MutationResult>;
   /** Acknowledge / clear the persistent failure list. */
-  clearFailures: () => Promise<boolean>;
+  clearFailures: () => Promise<MutationResult>;
   /** Re-fetch. Pass true for a silent (no-skeleton, no-clobber) refresh. */
   refresh: (silent?: boolean) => void;
 }
@@ -141,7 +142,7 @@ export function useSmsForwarding(): UseSmsForwardingReturn {
   // Save settings
   // ---------------------------------------------------------------------------
   const saveSettings = useCallback(
-    async (payload: SmsForwardingSavePayload): Promise<boolean> => {
+    async (payload: SmsForwardingSavePayload): Promise<MutationResult> => {
       setError(null);
       setIsSaving(true);
 
@@ -157,19 +158,21 @@ export function useSmsForwarding(): UseSmsForwardingReturn {
         }
 
         const json: SmsForwardingActionResponse = await resp.json();
-        if (!mountedRef.current) return false;
+        if (!mountedRef.current) return { ok: false, error: null };
 
         if (!json.success) {
-          setError(json.detail || json.error || "Failed to save settings");
-          return false;
+          const message = json.detail || json.error || "Failed to save settings";
+          setError(message);
+          return { ok: false, error: message };
         }
 
         await fetchData(true);
-        return true;
+        return { ok: true, error: null };
       } catch (err) {
-        if (!mountedRef.current) return false;
-        setError(err instanceof Error ? err.message : "Failed to save settings");
-        return false;
+        if (!mountedRef.current) return { ok: false, error: null };
+        const message = err instanceof Error ? err.message : "Failed to save settings";
+        setError(message);
+        return { ok: false, error: message };
       } finally {
         if (mountedRef.current) {
           setIsSaving(false);
@@ -182,7 +185,7 @@ export function useSmsForwarding(): UseSmsForwardingReturn {
   // ---------------------------------------------------------------------------
   // Send a test forward to the configured target
   // ---------------------------------------------------------------------------
-  const sendTest = useCallback(async (): Promise<boolean> => {
+  const sendTest = useCallback(async (): Promise<MutationResult> => {
     setError(null);
     setIsSendingTest(true);
 
@@ -198,19 +201,19 @@ export function useSmsForwarding(): UseSmsForwardingReturn {
       }
 
       const json: SmsForwardingActionResponse = await resp.json();
-      if (!mountedRef.current) return false;
+      if (!mountedRef.current) return { ok: false, error: null };
 
       if (!json.success) {
-        setError(json.detail || json.error || "Failed to send test message");
-        return false;
+        const message = json.detail || json.error || "Failed to send test message";
+        setError(message);
+        return { ok: false, error: message };
       }
-      return true;
+      return { ok: true, error: null };
     } catch (err) {
-      if (!mountedRef.current) return false;
-      setError(
-        err instanceof Error ? err.message : "Failed to send test message",
-      );
-      return false;
+      if (!mountedRef.current) return { ok: false, error: null };
+      const message = err instanceof Error ? err.message : "Failed to send test message";
+      setError(message);
+      return { ok: false, error: message };
     } finally {
       if (mountedRef.current) {
         setIsSendingTest(false);
@@ -221,7 +224,7 @@ export function useSmsForwarding(): UseSmsForwardingReturn {
   // ---------------------------------------------------------------------------
   // Clear (acknowledge) the failure state
   // ---------------------------------------------------------------------------
-  const clearFailures = useCallback(async (): Promise<boolean> => {
+  const clearFailures = useCallback(async (): Promise<MutationResult> => {
     setError(null);
     setIsClearing(true);
 
@@ -237,19 +240,21 @@ export function useSmsForwarding(): UseSmsForwardingReturn {
       }
 
       const json: SmsForwardingActionResponse = await resp.json();
-      if (!mountedRef.current) return false;
+      if (!mountedRef.current) return { ok: false, error: null };
 
       if (!json.success) {
-        setError(json.detail || json.error || "Failed to clear alerts");
-        return false;
+        const message = json.detail || json.error || "Failed to clear alerts";
+        setError(message);
+        return { ok: false, error: message };
       }
 
       await fetchData(true);
-      return true;
+      return { ok: true, error: null };
     } catch (err) {
-      if (!mountedRef.current) return false;
-      setError(err instanceof Error ? err.message : "Failed to clear alerts");
-      return false;
+      if (!mountedRef.current) return { ok: false, error: null };
+      const message = err instanceof Error ? err.message : "Failed to clear alerts";
+      setError(message);
+      return { ok: false, error: message };
     } finally {
       if (mountedRef.current) {
         setIsClearing(false);

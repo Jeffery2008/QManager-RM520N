@@ -146,20 +146,20 @@ const DeliveryHealthCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
   } = fwd;
 
   const handleSendTest = async () => {
-    const success = await sendTest();
-    if (success) {
+    const result = await sendTest();
+    if (result.ok) {
       toast.success(t("sms.forwarding.toast.test_success"));
     } else {
-      toast.error(error || t("sms.forwarding.toast.test_error"));
+      toast.error(result.error || t("sms.forwarding.toast.test_error"));
     }
   };
 
   const handleClear = async () => {
-    const success = await clearFailures();
-    if (success) {
+    const result = await clearFailures();
+    if (result.ok) {
       toast.success(t("sms.forwarding.toast.clear_success"));
     } else {
-      toast.error(error || t("sms.forwarding.toast.clear_error"));
+      toast.error(result.error || t("sms.forwarding.toast.clear_error"));
     }
   };
 

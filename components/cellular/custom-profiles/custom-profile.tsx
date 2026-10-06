@@ -86,6 +86,7 @@ import { CellularPageHeader } from "@/components/cellular/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { cn } from "@/lib/utils";
+import type { MutationResult } from "@/types/mutation-result";
 
 // The pill dialog-action pair, matching `sms/delete-dialogs.tsx`'s
 // `DESTRUCTIVE_ACTION`/`CANCEL_ACTION` constants: both Activate and
@@ -599,13 +600,13 @@ const CustomProfilePageBody = () => {
   );
 
   const handleDelete = useCallback(
-    async (id: string): Promise<boolean> => {
-      const success = await deleteProfile(id);
-      if (success && editingProfile?.id === id) {
+    async (id: string): Promise<MutationResult> => {
+      const result = await deleteProfile(id);
+      if (result.ok && editingProfile?.id === id) {
         setEditingProfile(null);
         setFormOpen(false);
       }
-      return success;
+      return result;
     },
     [deleteProfile, editingProfile],
   );
