@@ -769,7 +769,7 @@ A leg card is where the target changes, and it is now also **the single place a 
 
 **Short version: both cards used to offer two different ways to apply a lock, one of which was also a state display. There is now one, and it is a button.**
 
-Each footer reads, left to right: **Lock Tower** (`actions.lock`, a primary `SaveButton` on `PILL_ACTION_PLAIN`), **Remove Lock** (`actions.unlock`, `variant="outline"` with a `lock_open` glyph), and **Clear fields** (`actions.clear_fields`, `PILL_QUIET` + `variant="tonal-neutral"`, pushed to the far edge by `justify-between`). Two writes grouped together, then a form reset that touches nothing on the modem — the same construction as `band-grid-card.tsx`'s footer, which this surface is converging on. Lock is additionally disabled while the form parses to nothing (`validCells.length === 0` on LTE, `!parsedCell` on NR); `mt-auto` pins the whole footer so the two cards' buttons line up in an equal-height grid row.
+Each footer is the Card-Foot Apply row with no status slot (`CARD_FOOT` + `CARD_FOOT_ACTIONS` from `components/ui/card-foot.tsx`, right-aligned) and reads, left to right: **Clear fields** (`actions.clear_fields`, `PILL_QUIET` + `variant="tonal-neutral"`), **Remove Lock** (`actions.unlock`, `PILL_ACTION_PLAIN` + `variant="tonal-neutral"`, text only), then **Lock Tower** (`actions.lock`, a primary `SaveButton` on `PILL_ACTION_PLAIN`) last. A form reset that touches nothing on the modem, then the two writes — the same construction as `band-grid-card.tsx`'s footer. Remove Lock was a stroked `variant="outline"` with a `lock_open` glyph until 2026-10-06. Lock is additionally disabled while the form parses to nothing (`validCells.length === 0` on LTE, `!parsedCell` on NR); `mt-auto` pins the whole footer so the two cards' buttons line up in an equal-height grid row.
 
 The deleted control was a per-leg "Tower lock" `Switch`. It failed on three counts at once:
 
@@ -1209,7 +1209,7 @@ The current shape comes from a mockup, and several of its proposals were rejecte
 
 ## Related
 
-- [band-locking.md](band-locking.md) — the sibling surface: the footer construction this one converged on (one primary write, one outline write, one quiet form reset; its only `Switch` is failover), the `BAND_CHIP_LIVE_RING` inset-shadow pattern `CARRIER_TILE.MATCH` borrows, the shared `radio_info.bands.scanner.link` key, and a failover watcher that is **bounded** where this one is not
+- [band-locking.md](band-locking.md) — the sibling surface: the footer construction this one converged on (quiet form-only buttons first, one `tonal-neutral` write, the primary write last; its only `Switch` is failover), the `BAND_CHIP_LIVE_RING` inset-shadow pattern `CARRIER_TILE.MATCH` borrows, the shared `radio_info.bands.scanner.link` key, and a failover watcher that is **bounded** where this one is not
 - [scheduled-timers.md](scheduled-timers.md) — the runtime `OnCalendar` timer model, `qmanager_tower_schedule_arm`, and the 1970 boot-window fire guard every new timer must pass
 - [carrier-aggregation.md](carrier-aggregation.md) — `carrier_components[]`, the source of the camped-on carriers, and the identity-tone convention this surface's lead block no longer needs
 - [radio-information.md](radio-information.md) — the poller cadence behind the ~4s clock, and the compiler-backed `react-hooks` bail-on-first-violation behaviour

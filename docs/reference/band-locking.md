@@ -660,7 +660,9 @@ Everything shape- or tone-bearing on this surface lives in `components/cellular/
 
 ### Select all / Clear are `tonal-neutral`, never `ghost`
 
-`PILL_QUIET` sizes those two footer buttons but deliberately carries **no fill and no ink of its own** — the `variant="tonal-neutral"` Button supplies both. It used to be `variant="ghost"` plus a hardcoded `text-on-surface-variant` in the constant, and a ghost button has no resting fill at all: sitting beside a filled `Apply` and an outlined `Restore all supported`, it read as *disabled or absent* rather than as a third, quieter action. `tonal-neutral` gives it a real but muted presence (`surface-container`) instead of asking the reader to discover it by hovering.
+`PILL_QUIET` sizes those two footer buttons but deliberately carries **no fill and no ink of its own** — the `variant="tonal-neutral"` Button supplies both. It used to be `variant="ghost"` plus a hardcoded `text-on-surface-variant` in the constant, and a ghost button has no resting fill at all: sitting beside a filled `Apply`, it read as *disabled or absent* rather than as a quieter action. `tonal-neutral` gives it a real but muted presence (`surface-container`) instead of asking the reader to discover it by hovering.
+
+The `CardFoot` row reads, left to right: pending count (status), **Select all**, **Clear** (both `PILL_QUIET`), **Restore all supported** (`PILL_ACTION_PLAIN` + `tonal-neutral`, text only), then the `SaveButton` last. Restore all was a stroked `variant="outline"` with a glyph until 2026-10-06; DESIGN.md forbids a stroke beside a Save, so all three secondary actions share one fill and differ only in size.
 
 Both chip hovers are `enabled:`-scoped. Tailwind's `hover:` does not exclude a disabled element on its own, so an unscoped hover would light up every chip on a gated card — advertising an interaction that is switched off.
 
@@ -719,7 +721,7 @@ Three branches, all rendering `BAND_CARD` so the shell cannot drift:
 - **Empty** (`supportedBands.length === 0`) — a real state, not a failure: plenty of RM520N SKUs report no SA band list at all. It keeps the card shell so the grid does not reflow around it, and renders the shared `ConditionScreen` (`neutral` / `do_not_disturb_on` / `ariaRole="status"`, no `spin`) rather than a hand-rolled disc block — see [Both empty states use the shared `ConditionScreen`](#both-empty-states-use-the-shared-conditionscreen).
 - **Loaded** — header chip, chip grid, conditional legend (rendered only when at least one band is live, because a key explaining a mark that appears nowhere is noise), conditional error notice, `sr-only` live region for the applying announcement, and the footer.
 
-The footer separates two different truths: the header chip reports the **modem's** state (`{count} of {total} locked`), while the pending count beside Select all / Clear reports the **form's** (`{count} pending changes`). Merging them into one line would merge two facts.
+The footer separates two different truths: the header chip reports the **modem's** state (`{count} of {total} locked`), while the pending count in the `CardFoot` status slot (left edge) reports the **form's** (`{count} pending changes`). Merging them into one line would merge two facts.
 
 The **Loaded** branch has one further variant rather than a fourth branch: when the posture is `unavailable` it keeps the same shell and grid but freezes every control, swaps the header chip for "Not readable" with no count, and adds a `role="status"` note saying why. See [When the band read fails](#when-the-band-read-fails).
 

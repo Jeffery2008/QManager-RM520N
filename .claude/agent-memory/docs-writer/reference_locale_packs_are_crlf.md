@@ -35,3 +35,9 @@ stat line still reads as a handful of changed lines. Check after editing any
 doc — count `\n` not preceded by `\r` with a node byte read, since `cat -A`,
 `sed` and `awk` all strip the carriage return in this environment — and convert
 back if the file came out all-LF while its siblings are CRLF.
+
+Two more cases seen 2026-10-06: Git Bash `sed -i` rewrites the WHOLE file to LF
+(never use it on a doc; use Edit, or `perl -pi`), and a doc can carry a single
+LF-only line that Edit silently normalises to CRLF. Compare
+`git diff <base> --stat` with `git diff <base> --ignore-cr-at-eol --stat`: any
+difference is an ending-only change to undo.

@@ -252,9 +252,9 @@ The failure is asymmetric: an unnecessary 8 s wait costs the user nothing, while
 
 ### 5. Partial applies are normal
 
-`settings.sh` writes fields one at a time and accumulates two lists, so a POST of three fields can land two. The hook narrows the backend's loose `string[]` lists through `isWritableSettingKey()` into `CellularSettingsApplyResult`, then **clears only the fields that actually landed** — anything rejected stays dirty so the save bar can offer a retry over just those rows.
+`settings.sh` writes fields one at a time and accumulates two lists, so a POST of three fields can land two. The hook narrows the backend's loose `string[]` lists through `isWritableSettingKey()` into `CellularSettingsApplyResult`, then **clears only the fields that actually landed** — anything rejected stays dirty so the apply footer can offer a retry over just those rows.
 
-`fetchSettings()` clears `error` on entry, so a partial-failure message must be re-asserted *after* the verification refetch or the save bar goes quiet about the fields that did not land. The hook does this explicitly; do not remove it.
+`fetchSettings()` clears `error` on entry, so a partial-failure message must be re-asserted *after* the verification refetch or the apply footer goes quiet about the fields that did not land. The hook does this explicitly; do not remove it.
 
 > ℹ️ NOTE: This path was **unreachable in practice** until the backend learned to detect failed writes — see [Write failures are now actually detected](#write-failures-are-now-actually-detected). The frontend code is unchanged; it simply started receiving the envelope it was always written for.
 
@@ -292,7 +292,7 @@ A slot change is by far the longest operation on this surface. End to end:
 
 The read-back exists because **`AT+QUIMSLOT=N` can return `OK` while the modem silently stays on the old slot** under `qcmd` lock contention. Trusting that `OK` would auto-apply the wrong SIM's profile, so only a *verified* switch fires the downstream side effects (known-SIM registration, profile auto-apply, poller refresh nudge via `touch /tmp/qmanager_tier2_refresh`).
 
-A spinner held for 35 seconds reads as a hang, so `PendingSaveBar` becomes a **step ledger** while applying — three named phases (`writing` → `recovering` → `verifying`) driven by the hook's `applyPhase`, rendered as dots plus a spinner. Never a fill bar: fills are reserved for data visualisation.
+A spinner held for 35 seconds reads as a hang, so the status slot of `ApplyFoot` (`components/cellular/settings/apply-foot.tsx`) becomes a **step ledger** while applying — three named phases (`writing` → `recovering` → `verifying`) driven by the hook's `applyPhase`, rendered as dots while `SaveButton` shows its spinner. Never a fill bar: fills are reserved for data visualisation.
 
 Related: [wan-profile-management.md](wan-profile-management.md) (the profile auto-apply this triggers), [sim-detection.md](sim-detection.md) (`sim_db_add` and the SIM-swap banner).
 
@@ -509,7 +509,8 @@ See also [tmp-file-ownership.md](tmp-file-ownership.md) for the cross-UID rules 
 app/cellular/settings/            route
 └─ components/cellular/settings/
    ├─ cellular-settings.tsx       route shell — header, error banner, the band
-   │                              cascade, and the SHARED save bar + footer
+   │                              cascade; builds the ONE shared ApplyFoot and
+   │                              passes it to the Network card only
    ├─ live-state-strip.tsx        BAND A — four poller-fed tiles (Network, SIM,
    │                              Aggregation, Data path) under a "Live state"
    │                              header carrying the STALE-only Badge. Also owns
@@ -526,7 +527,11 @@ app/cellular/settings/            route
    │                              Mode & Roaming") — three SettingRows each
    ├─ setting-row.tsx             label + consequence + control, promotes when dirty
    ├─ segmented-field.tsx         ToggleGroup above the row's breakpoint, Select below
-   ├─ pending-save-bar.tsx        "N changes pending" → three-step apply ledger
+   ├─ apply-foot.tsx              `ApplyFoot` / `ApplyFootSkeleton` — the family's
+   │                              CardFoot: count or three-step apply ledger left,
+   │                              optional secondary · Discard · Save right (also
+   │                              Network Priority's; skeleton used by IMEI, APN,
+   │                              MBN). Copy keys are still `*.save_bar.*`
    └─ shapes.ts                   geometry + tone contract (all of the above import it)
                                   — incl. STRIP, RATE_CEILING, SLOT_CHIP / SLOT_GLYPH
 ```
@@ -541,10 +546,9 @@ app/cellular/settings/            route
 | 2 | Error banner (conditional) | `TonalBanner`, `tone="destructive"` | settings GET |
 | 3 | **Band A — live state** | `LiveStateStrip` | **poller only** (~4 s) |
 | 4 | **Band A2 — rate ceiling** | `RateCeilingDisclosure` | **settings GET only** (does not tick) |
-| 5 | **Band B — the write cards** | two `CellularSettingsCard`s | settings GET |
-| 6 | Save bar / resting footer | `PendingSaveBar` | — |
+| 5 | **Band B — the write cards** | two `CellularSettingsCard`s; the Network card ends in `ApplyFoot` | settings GET |
 
-Bands 3–5 arrive as a Motion cascade 120 ms apart; the save bar and footer sit **outside** the cascade, because a pending-changes action should never wait its turn.
+Bands 3–5 arrive as a Motion cascade 120 ms apart. There is no page-level save bar: one POST covers both cards, so `cellular-settings.tsx` passes a single `foot` to the **Network** card (field counts tie 3/3 with SIM, and Network is last in reading order). Its status names pending fields on **both** cards, so an edit on the SIM card is visible from the footer. Re-read (`form.refresh`) is a ghost secondary action in that footer, always shown and disabled while saving; Discard is always rendered and disabled when nothing is pending.
 
 #### Why one clock per band
 
@@ -758,4 +762,4 @@ See [i18n.md](i18n.md) for the `bun run i18n:check` gate, which exits non-zero o
 - [wan-profile-management.md](wan-profile-management.md) — the APN/profile auto-apply a slot switch triggers
 - [tmp-file-ownership.md](tmp-file-ownership.md) — `/tmp` rules for CGI scratch files
 - [radio-information.md](radio-information.md) — the `/cellular/` index page, the other consumer of `network.type`
-- [dashboard-state-motion.md](dashboard-state-motion.md) — `SaveButton`'s three states and its width lock, used by the save bar
+- [dashboard-state-motion.md](dashboard-state-motion.md) — `SaveButton`'s three states and its width lock, used by the apply footer

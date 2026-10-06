@@ -366,9 +366,10 @@ Page: `/monitoring/watchdog` — `components/monitoring/watchdog/watchdog.tsx`. 
 MonitoringPageHeader          title + description + Refresh pill
 banners (conditional)         SIM failover · auto-disabled
 BAND A  status band           4 × 104px tiles — State · Failed checks · Recoveries · Reboots
-BAND B  hero card             "Recovery ladder": master switch + 4 rungs
-BAND C  pair (COLS)           "Detection"  |  "Recovery activity"
-BAND D  save bar              status line + Discard + Save
+BAND B  hero card             "Recovery ladder": master switch + 4 rungs,
+                              then the surface's ONE CardFoot (WatchdogFoot)
+BAND C  full-width card       "Detection"
+BAND D  full-width card       "Recovery activity"
 ```
 
 **The family's two contract modules.** `components/monitoring/watchdog/shapes.ts` owns every geometry string, control height and tone map on the surface, and the skeletons import the loaded views' own constants (Skeleton-Mirror). `derive.ts` owns the one derived model — the phase, the four tiles, the per-rung state and the tier copy keys. No component re-infers a state from a payload, and no component exports a shape constant. Geometry is restated from the sibling `/monitoring/` families rather than imported.
@@ -401,9 +402,11 @@ BAND D  save bar              status line + Discard + Save
 - **Recovery activity** (`recovery-activity-card.tsx`) — the `/monitoring` 52px day-grouped event row, tone from the shared `presentEvent(…, "card")` so the Age-Gated Tone Rule applies. Resolution is computed over the whole feed *before* filtering, or every recovery would read as permanently ongoing. The row's `message` is producer text from `qmanager_watchcat` and stays untranslated, as on every event feed in the product.
   - **The event record carries no tier** (`events.sh` emits `timestamp`/`type`/`message`/`severity` only), so the row's `Tag` is the event type. Inferring a tier by matching the daemon's English prose would be a fabricated reading.
 
-- **The D3 pair.** Detection and Activity sit in `COLS` (`items-stretch` + `*:data-[slot=card]:h-full`). **Detection is the height driver and declares no fill region** — three fixed-height fields cannot stretch, and a `flex-1` over them distributes nothing. **Activity is the sole slack absorber**, and its list scrolls (`CARD_FILL_REGION` + `overflow-y-auto`, `min-h-0` on the ancestor chain) so its intrinsic height stays out of the grid track; without that, one real incident's worth of rows would strand hundreds of pixels in Detection. Both conditions (empty and error) take the same region and centre in it. In the page's error branch the pair is deliberately un-paired and Activity runs full-width, the same relief valve `alerts.tsx` uses.
+- **No Detection/Activity pair.** There is no `COLS` on this surface, deliberately: at 25 events Activity drove a shared track to 1614px and stranded 1123px in Detection, which has three fixed-height fields and nothing to fill with. Both are full-width bands; the measurement is recorded at the top of `shapes.ts`.
 
-- **Save bar** (`save-bar.tsx`) — page-level and **not sticky**. Four states: clean, unsaved, blocked, saved. Blocked names the offending **controls** (there are no tabs) and clicking Save focuses and reveals the first one; the field list is joined with `Intl.ListFormat` for the active locale.
+- **Apply footer** (`watchdog-foot.tsx`, `WatchdogFoot` / `WatchdogFootSkeleton`) — the one commit for the whole surface, a `CardFoot` on the **Ladder** card's bottom edge (`ladder-card.tsx`). It also commits Detection's fields, so its dirty status names the cards that hold pending edits (`watchdog.save.dirty`, `{{cards}}` joined from `watchdog.ladder.title` / `watchdog.detection.title`). Three status states: clean, dirty, blocked. Blocked names the offending **controls** and clicking Save focuses and reveals the first one; both lists are joined with `Intl.ListFormat` for the active locale. Discard (ghost, text only) is always rendered and disabled when clean or saving. A save that grants tier-4 reboot authority opens a confirm `AlertDialog` first.
+  > ⚠️ `SaveButton` swallows the click while `blockedReason` is set, so the jump to the blocked field runs from an `onClickCapture` on a `contents` wrapper span. An `onClick` on `SaveButton` never fires in that state.
+  > ⚠️ There was a page-level, non-sticky `save-bar.tsx` until 2026-10-06. It is deleted; the Card-Foot Apply Rule in `DESIGN.md` forbids a bar under the card grid, so do not restore one.
 
 **Backup-slot save gating:** enabling Tier 3 without choosing a backup slot **blocks the save** in the form (`use-watchdog-form.ts`) — the frontend guard that keeps you out of the misconfig-stops-ladder state described above. The form validation mirrors the CGI ranges exactly, and its messages are i18n keys the rendering component translates.
 
@@ -415,7 +418,7 @@ BAND D  save bar              status line + Discard + Save
 
 **i18n:** the surface is fully keyed under the top-level `watchdog` key of `public/locales/{en,zh-CN,zh-TW,it,id}/common.json` (122 keys), including screen-reader copy. The only untranslated text is the activity rows' producer-authored `message`.
 
-**Motion:** one `staggerContainer` on the page root with every band a `staggerItem` (120ms), `rowCascadeDelay` for the log rows (80ms), and exactly one ambient loop — the state disc while the phase is `recovery`. The save bar's unsaved dot is static, because an unsaved edit is not a live thing.
+**Motion:** one `staggerContainer` on the page root with every band a `staggerItem` (120ms), `rowCascadeDelay` for the log rows (80ms), and exactly one ambient loop — the state disc while the phase is `recovery`. The footer's unsaved dot (`FOOT.DOT`) is static, because an unsaved edit is not a live thing.
 
 ---
 
