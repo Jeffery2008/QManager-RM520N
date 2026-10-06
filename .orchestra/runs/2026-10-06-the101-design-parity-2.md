@@ -1,5 +1,5 @@
 # Run: Port the101's evolved design rules (CardFoot, SegmentedField, toasts) into RM520N
-status: open (awaiting close-out answer)
+status: closed
 lane: full (tier 2, docs + primitives)
 base: 0fbd9ee5   branch: wt/the101-design-parity-2 @ .claude/worktrees/design-parity   opened: 2026-10-06   lead: Sonnet 5.5 session rooted in QManager-the101
 
@@ -14,6 +14,7 @@ base: 0fbd9ee5   branch: wt/the101-design-parity-2 @ .claude/worktrees/design-pa
 - Preserved: Rethink Sans + JetBrains Mono (no Geist / font-numeric / Three-Voice), 5-catalog i18n parity, no test files.
 - Routing: RM520N qm-* agents not dispatchable from a the101-rooted session; general-purpose / orchestra-verifier on sonnet, effort high, with RM520N's qm-worker contract named.
 - Release notes: no bullet (internal docs/primitives, nothing user-visible).
+- 2026-10-06 Close-out: user chose "Merge into development (Recommended)"; development had not moved (0fbd9ee5), fast-forward.
 
 ## Work
 | id | task | write set | result |
