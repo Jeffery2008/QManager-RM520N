@@ -990,7 +990,7 @@
       },
       "mono": {
         "displayName": "Machine Voice",
-        "purpose": "JetBrains Mono, self-hosted at build time. Identifiers (band, EARFCN, PCI, ICCID, IMEI, MAC/IP), static facts read back from config, raw AT responses, log lines, copyable commands. The tell: does the value change while the user watches without them acting? Then `font-sans` with `tabular-nums`. Does it hold steady until something reconfigures it? Then `font-mono`. A human-authored label never wears it."
+        "purpose": "JetBrains Mono, vendored under `app/fonts/` and loaded through `next/font/local` — never `next/font/google`. Opaque strings whose character grid carries meaning: raw AT responses, log lines, copyable commands, file paths, IP/MAC addresses, interface names, APN strings, hex values and bitmasks, and long opaque identifiers (ICCID, IMEI, IMSI), even when all-digit. The tell: is this a quantity you read, or an opaque string you compare? A quantity (RSRP, EARFCN, PCI, band, TAC, channel numbers) is `font-sans` with `tabular-nums`; an opaque string is `font-mono`. A human-authored label never wears it."
       }
     },
     "shadows": [
@@ -1177,7 +1177,7 @@
       {
         "name": "rounded-pill",
         "value": "9999px",
-        "purpose": "Chips, tags, buttons, nav items, metric rows, meters, glyph discs, quality bars."
+        "purpose": "Chips, tags, buttons (the canon — the `Button` primitive itself is still `rounded-md`, tracked as a Migration Delta), nav items, metric rows, meters, glyph discs, quality bars."
       },
       {
         "name": "--radius (legacy)",
@@ -1189,7 +1189,7 @@
       {
         "name": "Material Symbols Rounded",
         "scope": "The sidebar, /dashboard, the two pre-auth routes (/ and /login/), and the entire /cellular/ family — index plus all 17 sub-routes.",
-        "note": "Ligature-driven and self-hosted, subset at build time from a shared glyph list, so `font-feature-settings: 'liga'` is what makes an icon an icon. Sets `fontSize` as an inline style, which outranks any utility — a parent's `[&>svg]:size-3` cannot reach it, so pass `size` explicitly at every call site (12 in a dense chip, 16 where the glyph carries quality). Always `aria-hidden` beside a real text label. Its `FILL` axis is animatable and the active nav row thickens it 0 -> 1, which is what makes the active state survive grayscale."
+        "note": "Ligature-driven and self-hosted, subset at build time from a shared glyph list, so `font-feature-settings: 'liga'` is what makes an icon an icon. Sets `fontSize` as an inline style, which outranks any utility — a parent's `[&>svg]:size-3` cannot reach it, so pass `size` explicitly at every call site (12 in a dense chip, 16 where the glyph carries quality). Always `aria-hidden` beside a real text label. Its `FILL` axis is animatable and the active nav row thickens it 0 -> 1, which is what makes the active state survive grayscale. A glyph name the type permits but the shipped subset lacks does not fail the build — it renders the literal ligature text, and `bun run icons:check` is what catches it. A glyph that must animate `transform` goes inside a wrapper span that carries the transition, because the unlayered `.material-symbol` rule sets its own `transition`."
       },
       {
         "name": "lucide-react",
@@ -1208,7 +1208,7 @@
       "name": "Primary Button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The main action on any surface — Record, Save, Apply — never `outline`. Full-round pill, 42px, brand fill with its own `-foreground` ink. The `Button` primitive still carries shadcn's `rounded-md h-9` defaults; converted surfaces reach the canon geometry at the call site (`h-[2.625rem] rounded-pill px-5 text-sm font-semibold`).",
+      "description": "The main action on any surface — Record, Save, Apply — never `outline`. The canon is a full-round pill at every size, built into the `Button` primitive; **the primitive does not carry it yet** (`components/ui/button.tsx` still ships `rounded-md h-9`, tracked as a Migration Delta), so the 42px page action pill shown here is reached at each call site through a per-family `PILL_ACTION` constant (`h-[2.625rem] rounded-pill px-5 text-sm font-semibold`). Brand fill with its own `-foreground` ink.",
       "html": "<button class=\"ds-btn-primary\">Apply profile</button>",
       "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;height:2.625rem;padding:0 1.25rem;border:none;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);font-size:.875rem;font-weight:600;cursor:pointer;transition:background-color var(--duration-quick,360ms) ease-out,box-shadow var(--duration-quick,360ms) ease-out}.ds-btn-primary:hover{background:color-mix(in oklab,var(--primary) 90%,transparent)}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in oklab,var(--ring) 50%,transparent)}"
     },
@@ -1253,12 +1253,28 @@
       "css": ".ds-card-hero{display:flex;flex-direction:column;gap:1.25rem;padding:1.625rem 1.75rem;border:none;border-radius:1.25rem;background:var(--surface);color:var(--on-surface);box-shadow:var(--shadow-whisper)}.ds-card-hero__title{margin:0;font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);font-size:1.125rem;font-weight:600;line-height:1}.ds-card-hero__desc{margin:0;font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);font-size:.875rem;font-weight:400;line-height:1.5;color:var(--on-surface-variant)}"
     },
     {
+      "name": "Card Foot",
+      "kind": "custom",
+      "refersTo": "card-foot",
+      "description": "The apply footer of an editable card (The Card-Foot Apply Rule): a borderless row on the card's own bottom edge, `pt-4` of air, a fixed `min-h-16` slot so the card never jumps between idle, dirty, applying and failed. Status holds the left edge in `on-surface-variant` 13px; actions hold the right edge, `Discard` (ghost) first and the `SaveButton` last. Persistent: an idle card shows Apply disabled with its reason. Not shadcn `CardFooter`.",
+      "html": "<div class=\"ds-foot\"><span class=\"ds-foot__status\">3 unsaved changes</span><div class=\"ds-foot__actions\"><button class=\"ds-foot__discard\">Discard</button><button class=\"ds-foot__save\">Save</button></div></div>",
+      "css": ".ds-foot{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1rem;min-height:4rem;padding-top:1rem;font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif)}.ds-foot__status{flex:1;min-width:13rem;font-size:.8125rem;color:var(--on-surface-variant)}.ds-foot__actions{display:flex;align-items:center;gap:.625rem;margin-left:auto}.ds-foot__discard,.ds-foot__save{display:inline-flex;align-items:center;justify-content:center;height:2.625rem;padding:0 1.25rem;border:none;border-radius:9999px;font-size:.875rem;font-weight:600;cursor:pointer}.ds-foot__discard{background:transparent;color:var(--on-surface-variant)}.ds-foot__discard:hover{background:var(--surface-container)}.ds-foot__save{background:var(--primary);color:var(--primary-foreground)}"
+    },
+    {
       "name": "Glance Tile",
       "kind": "custom",
       "refersTo": "tile",
       "description": "The inner unit of a glance surface: a 12px block at a PINNED 104px height (`TILE_SHAPE` in components/cellular/tile-shape.ts), holding a 52px full-round glyph disc beside eyebrow -> value -> caption. THE BODY IS NEUTRAL AND THE DISC CARRIES THE COLOUR — the previous four-tinted-tile strip encoded category without encoding importance, so it flattened to equal weight with nowhere for the eye to land; a neutral body with a saturated disc gives the tile a focal point at 1/8th the tinted area. The disc uses the role's strong FILL, never the pale container. The height is pinned rather than floored because a floor cannot be a mirror: live tiles measured 118 / 98 / 95px against a 92px skeleton.",
       "html": "<div class=\"ds-tile\"><span class=\"ds-tile__disc\"><svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M12 2 8 8h3v6H5l-3 8h20l-3-8h-6V8h3z\"/></svg></span><div class=\"ds-tile__col\"><span class=\"ds-tile__eyebrow\">Bandwidth</span><span class=\"ds-tile__value\">70<span class=\"ds-tile__unit\">MHz</span></span><span class=\"ds-tile__caption\">20 + 30 + 20 MHz</span></div></div>",
       "css": ".ds-tile{display:flex;align-items:center;gap:.875rem;height:6.5rem;padding:1rem 1.25rem;border-radius:0.75rem;background:var(--surface-container);color:var(--on-surface);font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif)}.ds-tile__disc{display:grid;place-items:center;flex:none;width:3.25rem;height:3.25rem;border-radius:9999px;background:var(--downlink);color:var(--downlink-foreground)}.ds-tile__disc>svg{width:1.75rem;height:1.75rem}.ds-tile__col{display:flex;min-width:0;flex-direction:column;gap:3px}.ds-tile__eyebrow{font-size:.75rem;font-weight:600;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-tile__value{font-size:1.375rem;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums;display:inline-flex;align-items:baseline;gap:.25rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-tile__unit{font-size:.875rem;font-weight:600}.ds-tile__caption{font-size:.75rem;font-variant-numeric:tabular-nums;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+    },
+    {
+      "name": "Info Tip",
+      "kind": "custom",
+      "refersTo": "hint-icon",
+      "description": "`HintIcon`: a popover that hover can preview, never a `Tooltip` (a Radix Tooltip never opens on tap). A 16px outline `info` glyph in a 20px round button, `on-surface-variant` at rest and `primary-on-surface` on hover, focus and open; it always trails its label. Hover opens after 300ms and closes 120ms after the mouse leaves; click or tap pins it; Enter or Space toggles; focus alone opens nothing; one tip is open at a time, app-wide. The tip is the app's own floating surface (`bg-popover`, hairline border, `rounded-field`, 14 x 10px padding, Rethink Sans 13/20, at most 18rem, 8px above the trigger, no arrow, Popover Float shadow). The API is `label`, `children` and an optional `tone` (`info` default, `warning`); no sizes. About one per settings group, and no tip is the default.",
+      "html": "<span class=\"ds-hint-row\">Rate ceiling<button class=\"ds-hint\" aria-label=\"About rate ceiling\"><span class=\"ds-hint__glyph\" aria-hidden=\"true\">i</span></button></span>",
+      "css": ".ds-hint-row{display:inline-flex;align-items:center;gap:.375rem;font-family:var(--font-sans,'Rethink Sans',system-ui,sans-serif);font-size:.875rem;font-weight:500;color:var(--on-surface)}.ds-hint{display:inline-grid;place-items:center;width:1.25rem;height:1.25rem;padding:0;border:none;border-radius:9999px;background:transparent;color:var(--on-surface-variant);cursor:pointer;transition:color var(--duration-quick,360ms) ease-out}.ds-hint:hover,.ds-hint:focus-visible{color:var(--primary-on-surface)}.ds-hint__glyph{display:grid;place-items:center;width:1rem;height:1rem;border:1.5px solid currentColor;border-radius:9999px;font-size:.6875rem;font-weight:600;line-height:1}"
     },
     {
       "name": "Metric Row Pill",
@@ -1295,7 +1311,7 @@
   ],
   "narrative": {
     "northStar": "An instrument console — colour on the data, not on the furniture.",
-    "overview": "QManager is an **instrument console**. It reports what a cellular modem is doing, on the modem itself, to someone who understands modems. The design language follows from three facts about that job.\n\n**Colour belongs to the data, not to the furniture.** A card is a neutral surface. What is coloured is the reading: the numeral, the chart stroke, the quality bar, the glyph in its disc. This is the single largest change from the previous system, which spent its colour on large tonal container fills and left the live diagnostic values grey. That inversion was measured and it was backwards — on the surface built to showcase the colour system, four tinted tiles carried restated facts while RSRP and SINR sat in neutral text below them.\n\nIt is also the accessible answer, which is not a coincidence. Across this palette, **ink colours separate in 0 of 28 pairs under deuteranopia and protanopia simulation. So do fills. Pale identity containers separate in 2 of 10.** Colour on ink works; colour on large pale surfaces does not. The design direction and the measurement agree, so the system commits to the layer that survives.\n\n**Density is the product, and hierarchy is how it stays readable.** A modem console shows a lot at once. The answer is never to show less; it is to rank what is shown. Neutral surfaces, one coloured thing per row, and a consistent card grid are what let forty routes feel like one product.\n\n**Every hue owns exactly one meaning.** A colour a user learns on the dashboard means the same thing on the cell scanner. Where a figure has no honest hue, it stays neutral rather than being given a decorative one.\n\n**Reference language:** WiFiman (Ubiquiti) and Firewalla — near-black canvas, saturated data strokes, coloured numerals, thin quality bars, outline metadata tags. **Structural reference:** the grouped-card, consistent-shape page from macOS System Settings and the Apple pro-app inspectors. **Not** a consumer router app, not a generic SaaS dashboard, not a terminal utility.\n\nBoth themes are first-class and each is authored. Dark is a near-black instrument panel; light is a white-card console. Neither is a desaturated copy of the other, and every value in both was measured rather than derived by inversion.",
+    "overview": "QManager is an **instrument console**. It reports what a cellular modem is doing, on the modem itself, to someone who understands modems. The design language follows from three facts about that job.\n\n**Colour belongs to the data, not to the furniture.** A card is a neutral surface. What is coloured is the reading: the numeral, the chart stroke, the quality bar, the glyph in its disc. This is the single largest change from the previous system, which spent its colour on large tonal container fills and left the live diagnostic values grey. That inversion was measured and it was backwards — on the surface built to showcase the colour system, four tinted tiles carried restated facts while RSRP and SINR sat in neutral text below them.\n\nIt is also the accessible answer, which is not a coincidence. Across this palette, **ink colours separate in 0 of 28 pairs under deuteranopia and protanopia simulation. So do fills. Pale identity containers separate in 2 of 10.** Colour on ink works; colour on large pale surfaces does not. The design direction and the measurement agree, so the system commits to the layer that survives.\n\n**Density is the product, and hierarchy is how it stays readable.** A modem console shows a lot at once. The answer is never to show less; it is to rank what is shown. Neutral surfaces, one coloured thing per row, and a consistent card grid are what let forty routes feel like one product. Inside a card, edges, grouping and quiet defaults do the ranking (Layout > The Scanning Rules).\n\n**Every hue owns exactly one meaning.** A colour a user learns on the dashboard means the same thing on the cell scanner. Where a figure has no honest hue, it stays neutral rather than being given a decorative one.\n\n**Reference language:** WiFiman (Ubiquiti) and Firewalla — near-black canvas, saturated data strokes, coloured numerals, thin quality bars, outline metadata tags. **Structural reference:** the grouped-card, consistent-shape page from macOS System Settings and the Apple pro-app inspectors. **Not** a consumer router app, not a generic SaaS dashboard, not a terminal utility.\n\nBoth themes are first-class and each is authored. Dark is a near-black instrument panel; light is a white-card console. Neither is a desaturated copy of the other, and every value in both was measured rather than derived by inversion.",
     "keyCharacteristics": [
       "OKLCH only, and every token is inside sRGB by construction — chroma floored to 98.5% of the in-gamut maximum for its lightness and hue, so declared equals shipped.",
       "Colour lives on INK first, FILL second, and CONTAINER only for the functional roles. Choosing the wrong layer is the standard failure.",
@@ -1308,7 +1324,7 @@
       "Motion is expressive in curve and duration, capped at `emphasized` (800ms), and never overshoots. One number, 1.03, is the sole sanctioned exception.",
       "Responsive behavior is driven by container queries, not viewport breakpoints.",
       "Geometry lives in a per-family `shapes.ts` module, not in the components that draw it — eight of them under `components/cellular/**`, imported by the loaded views AND their skeletons, so a strip and its mirror cannot drift.",
-      "No runtime asset fetches. Fonts and the icon font are self-hosted and subset at build time — the modem may have no internet.",
+      "No runtime or build-time font fetches. Every face is vendored under `app/fonts/` and loaded through `next/font/local` — never `next/font/google`, which still fetches on every cold build — and the icon font is self-hosted and subset, because the modem may have no internet.",
       "Build on shadcn/ui first, restyled with these tokens at the call site. Build custom only where shadcn has no answer."
     ],
     "rules": [
@@ -1343,6 +1359,11 @@
         "section": "colors"
       },
       {
+        "name": "The Fact-Is-Info Rule",
+        "body": "A fact worth knowing that is neither a fault nor health uses the `info` role: the brand blue, as a filled `Badge variant=\"info\"` with a glyph. A grey outline reads as disabled or unavailable, amber as a problem, green as healthy, so none of them can honestly say \"this is how it is, and it matters\". The RM520N case is Frequency Locking's \"No automatic recovery\" chip on the locked verdict (`components/cellular/frequency-locking/freq-lock-hero.tsx`): nothing restores service on its own while a frequency lock is in force. It is drawn `muted` today and tracked as a Migration Delta. It follows The Info-Is-Brand Rule and The Quiet-Default Rule: the chip is shown only while the fact applies, and the exception wears the fill.",
+        "section": "colors"
+      },
+      {
         "name": "The Direction-Is-Not-A-Radio Rule",
         "body": "Rose and cyan say which way the bytes are going, on either radio. A download figure on the LTE leg is rose-on-violet and neither hue is guessing about the other. Neither carries a second meaning: counts and capacities are neutral.",
         "section": "colors"
@@ -1363,13 +1384,18 @@
         "section": "colors"
       },
       {
+        "name": "The Area-Fill Rule",
+        "body": "An area chart may wash the region under its stroke with that stroke's own ink, as a `linearGradient` fading to zero at the far edge. This is ink, not a container: the Don't list's 'give identity or direction a large container block' governs tinted surfaces a reader looks at, and a fill bounded by a data path is a reader looking at the data. Two conditions make it so, and both are load-bearing. Capped at 0.35 opacity at the stroke — past that the wash starts reading as a filled block in a direction hue. And a fixed or floored scale — the wash encodes how close a point sits to the plot's ceiling, so a ceiling that re-derives itself every poll makes it encode nothing; a fill over a freely renormalising axis is not permitted. A fill is never the only channel: the stroke carries the series and the glyph-paired legend carries which direction it is. (Tracked: the signal-history and live-latency charts are still over data-relative axes.)",
+        "section": "colors"
+      },
+      {
         "name": "The Two-Voice Rule",
         "body": "Rethink Sans is the interface, JetBrains Mono is the machine. There is no third typeface. Pairing Rethink Sans with another UI sans (Inter, Geist Sans, IBM Plex, Roboto, Manrope) is forbidden.",
         "section": "typography"
       },
       {
         "name": "The Machine-Voice Rule",
-        "body": "`font-mono` is scoped to machine truth that is not itself a changing figure: identifiers (band, EARFCN, PCI, ICCID, IMEI, MAC/IP), static facts read back from config, raw AT responses, log lines, copyable commands. A human-authored label never wears it. A live measurement — RSRP, throughput, a countdown — is the interface *reporting* a number, so it takes `--font-sans` and `tabular-nums`. The tell: does the value change while the user watches without them acting? Then `font-sans`. Does it hold steady until something reconfigures it? Then `font-mono`.",
+        "body": "`font-mono` is scoped to strings whose character grid carries meaning: content the user compares character by character or would paste into a terminal — raw AT responses, log lines, copyable commands, file paths, IP/MAC addresses, interface names, hostnames, APN strings, MCC-MNC codes, hex values and bitmasks, and long opaque identifiers (ICCID, IMEI, IMSI), which stay mono even though they are all digits. A human-authored label never wears it. Everything the interface reports as a FIGURE takes `font-sans` + `tabular-nums`: measurements (RSRP, throughput, latency, temperature, bandwidth and frequency in MHz) and short numeric device labels (EARFCN, NR-ARFCN, PCI, band number, TAC, decimal cell ID, channel and slot numbers). The tell: is this a quantity you read, or an opaque string you compare? A quantity, however static, is `font-sans tabular-nums`. An opaque string, however numeric, is `font-mono`.",
         "section": "typography"
       },
       {
@@ -1395,6 +1421,11 @@
       {
         "name": "The Card-Wrapped Surface Rule",
         "body": "The unit of composition is the **card that wraps a settings group**, not the page. The card owns its whole content; the page only arranges cards. A feature that scatters loose fragments across the viewport has skipped the card.",
+        "section": "layout"
+      },
+      {
+        "name": "The Card-Foot Apply Rule",
+        "body": "A card that edits a draft commits it from a footer row on the card's own bottom edge, with no border line: `CardFoot` (`components/ui/card-foot.tsx`; `CARD_FOOT` / `CARD_FOOT_STATUS` / `CARD_FOOT_ACTIONS`). No `border-t`, only `pt-4` of air, pinned with `mt-auto`, one fixed `min-h-16` slot so the card never jumps between idle, dirty, applying and failed. Status holds the left edge; actions hold the right edge — `Discard` (ghost) and any secondary action first (ghost or `tonal-neutral`, never a stroked `outline` button), the `SaveButton` last. The row is persistent: an idle card shows Apply disabled with its reason. Never an Apply floating mid-card, a save bar under the card grid, or a `SaveButton` beside a field. Use a plain element, not shadcn `CardFooter`; never wrap the `SaveButton` in `AnimatePresence`; pass copy and glyphs in as props. Exempt: dialogs and wizards, per-row and inline actions, operational actions that are not a draft commit. This supersedes the page-level save bar approved for Connection Watchdog on 2026-09-05, and it is a sweep rule: new or reworked editable cards use it, and Migration Deltas lists every site still off it.",
         "section": "layout"
       },
       {
@@ -1464,7 +1495,7 @@
       },
       {
         "name": "The Transform-Only Rule",
-        "body": "Animate `transform` and `opacity`. The single sanctioned `width` animation is the carrier-aggregation segment, where the width *is* the data and a `scaleX` would distort the band labels riding inside it. Meters animate `scaleX`, never `width` — on a CPU also carrying the user's traffic, a per-poll layout pass per meter is not free.",
+        "body": "Animate `transform` and `opacity`. Meters animate `scaleX`, never `width`, on first paint; a value retarget on an existing bar uses `width` deliberately (see `components/ui/metric-bar.tsx`'s own comment) because a transform would squash the pill cap at low percentages, and it changes only when a poll retargets the fill, never per frame. The one other sanctioned `width` animation is the carrier-aggregation segment, where the width *is* the data and a `scaleX` would distort the band labels riding inside it. On a CPU also carrying the user's traffic a per-frame layout pass per meter is not free, so nothing else animates `width`.",
         "section": "motion"
       },
       {
@@ -1490,11 +1521,16 @@
       {
         "name": "The Animations-Preference Rule",
         "section": "motion",
-        "body": "The reduced-motion switch has THREE states, not two: System (no attribute, `MotionConfig reducedMotion=\"user\"`), Full (`data-motion=\"full\"`, `\"never\"`), Reduced (`data-motion=\"reduced\"`, `\"always\"`). The absence of the attribute is load-bearing — 'System' removes it rather than writing `data-motion=\"system\"`, and that absence is what lets the bare media query decide. The key, the type and the pre-paint boot script live together in `lib/motion-preference.ts`, and `app/layout.tsx` injects the boot script render-blocking: an attribute landing in a mount effect arrives AFTER first paint, so a user on Reduced would see one frame of every entrance animation, precisely the frame they asked not to see. Tailwind's stock `motion-reduce:` compiles to a bare media query with no selector hook, so BOTH `motion-reduce` and `motion-safe` are redefined as `@custom-variant`s in `globals.css`, each emitting `@slot` twice. Redefine both or neither: without the `motion-safe` half, a user on OS-reduce who explicitly picks Full gets every spinner frozen."
+        "body": "The reduced-motion switch has THREE states, not two: System (no attribute, `MotionConfig reducedMotion=\"user\"`), Full (`data-motion=\"full\"`, `\"never\"`), Reduced (`data-motion=\"reduced\"`, `\"always\"`). The absence of the attribute is load-bearing — 'System' removes it rather than writing `data-motion=\"system\"`, and that absence is what lets the bare media query decide. The key, the type and the pre-paint boot script live together in `lib/motion-preference.ts`, and `app/layout.tsx` injects the boot script render-blocking: an attribute landing in a mount effect arrives AFTER first paint, so a user on Reduced would see one frame of every entrance animation, precisely the frame they asked not to see. Tailwind's stock `motion-reduce:` compiles to a bare media query with no selector hook, so BOTH `motion-reduce` and `motion-safe` are redefined as `@custom-variant`s in `globals.css`, each emitting `@slot` twice. Redefine both or neither: without the `motion-safe` half, a user on OS-reduce who explicitly picks Full gets every spinner frozen. Charts follow the same switch: recharts animates through react-smooth, which `MotionConfig` cannot reach, so every chart reads `useChartReducedMotion()` (`hooks/use-chart-motion.ts`), where the in-app preference outranks the OS `prefers-reduced-motion` query in both directions and `system` defers to the OS query, subscribed live. `useChartSeriesMotion` (`<Area>` / `<Line>`) and `useChartBarMotion` (`<Bar>`) are built on it, and a new chart spreads one of them rather than setting `isAnimationActive` by hand. (Tracked: `useChartSeriesMotion` exists today but reads the OS query only, and the other two hooks do not exist yet.)"
       },
       {
         "name": "The Field-Step Rule",
         "body": "A field's resting fill is one tonal step above **its host**, never a fixed token — the fill is the whole affordance, so a fixed token renders at 1.00:1 on the wrong host. `-high` is the top rung, so a `-high` host steps down rather than the field growing a border. An explicit fill is always a light/dark pair, with the dark half marked important. See Components > Inputs / Fields.",
+        "section": "components"
+      },
+      {
+        "name": "The Toast-Confirms Rule",
+        "body": "A finished user action is confirmed by one toast, success or failure, and by nothing that fades. Every user-initiated mutation that finishes (save, apply, a switch that persists, add, delete, reset, restart, install, copy) fires one plain-`sonner` `toast.success` or `toast.error`, in the component handler that owns the action, at the terminal moment, with `t()` copy in all five catalogs. The failure reason comes from the call's own returned result, never from `error` state read after an `await`; an effect-based toast carries a deterministic sonner `id` and never fires for a result merely loaded on mount; copy goes through `copyText` (`lib/clipboard.ts`). A fading 'Applied'/'Saved' chip is retired — `SaveButton`'s own Saved! flash stays. Exceptions: a mutation that ends in navigation (the `/reboot/` handoff) and a wizard step that advances keep that transition as their success signal, and still toast failures. If a surface seems to need its own 'Saved' chip, the toast is missing or wrong.",
         "section": "components"
       },
       {
@@ -1574,45 +1610,68 @@
       "**Do** pick a **pair** — a fill with its own `-foreground`, or a container with its own `on-` ink.",
       "**Do** give every status chip a glyph, and give two states in the same slot two different glyphs.",
       "**Do** use an outline tag for identity and metadata, and a filled chip for state.",
+      "**Do** show a fact worth knowing that is neither a fault nor health as a filled `info` chip with a glyph, only while it applies (The Fact-Is-Info Rule).",
       "**Do** pair the quality ramp with bar length, always.",
       "**Do** measure a new colour — gamut first, then contrast, then deuteranopia and protanopia against the layer it will ship on.",
       "**Do** reach for the role radii (`rounded-tile` / `card` / `hero` / `pill`) in new work.",
       "**Do** ship `border-0` on a card and let the tone step carry the separation.",
       "**Do** write responsive behavior as a container query against `@container/main`.",
       "**Do** wrap a settings group in a card and let the page arrange cards.",
+      "**Do** let every feature page's content column span the full width; never wrap the page in a `max-w-*` container (Full-Width Page Rule).",
       "**Do** put `min-w-0 truncate` on every text node in a paired card's header.",
       "**Do** mark every changing figure `tabular-nums` in `font-sans`, and reserve `font-mono` for identifiers.",
       "**Do** mirror a skeleton's geometry from the same exported shape constant the loaded view uses.",
       "**Do** build the loading, empty, and error state in the same change as the loaded one.",
+      "**Do** commit an editable card from its own footer row: status on the left, `Discard` then `SaveButton` on the right (The Card-Foot Apply Rule).",
+      "**Do** confirm every finished user action with one success or error toast, and retire any fading \"Applied\"/\"Saved\" chip (Confirmation Toasts, The Toast-Confirms Rule).",
+      "**Do** use the shared `SegmentedField` for an on/off or short exclusive choice in new and redesigned surfaces, rather than a bare `Switch`.",
       "**Do** pass `size` explicitly at every `MaterialSymbol` call site.",
       "**Do** keep interactive targets at 44px on coarse pointers, and let toolbars wrap.",
       "**Do** make a status surface report *saved* state, and make an incapable control explain itself.",
       "**Do** defer anything that reboots the modem behind a dialog plus a persistent banner.",
-      "**Do** key every new user-visible string across all five locales; `bun run i18n:check` gates it."
+      "**Do** key every new user-visible string across all five locales; `bun run i18n:check` gates it.",
+      "**Do** trust conventions — label controls so they need no hint.",
+      "**Do** put jargon definitions and non-dangerous caveats in an info tip, about one per settings group at most.",
+      "**Do** hang every element on at least two edges: keys on the left edge, values on the right, actions on the header's right edge or the card's bottom edge (The Scanning Rules).",
+      "**Do** fix a hard-to-scan list by grouping it under section labels and varying it with a glyph or tag before you add spacing.",
+      "**Do** render a default or expected value quiet, so the one that differs finds the eye on its own.",
+      "**Do** recompose a card into columns when its rows get too wide for a key and its value to read as a pair."
     ],
     "donts": [
       "**Don't** tint a large surface because it looked plain — that is the failure this system exists to prevent.",
-      "**Don't** give identity or direction a large container block; they are ink, outline, and disc only.",
+      "**Don't** give identity or direction a large container block; they are ink, outline, and disc only. (A chart's area fill under its own stroke is ink, not a block — see The Area-Fill Rule for the two conditions that keep it so.)",
       "**Don't** put ink from one role on another role's surface, or a neutral-ramp ink on a tinted one.",
       "**Don't** hardcode `text-white` on a destructive fill — in dark mode that fill is *light*.",
       "**Don't** compensate for a mismatched pair with an alpha (`bg-destructive/60`); fix the pair.",
       "**Don't** use an outline tag as a status indicator, or a filled chip as an identity label.",
+      "**Don't** show a fact worth knowing as a grey outline (reads as disabled) or in amber (reads as a problem).",
       "**Don't** use `nr` or `lte` to mean \"healthy\", or put an identity hue anywhere in a quality scale.",
       "**Don't** ship an out-of-gamut `oklch()` — the build will map it and you will not have authored what ships.",
       "**Don't** argue a colour decision from degrees of hue separation; measure it.",
       "**Don't** use the numbered `--chart-1..6`; they do not theme.",
       "**Don't** put a border on a tonal container, or use `--border` as a card edge.",
       "**Don't** distinguish two states by tone alone when one of them is a released, disabled, or absent thing.",
-      "**Don't** animate `width` (the aggregation segment is the sole exception) or exceed `emphasized`.",
+      "**Don't** animate `width` on first paint (the `MetricBar` value retarget and the carrier-aggregation segment are the two exceptions) or exceed `emphasized`.",
       "**Don't** write a raw duration (`duration-200`, `{ duration: 0.25 }`) or a `transition-all` with no duration.",
       "**Don't** add a third stagger step, a fifth duration, or a spring.",
       "**Don't** add an exit animation to a banner or a route transition.",
       "**Don't** give a modal one unqualified `duration-*` for both directions, or leave its scrim without one.",
       "**Don't** loop an animation where nothing is genuinely live.",
       "**Don't** put an icon in a `CardHeader`.",
+      "**Don't** write a hint that restates its label, a `CardDescription` longer than one line, or an empty state that lectures.",
+      "**Don't** confirm a finished action with a fading chip or label alone (\"Applied\", \"Saved\"), toast a result that was only loaded on mount, or read `error` state after an `await` to build a failure toast.",
+      "**Don't** float an Apply mid-card or under the card grid, or stroke a secondary action beside a Save with `variant=\"outline\"` (The Card-Foot Apply Rule).",
+      "**Don't** hide a connection-affecting consequence inside an info tip.",
+      "**Don't** give every setting a `HintIcon`, or build an info tip on `Tooltip`.",
+      "**Don't** centre text that gets scanned as part of a set, or float actions mid-card with no edge under them.",
+      "**Don't** tidy a crowded card by hiding its actions in a `⋯` menu; give the primary ones an edge first.",
+      "**Don't** ship an icon-only control whose meaning is only learnable from its tooltip.",
+      "**Don't** make one thing stand out by turning it up; quiet its neighbours. Don't dress a default value as loudly as a changed one.",
+      "**Don't** nest more than one inner container inside a card, or stack borders and radii to mark a sub-group a section label could mark.",
       "**Don't** invent a bespoke hero-driven layout for one screen.",
       "**Don't** mix Material Symbols and lucide inside a single route.",
       "**Don't** introduce a third typeface, or set a human-authored label in mono.",
+      "**Don't** load a face through `next/font/google`; vendor it under `app/fonts/` and load it with `next/font/local`.",
       "**Don't** reach for 13px outside a dense metric row, or for the pre-auth scale outside `/` and `/login/`."
     ]
   }

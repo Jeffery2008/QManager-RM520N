@@ -12,7 +12,7 @@ Material Symbols is a **self-hosted, ligature-driven icon font**, not an SVG com
 | **Canonical glyph list (single source of truth)** | `MATERIAL_SYMBOL_NAMES` in `components/ui/material-symbol-names.ts` |
 | Allowed glyph names (TS type) | `MaterialSymbolName`, **derived** from that array |
 | Subset generator | `scripts-dev/subset-icons.ts` (imports the same array) |
-| Shipped font file | `app/fonts/MaterialSymbolsRounded-subset.woff2` (97 glyphs, 36.3 KB) |
+| Shipped font file | `app/fonts/MaterialSymbolsRounded-subset.woff2` (117 glyphs, 43,488 bytes, as counted from the manifest 2026-10-06) |
 | Generator manifest | `app/fonts/MaterialSymbolsRounded-subset.json` — what was requested + sha256 of what shipped |
 | Font binding | `app/layout.tsx` (`next/font/local`, bound to a CSS variable) |
 | Regenerate the font | `bun run icons:subset` |
@@ -75,6 +75,10 @@ This section previously listed `checkbox.tsx` and `sonner.tsx` as **known unfixe
 `components/ui/save-button.tsx` is the case that forced the rule to be written down rather than inferred. It mounts on **9 Material routes and 9 lucide routes**: there is no majority to default to, and a route-sensing branch would mean a shared primitive reading its own URL to pick an icon library — the exact coupling the boundary exists to avoid. It renders lucide `CheckCircle2Icon`: the **circular-check form** the design mock asked for, drawn with the **library the canon requires**. Form from the mock, library from the rule.
 
 The corollary for future work: **a new `components/ui/` primitive that mounts route-agnostically is lucide by default.** Reaching for Material inside one is the signal that it is not actually route-agnostic, and belongs in a route-scoped sibling instead — which is precisely the `Banner` / `TonalBanner` split documented further down.
+
+**`HintIcon` is the one sanctioned cross-route exception, running the other way.** `components/ui/hint-icon.tsx` renders a Material glyph on every route, lucide routes included (user decision). A route-agnostic primitive pinned to the default half is the rule; the info tip is deliberately not pinned, because it must look the same wherever a tip appears. Don't make it route-aware.
+
+**Icon-set-neutral primitives import neither set.** `components/ui/card-foot.tsx` (layout only) and `components/ui/segmented-field.tsx` (the caller passes the check glyph through a required `glyph` prop) never import `lucide-react` or `MaterialSymbol`, so a lucide route and a Material route can both use them. That is the third way out for a shared primitive after "pin it to lucide" and "split it into a route-scoped sibling": take the glyph as a prop.
 
 **One lucide import deliberately survives under `components/cellular/` and it is correct code.** `components/cellular/custom-profiles/apply-progress-dialog.tsx` imports `RotateCwIcon` to pass into `Banner`'s `icon` prop, which is typed `LucideIcon`. `components/ui/banner.tsx` is the page-level, route-agnostic banner and stays lucide by the existing rule (it mounts on lucide pages too) — the same shape of false positive as `components/auth/change-password-dialog.tsx`. Grepping `lucide-react` under `components/cellular/` will find this hit; do not "fix" it.
 
@@ -143,13 +147,16 @@ Subset growth, by the change that caused it:
 | + pre-auth `/` and `/login/` | 64 | 23.9 KB |
 | + `/cellular/` index | 71 | 26.4 KB |
 | + `/cellular/` sub-routes (17) | 95 | 35.2 KB |
-| **+ SMS Center / SMS Forwarding tonal rebuild** | **97** | **36.3 KB** |
+| + SMS Center / SMS Forwarding tonal rebuild | 97 | 36.3 KB |
+| **Current manifest** (`MaterialSymbolsRounded-subset.json`, 2026-10-06) | **117** | **43,488 bytes** |
 
 The eight glyphs added for the pre-auth retarget: `dark_mode`, `error`, `light_mode`, `lock`, `lock_clock`, `translate`, `wifi_off`, `wifi_tethering_off`. (The row above reads 64 because one further glyph landed between that change and this one without the table being touched; the baseline this change grew from was 65 glyphs / 24.6 KB.)
 
 The **six** glyphs added for the `/cellular/` index: `content_copy`, `expand_more`, `graphic_eq`, `layers`, `settings_input_antenna`, `sim_card`.
 
 The **24** glyphs added for the 17 `/cellular/` sub-routes, each verified against the live Google Fonts endpoint before use (see "Verifying a glyph name and its substitution" below): `add`, `auto_awesome`, `bolt`, `call`, `delete`, `done_all`, `drag_indicator`, `edit`, `explore`, `first_page`, `location_on`, `lock_open`, `more_horiz`, `more_vert`, `rocket_launch`, `route`, `search`, `send`, `shield`, `sos`, `sports_esports`, `trophy`, `videocam`, `work`.
+
+The **20** glyphs added between that rebuild and the current manifest are not itemised here; diff the manifest's `icons` array against git history when you need them.
 
 The **two** glyphs added for the SMS Center / SMS Forwarding tonal rebuild: `mark_email_unread` (the unread row marker, which replaced a bare colour-only dot) and `delete_sweep` (the "Delete all" action, distinct from the single-message `delete`).
 
@@ -205,6 +212,8 @@ The `check_box` pair is worth keeping separately from the rest: the other reject
 | `components/ui/empty.tsx` | `[&_svg:not([class*='size-'])]:size-6` | yes | **no** |
 
 A parallel sizing rule for `[data-slot=material-symbol]` would lose to the inline style too, so it is not attempted. **Every Material glyph passes `size` explicitly at its call site**: 12 in a dense chip, 15-17 in a status chip or corner badge, 16 where the glyph is the only channel carrying meaning, 24 in an `EmptyMedia`, 96 in a Network Status orb. Only `pointer-events` ports across, via a parallel `[&>[data-slot=material-symbol]]:pointer-events-none` rule added to both files. Both files carry a comment saying so.
+
+**A Material glyph that must animate `transform` goes inside a wrapper span that carries the transition.** The unlayered `.material-symbol` rule in `app/globals.css` sets its own `transition` (on `font-variation-settings`, the FILL axis) and, being outside `@layer`, beats a layered `transition-*` utility put on the glyph itself. Put the `transition-transform` and the rotation on the wrapper. (Verified against `app/globals.css`: the rule sits after `@layer base` closes.)
 
 ## Shared primitives style themselves on `>svg` — mirror the selector, or the layout silently breaks
 

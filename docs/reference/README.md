@@ -79,6 +79,7 @@ This file is the **router**. One row per reference doc, and each row lists only 
 | --- | --- | --- |
 | [color-system.md](color-system.md) | Any colour token in `app/globals.css`, a new role, a `Badge` tone, `--primary-container`, `--lte-container`, the quality-ramp tokens, a surface that reads too loud | Both |
 | [icon-system.md](icon-system.md) | Any icon anywhere — `MaterialSymbol`, a lucide import, `bun run icons:subset`, `bun run icons:check`, the route-scoped Material-vs-lucide boundary | Both |
+| [toast-confirmation.md](toast-confirmation.md) | Any `toast.success` / `toast.error` call, a save / apply / toggle / delete / install / copy handler, `markSaved()` / `useSaveFlash`, a transient Saved or Applied chip, `lib/clipboard.ts` `copyText`, `navigator.clipboard`, the `<Toaster />` order in `app/layout.tsx` | Both |
 | [tailwind-prose-hazard.md](tailwind-prose-hazard.md) | Any prose that quotes a utility class — a code comment, a doc sentence, a failure message — plus `app/globals.css`'s content scan and the `next build` CSS-optimizer report | Both |
 
 ### Platform & Install

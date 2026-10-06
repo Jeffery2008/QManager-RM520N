@@ -334,7 +334,7 @@ to a plain crossfade, which still carries the information that the state changed
 
 ## Part 3 — The save flow (`SaveButton`, recipe 15)
 
-`components/ui/save-button.tsx` is the product-wide save action: **18 call sites**, 9 on Material
+`components/ui/save-button.tsx` is the product-wide save action: **18 call sites** when this part was written (23 `<SaveButton` sites at `0fbd9ee5`), 9 on Material
 routes and 9 on lucide ones. Three states cross-fade **in place** inside one pill — idle label →
 spinner + `actions.saving` → check + `actions.saved` — and the button never changes width while it
 does, so a toolbar cannot reflow mid-save.
@@ -387,10 +387,17 @@ names a number, export the number.
 All three layers are `aria-hidden`; the `Button` carries one stable `aria-label` that does **not**
 change across states, so a state change never re-announces the control.
 
-- **No `aria-live`, deliberately.** All 22 `markSaved()` call sites are immediately followed by a
-  `toast.success(...)`, and sonner already renders into a live region. An `aria-live` on the button
-  would double-announce every save product-wide. **The toast is the announcement channel; the button is
-  the visual confirmation.**
+- **No `aria-live`, deliberately.** All 22 `markSaved()` call sites were immediately followed by a
+  `toast.success(...)` when this was written (67 `markSaved` sites at `0fbd9ee5`, not re-audited), and
+  sonner already renders into a live region. An `aria-live` on the button would double-announce every
+  save product-wide. **The toast is the announcement channel; the button is the visual confirmation.**
+- **The toast is the only confirmation message** (The Toast-Confirms Rule, `DESIGN.md` > Confirmation
+  Toasts). The button's own Saving.../Saved! flash is the control's state, not a message, and stays; a
+  second Saved / Applied chip that fades beside it is retired. See
+  [toast-confirmation.md](toast-confirmation.md).
+- **On a card, the button sits last on the right edge of the `CardFoot` row** (The Card-Foot Apply Rule,
+  `components/ui/card-foot.tsx`), with status on the left. Existing page-level and inline placements are
+  tracked in `DESIGN.md` > Migration Deltas.
 - **No hard `disable` during the flow, deliberately.** A `disabled` element drops focus to `<body>` in
   both Chrome and Firefox, so a keyboard user who pressed Enter on Save lost their place for the ~1.8s
   of the flash — which is what the incumbent did. Instead: the caller's own `disabled` passes through
@@ -591,6 +598,8 @@ All silent failures. Each one compiles, renders, and is wrong.
   signature rather than an identity comparison
 - [icon-system.md](icon-system.md) — why every status chip carries a glyph in the first place, and the
   route-agnostic rule that pins `SaveButton`'s check to lucide
+- [toast-confirmation.md](toast-confirmation.md) — the Toast-Confirms Rule's implementation traps; the save
+  flash here is the control's state, the toast is the message
 - [i18n.md](i18n.md) — the parity gate that graded the save button's 16 hardcoded English labels, and a
   98-key English-only regression, as silence
 - `DESIGN.md` > Motion > "Live value tick" and "Status chip swap"; > Motion > "Row cascade" for the two

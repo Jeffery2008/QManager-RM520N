@@ -14,18 +14,18 @@ Read this before adding a colour, retuning one, or looking at a token that seems
 | Tailwind mappings | `@theme inline` block in the same file |
 | Canon (meanings, values, rules) | `DESIGN.md` > Colors |
 | Chip roles | `components/ui/badge.tsx` |
-| Separation floor, decorative vs **functional** | **40 degrees** (one-directional — see below) |
-| CVD collapse floor between two tones | **0.05** simulated separation |
+| Separation rule | **Measured, not hue arithmetic** (`DESIGN.md` > The Measured-Separation Rule). The old 40-degree rule is retired; see below |
+| CVD collapse floor between two tones | **0.05** simulated separation, on the layer the colour ships on |
 | Signal-quality ramp (the one scale, not a role) | `--quality-{1..5}` / `--quality-{1..5}-bar`; mapped by `components/cellular/signal-quality-display.ts` |
 
 ## The role families
 
 | Family | Tokens | Means | Axis |
 | ------ | ------ | ----- | ---- |
-| Primary / NR blue | `--primary-*`, aliased by `--info`, `--ring`, `--sidebar-primary`, `--chart-nr` | 5G NR **identity**, the brand, "in progress", info | Identity |
+| Primary / NR blue | `--primary-*`, followed by `--info`, `--ring`, `--sidebar-primary`; `--chart-nr` tracks `--primary-on-surface` | 5G NR **identity**, the brand, "in progress", info | Identity |
 | Carrier Violet | `--lte-*`, `--chart-lte` | 4G LTE **identity** | Identity |
-| **Downlink Rose** | `--downlink`, `-foreground`, `-on-surface`, `-container`, `--on-downlink-container` | The **download direction**, and **capacity / throughput** | Direction |
-| **Uplink Cyan** | `--uplink`, `-foreground`, `-on-surface`, `-container`, `--on-uplink-container` | The **upload direction**, and **counts** | Direction |
+| **Downlink Rose** | `--downlink`, `-foreground`, `-on-surface`, `-container`, `--on-downlink-container` | The **download direction**, and nothing else | Direction |
+| **Uplink Cyan** | `--uplink`, `-foreground`, `-on-surface`, `-container`, `--on-uplink-container` | The **upload direction**, and nothing else | Direction |
 | **Spatial Azure** | `--spatial`, `-foreground`, `-on-surface`, `-container`, `--on-spatial-container` | **Antenna and spatial-stream readouts** — MIMO layer counts, per-antenna chains | Spatial |
 | Success / Warning / Destructive | `--success-*`, `--warning-*`, `--destructive-*` | Functional verdicts only | Status |
 | Neutral ramp | `--surface-*`, `--on-surface*`, `--outline` | No claim at all | — |
@@ -42,23 +42,33 @@ Downlink Rose exists to break that overload. Both direction roles now hold hues 
 
 ### Where each direction hue lands
 
-| Surface | Download / capacity | Upload / count |
-| ------- | ------------------- | -------------- |
-| Speedtest dialog `ROLE` map (`speedtest-dialog.tsx:143`) | `downlink-*` | `uplink-*` |
-| Cached speedtest chips (`live-latency.tsx:888`) | `downlink-container` | `uplink-container` |
-| Device Metrics data-usage glyphs (`device-metrics.tsx:424`) | `text-downlink-on-surface` | `text-uplink-on-surface` |
-| AMBR rate chips (`settings/shapes.ts:1064`) | `bg-downlink` | `bg-uplink` |
-| Radio Information summary tiles | Bandwidth → `downlink-container` | Carriers → `uplink-container` |
-| Ethernet link speed tile (`ethernet-card.tsx:114`) | `downlink-container` | — |
+| Surface | Download | Upload |
+| ------- | -------- | ------ |
+| Speedtest dialog `ROLE` map (`speedtest-dialog.tsx`) | `downlink-*` | `uplink-*` |
+| Cached speedtest figures (`live-latency.tsx`) and Device Metrics data-usage glyphs (`device-metrics.tsx`), via `DIRECTION` in `dashboard/shapes.ts` | `text-downlink-on-surface` + `arrow_circle_down` | `text-uplink-on-surface` + `arrow_circle_up` |
+| AMBR rate chips (`RATE_CHIP.ON_DOWNLOAD` / `.ON_UPLOAD`, `cellular/settings/shapes.ts`) | `bg-downlink` | `bg-uplink` |
 
-Two consequences that are easy to get wrong:
+Three consequences that are easy to get wrong:
 
-- **Capacity takes rose, not cyan.** Aggregate channel width and a negotiated Ethernet link rate are *bidirectional* figures. Cyan would claim an upload direction they do not have; rose's second meaning is throughput, which is exactly the pipe. That is why the Ethernet speed tile moved off cyan.
-- **A directionless figure takes neither.** Latency has no direction, so the speedtest's ping role went **neutral** rather than keeping a hue. Packet loss on the Live Latency chart went neutral for the same reason plus one more: painting it from the functional ramp would draw a healthy 0% line permanently red, and this product reports rather than alarms.
+- **A capacity or a count takes neither.** An aggregate channel width, a negotiated link rate or a client or carrier count is not a direction. Rose would claim a download it is not, cyan an upload. These were rose and cyan until 2026-08-16 (the old rule gave rose "and capacity" and cyan "and counts"), which made the axis untrue; `DESIGN.md` > Colors > Direction deleted both second meanings. The Radio Information Carriers tile, the antenna-statistics chain-count tile, the Traffic Engine counts and the Ethernet link-rate tile are neutral now (The Neutral-Default Rule).
+- **A directionless figure takes neither.** Latency has no direction, so the speedtest's ping role is neutral. Packet loss on the Live Latency chart is neutral for the same reason plus one more: painting it from the functional ramp would draw a healthy 0% line permanently red, and this product reports rather than alarms.
+- **Direction always pairs its hue with an arrow glyph.** Hue alone never says which way.
 
-## Hue-slot arithmetic: why 341, and why there is no room for a fifth
+> ⚠️ Residual deviations, tracked in `DESIGN.md` > Migration Deltas (grep `bg-downlink|bg-uplink|text-uplink` over `components app`, 2026-10-06): `BANDWIDTH_DISC` in `components/cellular/radio/summary-tiles.tsx` and `DISC_RATE` in `components/cellular/settings/shapes.ts` still colour a capacity on `bg-downlink`, and the Donate glyph in `components/nav-section.tsx` wears `text-uplink`. All three contradict the rule above. Move them to neutral when you next touch the surface, and correct the comment beside each in the same change.
 
-The system enforces a **40-degree minimum separation** between a decorative role hue and a functional one. Taken slots:
+## The Fact-Is-Info Rule
+
+**A fact worth knowing that is neither a fault nor health uses the `info` role: a filled `Badge variant="info"` with a glyph, shown only while the fact applies.** A grey outline reads as disabled or unavailable, amber as a problem and green as healthy, so none of them can honestly say "this will take a minute" or "this is a preview". `info` is the brand ramp (The Info-Is-Brand Rule), so it adds no hue; and because the chip appears only while the fact holds, the exception wears the fill and the default stays quiet (The Quiet-Default Rule).
+
+> ⚠️ `Badge variant="info"` is `bg-primary-container text-on-primary-container`, the exact pair a promoted `primary-container` row uses, so on such a row the chip dissolves to a bare glyph and a word. Re-ground the chip on the row's own ink (see `.claude/agent-memory/ui-builder/reference-info-chip-dissolves-on-primary-container.md`). `muted`, `success`, `warning` and `destructive` do not collide.
+
+> ℹ️ NOTE — open case, tracked in `DESIGN.md` > Migration Deltas: Frequency Locking's "No automatic recovery" chip (`cellular/frequency-locking/freq-lock-hero.tsx`, `verdict.no_recovery`) is still `Badge variant="muted"`. It sits on the amber locked-verdict panel, where `info` has not been measured, so measure the pair in both themes before switching it and do not claim the chip conforms until then.
+
+## Hue slots, and the retired 40-degree rule
+
+> ℹ️ NOTE — **superseded as a rule, kept as history.** This section used to state a 40-degree minimum between a decorative hue and a functional one. `DESIGN.md` retired it: **The Measured-Separation Rule** says colour is measured (deuteranopia and protanopia, OKLab ΔE, the 0.05 floor, on the layer the colour ships on), never reasoned from degrees of hue. The rule behaved like the proxy it was, permitting pairs that collapsed and forbidding pairs that were fine. The slot table and the two traps below still describe real constraints; the arithmetic no longer decides anything.
+
+Hues in `app/globals.css`:
 
 | Hue | Role |
 | --- | ---- |
@@ -66,68 +76,56 @@ The system enforces a **40-degree minimum separation** between a decorative role
 | 72 | warning |
 | 149 | success |
 | 200 | uplink |
-| 264 | primary / NR / info |
+| 232 | spatial |
+| 262 | primary / NR / info |
 | 296 | lte |
+| 341 | downlink |
 
-Sweeping all 360 degrees against that set leaves **exactly one window** clearing the floor against *every* taken hue: **h ∈ [336, 347]**. Downlink Rose sits at **341**, the middle of it. Hue 341 was therefore not chosen by eye — it was the only wholly-unconstrained slot left.
+**Why 341.** Under the old rule, sweeping all 360 degrees against the then-taken slots (27, 72, 149, 200, 262, 296) left exactly one window clearing 40 degrees of every one of them, h in [336, 347]. Downlink Rose sat at the middle of it, so 341 was the only wholly-unconstrained slot, not an eyeballed one. It is kept because the measurements later confirmed it rather than because the arithmetic demanded it: rose against destructive red, the riskiest adjacency, measured **0.47 separation in dark and 0.25 in light** against the 0.05 floor (2026-08-16, not re-run since).
 
-### The amendment: the floor is one-directional (2026-08-16)
+**The real failure mode.** A decorative hue mistaken for a functional one is a lie about the device: a tile that reads as `warning` when nothing is wrong. Two decorative hues sitting close is a legibility question, not an honesty one, and legibility has other channels (a glyph, a label, a lightness step). The system has always accepted this: NR 262 and LTE 296 are 34 degrees apart, and Spatial Azure at 232 is 30 degrees from the brand ramp and 32 from Uplink Cyan. Spatial Azure's nearest functional hue is success, 83 degrees away.
 
-Adding **Spatial Azure at hue 232** for MIMO and per-antenna readouts forced the rule to be stated precisely, because 232 sits 32 degrees from Uplink Cyan (200) and 32 from the brand ramp (264) — inside the floor as previously written.
+**The trap, and it is counter-intuitive.** The widest unused position on the circle is hue ~110, at 38.5 degrees from both warning (72) and success (149). It looks like the best remaining slot and is the worst one: a yellow-green sitting precisely where deuteranopia merges amber into green, so it is maximally confusable with the two functional states it is nearest. Anyone hunting for "the biggest gap" finds 110 first. Do not take it.
 
-The resolution is not a carve-out, it is what the rule was always protecting against. **The failure mode is a decorative hue being mistaken for a functional one**, because that is a lie about the device: a tile that reads as `warning` when nothing is wrong. Two *decorative* hues sitting close is a legibility question, not an honesty one, and legibility has other channels — a glyph, a label, a lightness step. The system has always accepted exactly this: **NR 264 and LTE 296 are 32 degrees apart** and have been since the palette was written.
+**What a fifth role costs.** No wholly-unconstrained slot remains. A new role must accept decorative crowding (measure the functional distance first and the decorative second, and state both), or take a neutral, a lightness step or a non-chromatic channel. It should also justify a *class* of readout rather than one surface: Spatial Azure was minted because MIMO layers, per-antenna chains and the alignment surfaces are a whole family with no axis, not because one tile looked plain.
 
-So the floor is measured **against functional hues** (149 / 72 / 27 plus the brand ramp) and decorative crowding is permitted. Spatial Azure's nearest functional hue is success at **83 degrees** — it is one of the *safest* hues in the palette by the measure that matters.
+> ℹ️ NOTE — precedent. Uplink Cyan sits at 200 rather than the design bundle's literal 185 because 185 was 36 degrees from success at 149. The old rule bit once, and the measurement agreed.
 
-**The trap this exposes, and it is counter-intuitive.** The widest unused position on the whole circle is **hue ~110**, at 38.5 degrees from both warning (72) and success (149). It looks like the best remaining slot and it is the worst one available: a yellow-green sitting precisely where deuteranopia merges amber into green, i.e. maximally confusable with the two functional states it is nearest. Anyone hunting for "the biggest gap" will find 110 first. Do not take it.
+## Dark-mode identity fills
 
-### What a fifth role costs now
+On 2026-08-16 the three identity fills were first toned down from L 0.79–0.81 to 0.72–0.74 on a near-black ground, because the brightest objects in the interface were carrying the least information. **That interim step was superseded by the bolder-chroma retune; the shipped dark fills are now the `.dark` block of `app/globals.css`:**
 
-The circle is full in the sense that no wholly-unconstrained slot remains. A new role must therefore either accept decorative crowding — measuring **functional distance first, decorative second**, and stating both — or take a neutral, a lightness step, or a non-chromatic channel. It should also justify a *class* of readout rather than one surface: Spatial Azure was minted because MIMO layers, per-antenna chains and the alignment surfaces are a whole family with no axis, not because one tile looked plain.
+| Token | Dark L (C) | Light L (C) |
+| ----- | ---------- | ----------- |
+| `--primary` (hue 262) | **0.605** (0.200) | 0.565 (0.235) |
+| `--lte` (296) | **0.70** (0.175) | 0.51 (0.24) |
+| `--uplink` (200) | **0.82** (0.137) | 0.545 (0.091) |
+| `--downlink` (341) | **0.66** (0.200) | 0.48 (0.204) |
+| `--spatial` (232) | **0.79** (0.127) | 0.55 (0.11) |
 
-The tightest remaining adjacency is rose vs destructive red, which was flagged as the riskiest pairing *before* it was measured and then cleared comfortably: **0.47 separation in dark, 0.25 in light**, against a 0.05 floor.
+The aliases follow their sources: `--info`, `--ring`, `--sidebar-primary` and `--sidebar-ring` track `--primary` (dark 0.605), while `--chart-nr` and `--chart-lte` track the `-on-surface` inks (dark 0.65 and 0.74), not the fills. Retuning one without its aliases silently splits the brand.
 
-> ℹ️ NOTE — precedent. Uplink Cyan sits at 200 rather than the design bundle's literal 185 for exactly this reason: 185 was 36 degrees from success at 149. The rule has bitten once already.
+The ink-contrast and CVD figures quoted when the interim step landed (ink 7.2–7.7:1; NR and LTE 0.094 apart under protanopia at 0.72 / 0.73, with 0.76 skipped because it measured 0.047) were taken at the earlier values and **have not been re-run** at 0.605 / 0.70. Do not cite them as current. `DESIGN.md` carries the current claim (ink pairs separate in 0 of 28 pairs, both themes).
 
-## Dark-mode identity fills were toned down (2026-08-16)
-
-The three identity fills sat at L 0.79–0.81 on an L 0.155 ground — **the brightest objects in the interface were the ones carrying the least information**. They now land at 0.72–0.74:
-
-| Token | Was | Now |
-| ----- | --- | --- |
-| `--primary` | 0.79 | **0.72** |
-| `--lte` | 0.80 | **0.73** |
-| `--uplink` | 0.81 | **0.74** |
-
-The aliases move in lockstep — `--info`, `--ring`, `--sidebar-primary`, `--sidebar-ring`, `--chart-nr`, `--chart-lte`. Retuning one without the others silently splits the brand.
-
-Two measured facts behind those numbers:
-
-- **Ink holds at 7.2–7.7:1** (was 9.1–9.2), comfortably past WCAG AA. The fills moved and their inks did not need to, because both stay on the same side of the light/dark flip — the Paired-Theme Rule is intact.
-- **L 0.76 was deliberately skipped.** At 0.76 NR and LTE measure **0.047** separation under protanopia — just under the 0.05 collapse floor. At 0.72 / 0.73 they measure 0.094.
-
-> ⚠️ Toning a token is not the strongest lever available. Moving a block from a **strong fill** to a **container** is worth roughly a 0.47 lightness drop in dark mode — an order of magnitude more than any token nudge. When a surface reads loud, check the role choice before reaching for the value. The Radio Information summary strip is the worked example ([radio-information.md](radio-information.md)).
+> ⚠️ Toning a token is not the strongest lever available. Moving a block from a **strong fill** to a **container** was worth roughly a 0.47 lightness drop in dark mode at the interim values, an order of magnitude more than any token nudge. When a surface reads loud, check the role choice before reaching for the value. The Radio Information summary strip is the worked example ([radio-information.md](radio-information.md)).
 
 ## `--lte-container` light: a correctness fix, not a taste change
 
-Light-mode `--lte-container` moved **L 0.90 → 0.855**.
+Light-mode `--lte-container` was moved down from **L 0.90**, and ships at **L 0.85** now (`oklch(0.85 0.082 296)`); `--primary-container` is **0.89**.
 
-At 0.90 it measured **0.007** separation from `--primary-container` (L 0.885) under protanopia simulation. In plain terms: **light-mode NR and LTE were the same object to a red-blind user** — the exact failure mode `DESIGN.md` bans the generic `--chart-1..5` ramp for. Dropping 0.045 takes the separation to **0.156**, and ink holds at 10.1:1.
+At 0.90 it measured **0.007** separation from `--primary-container` (then L 0.885) under protanopia simulation. In plain terms: **light-mode NR and LTE were the same object to a red-blind user**, the exact failure mode `DESIGN.md` bans the generic `--chart-1..5` ramp for. The fix took the separation to **0.156** at the 2026-08-16 values (0.855 against 0.885, ink 10.1:1). The shipped lightness gap is wider now (0.04 against 0.03), so the direction is the same, but that figure was not re-measured at the current values.
 
-This is why the change is filed as a correctness fix. Anyone reverting it on aesthetic grounds is reintroducing a defect, not a preference.
+This is why the change is filed as a correctness fix. Anyone reverting it on aesthetic grounds is reintroducing a defect, not a preference. Note that `DESIGN.md` also restricts large containers to the functional roles, because identity containers collapse in light mode (8 of 10 pairs), so an identity container is rarely drawn at all; the tokens still have to be right for the places they are.
 
 ## The trap: never equalise `--primary-container` and `--lte-container` in dark
 
-**Dark `--primary-container` sits at L 0.40 while its five sibling containers sit at 0.30–0.325. That looks exactly like a calibration defect. It is not, and closing the gap breaks the system.**
+**Dark `--primary-container` sits at L 0.375 and `--lte-container` at 0.27, a 0.105 lightness gap. That can look like a calibration defect. It is not, and closing the gap breaks the system.**
 
-Why the gap has to be there: NR blue (264) and LTE violet (296) are **32 degrees apart**, which is *inside* this system's own 40-degree floor. They are the one pair that cannot be separated by hue, so **lightness is carrying the entire distinction**. Equalise them and the pair measures **0.049** — collapsed — against the shipped pair's **0.216**.
+Why the gap has to be there: NR blue (262) and LTE violet (296) are **34 degrees apart**, so hue cannot separate them and **lightness carries the whole distinction**. Equalising them collapsed the pair to **0.049** against **0.216** for the shipped pair (measured 2026-08-16 against the earlier 0.40 / 0.325 pair; not re-run at the current values, but the mechanism is unchanged).
 
-The gap is real and it has real costs, which are paid by *routing around it*, never by levelling it:
+The gap has a cost, and the cost is paid by *routing around it*, never by levelling it. On a dark tile `primary-container` lifts further off the page ground than its quiet siblings did (2.06:1 against 1.49–1.53:1 when measured), which is why Recent Activities keeps routine events on the neutral ramp: a routine handoff must not out-shout an outage ([recent-activities.md](recent-activities.md)). The Radio Information doc previously carried a "known token asymmetry" note proposing exactly this levelling in a future token pass. That note is **retracted**.
 
-- On a dark tile, `primary-container` genuinely lifts about 2.06:1 off the page ground where its siblings sit at 1.49–1.53:1. Recent Activities uses that fact as an argument for keeping routine events on the neutral ramp — a routine handoff must not out-shout an outage ([recent-activities.md](recent-activities.md)).
-- The Radio Information doc previously carried a "known token asymmetry" note proposing exactly this levelling in a future token pass. That note is **retracted**.
-
-Before touching either token, re-run the CVD simulation on the pair. The asymmetry is load-bearing.
+Before touching either token, re-run the CVD simulation on the pair.
 
 ## The CVD floor, and what colour can actually do on a dark surface
 
@@ -188,7 +186,7 @@ Giving chips a fifth failure step would mean minting a `--quality-N-container` /
 - [radio-information.md](radio-information.md) — the four summary tiles: the worked example of role choice beating token tuning, and of the tile bodies going neutral so colour survives only where it is true.
 - [speedtest.md](speedtest.md) — the direction contract from tile to dialog to result.
 - [dashboard-chart-cards.md](dashboard-chart-cards.md) — why the packet-loss series is neutral ink.
-- [ethernet.md](ethernet.md) — capacity vs direction on the link-speed tile.
+- [ethernet.md](ethernet.md) — the link-speed tile, which went neutral because a rate is not a direction.
 - [cellular-settings-family.md](cellular-settings-family.md) — the AMBR rate chips, and why direction chips sit *on* a radio container rather than borrowing from it.
 - [icon-system.md](icon-system.md) — the identity outline `Tag` variants, and the glyph obligations that come with them.
 - [recent-activities.md](recent-activities.md) — routing around the `primary-container` lightness outlier.

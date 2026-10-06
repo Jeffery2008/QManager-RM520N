@@ -22,11 +22,11 @@ Do not re-document it here; point to it.
 |-------|-----------|
 | OKLCH color tokens (light + dark), functional colors, chart ramp, signal-quality ramp | `DESIGN.md` §2 Colors |
 | Typography (Rethink Sans, JetBrains Mono machine voice, weight discipline) | `DESIGN.md` §3 Typography |
-| Radius (`0.65rem` base) and spacing scale | `DESIGN.md` frontmatter (`rounded`, `spacing`) |
+| Radius role scale (`rounded-inline/field/tile/card/hero` = 8/10/12/16/20px, plus `rounded-pill`) and spacing scale | `DESIGN.md` frontmatter (`rounded`, `spacing`) |
 | Elevation, shadows, tonal layering | `DESIGN.md` §4 Elevation |
 | Motion system (durations, springs, reduced-motion, presets) | `DESIGN.md` §4a Motion System |
 | Buttons, badges, cards, inputs, dialogs, the signature components | `DESIGN.md` §5 Components |
-| Icon libraries and the Icon-Boundary Rule (Material Symbols on the sidebar + dashboard route, lucide elsewhere) | `DESIGN.md` §5 Components > Icons, and [reference/icon-system.md](reference/icon-system.md) |
+| Icon libraries and the Icon-Boundary Rule (Material Symbols on the sidebar, `/dashboard`, the pre-auth `/` and `/login/`, and all of `/cellular/**`; lucide elsewhere; `HintIcon` Material on every route) | `DESIGN.md` §5 Components > Icons, and [reference/icon-system.md](reference/icon-system.md) |
 | Do's and Don'ts | `DESIGN.md` §6 |
 
 > ℹ️ NOTE: Two claims in the older version of this file were **wrong** and are corrected in
@@ -35,7 +35,7 @@ Do not re-document it here; point to it.
 > old solid `variant="default"`/`variant="destructive"` fills and the outline-plus-tint pattern that
 > briefly replaced them are retired; see `DESIGN.md` > The Filled-Chip Rule. (2) The fonts are
 > **Rethink Sans** (UI, including every changing numeric figure) and **JetBrains Mono** (identifiers and
-> raw machine strings, bound to `--font-jetbrains-mono`). See `DESIGN.md` §3.
+> raw machine strings, bound to `--font-jetbrains-mono`). See `DESIGN.md` §3. Every face is vendored under `app/fonts/` and loaded through `next/font/local`; **never `next/font/google`**, whose build-time fetch from Google Fonts fails the production build on a slow or absent link.
 
 ---
 
@@ -84,8 +84,31 @@ These are not vanilla shadcn primitives; they are QManager additions a developer
 | `meta-panel.tsx` | Grid-laid attribute readouts (`MetaPair`) for device/detail panels. |
 | `spinner.tsx` | Shared spinner primitive. |
 | `animated-beam.tsx`, `animated-list.tsx` | MagicUI-derived motion helpers for signal-beam / list transitions. |
+| `card-foot.tsx` | The apply footer an editable card ends in (**Card-Foot Apply Rule**): a borderless persistent row, `status` on the left edge, `actions` on the right with `SaveButton` last. Layout only, no copy and no icons, so it works on both icon sets. Use it, not shadcn `CardFooter`. Pattern in [FRONTEND.md](FRONTEND.md) > Card Pattern. |
+| `segmented-field.tsx` | The pill group for a boolean preference or a short mutually-exclusive choice (primary thumb plus a check glyph in a rounded track), in place of a bare `Switch`. It imports neither icon set: the caller passes the check glyph through the required `glyph` prop. Falls back to a `Select` below a card breakpoint; `breakpoint="never"` keeps the pills at every width. New and reworked surfaces only; the existing `Switch` sites are tracked in `DESIGN.md` > Migration Deltas. |
+| `tag.tsx` | Outline identity and metadata tag (`nr`, `lte`, `spatial`, `neutral`). Never a status chip: status is a filled `Badge` variant with an icon, and the split is compiler-enforced through `BadgeVariant`. |
+| `hint-icon.tsx` | The info-tip toggletip (`Popover`, never `Tooltip`; Material glyph on every route). About one per settings group; no tip is the default. See `DESIGN.md` > Copy & Help. |
+| `banner.tsx`, `tonal-banner.tsx` | Page-level banner (route-agnostic, lucide) and the card-scoped Material sibling used on the pre-auth cards. |
 
 For where these are consumed (pages, hooks, routing), see [FRONTEND.md](FRONTEND.md).
+
+### Confirmation toasts
+
+Every finished user-initiated mutation is confirmed by one plain `sonner` toast (**The Toast-Confirms Rule**, `DESIGN.md` > Confirmation Toasts). Fire it in the handler that owns the action, with a translated sentence, and take the failure reason from the call's returned result:
+
+```tsx
+import { toast } from "sonner";
+
+const res = await saveSettings(payload);
+if (res.success) {
+  markSaved();
+  toast.success(t("feature.toast.saved"));
+} else {
+  toast.error(t("feature.toast.save_failed"), { description: res.error || undefined });
+}
+```
+
+Never read the hook's `error` state after the `await` (it is the previous render's value), never leave a fading Saved/Applied chip beside the toast, and copy text through `lib/clipboard.ts` `copyText`. The `feature.toast.*` keys are illustrative; real keys land in all five catalogs. Traps, the navigation exception and RM520N's current status are in [reference/toast-confirmation.md](reference/toast-confirmation.md).
 
 ---
 
@@ -165,7 +188,7 @@ Container-query breakpoints (inside a card that declares `@container/card`):
 - Touch targets minimum 44px. For icon-only tab lists, bump `TabsList` height
   (`h-11 @md/card:h-9`) rather than overriding individual trigger min-widths (which collapses
   `flex-1` triggers below their content size).
-- Page wrappers use `px-4 lg:px-6`; legacy `mx-auto p-2` wrappers are being phased out.
+- The shell (`components/app-layout.tsx`) supplies the content gutter. A feature page's content column is `@container/main mx-auto flex flex-col gap-5 p-2` (`PAGE_ROOT` in `components/about-device/shapes.ts`) and **is** the canonical wrapper, not a legacy one. It spans the full content width: never cap it with `max-w-*` (The Full-Width Page Rule, `DESIGN.md` > Layout). The older `@container/main flex flex-col gap-5 px-4 pb-6 lg:px-6` roots under `components/monitoring/**` are not the template.
 
 ---
 

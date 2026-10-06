@@ -206,8 +206,15 @@ const { settings, isLoading, isSaving, error, saveSettings, refresh } = useFeatu
 
 // Save changes
 const result = await saveSettings({ field: "value" });
-if (result.success) { /* toast success */ }
+if (result.success) {
+  markSaved();
+  toast.success(t("feature.toast.saved"));
+} else {
+  toast.error(t("feature.toast.save_failed"), { description: result.error });
+}
 ```
+
+Every finished user action is confirmed by exactly one `sonner` toast, success or failure, fired from the component handler that owns the action (**The Toast-Confirms Rule**). The failure reason comes from the call's returned result, never from the hook's `error` state read after an `await` (a stale closure); a fading Applied/Saved chip is retired. Many hooks in this tree still return a bare `Promise<boolean>` from `saveSettings`, which carries no reason, so the handler shows a fixed translated title; changing a mutator to return `{ success, error? }` means updating every caller in the same commit, because an unchanged `if (await save())` is truthy for every outcome. See [reference/toast-confirmation.md](reference/toast-confirmation.md).
 
 | Hook | CGI Endpoint | Types File |
 |------|-------------|------------|
@@ -381,24 +388,44 @@ Event type labels, descriptions, and severity mappings for the events UI.
 
 ### Card Pattern
 
-Most settings pages use a consistent card layout:
+Settings pages use one card shape: plain header, content, and an editable card commits from its own footer (**The Card-Foot Apply Rule**, `DESIGN.md` > Layout > Named Rules).
 
 ```tsx
-<Card>
+const { saved, markSaved } = useSaveFlash();
+
+<Card className="@container/card">
   <CardHeader>
-    <CardTitle>Feature Name</CardTitle>
-    <CardDescription>Brief explanation</CardDescription>
+    <CardTitle>{t("feature.title")}</CardTitle>
+    <CardDescription>{t("feature.description")}</CardDescription>
   </CardHeader>
   <CardContent>
     {/* Form fields or data display */}
   </CardContent>
-  <CardFooter>
-    <Button onClick={save} disabled={isSaving}>
-      {isSaving ? "Saving..." : "Save Changes"}
-    </Button>
-  </CardFooter>
+  <CardFoot
+    status={isDirty ? t("feature.unsaved", { count: changeCount }) : undefined}
+    actions={
+      <>
+        <Button variant="ghost" onClick={discard} disabled={!isDirty || isSaving}>
+          {t("feature.discard")}
+        </Button>
+        <SaveButton
+          isSaving={isSaving}
+          saved={saved}
+          label={t("feature.save")}
+          disabled={!isDirty}
+          onClick={handleSave}
+        />
+      </>
+    }
+  />
 </Card>
 ```
+
+- `CardFoot` (`components/ui/card-foot.tsx`) is layout only: status on the left edge, actions on the right, `SaveButton` last, a borderless persistent row with a fixed minimum height. It takes translated content from the caller and imports neither icon set. Use it instead of shadcn `CardFooter`, whose `[.border-t]:pt-6` fights the row's padding.
+- Discard and any secondary action beside Save are ghost or `tonal-neutral`, never a stroked `outline` button. Never wrap `SaveButton` in `AnimatePresence`.
+- The `feature.*` keys above are illustrative: a real card adds its own keys to **all five** catalogs (`en id it zh-CN zh-TW`).
+- Exempt: dialogs and wizards (their own `DialogFooter`), per-row and inline actions, and operational actions that are not a draft commit.
+- **Migration Delta:** the rule governs new and reworked cards. Existing placements (the page-level `cellular/settings/pending-save-bar.tsx` and `monitoring/watchdog/save-bar.tsx`, in-card save rows, stock `CardFooter` footers) are tracked in `DESIGN.md` > Migration Deltas and are not swept.
 
 ### Loading / Error / Empty States
 
@@ -417,7 +444,7 @@ Features that require a device reboot (MBN, IMEI, IP Passthrough, Tailscale resy
 ```tsx
 const success = await saveSettings(payload);
 if (!success) {
-  toast.error("Failed to save settings");
+  toast.error(t("feature.toast.save_failed"));
   return;
 }
 
