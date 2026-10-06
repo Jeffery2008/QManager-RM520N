@@ -802,6 +802,10 @@
         "save": "Salva impostazioni",
         "failed": "Impossibile applicare {{fields}}. Le altre modifiche sono state salvate."
       },
+      "toast": {
+        "saved": "Impostazioni applicate.",
+        "save_failed": "Impossibile applicare le impostazioni."
+      },
       "apply": {
         "writing": "Scrittura sul modem",
         "recovering": "In attesa che la radio si stabilizzi",

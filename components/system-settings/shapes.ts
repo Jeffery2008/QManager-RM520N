@@ -432,8 +432,8 @@ export const DELTA = {
 } as const;
 
 /**
- * One layer of the autosave receipt. The three share a grid cell, so the strip
- * is max(idle, saving, saved) wide per locale and a save reflows nothing.
+ * One layer of the autosave receipt. The two share a grid cell, so the strip
+ * is max(idle, saving) wide per locale and a save reflows nothing.
  */
 export const SAVE_LAYER =
   "col-start-1 row-start-1 flex items-center justify-end gap-1.5 text-on-surface-variant text-xs font-medium transition-opacity duration-[var(--duration-quick)] ease-out";

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { CheckIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 
 import {
   Card,
@@ -41,13 +41,10 @@ import {
 // landed on: a live band with its own clock above a writable band with its own.
 //
 // -----------------------------------------------------------------------------
-// IT APPLIES ON CHANGE, AND THE TRIGGER IS THE CONFIRMATION
+// IT APPLIES ON CHANGE, SO THERE IS NO SAVE BUTTON
 // -----------------------------------------------------------------------------
-// The backend contract is POST `speed_limit` -> PHY bounce -> confirm-poll, so
-// there is no moment between "chosen" and "applied" for a Save button to occupy.
-// The trigger carries the three states instead — spinner "Applying…" -> check
-// "Saved" -> the value. This is the interaction the retired card had, and it is
-// kept deliberately; only the shape and the copy are new.
+// POST -> PHY bounce -> confirm-poll: the trigger shows "Applying…" then the
+// value, and the toast confirms the outcome.
 //
 // -----------------------------------------------------------------------------
 // THE CONSEQUENCE LINE IS REQUIRED, AND IT NAMES THE RISK
@@ -92,7 +89,6 @@ export interface SpeedLimitCardProps {
   speedLimit: string;
   supports2500: boolean;
   isSaving: boolean;
-  saved: boolean;
   /** False until the first successful read lands. */
   hasStatus: boolean;
   /**
@@ -111,7 +107,6 @@ export function SpeedLimitCard({
   speedLimit,
   supports2500,
   isSaving,
-  saved,
   hasStatus,
   pollFailed,
   interfacePresent,
@@ -164,11 +159,6 @@ export function SpeedLimitCard({
                         )}
                       />
                       {t(`${K}.settings.applying`)}
-                    </span>
-                  ) : saved ? (
-                    <span className="flex items-center gap-2">
-                      <CheckIcon className={FIELD_GLYPH} />
-                      {t(`${K}.settings.saved`)}
                     </span>
                   ) : (
                     <SelectValue placeholder={t(`${K}.settings.placeholder`)} />

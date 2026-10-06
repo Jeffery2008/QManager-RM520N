@@ -283,7 +283,6 @@ export function AlertsSettingsCard({
               <SaveStatus
                 isDirty={form.isDirty}
                 blocked={form.blocked}
-                saved={form.saved}
                 blockedNames={blockedNames}
               />
               <div className={SAVEBAR.ACTIONS}>
@@ -727,17 +726,15 @@ function MailerInstall({ hook }: { hook: UseAlertsReturn }) {
 }
 
 // -----------------------------------------------------------------------------
-// SaveStatus — the four truthful states of the bar's left half.
+// SaveStatus — the three truthful states of the bar's left half.
 // -----------------------------------------------------------------------------
 function SaveStatus({
   isDirty,
   blocked,
-  saved,
   blockedNames,
 }: {
   isDirty: boolean;
   blocked: boolean;
-  saved: boolean;
   blockedNames: string[];
 }) {
   const { t } = useTranslation("common");
@@ -762,16 +759,6 @@ function SaveStatus({
         <span className={SAVEBAR.PULSE} aria-hidden />
         <span className="text-on-surface truncate font-medium">
           {t("alerts.channels.save.dirty")}
-        </span>
-      </p>
-    );
-  }
-  if (saved) {
-    return (
-      <p className={cn(SAVEBAR.STATUS, "text-success-on-surface min-w-0")}>
-        <CheckCircle2Icon className="size-3.5 flex-none" aria-hidden />
-        <span className="truncate font-medium">
-          {t("alerts.channels.save.saved")}
         </span>
       </p>
     );

@@ -95,7 +95,6 @@
       "row_label": "Batas kecepatan",
       "placeholder": "Pilih kecepatan",
       "applying": "Menerapkan…",
-      "saved": "Tersimpan",
       "group_label": "Batas kecepatan",
       "option_auto": "Otomatis (maks)",
       "option_10": "10 Mbps",
@@ -986,7 +985,6 @@
         "dirty": "Perubahan belum tersimpan",
         "discard": "Buang",
         "failed": "Pengaturan tidak dapat disimpan.",
-        "saved": "Tersimpan",
         "succeeded": "Pengaturan peringatan tersimpan"
       },
       "secret_saved": "Tersimpan",
@@ -1421,7 +1419,6 @@
       "action": "Simpan",
       "clean": "Semua perubahan tersimpan",
       "dirty": "Anda memiliki perubahan yang belum disimpan",
-      "saved": "Tersimpan",
       "blockedIn": "Periksa {{fields}} sebelum menyimpan",
       "toastOk": "Pengaturan watchdog tersimpan",
       "toastFail": "Tidak dapat menyimpan pengaturan watchdog",

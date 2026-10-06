@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { AlertCircleIcon, CheckCircle2Icon } from "lucide-react";
+import { AlertCircleIcon } from "lucide-react";
 
 import {
   AlertDialog,
@@ -69,7 +69,6 @@ export function SaveBar({ form }: { form: WatchdogForm }) {
       <SaveStatus
         isDirty={form.isDirty}
         blocked={blocked}
-        saved={form.saved}
         nameList={nameList}
       />
       <div className={SAVEBAR.ACTIONS}>
@@ -145,16 +144,14 @@ export function SaveBar({ form }: { form: WatchdogForm }) {
   );
 }
 
-/** Four honest states. Blocked names the control, because there is no tab. */
+/** Three honest states. Blocked names the control, because there is no tab. */
 function SaveStatus({
   isDirty,
   blocked,
-  saved,
   nameList,
 }: {
   isDirty: boolean;
   blocked: boolean;
-  saved: boolean;
   nameList: string;
 }) {
   const { t } = useTranslation("common");
@@ -176,14 +173,6 @@ function SaveStatus({
         <span className="text-on-surface truncate font-medium">
           {t("watchdog.save.dirty")}
         </span>
-      </p>
-    );
-  }
-  if (saved) {
-    return (
-      <p role="status" className={cn(SAVEBAR.STATUS, "text-success-on-surface min-w-0")}>
-        <CheckCircle2Icon className="size-3.5 flex-none" aria-hidden />
-        <span className="truncate font-medium">{t("watchdog.save.saved")}</span>
       </p>
     );
   }

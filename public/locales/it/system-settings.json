@@ -184,8 +184,7 @@
       },
       "stale": "QManager ha perso il contatto durante l'aggiornamento. Questi sono gli ultimi valori letti dal dispositivo.",
       "autosave": "Salva automaticamente",
-      "saving": "Salvataggio…",
-      "saved": "Salvato"
+      "saving": "Salvataggio…"
     },
     "toast": {
       "enabled": "Riavvio pianificato attivato",

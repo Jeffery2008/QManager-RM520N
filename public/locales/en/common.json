@@ -95,7 +95,6 @@
       "row_label": "Speed limit",
       "placeholder": "Select speed",
       "applying": "Applying…",
-      "saved": "Saved",
       "group_label": "Speed limit",
       "option_auto": "Auto (max)",
       "option_10": "10 Mbps",
@@ -1015,7 +1014,6 @@
       "save": {
         "clean": "All changes saved",
         "dirty": "Unsaved changes",
-        "saved": "Saved",
         "blocked": "Fix the highlighted fields",
         "blocked_in": "Fix the errors in {{channels}}",
         "discard": "Discard",
@@ -1421,7 +1419,6 @@
       "action": "Save",
       "clean": "All changes saved",
       "dirty": "You have unsaved changes",
-      "saved": "Saved",
       "blockedIn": "Check {{fields}} before saving",
       "toastOk": "Watchdog settings saved",
       "toastFail": "Could not save the watchdog settings",
