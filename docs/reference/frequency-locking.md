@@ -333,7 +333,7 @@ Everything shape- or tone-bearing lives in `components/cellular/frequency-lockin
 | `EMPTY` | The NR card's empty-list block |
 | `NOTICE`, `NOTICE_TONE` | Card-scoped notices: `warning` / `neutral` / `info`, three glyphs, no shared marks |
 | `APPLY_BAR` | The bar. `READBACK` is mono per the Machine-Voice Rule |
-| `PILL_ACTION`, `PILL_ACTION_PLAIN`, `PILL_QUIET` | Action sizing, matched to tower locking's scale so the two pages feel like one |
+| `PILL_QUIET` | The smaller Clear fields pill, matched to tower locking's so the two pages feel like one; the other actions use the Button's own `size="action"` |
 | `LOCK_BADGE`, `EXPERIMENTAL_BADGE`, `BADGE_GLYPH_SIZE` | Tone + glyph maps, keyed onto the exported `BadgeVariant` type so an unmapped state fails the build |
 | `lockPosture`, `channelFrequencyLabel`, `isChannelAllowed` | The three pure helpers the components read |
 | `SKELETON_SHAPE` | Loaded geometry restated once so skeletons mirror by **import**, not by estimate |
@@ -418,7 +418,7 @@ Both incumbent cards carried a per-leg `Switch`. It is gone, and it must not com
 
 The footer button is now the only write path, and it is always behind an `AlertDialog`. There is no `Switch` anywhere on this surface.
 
-Each footer is the Card-Foot Apply row with no status slot (`CARD_FOOT` + `CARD_FOOT_ACTIONS` from `components/ui/card-foot.tsx`, right-aligned) and reads, left to right: **Clear fields** (`PILL_QUIET` + `variant="tonal-neutral"`), **Clear LTE/NR lock** (`PILL_ACTION_PLAIN` + `variant="tonal-neutral"`, text only), then **Apply LTE/NR lock** (a `SaveButton` on `PILL_ACTION_PLAIN`) last. A form reset that touches nothing on the modem, then the two writes — the same construction Band Locking and Tower Locking use. Clear lock was a stroked `variant="outline"` with a `lock_open` glyph until 2026-10-06; DESIGN.md forbids a stroke beside a Save.
+Each footer is the Card-Foot Apply row with no status slot (`CARD_FOOT` + `CARD_FOOT_ACTIONS` from `components/ui/card-foot.tsx`, right-aligned) and reads, left to right: **Clear fields** (`PILL_QUIET` + `variant="tonal-neutral"`), **Clear LTE/NR lock** (`size="action"` + `variant="tonal-neutral"`, text only), then **Apply LTE/NR lock** (a `SaveButton` at `size="action"`) last. A form reset that touches nothing on the modem, then the two writes — the same construction Band Locking and Tower Locking use. Clear lock was a stroked `variant="outline"` with a `lock_open` glyph until 2026-10-06; DESIGN.md forbids a stroke beside a Save.
 
 ### Both cards gate Apply on a real change
 

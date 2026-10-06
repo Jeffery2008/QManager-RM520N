@@ -157,17 +157,11 @@ One peer card, five rows, each with a required consequence sentence that changes
 
 Draft state is `Partial<Draft>` edits over a memoised baseline, never a `useEffect` sync — see the same section in [`ttl-mtu.md`](./ttl-mtu.md) for why.
 
-### All five Select triggers were rendering at 36 px on a 42 px system
+### Fields
 
-`select.tsx:40` ships `data-[size=default]:h-9`. That is an attribute selector plus a class — specificity **(0,2,0)** — and it beats a bare `h-[2.625rem]` at (0,1,0). `tailwind-merge` keeps both, because they sit in different modifier groups, so the primitive simply wins and the control renders 36 px against a call site asking for 42.
+The five Select triggers sit on `ROW_GROUP` (`surface-container`), so each passes `host="container"` and the primitive paints `surface-container-high` (The Field-Step Rule). `FIELD` in `shapes.ts` carries only width and type; height, radius and fill come from `fieldVariants` in `components/ui/input.tsx`.
 
-It looks approximately right, which is why it survived review on this page for its whole life. `shapes.ts` now writes `h-[2.625rem]!` and the trigger measures **42 px**.
-
-The dark fill has the same shape of problem, one step worse: `select.tsx`'s own `dark:bg-input/30` is also (0,2,0), so an unprefixed fill loses outright; once *both* halves are `dark:`-prefixed they **tie**, and a tie is decided by Tailwind's deterministic name sort (`bg-input…` before `bg-surface-…` only because *i* precedes *s*). `FIELD` therefore writes `dark:bg-surface-container-high!` and wins by construction rather than by alphabet.
-
-The manual MAC entry uses a raw `<input>` rather than the `Input` primitive, for the same reason plus one more: `Input` carries `md:text-sm`, a **viewport** breakpoint leaking into a container-query surface.
-
-> ℹ️ NOTE: these are local corrections. `input.tsx` / `select.tsx` / `textarea.tsx` remain an open product-wide Migration Delta in `DESIGN.md`; migrating the primitives retires every marker here.
+The manual MAC entry is a raw `<input>` that calls `fieldVariants({ host: "container" })` directly, with `MAC_FIELD` adding the 42px height and mono type. It does not use the `Input` primitive because `Input` carries `md:text-sm`, a **viewport** breakpoint that would override the row's type on a container-query surface.
 
 ## Open question: the DNS-proxy tile asserts nothing about Custom DNS
 

@@ -44,7 +44,7 @@ byte-for-byte across two files within a day of being written.
 
 | Constant | Why it is the way it is |
 | --- | --- |
-| `FIELD_HEIGHT` | Carries its `!` **inside** the string. Tailwind extracts candidates from raw source text, so `` `${FIELD_HEIGHT}!` `` never produces a literal and the marker silently does nothing. `select.tsx:40`'s `data-[size=default]:h-9` then wins at (0,2,0) and the control renders 36px against a call site asking for 42. |
+| `FIELD_HEIGHT` | The 42px field and action height, used only by the `SKELETON` placeholders. The live fields take their height from `fieldVariants` and the actions from `size="action"`, so this constant mirrors the primitives rather than sizing anything. |
 | `CARD_SHELL` | The shadow is `!`-marked because `twMerge` reads an arbitrary shadow value as a colour, so name-sort would otherwise decide against `card.tsx`'s own `shadow-sm`. |
 | `TILE.ROOT` | 104px **pinned**, never `min-h`. A floor cannot be a mirror — the skeleton wears `ROOT` itself so the two cannot drift. |
 | `CARD_GRID` | `*:h-full *:*:data-[slot=card]:h-full` — the second step is what lets the height lock reach **through** each card's motion wrapper. Drop it and the Symmetric-Pair lock dies silently. |

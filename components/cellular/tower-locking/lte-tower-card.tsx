@@ -831,7 +831,7 @@ export default function LteTowerCard({
                         >
                           <SelectTrigger
                             id={earfcnId}
-                            host="container"
+                            host={blank ? "surface" : "container"}
                             className={SELECT_CONTROL}
                             aria-label={t("tower_locking.fields.earfcn")}
                           >
@@ -988,7 +988,7 @@ export default function LteTowerCard({
                           inputMode="numeric"
                           autoComplete="off"
                           placeholder={t("tower_locking.live.tile_earfcn")}
-                          host="container"
+                          host={blank ? "surface" : "container"}
                           className={`${FIELD_CONTROL} font-mono tabular-nums`}
                           value={slot.earfcn}
                           onChange={(event) =>
@@ -1012,7 +1012,7 @@ export default function LteTowerCard({
                         inputMode="numeric"
                         autoComplete="off"
                         placeholder={t("tower_locking.live.tile_pci")}
-                        host="container"
+                        host={blank ? "surface" : "container"}
                         className={`${FIELD_CONTROL} font-mono tabular-nums`}
                         value={slot.pci}
                         onChange={(event) =>

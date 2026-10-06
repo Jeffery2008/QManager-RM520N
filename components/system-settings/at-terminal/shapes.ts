@@ -234,40 +234,22 @@ export const GATE = {
 // The prompt
 // -----------------------------------------------------------------------------
 
-/**
- * The 42px control height, IMPORTANT-MARKED and written exactly once. The
- * marker lives INSIDE the literal: appended at a call site it never reaches
- * Tailwind's scanner, so the rule is never generated at all.
- */
-const PROMPT_HEIGHT = "h-[2.625rem]!";
+const PROMPT_HEIGHT = "h-[2.625rem]";
 
 /**
  * The family's `FOCUS_RING`, on the `focus-within` axis — the ring belongs to
- * the pill, and the thing that takes focus is the bare input inside it. The gap
+ * the bar, and the thing that takes focus is the bare input inside it. The gap
  * takes the CARD's ground, which is what the bar actually sits on.
  */
 const PROMPT_RING =
   "focus-within:outline-none focus-within:ring-[3px] focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-surface";
 
-/**
- * The prompt bar, replacing a flush square-cornered `InputGroup` with a hairline
- * and a shadow.
- *
- * THE FILL IS ONE STEP ABOVE ITS HOST. The bar's host is the card, which is
- * `bg-surface`, so `surface-container` is exactly host + 1 (The Field-Step
- * Rule). The dark half is explicit and important-marked for the same reason the
- * family's `FIELD` is: once both rules are prefixed they tie, and a tie is
- * decided by Tailwind's name sort rather than by the call site.
- */
+/** The prompt bar: a 10px field shell (SHELL resolution) holding a bare input and the Send pill. */
 export const PROMPT = {
-  ROOT: `flex ${PROMPT_HEIGHT} w-full items-center gap-2 rounded-pill bg-surface-container dark:bg-surface-container! pr-1.5 pl-4 ${PROMPT_RING}`,
+  ROOT: `flex ${PROMPT_HEIGHT} w-full items-center gap-2 rounded-field bg-surface-container pr-1.5 pl-4 ${PROMPT_RING}`,
   /** The `❯` glyph. A prompt sigil, so mono. */
   GLYPH: "text-on-surface-variant flex-none font-mono text-sm leading-none select-none",
-  /**
-   * A bare input rather than the `Input` primitive: the primitive ships its own
-   * radius, hairline and dark fill, and the pill around it already carries all
-   * three.
-   */
+  /** A bare input: the bar is the field, so the control stays transparent. */
   INPUT:
     "placeholder:text-on-surface-variant min-w-0 flex-1 border-0 bg-transparent font-mono text-[0.84375rem] outline-none disabled:cursor-not-allowed disabled:opacity-50",
   /**
@@ -315,7 +297,7 @@ export const MANAGE = {
    * Two `Input`s on the dialog ground. The basis makes the row wrap instead of
    * squeezing a mono AT command into ~90px beside a flex-none Add pill.
    */
-  FIELD: `min-w-0 flex-1 basis-40 text-[0.84375rem] aria-invalid:ring-[3px] aria-invalid:ring-destructive/40 ${FOCUS_RING_ON_SURFACE}`,
+  FIELD: `min-w-0 flex-1 basis-40 text-[0.84375rem] md:text-[0.84375rem] aria-invalid:ring-[3px] aria-invalid:ring-destructive/40 ${FOCUS_RING_ON_SURFACE}`,
   FIELD_MONO: "font-mono",
   ERROR: "text-destructive-on-surface text-xs",
 } as const;

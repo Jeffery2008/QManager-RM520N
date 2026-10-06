@@ -648,7 +648,7 @@ Everything shape- or tone-bearing on this surface lives in `components/cellular/
 | `CARRIER_DISC_GLYPH` | `Record<"LTE" \| "NR", MaterialSymbolName>` — `signal_cellular_alt` / `cell_tower`. Two distinct marks for a single-slot indicator |
 | `BAND_CHIP`, `BAND_CHIP_LIVE_RING`, `bandChipClass`, `bandChipA11yKey`, `BAND_LEGEND` | The chip contract (above). `bandChipFill` is now **module-local** — its only consumer is `bandChipClass`, and a caller composing the fill by hand could pair it with the wrong `ROOT` or drop the live ring, which is the two-axis chip's one failure mode. `BAND_LEGEND`'s rationale comment carries the "Currently locked" naming rule |
 | `NOTICE`, `NOTICE_TONE` | The card-scoped error slot |
-| `PILL_ACTION`, `PILL_ACTION_PLAIN`, `PILL_QUIET` | Action sizing. `PILL_QUIET` is deliberately smaller: Select all / Clear change a selection, they do not write to the modem, and three equal-weight pills in one footer loses which is consequential. It carries **size only** — no fill, no ink |
+| `PILL_QUIET` | The smaller selection pill; the page actions use the Button's own `size="action"`. `PILL_QUIET` is deliberately smaller: Select all / Clear change a selection, they do not write to the modem, and three equal-weight pills in one footer loses which is consequential. It carries **size only** — no fill, no ink |
 | `FAILOVER_BADGE`, `CATEGORY_BADGE`, `BADGE_GLYPH_SIZE` | Tone + glyph maps, keyed onto the exported `BadgeVariant` type so an unmapped state fails the build |
 | `POSTURE_GLYPH` | **Live now** (`lock` / `lock_open` / `help`), indexed by the aggregate `overallPosture` derived in `live-band-hero.tsx`. It was an unreferenced export while the disc hard-coded one glyph — see The disc is a real state indicator now |
 | `categoryPosture` | `(locked, supported) => BandPosture`. The single derivation shared by the rail's rows, the rail subtitle and the card's header chip |
@@ -662,7 +662,7 @@ Everything shape- or tone-bearing on this surface lives in `components/cellular/
 
 `PILL_QUIET` sizes those two footer buttons but deliberately carries **no fill and no ink of its own** — the `variant="tonal-neutral"` Button supplies both. It used to be `variant="ghost"` plus a hardcoded `text-on-surface-variant` in the constant, and a ghost button has no resting fill at all: sitting beside a filled `Apply`, it read as *disabled or absent* rather than as a quieter action. `tonal-neutral` gives it a real but muted presence (`surface-container`) instead of asking the reader to discover it by hovering.
 
-The `CardFoot` row reads, left to right: pending count (status), **Select all**, **Clear** (both `PILL_QUIET`), **Restore all supported** (`PILL_ACTION_PLAIN` + `tonal-neutral`, text only), then the `SaveButton` last. Restore all was a stroked `variant="outline"` with a glyph until 2026-10-06; DESIGN.md forbids a stroke beside a Save, so all three secondary actions share one fill and differ only in size.
+The `CardFoot` row reads, left to right: pending count (status), **Select all**, **Clear** (both `PILL_QUIET`), **Restore all supported** (`size="action"` + `tonal-neutral`, text only), then the `SaveButton` last. Restore all was a stroked `variant="outline"` with a glyph until 2026-10-06; DESIGN.md forbids a stroke beside a Save, so all three secondary actions share one fill and differ only in size.
 
 Both chip hovers are `enabled:`-scoped. Tailwind's `hover:` does not exclude a disabled element on its own, so an unscoped hover would light up every chip on a gated card — advertising an interaction that is switched off.
 
@@ -678,7 +678,7 @@ It exists rather than a copy-pasted `<h1>` because `text-3xl font-bold mb-2` app
 
 It is deliberately **not** `components/cellular/radio/page-header.tsx`. That component owns Radio Information's freshness chip, its clipboard action and its own namespace lookups; it is a page, not a primitive.
 
-Band Locking uses its optional `actions` slot for the Refresh pill (styled by the page's own `PILL_ACTION`, since `CellularPageHeader` deliberately does not style its callers' buttons). See [Refreshing the page](#refreshing-the-page).
+Band Locking uses its optional `actions` slot for the Refresh pill (`size="action"`, set at the call site because `CellularPageHeader` deliberately does not style its callers' buttons). See [Refreshing the page](#refreshing-the-page).
 
 ## Props contracts
 

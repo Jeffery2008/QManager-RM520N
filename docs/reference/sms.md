@@ -265,8 +265,8 @@ The route was rebuilt on the tonal design system (`DESIGN.md`). The 961-line `sm
 
 Added 2026-08-20. SMS was the only one of the twelve `/cellular/` route families **without** a `shapes.ts`, and it had every symptom the pattern exists to prevent — none of them visible in any single file, which is why they survived review:
 
-- `PILL_ACTION` existed in **four byte-identical copies** across three files (`sms-center.tsx`, `sms-compose-dialog.tsx`, twice inline in `states.tsx`), plus a fifth in `forwarding/sms-forwarding-card.tsx`.
-- **Three unrelated control heights** inside one card — 42px, 40px and 36px — with no constant naming the split, so nothing recorded that the 36px toolbar was a deliberate density choice rather than drift. `TOOLBAR_PILL` now carries both the height *and* the `pointer-coarse:h-11` bump that keeps it a legal 44px touch target, so the two facts travel together.
+- `PILL_ACTION` existed in **four byte-identical copies** across three files (`sms-center.tsx`, `sms-compose-dialog.tsx`, twice inline in `states.tsx`), plus a fifth in `forwarding/sms-forwarding-card.tsx`. All of them are now the Button's own `size="action"` (2026-10-06).
+- **Three unrelated control heights** inside one card — 42px, 40px and 36px — with no constant naming the split, so nothing recorded that the 36px toolbar was a deliberate density choice rather than drift. `TOOLBAR_PILL` now names the 36px height; the `pointer-coarse:h-11` bump that keeps it a legal 44px touch target comes from the Button's `default` size.
 - `DIALOG_TONAL = DIALOG_ACTION`, an alias to nothing, left over from a split that no longer exists.
 - **Skeletons that guessed** rather than mirrored — see [Skeletons are mirrors again](#skeletons-are-mirrors-again).
 

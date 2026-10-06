@@ -12,6 +12,11 @@ Every settings card in the app now saves from the same place — a row along the
 - **Buttons beside Save are quieter.** **Restore all supported** (band locking), **Clear LTE/NR lock** (frequency locking), **Remove Lock** (tower locking) and **Add resolver** (Custom DNS) are now plain tinted buttons with no outline or icon, so **Save** is the one button that stands out.
 - **Saving is confirmed by a toast, not a label that fades.** The "Saved" text that blinked beside the Save button in Alerts, Watchdog, Scheduled Reboot and the Ethernet speed limit is gone, and **Cellular → Settings** now shows a toast when your changes apply (or names the settings that failed). (The five fading labels all ran on a 1.8 s timer; the toast already existed on four of them.)
 - **"No automatic recovery" is now blue.** On **Cellular → Frequency Locking**, the chip on the locked verdict is a filled info chip instead of a grey one, so it reads as a fact rather than a disabled state.
+- **Buttons and fields look the same everywhere.** Every button is a rounded pill, main page actions share one 42px size (the Monitoring pages' buttons grew to match), and text boxes and dropdowns share one shape and fill on every page. (`Button size="action"`; `Input`, `Select`, `Textarea` and `InputGroup` share one field style with a `host` fill.)
+
+## 🐛 Fixes
+
+- **TTL & MTU Apply buttons match their Discard buttons.** On **Local Network → TTL & MTU Settings**, the Apply buttons were smaller and squarer than the Discard pill beside them; they are now the same 42px pill.
 
 ## 📥 Installation
 

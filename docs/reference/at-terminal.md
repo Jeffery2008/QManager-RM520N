@@ -300,9 +300,8 @@ a product surface. Only the launch seam above is in scope for a design pass.
 `components/system-settings/at-terminal/shapes.ts` follows the `logs/` /
 `connection-quality/` precedent (documented in [`languages.md`](./languages.md)'s
 warning about the family's two competing conventions): it imports and re-exports
-`CARD_DESC`, `CARD_PAD`, `CARD_SHELL`, `CARD_TITLE`, `FOCUS_RING`, `PAGE_HEAD`,
-`PAGE_ROOT` and `PILL_ACTION` from `components/system-settings/shapes.ts` one
-level up, and restates everything the console itself invents — the transcript
+`CARD_DESC`, `CARD_PAD`, `CARD_SHELL`, `CARD_TITLE`, `FOCUS_RING`, `PAGE_HEAD`
+and `PAGE_ROOT` from `components/system-settings/shapes.ts` one level up, and restates everything the console itself invents — the transcript
 row, the gate, the prompt bar, the popover.
 
 **The transcript deliberately breaks from the family's tonal-row convention.**
@@ -315,24 +314,15 @@ individually-padded tonal pills. `shapes.ts`'s own header comment states this
 explicitly as the one place this module's grammar diverges from its siblings'.
 
 Four new geometry numbers this route adds, none borrowed from a sibling: a 42px
-prompt field (`PROMPT_HEIGHT`, important-marked and written exactly once — see
-the Tailwind hazard note below), a 36px header action, a 32px confirmation-gate
+prompt field (`PROMPT_HEIGHT`, a 10px field shell), a 36px header action, a 32px confirmation-gate
 disc, and a 28px per-row copy button.
 
-> ⚠️ WARNING: `PROMPT_HEIGHT` and `MANAGE.FIELD`'s height both carry
-> `h-[2.625rem]!` with the important marker **inside** the exported string
-> literal, for the reason every other important-marked constant in this family
-> carries it there: a marker appended at the call site never appears as a literal
-> in source, so Tailwind's scanner never emits the rule at all, and `tsc`, ESLint
-> and `next build` all stay green while the height silently does nothing. See
-> [`tailwind-prose-hazard.md`](./tailwind-prose-hazard.md).
-
 The prompt bar's fill (`PROMPT.ROOT`) is `surface-container` — one step above the
-card's own `surface` — following the family's Field-Step Rule, with the dark-mode
-half written out explicitly and important-marked for the same name-sort reason:
-once both the primitive's own dark fill and the call site's are prefixed, they
-tie, and Tailwind's alphabetical tie-break would otherwise decide the surface
-rather than the call site.
+card's own `surface` — following the Field-Step Rule. The bar is a SHELL: a plain
+`div` carries the fill and the focus ring, and the raw `<input>` inside it
+(`PROMPT.INPUT`) is `bg-transparent` with no border. The Manage dialog's two
+fields are ordinary `Input`s and take their 42px height and fill from the
+primitive.
 
 ---
 

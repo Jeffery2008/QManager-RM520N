@@ -40,7 +40,7 @@ Nothing in that rebuild touched a CGI script, a systemd unit, the installer, or 
 | `REORDER_ROW` | Network Priority's draggable rank rows |
 | `RANK_PILL`, `RAT_RANK_TONE` | Network Priority's rank numeral |
 | `CHOICE_ROW` | APN Management's MBN bundle list |
-| ~~`FIELD_INPUT`~~ | **No longer exported** as of 2026-08-30 — it is module-private, and the two `FIELD_SHELL` composites below are the API |
+| ~~`FIELD_INPUT`~~ | **Deleted** 2026-10-06. `FIELD_SHELL` now rides the `Input` primitive and needs no input half of its own |
 | `FIELD_SHELL` | IMEI Settings (both cards), APN Management. Its `FIELD_SHELL_ON_FILL` twin was **deleted** with the row promotion on 2026-08-30 — the identically-named export still in `components/cellular/sms/shapes.ts` belongs to the SMS family and is unrelated |
 | `INLINE_ERROR` | Inline validation copy on a plain card |
 | `SECTION_DIVIDER` | A rule *between sections inside* a card |
@@ -57,7 +57,7 @@ That change was frontend-only and scoped to `/cellular/settings`, but it edits t
 | `RATE_CEILING` | **Added** | Band A2's summary line and disclosure panel |
 | `SEGMENTED.GLYPH_ACTIVE` / `.GLYPH_RESERVED` | **Added** | The reserved-glyph rule below — a layout contract, not a decoration |
 | `SEGMENTED_BREAKPOINTS["5xl"]` | **Added** | A fourth step at 64 rem / 1024 px, reachable through `segmentedBreakpoint("5xl")` |
-| `FIELD_INPUT` | **`export` removed** | Module-private now. Nothing outside `shapes.ts` imported it — the two `FIELD_SHELL` composites are what call sites use, and they kept their importers |
+| `FIELD_INPUT` | **`export` removed** | Module-private from 2026-08-30, then deleted 2026-10-06 when the fields moved onto the `Input` primitive |
 | `HERO_SHELL`, `HERO_PAD`, `HERO_RAIL`, `HERO_RAIL_TONE`, `HERO_BODY`, `HERO_BODY_CELL`, `HERO_BODY_PARAMS_CELL`, `HERO_FOOTNOTE`, `HERO_PARAMS` | **Deleted** | Their only consumer, `ModemHeroCard`, is deleted. See [cellular-basic-settings.md](cellular-basic-settings.md) |
 | `PAGE_TITLE`, `PAGE_DESCRIPTION` | **Deleted** | Consumerless — `CellularPageHeader` owns the page type scale |
 
@@ -98,28 +98,13 @@ Two invariants the chip carries regardless of hue:
 - **The arrow glyph is the direction's second channel**, never optional. At container lightness in dark mode this system's tonal pairs collapse under red-green colour-vision simulation, so on a dark block the arrow is the information and the hue is reinforcement.
 - **Fill pairs, never an alpha wash.** An earlier draft wrote `bg-lte/25`; an alpha is a different perceived lightness in each theme, where `bg-downlink` + `text-downlink-foreground` is a real pair in both. The pairs are declared in `shapes.ts`, so a consumer must **not** also set an ink class on the chip.
 
-### `FIELD_SHELL`, and why `components/ui/input.tsx` is unusable here
+### `FIELD_SHELL` and `SELECT_TRIGGER`
 
-Free-text fields on this family are a **raw `<input>`** carrying `FIELD_SHELL` — not the shadcn `Input` primitive.
+Free-text fields on this family are the `Input` primitive carrying `FIELD_SHELL`; dropdowns are `SelectTrigger` carrying `SELECT_TRIGGER`. Both constants are layout and voice only: the primitives own the 42px height, the `rounded-field` radius and the fill. Inside a `ROW_GROUP` (`surface-container`) the call site passes `host="container"` (DESIGN.md > The Field-Step Rule).
 
-> ℹ️ NOTE: this used to be a **pair**. `FIELD_SHELL_ON_FILL` was the twin for a promoted (dirty) row, and it went with the promotion on 2026-08-30 — no row can sit on a `primary-container` fill any more, so a second ink spelling has nothing to be correct against. One export now. An identically-named `FIELD_SHELL_ON_FILL` still exists in `components/cellular/sms/shapes.ts`; that is the SMS family's own module and is unrelated to this one.
+`FIELD_SHELL` restates the type size as `md:text-[0.84375rem]`. `Input` ships `md:text-sm`, and `tailwind-merge` de-duplicates per modifier, so an unprefixed size cannot displace it: without the `md:` restatement the field renders 14px above a 768px viewport while every sibling renders 13.5px.
 
-**Short version:** `tailwind-merge` de-duplicates classes *per modifier*, so an unprefixed override cannot displace a `dark:`- or `md:`-scoped class. Both survive, and the scoped one wins wherever it applies.
-
-The mechanism matters because the failure is invisible in review. `input.tsx` ships `dark:bg-input/30` and `md:text-sm`. Handing it `SELECT_TRIGGER`'s unprefixed `bg-surface-container-high` and text size does **not** replace those — tailwind-merge treats `bg-*` and `dark:bg-*` as different groups, keeps both, and the `dark:` rule wins in dark mode. So the field silently reverts to the primitive's fill in dark mode and to the primitive's type size above 768 px: the two axes a desktop light-mode review never looks at.
-
-The primitive smuggles three more things past the same boundary:
-
-| Primitive class | What it costs here |
-| --------------- | ------------------ |
-| `md:text-sm` | The field renders 14 px above 768 px while every sibling renders 13.5 px |
-| `transition-[color,box-shadow]` with no duration | A raw Tailwind 150 ms — off the `--duration-*` scale, so it silently will not retune |
-| `shadow-xs` | A cast shadow on an input, which DESIGN.md > Inputs forbids |
-| `placeholder:text-muted-foreground` | A legacy token surviving in the rest state |
-
-Overriding all of these at the call site means restating `SELECT_TRIGGER`'s own numbers as `dark:` and `md:` variants — which is the drift `shapes.ts` exists to prevent. Two independent builders hit this on two different pages in the same change and each wrote a local constant; `FIELD_INPUT` is that constant, promoted once so a third page cannot write a fourth version. It is **module-private** (`shapes.ts:807`) — call sites compose it through `FIELD_SHELL` (`:816`), which is the API.
-
-> ⚠️ WARNING: **order inside the template literal is load-bearing.** `FIELD_SHELL` is `` `${SELECT_TRIGGER} ${FIELD_INPUT}` ``, and the two halves contribute classes to the same tailwind-merge groups, so the later one wins. The retired `FIELD_SHELL_ON_FILL` depended on exactly this to append its placeholder ink last; if a promoted-row variant is ever reintroduced anywhere, it inherits the same trap. Reordering the literal breaks it silently — there is no build error and no visual difference in the state a reviewer usually looks at.
+> ℹ️ NOTE: an identically-named `FIELD_SHELL_ON_FILL` exists in `components/cellular/sms/shapes.ts`. That is the SMS family's own module; this family's twin was deleted with the row promotion on 2026-08-30.
 
 `font-mono` on these fields is not a costume — every consumer holds an identifier the device emits verbatim (an IMEI, a TAC, an APN), and the letter-spacing is what makes fifteen undifferentiated digits scannable. The **placeholder** deliberately drops back to `font-sans`: a placeholder is human-authored instruction, not machine output, and mono'd prompt text reads as though the field were already filled.
 
@@ -436,12 +421,12 @@ The row now reveals only for the **Custom code** option, which is the one case w
 
 Copy and "Look up online" sat on a second row under the field. Neither is a decision, both operate on the value above them, and stacked they read as a toolbar for the whole section rather than as two things you can do to *this* number. They are now addons inside the field itself — the outbound link leads, the number is the content, copy closes.
 
-> ⚠️ WARNING: **Do not reach for `components/ui/input-group.tsx` on this surface.** The stock primitive is a hairline `border` over `rounded-md` with `dark:bg-input/30` and `text-muted-foreground`: a stroke where this system uses a fill (The No-Hairline-On-Fill Rule), the legacy `--radius` chain where this system uses the role scale, and precisely the `dark:`-scoped fill that `FIELD_VOICE`'s own note documents as surviving an unprefixed override through tailwind-merge. `CHECK_GROUP` is composed from `CONTROL_BOX` instead, so it is the **same** 42 px pill as the fields above it rather than a lookalike.
+`CHECK_GROUP.ROOT` draws the canon field by hand as a SHELL (DESIGN.md > The Field-Step Rule): 42px, `rounded-field`, a transparent border and `bg-surface-container` on the card host. The group carries the fill and the focus ring; the raw `<input>` inside (`CHECK_GROUP.INPUT`) is transparent.
 
 Three things about it are load-bearing:
 
-- **The ring is on the shell, not the input.** `has-[input:focus-visible]` lights the whole group. A ring drawn around a transparent child that fills only the middle of the box would trace a rectangle through the middle of a pill.
-- **The lead ink is `text-primary-on-surface`, not `text-primary`.** Measured on the shipped tokens: `text-primary` on this group's `surface-container-high` fill is **4.18:1** in dark mode, under the AA floor; `primary-on-surface` reads 5.07 dark / 4.54 light. `--primary` is the strong fill and belongs under `--primary-foreground` — same slot mistake, same fix as `INLINE_ERROR`.
+- **The ring is on the shell, not the input.** `has-[input:focus-visible]` lights the whole group. A ring drawn around a transparent child that fills only the middle of the box would trace a rectangle through the middle of the box.
+- **The lead ink is `text-primary-on-surface`, not `text-primary`.** Measured on the shipped tokens: `text-primary` on a `surface-container-high` fill is **4.18:1** in dark mode, under the AA floor; `primary-on-surface` reads 5.07 dark / 4.54 light. `--primary` is the strong fill and belongs under `--primary-foreground` — same slot mistake, same fix as `INLINE_ERROR`.
 - **The lead's 44 px target grows down, up and left — never right.** A symmetric `::before` inset would overhang the input beside it, and a user aiming at the field would open somebody else's website instead. Verified with `elementFromPoint` at all four edges.
 
 The lead's **label** hides below `@md/card` and the glyph carries the action there; the `aria-label` is unconditional, so the accessible name never changes. That step is not cosmetic — the workbench's own column at the `@4xl/main` breakpoint is ~325 px of content, and a 15-digit mono identifier plus a labelled pill plus a copy target does not fit on one line. Measured at a 390 px viewport: the input's `scrollWidth === clientWidth`, so the value never scrolls out of its own field.

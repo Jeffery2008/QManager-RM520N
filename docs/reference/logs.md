@@ -397,7 +397,7 @@ one.
 deliberate two-source split.
 
 **Imported** from `components/system-settings/shapes.ts` — the same family, one level up:
-`PAGE_ROOT`, `PAGE_HEAD`, `PILL_ACTION`, `PILL_GLYPH`, `CARD_SHELL`, `CARD_PAD`, `CARD_TITLE`,
+`PAGE_ROOT`, `PAGE_HEAD`, `PILL_GLYPH`, `CARD_SHELL`, `CARD_PAD`, `CARD_TITLE`,
 `CARD_DESC`, `FOCUS_RING`, `FIELD`, `COARSE_TARGET`, `EYEBROW`, `VALUE`, `VALUE_TEXT`,
 `CAPTION`, `VALUE_NONE`, `TILE`, `DISC_TONE`, `DISC_TRANSITION`, `BAND`, `SKELETON`. These are
 re-exported so components in this directory import from one place. Re-declaring twenty names

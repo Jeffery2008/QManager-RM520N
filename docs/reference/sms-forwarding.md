@@ -153,13 +153,9 @@ Enable toggle + destination number + save. No status display, no test button, no
 
 **The error branch widened from `error && !data` to `!data`.** Previously a first fetch that resolved with *no data and no error string* fell through to the form and rendered an unchecked toggle over a blank number field — which **asserts** that forwarding is off when the truth is that the config was never read. Any state without data now takes the error branch.
 
-#### The dark-mode field bug (`FIELD_SHELL`)
+#### The destination field (`FIELD_SHELL`)
 
-The destination field is a **raw `<input>` on `FIELD_SHELL`**, not `components/ui/input.tsx`. This is a real rendering bug that shipped, not a stylistic preference.
-
-`components/ui/input.tsx` ships `dark:bg-input/30`. Tailwind's `dark:` variant compiles to the selector `&:is(.dark *)`, which has CSS **specificity** (0,2,0) — two class-level matches. (Specificity is the browser's tie-breaker when two rules set the same property: the more specific selector wins regardless of source order.) A plain `bg-surface-container` passed at the call site is (0,1,0), so it **loses**. And `tailwind-merge` — the utility `cn()` uses to drop a class that a later class overrides — cannot fold the two, because it only collapses classes in the *same* modifier scope, and `dark:bg-input/30` and `bg-surface-container` are in different ones. So the "override" was never an override: **every forwarding field rendered `input/30` in dark mode instead of the container step.** It looked approximately right, which is exactly why it survived review.
-
-The primitive carries two smaller problems on the same line: `md:text-sm` leaks a **viewport** breakpoint into a container-query surface, and `transition-[color,box-shadow]` has no duration, so it silently inherits Tailwind's off-scale 150ms and can never retune with the system. Handing `FIELD_SHELL` to a raw `<input>` closes all three at once. `settings/shapes.ts` and `tower-locking/shapes.ts` independently document the identical trap.
+The destination field is the `Input` primitive carrying `FIELD_SHELL` from `components/cellular/sms/shapes.ts`. `FIELD_SHELL` is voice only (mono, tracked, the sans placeholder and the invalid ring); the primitive owns the 42px height, the `rounded-field` radius and the default `surface-container` fill. On a dirty row the card swaps in `FIELD_SHELL_ON_FILL`, whose `bg-primary` replaces the primitive's fill through `cn()`.
 
 #### Dirty-row promotion
 

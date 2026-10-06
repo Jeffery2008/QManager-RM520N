@@ -256,7 +256,6 @@ const FIELD_TILE_LABEL = `${FIELD_LABEL} w-full`;
  */
 const FIELD_TILE_CONTROL = [
   "h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-0 py-0 shadow-none",
-  "dark:bg-transparent!",
   "font-mono text-sm font-semibold tabular-nums",
   "focus-visible:ring-0",
 ].join(" ");
@@ -264,7 +263,7 @@ const FIELD_TILE_CONTROL = [
 /** The same control as a `SelectTrigger`. */
 const TILE_SELECT = [
   FIELD_TILE_CONTROL,
-  "data-[size=default]:h-8 dark:hover:bg-transparent!",
+  "data-[size=default]:h-8",
 ].join(" ");
 
 /**

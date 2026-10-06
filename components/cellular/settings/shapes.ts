@@ -805,9 +805,8 @@ export const FIELD_COUNTER =
  * furniture. Actions bracket the value: the outbound link leads, the number is
  * the content, copy closes.
  *
- * The box is the canon field drawn by hand (SHELL resolution), the same 42px
- * field as the ones above it. It sits on the card, so its fill is
- * `surface-container` (The Field-Step Rule).
+ * The box is the canon 42px field drawn by hand (SHELL resolution); it sits on
+ * the card, so its fill is `surface-container`.
  *
  * THE RING MOVED TO THE SHELL. The input inside is transparent and unringed —
  * a ring drawn around a child that fills only the middle of the box would trace

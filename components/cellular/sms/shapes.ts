@@ -53,11 +53,7 @@ export const PAGE_TITLE = "text-3xl font-bold tracking-[-0.02em]";
 export const PAGE_DESCRIPTION =
   "text-on-surface-variant text-sm leading-relaxed text-pretty";
 
-/**
- * The dense in-card control, 36px. DELIBERATELY one step under the 42px `action`
- * size: the inbox toolbar and card-header actions sit inside a table-bearing card
- * where a 42px control row would out-weigh the rows it filters.
- */
+/** The dense in-card control, 36px: one step under `action` so it never out-weighs the table rows it filters. */
 export const TOOLBAR_PILL = "h-9 gap-2 px-4 text-sm font-medium";
 
 /** The 36px icon-only twin of TOOLBAR_PILL, on a fill (the Fill-Over-Stroke Rule). */

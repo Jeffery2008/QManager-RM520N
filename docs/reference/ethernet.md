@@ -83,18 +83,11 @@ The row's **consequence sentence is required**, and it names the risk in plain l
 
 `speedLimit` is `""`, never `"auto"`, when nothing has been read — a defaulted value would render the most common setting as a confirmed selection on a page that has never reached the modem.
 
-### Two collisions the primitives win unless you mark them
+### The card shadow needs the important modifier
 
-Both were found by **measuring the rendered node**, not by reading the class strings, and both look approximately right — which is why they survive review.
+`CARD_SHELL` writes `shadow-[var(--shadow-whisper)]!`. Without the `!` the card renders the `Card` primitive's `shadow-sm` instead: `tailwind-merge` reads an arbitrary shadow value as a shadow *colour*, so `cn()` keeps both classes and Tailwind's name sort (`shadow-[` emits before `shadow-s`) lets the primitive win. It looks approximately right, which is why it survives review; measure the rendered node.
 
-| Collision | Measured | Why the call site loses |
-| --------- | -------- | ----------------------- |
-| `FIELD` height | rendered **36 px** against a call site asking for 42 | `select.tsx:40` ships `data-[size=default]:h-9`, specificity (0,2,0) vs a bare `h-[2.625rem]`'s (0,1,0) |
-| `CARD_SHELL` shadow | rendered Tailwind's `shadow-sm`, not the whisper | `cn()` cannot dedupe them — `tailwind-merge` reads an arbitrary shadow value as a shadow *colour*, so both survive, and the winner is Tailwind's name sort (`shadow-[` emits before `shadow-s`) |
-
-Both are fixed with the important modifier at this one call site. The same mechanism covers the **dark** field fill: `select.tsx`'s own `dark:bg-input/30` is (0,2,0), so a light-only override loses outright, and once both are `dark:`-prefixed they *tie* and are decided by alphabet. `FIELD` writes `dark:bg-surface-container-high!`. Verified in the browser: the trigger paints exactly `--surface-container-high` in dark, one step above its `--surface-container` host (The Field-Step Rule — and note the host is the row group, not the card).
-
-These are local corrections. `input.tsx` / `select.tsx` / `textarea.tsx` remain an **open product-wide Migration Delta**; migrating them retires every marker here.
+The speed-limit Select trigger needs no marker. It sits on `ROW_GROUP` (`surface-container`), so it passes `host="container"` and the primitive paints `surface-container-high` at 42px (The Field-Step Rule); `FIELD` carries only width and type.
 
 ## `interface_present`, and why `link_status` could not answer it
 

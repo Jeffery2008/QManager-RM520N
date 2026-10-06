@@ -78,7 +78,7 @@ It has a deliberate two-source split, and the split is the part that gets undone
 level up, so this is not a boundary crossing: `PAGE_ROOT`, `PAGE_HEAD`, `BAND`, `TILE`,
 `DISC_TONE`, `DISC_TRANSITION`, `EYEBROW`, `VALUE`, `VALUE_TEXT`, `VALUE_NONE`, `CAPTION`,
 `CARD_SHELL`, `CARD_PAD`, `CARD_BODY`, `CARD_TITLE`, `CARD_DESC`, `ROW_GROUP`, `GROUP_FILL`,
-`CONDITION`, `CONDITION_PANEL`, `NOTICE`, `CHIP_ON_TONAL`, `META_INK_ON_TONAL`, `PILL_ACTION`,
+`CONDITION`, `CONDITION_PANEL`, `NOTICE`, `CHIP_ON_TONAL`, `META_INK_ON_TONAL`,
 `PILL_GLYPH`, `FOCUS_RING`, `COARSE_TARGET`, `SKELETON`, and the `DiscTone` type. They are
 re-exported so every component in the directory imports from one place.
 

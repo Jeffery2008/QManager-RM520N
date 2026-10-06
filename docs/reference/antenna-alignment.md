@@ -257,7 +257,7 @@ When the button cannot work it is **disabled and says why**, per DESIGN.md's Sta
 
 `SLOT.LABEL_SHELL` wraps a raw `<input>`; the input itself is transparent and unstyled. Two reasons, and both are traps:
 
-- It is deliberately **not** the `Input` primitive. `Input`'s base string carries `dark:bg-input/30` and `md:text-sm`, and `cn()` cannot let an unprefixed class displace a variant-prefixed one — so the fill silently reverts in dark mode and the size reverts at a **768px viewport**, a viewport breakpoint leaking into a container-query surface.
+- It is deliberately **not** the `Input` primitive. The shell is a SHELL resolution (DESIGN.md > The Field-Step Rule) with a leading glyph, and `Input` carries `md:text-sm`, which `cn()` cannot displace with an unprefixed size — the 13px label would revert at a **768px viewport**, a viewport breakpoint leaking into a container-query surface.
 - At `border-0` on a single tonal step, the page's only editable control read as a static chip in a row full of static chips. DESIGN.md keeps inputs borderless at rest, so the affordance is a glyph rather than a stroke: the shell owns fill, radius, the 44px height and the focus ring, and an `edit` mark says the value is yours to change.
 
 ### Sampling is gated on the modem's own timestamp

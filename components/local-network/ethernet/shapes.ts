@@ -218,9 +218,8 @@ export const NOTICE_TITLE = "truncate text-lg font-semibold";
  * Measured, not reasoned: `getComputedStyle(card).boxShadow` returned Tailwind's
  * two-layer `rgba(0,0,0,.1) 0 1px 3px, rgba(0,0,0,.1) 0 1px 2px -1px` — i.e.
  * `shadow-sm` — against a call site asking for the whisper. Same family as the
- * `twMerge` custom-radius trap `lib/utils.ts` documents, and the same shape as
- * the `dark:` fill collision below: a tie the tooling cannot see, decided by
- * spelling. The marker makes it win by construction.
+ * `twMerge` custom-radius trap `lib/utils.ts` documents: a tie the tooling
+ * cannot see, decided by spelling. The marker makes it win by construction.
  *
  * The product-wide fix is teaching `cn()` that an arbitrary shadow value is a
  * box-shadow — which would also flip every `/cellular/settings` card, currently

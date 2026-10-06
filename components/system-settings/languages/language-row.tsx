@@ -15,7 +15,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { buttonVariants } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { DUR, EASE_EMPHASIZED, staggerRowItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -201,10 +200,8 @@ export function LanguageRow({
                 void handleRemove();
               }}
               disabled={removing}
-              className={buttonVariants({
-                variant: "destructive",
-                size: "action",
-              })}
+              variant="destructive"
+              size="action"
             >
               {removing ? (
                 <Loader2Icon className={cn(PILL_GLYPH, SPIN)} aria-hidden="true" />

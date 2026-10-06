@@ -115,7 +115,7 @@ The coordinator is the only component that calls a hook. It reads `useModemStatu
 
 ### The page header gained one action
 
-`CellularPageHeader`'s `actions` slot now carries a link to the Cell Scanner: `<Button asChild variant="tonal" className={PILL_ACTION}>` wrapping a `next/link` to `/cellular/cell-scanner`, with the `radar` glyph.
+`CellularPageHeader`'s `actions` slot now carries a link to the Cell Scanner: `<Button asChild variant="tonal" size="action">` wrapping a `next/link` to `/cellular/cell-scanner`, with the `radar` glyph.
 
 The scanner is where a target comes from when the cell you want is *not* one the modem is already camped on — the strip can only offer what is on air — so it belongs beside the page it feeds rather than only in the sidebar. `variant="tonal"` and not `default`: this navigates, it does not write to the radio, and the page's real primary actions are the leg cards' Lock buttons.
 
@@ -769,7 +769,7 @@ A leg card is where the target changes, and it is now also **the single place a 
 
 **Short version: both cards used to offer two different ways to apply a lock, one of which was also a state display. There is now one, and it is a button.**
 
-Each footer is the Card-Foot Apply row with no status slot (`CARD_FOOT` + `CARD_FOOT_ACTIONS` from `components/ui/card-foot.tsx`, right-aligned) and reads, left to right: **Clear fields** (`actions.clear_fields`, `PILL_QUIET` + `variant="tonal-neutral"`), **Remove Lock** (`actions.unlock`, `PILL_ACTION_PLAIN` + `variant="tonal-neutral"`, text only), then **Lock Tower** (`actions.lock`, a primary `SaveButton` on `PILL_ACTION_PLAIN`) last. A form reset that touches nothing on the modem, then the two writes — the same construction as `band-grid-card.tsx`'s footer. Remove Lock was a stroked `variant="outline"` with a `lock_open` glyph until 2026-10-06. Lock is additionally disabled while the form parses to nothing (`validCells.length === 0` on LTE, `!parsedCell` on NR); `mt-auto` pins the whole footer so the two cards' buttons line up in an equal-height grid row.
+Each footer is the Card-Foot Apply row with no status slot (`CARD_FOOT` + `CARD_FOOT_ACTIONS` from `components/ui/card-foot.tsx`, right-aligned) and reads, left to right: **Clear fields** (`actions.clear_fields`, `PILL_QUIET` + `variant="tonal-neutral"`), **Remove Lock** (`actions.unlock`, `size="action"` + `variant="tonal-neutral"`, text only), then **Lock Tower** (`actions.lock`, a primary `SaveButton` at `size="action"`) last. A form reset that touches nothing on the modem, then the two writes — the same construction as `band-grid-card.tsx`'s footer. Remove Lock was a stroked `variant="outline"` with a `lock_open` glyph until 2026-10-06. Lock is additionally disabled while the form parses to nothing (`validCells.length === 0` on LTE, `!parsedCell` on NR); `mt-auto` pins the whole footer so the two cards' buttons line up in an equal-height grid row.
 
 The deleted control was a per-leg "Tower lock" `Switch`. It failed on three counts at once:
 
@@ -1010,11 +1010,11 @@ Everything shape- or tone-bearing lives in `components/cellular/tower-locking/sh
 | `AUTO_GRID`, `AUTO_TILE`, `AUTO_METER` | The standing-orders section's three tiles. `AUTO_GRID` queries **`@container/section`**; columns are stepped because the schedule tile needs the room; `AUTO_METER.ROOT` carries no `overflow-hidden` so the threshold marker can overhang the track |
 | `HERO_EYEBROW` | The strip panel's eyebrow. Kept rather than deleted as a reflex: DESIGN.md's tile anatomy is literally `eyebrow → value → caption`, and the band-locking and custom-profiles heroes ship the identical step |
 | `HERO_REFRESH_BUTTON`, `HERO_HELP_BUTTON` | The two 22px-glyph/44px-target buttons. Both **inherit their ink** (`text-current`) — see [Freshness heads the section](#freshness-heads-the-section). `HERO_HELP_BUTTON` is an **alias by value, restated in intent** — the two are the same size by coincidence of the 44px floor, not by shared meaning |
-| `FIELD_GRID`, `FIELD_LABEL`, `FIELD_SHAPE`, `FIELD_CONTROL`, `FIELD_CONTROL_ON_CONTAINER`, `SWITCH_TARGET` | The leg cards' shared form shapes. `FIELD_GRID` is the NR card's 2×2 of value tiles. `FIELD_SHAPE` is geometry only; the fill is chosen by the **host**, one tonal step below — see [The Field-Step Rule](#the-field-step-rule-six-invisible-controls) and the specificity note below. `SWITCH_TARGET` is the 44px overlay all five switches share |
+| `FIELD_GRID`, `FIELD_LABEL`, `FIELD_CONTROL`, `SWITCH_TARGET` | The leg cards' shared form shapes. `FIELD_GRID` is the NR card's 2×2 of value tiles. `FIELD_CONTROL` is type only (`text-sm`); shape and fill come from the field primitive, and a control on a `surface-container` host passes `host="container"` — see [The Field-Step Rule](#the-field-step-rule-six-invisible-controls). `SWITCH_TARGET` is the 44px overlay all five switches share |
 | `SLOT_ROW` | One LTE cell slot, as a row: `ROOT` / `EMPTY` / `INDEX` / `FIELDS` / `META`. `EMPTY` is dashed and unfilled; the inputs inside stay live in both variants |
 | `DAY_CHIP`, `dayChipFill` | The weekday toggle. Both hovers are `enabled:`-scoped |
 | `NOTICE`, `NOTICE_TONE` | The card- and page-scoped notice, three roles / three glyphs / no shared marks. `warning` is the partial-success channel |
-| `PILL_ACTION`, `PILL_ACTION_PLAIN`, `PILL_QUIET` | Action sizing. `PILL_ACTION_PLAIN` is the Lock `SaveButton`, `PILL_ACTION` the glyph-bearing Remove Lock; `PILL_QUIET` is deliberately smaller for Clear fields and carries **no fill or ink** — pair with `variant="tonal-neutral"`, never `ghost` |
+| `PILL_QUIET` | The smaller Clear fields pill (`h-9 px-3.5 text-xs font-semibold`); Lock and Remove Lock use the Button's own `size="action"`. It carries **no fill or ink** — pair with `variant="tonal-neutral"`, never `ghost` |
 | `FAILOVER_BADGE`, `LEG_BADGE`, `PERSIST_BADGE`, `BADGE_GLYPH_SIZE` | Tone + glyph maps, keyed onto the exported `BadgeVariant` type so an unmapped state fails the build |
 | `failoverKey`, `lockPresence`, `TowerLockPresence`, `persistPosture` | The derivations the automation tiles read. `failoverKey` takes a `TowerLockPresence` tri-state, **not** a boolean — see [Why the chip is a shield, not a spinner](#why-the-chip-is-a-shield-not-a-spinner) |
 | `SKELETON_SHAPE` | Loaded geometry restated once so skeletons mirror by import, not by estimate — see [Skeleton figures are measured, not estimated](#skeleton-figures-are-measured-not-estimated) |
@@ -1036,6 +1036,7 @@ Retired across the match-line deletion, the identity-fill removal, the section s
 | `HERO_RAIL_SUBTITLE` | The hero's dynamic lock-posture subtitle → a static description line |
 | `HERO_DESCRIPTION` | The merged hero's own description → `SECTION_HEAD.DESCRIPTION`, which "While nobody is watching" uses and "Right now" deliberately does not |
 | `SELECT_CONTROL` | A shared `SelectTrigger` shape that **had zero consumers**. Both leg cards already declared their own local constant and never imported this one, because the two selects are not the same size: the LTE slot row's is a 42px `SELECT_CONTROL` built on `FIELD_CONTROL`, the NR card's is a 32px `TILE_SELECT` living inside a `FIELD_TILE`. A shared constant for two different geometries is a false economy — see the specificity note below |
+| `FIELD_SHAPE`, `FIELD_CONTROL_ON_CONTAINER`, `PILL_ACTION`, `PILL_ACTION_PLAIN` | Field geometry, the `-high` fill pair and the 42px action recipe → the primitives: `host="container"` on the field and `size="action"` on the `Button` (2026-10-06) |
 | `FIELD_SLOT`, `FIELD_SLOT_HEAD` | The three stacked slot panels (a heading row over a two-up field grid) → `SLOT_ROW`, one row per slot |
 | `carrierTileTone`, `carrierPillTone`, `carrierMeterTone` | The three identity-fill tone helpers. **They exist only to put controls on a saturated identity ground**; with no identity fill left on this surface, every control here is an ordinary neutral one and none of the three has a caller |
 
@@ -1064,7 +1065,7 @@ A carrier tile can render *taller* than 87px when it shares a grid row with the 
 
 DESIGN.md gives an input no border at rest, so **the fill is the entire affordance**: there is nothing else on screen saying where the box is. A fixed fill token is therefore only *accidentally* correct. `FIELD_CONTROL` shipped as the only answer, painting `bg-surface-container`, and **not one call site on this surface had the host it described** — every field here lives inside `SLOT_ROW` or `AUTO_TILE`, both `bg-surface-container`. All six painted their host's exact colour and rendered at **1.00:1**. The doc comment above the constant described a host that did not exist, which is how it survived review.
 
-`shapes.ts` now splits the geometry from the fill: `FIELD_SHAPE` (unfilled), `FIELD_CONTROL` (for a `surface` / `card` host) and `FIELD_CONTROL_ON_CONTAINER` (`-high`, which on this surface means everywhere).
+The field primitives now take the fill from their `host` prop, so every control here passes `host="container"` and paints `surface-container-high`; `FIELD_CONTROL` carries only the type voice.
 
 Two corollaries carried into DESIGN.md:
 
@@ -1072,15 +1073,6 @@ Two corollaries carried into DESIGN.md:
 - **STEP or SHELL, one per card, never mixed.** STEP is the table above. SHELL is the alternative the NR card's `FIELD_TILE` uses: the control is transparent and the *host* carries both the fill and the focus ring (`focus-within:ring`). The bug is only ever the third state — a control painting its host's own colour.
 
 `SWITCH_TARGET` was extracted in the same pass. The `Switch` primitive paints 18x32px, well under the 44px floor; a pseudo-element overlay reaches the target without adding a layout box that would push the row's label off its baseline. Two byte-identical copies were declared locally in the two leg cards, and the surface's other three switches — persist, failover, schedule-enable — had **none at all**: the same primitive shipping at two target sizes on one page, with the smaller size on the three controls that actually write to the modem.
-
-### The field-specificity traps
-
-Both produce a result that *looks approximately right*, which is exactly why they would survive review. The shared field constants carry the first; the second lives at the two call sites that actually render a select, since the shared constant for it had no consumers and is gone.
-
-- **The `dark:` restatement is not redundant, and it is not sufficient either.** `components/ui/input.tsx` ships `dark:bg-input/30`, and `@custom-variant dark (&:is(.dark *))` compiles that to a `(0,2,0)` selector against a bare `bg-surface-container-high`'s `(0,1,0)` — so a light-only override simply loses in dark mode. `tailwind-merge` cannot fold them either: different modifier scopes, and it only collapses conflicts within one scope. **But once ours is `dark:`-prefixed too, both rules are (0,2,0) and they TIE** — and specificity decides nothing in a tie. The winner is emission order, which for two candidates of the same utility is Tailwind's deterministic candidate sort, i.e. by name: `bg-input…` sorts before `bg-surface-…` only because *i* precedes *s*. That is an **observed** outcome, not a constructed one — rename `--color-input`, mint a token that sorts between them, or change the sort, and every one of these fills flips in dark mode only, with no error anywhere. The shipped constants mark the dark half with Tailwind v4's important modifier (`dark:bg-surface-container-high!`) so the rule wins by construction. Same family as the `twMerge` custom-radius trap, where alphabetical order decides a conflict the tooling cannot see. Use `!` **only** against a primitive's own `dark:` fill — it is not a general escape hatch.
-- **A `SelectTrigger`'s height must be restated at matching specificity.** `components/ui/select.tsx` sets `data-[size=default]:h-9` — again `(0,2,0)` via the attribute selector — so a bare height utility loses and the select renders 36px beside its sibling inputs: visibly combed, and under the project's control-height floor. The LTE card writes `data-[size=default]:h-[2.625rem]` in its local `SELECT_CONTROL`; the NR card writes `data-[size=default]:h-8` in `TILE_SELECT`, plus a `dark:hover:bg-transparent` neutralisation of `select.tsx`'s `dark:hover:bg-input/50`.
-
-Both leg cards hit these independently, and both keep their own answer because their two selects are different sizes.
 
 ### The blocked pick button is `aria-disabled`, not `disabled`
 

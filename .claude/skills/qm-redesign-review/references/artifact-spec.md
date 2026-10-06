@@ -165,10 +165,10 @@ Copy these, not approximations. Check the family `shapes.ts` for its own values 
 
 | Thing | Value |
 |---|---|
-| Pill action | 42px (`h-[2.625rem]`, `PILL_ACTION`), 20px padding, 600 weight |
+| Pill action | 42px (`Button size="action"`), 20px padding, 600 weight |
 | Quiet toolbar pill | 36px (`PILL_QUIET`: `h-9 px-3.5 text-xs font-semibold`) |
 | Dialog action | 40px |
-| Field | 42px, `rounded-field` 10px, no rest border, fill one step above its host |
+| Field | 42px, `rounded-field` 10px, no rest border, fill one step above its host via the primitive's `host` prop |
 | Glyph disc | 52px tile (`TILE_SHAPE.DISC`), 44px block, 40px row |
 | Tile | 104px, **pinned** not floored, `rounded-tile` 12px |
 | Metric row pill | 40px, 13px/600 key and value on a 20px line box |
