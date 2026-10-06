@@ -6,8 +6,19 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { MaterialSymbol } from "@/components/ui/material-symbol";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  MaterialSymbol,
+  type MaterialSymbolName,
+} from "@/components/ui/material-symbol";
 import { useCellScanner } from "@/hooks/use-cell-scanner";
+import { useModemStatus } from "@/hooks/use-modem-status";
 import { downloadCSV } from "@/lib/download-csv";
 import { staggerItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -15,39 +26,30 @@ import type { CellScanResult } from "@/types/cell-scanner";
 
 import LockCellDialog, { type LockCellTarget } from "./lock-cell-dialog";
 import RunHero from "./run-hero";
-import RunSummary, { type SummaryTile, type SummaryVerdict } from "./run-summary";
+import LedgerRows, { type LedgerRow } from "./run-summary";
 import ScanResultView from "./scan-result";
-import { ScanEmptyState, ScanErrorState } from "./scan-states";
+import { ScanErrorState } from "./scan-states";
 import { ScannerSkeleton } from "./scanner-skeleton";
 import SiblingRouteLink from "./sibling-link";
 import {
+  EMPTY_PANEL,
   PILL_ACTION,
-  POSTURE_DISC,
-  POSTURE_GLYPH,
-  RESULTS_CARD,
+  PILL_QUIET,
+  SCAN_RESULTS_CARD,
   SECTION_HEAD,
-  SUMMARY,
+  VERDICT,
+  VERDICT_TONE,
   runPosture,
-  type SignalTier,
+  type VerdictTone,
 } from "./shapes";
+import { cellMatchesSim, simPlmnFromImsi } from "./sim-plmn";
 import { summariseSweep } from "./summaries";
 
 // =============================================================================
-// Full band scan — the run and its results
+// Full band sweep — the run and its results
 // =============================================================================
-// Two objects, and the split is the redesign. The HERO owns the run: its
-// posture and its buttons, always mounted, morphing rather than being replaced.
-// The RESULTS CARD owns the rows and nothing else, showing a skeleton, a state
-// panel or the table.
-//
-// The incumbent swapped one card body between four unrelated full-height
-// layouts, so the action row appeared and disappeared with the state it happened
-// to be rendered beside.
-//
-// The results card is always mounted, same as the neighbour route (2026-09-10):
-// at idle it shows the shared `ScanEmptyState`, the same object a completed
-// sweep with zero results falls back to, so the two causes read alike and the
-// card never has to unmount.
+// The hero owns the run; the results card owns the rows. The card is not
+// rendered at idle: it enters when a sweep starts and stays from then on.
 // =============================================================================
 
 function buildCsvRows(results: CellScanResult[]): string[] {
@@ -71,13 +73,7 @@ function buildCsvRows(results: CellScanResult[]): string[] {
 const CELL_SCAN_CSV_HEADER =
   "Network,Provider,MCC,MNC,Band,EARFCN,PCI,Cell ID,TAC,Bandwidth,Signal (dBm)";
 
-/**
- * Posture -> its two copy keys, spelled out as LITERALS.
- *
- * `i18n:check` grades a missing key as a warning and exits 0, so a stem it
- * cannot see statically is a stem nothing will ever report on. An interpolated
- * `` `posture.${posture}_title` `` is invisible to it; this is not.
- */
+/** Posture -> its copy keys, as literals so `i18n:check` can see them. */
 const POSTURE_COPY = {
   idle: {
     title: "cell_scanner.run.idle_title",
@@ -87,8 +83,7 @@ const POSTURE_COPY = {
     title: "cell_scanner.run.scanning_title",
     body: "cell_scanner.run.scanning_body",
   },
-  // No `body` on `complete`: the rail's figure IS the count, so a sentence
-  // restating it was the same fact twice, 40px apart. See `shapes.ts`'s header.
+  // No body on complete: the figure is the count.
   complete: { title: "cell_scanner.run.complete_title" },
   failed: {
     title: "cell_scanner.run.failed_title",
@@ -96,18 +91,10 @@ const POSTURE_COPY = {
   },
 } as const;
 
-/** The neighbour route, for the header cross-link. Literal, not built at runtime. */
+/** The neighbour route, for the header cross-link. */
 const NEIGHBOUR_ROUTE = "/cellular/cell-scanner/neighbourcell-scanner";
 
-/**
- * A uniform tier -> its verdict copy and mark, spelled out as LITERALS.
- *
- * `i18n:check` only sees keys it can read statically, so an interpolated
- * `` `verdict_all_${tier}` `` is a key nothing will ever report as missing. The
- * glyphs are the bar-count marks: three verdicts can appear in one slot and
- * `success-container` / `warning-container` are 1.03:1 apart, so the mark is
- * what tells them apart in sunlight, in greyscale and under deuteranopia.
- */
+/** A uniform tier -> its verdict copy and mark, as literals. */
 const VERDICT_COPY = {
   good: {
     key: "cell_scanner.run.verdict_all_good",
@@ -126,29 +113,41 @@ const VERDICT_COPY = {
   },
 } as const;
 
+/** A sweep's typical run, in seconds; the worker's hard limit is 180. */
+const SCAN_EXPECTED_SECONDS = 150;
+
 /**
- * A signal tier -> its label key, spelled out as LITERALS.
- *
- * The summary tile's disc is a `MaterialSymbol`, which is ligature-driven and
- * therefore always `aria-hidden` — so the tier reaches a screen reader only
- * through this label, rendered `sr-only` inside the disc. Same literal-stem rule
- * as `POSTURE_COPY`: `i18n:check` cannot see an interpolated key, so a key built
- * at runtime is a key nothing will ever report as missing.
+ * An ESTIMATE of sweep progress from elapsed time, 0-99: linear to 90% over the
+ * typical run, then an asymptote that never reaches 99. Only `complete` fills it.
  */
-const SIGNAL_LABEL_KEY: Record<SignalTier, string> = {
-  good: "cell_scanner.signal.good",
-  fair: "cell_scanner.signal.fair",
-  poor: "cell_scanner.signal.poor",
-  none: "cell_scanner.signal.none",
-};
+function estimateScanProgress(elapsedSeconds: number): number {
+  const t = Math.max(0, elapsedSeconds);
+  if (t <= SCAN_EXPECTED_SECONDS) return (t / SCAN_EXPECTED_SECONDS) * 90;
+  return 90 + 9 * (1 - Math.exp(-(t - SCAN_EXPECTED_SECONDS) / 20));
+}
+
+/** The worker's last-resort provider name, `<mcc>/<mnc>`: an identifier, so machine voice. */
+const NUMERIC_PROVIDER_RE = /^\d{1,4}\/\d{1,4}$/;
+
+/** The ledger's dBm figure, or `null` for the blank mark. */
+function formatDbm(value: number | null): string | null {
+  return value === null ? null : String(value);
+}
 
 export function FullScanner() {
   const { t } = useTranslation("cellular");
-  // `elapsedSeconds` is deliberately NOT destructured. The hook still computes
-  // and returns it — the transport was left alone so this stays a surface
-  // decision — but the running state carries no numbers at all now. See
-  // `run-hero.tsx`.
-  const { status, results, error, startScan } = useCellScanner();
+  const { status, results, error, elapsedSeconds, startScan } =
+    useCellScanner();
+
+  // The SIM's home PLMN, from its IMSI. Rows on any other network keep a
+  // disabled "Lock to this cell".
+  const { data: modemStatus } = useModemStatus({ pollInterval: 10000 });
+  const imsi = modemStatus?.device?.imsi;
+  const simPlmn = React.useMemo(() => simPlmnFromImsi(imsi), [imsi]);
+  const canLockCell = React.useCallback(
+    (cell: CellScanResult) => cellMatchesSim(cell, simPlmn),
+    [simPlmn],
+  );
   const [lockTarget, setLockTarget] = React.useState<LockCellTarget | null>(
     null,
   );
@@ -159,8 +158,7 @@ export function FullScanner() {
 
   const handleLockCell = React.useCallback((cell: CellScanResult) => {
     setLockTarget({
-      // The endpoint takes two different payloads and rejects the wrong one, so
-      // the branch happens once here rather than inside the dialog's request.
+      // The endpoint takes two payload shapes and rejects the wrong one.
       kind: cell.networkType.toUpperCase().startsWith("NR") ? "nr_sa" : "lte",
       networkType: cell.networkType,
       pci: cell.pci,
@@ -181,100 +179,55 @@ export function FullScanner() {
 
   const copy = POSTURE_COPY[posture];
 
-  // The run's own count, folded into the tile grid as a peer instead of a
-  // larger rail beside it — see `RunHero`'s `hideRail` and `RunSummary`'s
-  // `leading`. Its label is its own key: the rail still says "Sweep finished".
-  const totalCellsTile = hasResults ? (
-    <div className={SUMMARY.TILE}>
-      <span className={cn(SUMMARY.DISC, POSTURE_DISC.complete)}>
-        <MaterialSymbol
-          name={POSTURE_GLYPH.complete.glyph}
-          size={26}
-          filled={POSTURE_GLYPH.complete.filled}
-        />
-      </span>
-      <div className={SUMMARY.COPY}>
-        <span className={SUMMARY.LABEL}>
-          {t("cell_scanner.run.summary_total_cells")}
-        </span>
-        <span className={SUMMARY.DETAILS}>
-          <span className={SUMMARY.DETAIL_FIGURE}>
-            {t("cell_scanner.results.count", { count: results.length })}
-          </span>
-        </span>
-      </div>
-    </div>
-  ) : null;
+  // Every aggregate, derived once; `simPlmn` decides which group leads.
+  const summary = React.useMemo(
+    () => summariseSweep(results, simPlmn),
+    [results, simPlmn],
+  );
 
-  // Every aggregate on this page, derived once. `summariseSweep` is pure and
-  // total: an empty array, a single row and an all-sentinel result set all
-  // return a well-formed summary rather than `NaN` or `-Infinity`.
-  const summary = React.useMemo(() => summariseSweep(results), [results]);
-
-  const summaryTiles = React.useMemo<SummaryTile[]>(() => {
-    const tiles: SummaryTile[] = summary.groups.map((group) => ({
-      // The worker can report a cell with no operator name at all. An empty
-      // label would render as a blank tile with a disc beside it.
+  const ledgerRows = React.useMemo<LedgerRow[]>(() => {
+    const rows: LedgerRow[] = summary.groups.map((group) => ({
+      // An empty id would collide across every unnamed group.
       id: group.provider || "__unnamed",
-      label: group.provider || t("cell_scanner.run.summary_provider_unknown"),
-      // The tile's disc is the group's best measured tier, graded in
-      // `summaries.ts`. The label is the tier in words for a screen reader,
-      // since the glyph carrying it is a ligature and always aria-hidden.
-      tier: group.tier,
-      tierLabel: t(SIGNAL_LABEL_KEY[group.tier]),
-      details: [
-        // The count moved into the fact line when the tile became a row: the
-        // disc holds the left edge now, and a bare numeral with no unit beside
-        // it read as a second, competing figure to the rail's count.
-        {
-          text: t("cell_scanner.results.count", { count: group.cells }),
-          voice: "figure" as const,
-        },
-        ...(group.bands.length > 0
-          ? [{ text: group.bands.join(" "), voice: "ident" as const }]
-          : []),
-        {
-          text:
-            group.best === null
-              ? t("cell_scanner.run.summary_no_reading")
-              : t("cell_scanner.run.summary_best", { value: group.best }),
-          voice: "figure" as const,
-        },
-      ],
+      name: group.provider || t("cell_scanner.run.summary_provider_unknown"),
+      nameVoice: NUMERIC_PROVIDER_RE.test(group.provider) ? "machine" : "text",
+      isSim: group.isSim,
+      cells: group.cells,
+      cellsUnit: t("cell_scanner.run.ledger.cells_unit", {
+        count: group.cells,
+      }),
+      bands: group.bands,
+      strength: group.best,
+      dbmText: formatDbm(group.best),
     }));
 
-    // A dense urban sweep returns roaming partners nobody asked about. The
-    // grid caps itself and says so rather than growing into a list.
     if (summary.overflowProviders > 0) {
-      tiles.push({
+      rows.push({
         id: "__overflow",
-        label: t("cell_scanner.run.summary_others", {
+        name: t("cell_scanner.run.summary_others", {
           count: summary.overflowProviders,
         }),
-        // The best tier among the FOLDED groups, not `none`: the overflow may
-        // hold the strongest reading of the whole run, and a muted disc there
-        // would claim nothing in it was measured.
-        tier: summary.overflowTier,
-        tierLabel: t(SIGNAL_LABEL_KEY[summary.overflowTier]),
-        details: [
-          {
-            text: t("cell_scanner.results.count", {
-              count: summary.overflowCells,
-            }),
-            voice: "figure" as const,
-          },
-        ],
+        cells: summary.overflowCells,
+        cellsUnit: t("cell_scanner.run.ledger.cells_unit", {
+          count: summary.overflowCells,
+        }),
+        bands: [],
+        strength: summary.overflowBest,
+        dbmText: formatDbm(summary.overflowBest),
       });
     }
 
-    return tiles;
+    return rows;
   }, [summary, t]);
 
-  const verdict = React.useMemo<SummaryVerdict | null>(() => {
+  const verdictData = React.useMemo<{
+    tone: VerdictTone;
+    glyph: MaterialSymbolName;
+    text: string;
+  } | null>(() => {
     if (results.length === 0) return null;
 
-    // Nothing at all was measured: every row is the 0 sentinel. Muted, because
-    // that is an absence of readings, not a bad reading.
+    // Nothing measured: an absence of readings, so muted.
     if (summary.measured === 0) {
       return {
         tone: "muted",
@@ -283,8 +236,7 @@ export function FullScanner() {
       };
     }
 
-    // A mixed spread gets NO verdict. "The readings vary" explains nothing, and
-    // a strip that is always present stops being read.
+    // A mixed spread gets no verdict.
     if (!summary.uniform) return null;
 
     const spec = VERDICT_COPY[summary.uniform];
@@ -295,15 +247,42 @@ export function FullScanner() {
     };
   }, [results.length, summary, t]);
 
-  // The failed posture's title is the MODEM'S message when it gave one. A
-  // generic "Scan failed" over a specific reason is a downgrade — and when it is
-  // the modem's own string it is a raw machine string, so it takes machine
-  // voice. Authored English never does.
+  // The failed title is the reported reason when there is one, in machine voice.
   const usesModemMessage = posture === "failed" && Boolean(error);
-  const postureTitle =
-    usesModemMessage && error ? error : t(copy.title);
-
+  const postureTitle = usesModemMessage && error ? error : t(copy.title);
   const postureBody = "body" in copy ? t(copy.body) : null;
+
+  // Scanning or complete only: on failed, `results` may hold the previous run.
+  const ledgerRowsNode =
+    isScanning || posture === "complete" ? (
+      <LedgerRows
+        rows={ledgerRows}
+        isLoading={isScanning}
+        emptyText={t("cell_scanner.run.summary_empty")}
+        head={{
+          carrier: t("cell_scanner.run.ledger.col_carrier"),
+          cells: t("cell_scanner.run.ledger.col_cells"),
+          bands: t("cell_scanner.run.ledger.col_bands"),
+          best: t("cell_scanner.run.ledger.col_best"),
+        }}
+        simTagLabel={t("cell_scanner.run.ledger.your_sim")}
+        dbmUnit={t("cell_scanner.run.ledger.dbm_unit")}
+      />
+    ) : null;
+
+  // Complete only: while scanning, `results` still describes the previous run.
+  const verdictNode =
+    verdictData && posture === "complete" ? (
+      <p className={cn(VERDICT.ROOT, VERDICT_TONE[verdictData.tone])}>
+        <MaterialSymbol
+          name={verdictData.glyph}
+          size={18}
+          filled
+          className="flex-none"
+        />
+        <span className={VERDICT.TEXT}>{verdictData.text}</span>
+      </p>
+    ) : null;
 
   return (
     <>
@@ -317,9 +296,8 @@ export function FullScanner() {
               href={NEIGHBOUR_ROUTE}
               glyph="cell_tower"
               label={t("cell_scanner.run.link_neighbour")}
-              // The scan singleton is one `flock` across both routes, so the
-              // neighbour read would be refused with `other_scan_running`
-              // anyway. Say so here rather than at the far end.
+              shortLabel={t("cell_scanner.run.link_neighbour_short")}
+              // One scan `flock` for both routes: the read would be refused.
               blockedReason={
                 isScanning ? t("cell_scanner.run.link_blocked") : null
               }
@@ -328,123 +306,109 @@ export function FullScanner() {
           postureTitle={postureTitle}
           postureTitleIsMachine={usesModemMessage}
           postureBody={postureBody}
-          metric={hasResults ? results.length : null}
-          // THE SWEEP COLLAPSES AT IDLE. It holds the modem's AT lock for
-          // 30-180 seconds, so the grow lands once, early, and then the reader
-          // waits — the morph reads as the page committing to a long operation.
-          idleCollapsed
-          // Only when there is a folded-in `totalCellsTile` to take its place —
-          // `RunHero` falls back to its own rail otherwise.
-          hideRail={hasResults}
-          summary={
-            isScanning || posture === "complete" ? (
-              <RunSummary
-                // While a sweep runs, the panel would otherwise show the LAST
-                // run's numbers under this run's posture.
-                isLoading={isScanning}
-                tiles={summaryTiles}
-                verdict={verdict}
-                emptyText={t("cell_scanner.run.summary_empty")}
-                leading={totalCellsTile}
-              />
-            ) : null
+          metric={posture === "complete" ? summary.total : null}
+          metricUnit={
+            posture === "complete"
+              ? t("cell_scanner.run.ledger.cells_unit", {
+                  count: summary.total,
+                })
+              : null
           }
+          progress={isScanning ? estimateScanProgress(elapsedSeconds) : null}
+          progressLabel={t("cell_scanner.run.progress_label")}
+          rows={ledgerRowsNode}
+          verdict={verdictNode}
+          idleCollapsed
           actions={
-            // NOTHING ON THE FAILED POSTURE, deliberately. The results card
-            // below carries the recovery action in that state, so a launch
-            // button here would put two buttons on one screen for one act — the
-            // same duplication that retired the empty panel's own trigger.
+            // None on failed: the results card carries the retry.
             posture === "failed" ? null : (
-              <>
-                <Button
-                  type="button"
-                  onClick={startScan}
-                  disabled={isScanning}
-                  className={PILL_ACTION}
-                >
-                  <MaterialSymbol
-                    name={isScanning ? "progress_activity" : "radar"}
-                    size={18}
-                    className={
-                      isScanning
-                        ? "animate-spin motion-reduce:animate-none"
-                        : undefined
-                    }
-                  />
-                  {/* Three distinct labels for three distinct acts. Both
-                      scanning routes shipped the identical string "Start New
-                      Scan" for runs that differ by ~100x in what they cost the
-                      modem. */}
-                  {isScanning
-                    ? t("cell_scanner.run.scanning_action")
-                    : hasResults
-                      ? t("cell_scanner.run.rerun")
-                      : t("cell_scanner.run.start")}
-                </Button>
-              </>
+              <Button
+                type="button"
+                onClick={startScan}
+                disabled={isScanning}
+                className={PILL_ACTION}
+              >
+                <MaterialSymbol
+                  name={isScanning ? "progress_activity" : "radar"}
+                  size={18}
+                  className={
+                    isScanning
+                      ? "animate-spin motion-reduce:animate-none"
+                      : undefined
+                  }
+                />
+                {isScanning
+                  ? t("cell_scanner.run.scanning_action")
+                  : hasResults
+                    ? t("cell_scanner.run.rerun")
+                    : t("cell_scanner.run.start")}
+              </Button>
             )
           }
         />
       </motion.div>
 
-      <motion.div variants={staggerItem}>
-        <Card className={RESULTS_CARD}>
-          <div className={SECTION_HEAD.ROOT}>
-            <div className={SECTION_HEAD.TITLES}>
-              <h2 className={SECTION_HEAD.TITLE}>
-                {t("cell_scanner.results.title")}
-              </h2>
-              <p className={SECTION_HEAD.DESC}>
-                {t("cell_scanner.results.description")}
-              </p>
-            </div>
-          </div>
-
-          {isScanning ? (
-            <ScannerSkeleton />
-          ) : posture === "failed" ? (
-            <ScanErrorState
-              // NO `message` HERE, deliberately. The hero rail 200px above
-              // already carries the modem's own words as its posture title;
-              // passing them again made the failed state two identical
-              // disc-title-body stacks on one screen, which is the same "two
-              // objects, one fact" duplication that retired the posture chip.
-              // The rail names the problem, this panel offers the recovery.
-              title={t("cell_scanner.results.error_title")}
-              body={t("cell_scanner.results.error_body")}
-              retryLabel={t("cell_scanner.results.error_retry")}
-              onRetry={startScan}
-            />
-          ) : results.length > 0 ? (
-            <>
-              <ScanResultView data={results} onLockCell={handleLockCell} />
-
-              {/* End-justified, below the table's own footer/pager — the
-                  header action row now carries only "Sweep again"; exporting a
-                  finished sweep is a fact about the table, so it lives at the
-                  table's own bottom edge. Mirrors the neighbour route. */}
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="tonal-neutral"
-                  className={PILL_ACTION}
-                  onClick={handleDownload}
-                >
-                  <MaterialSymbol name="download" size={18} />
-                  {t("cell_scanner.run.download")}
-                </Button>
+      {posture === "idle" ? null : (
+        <motion.div variants={staggerItem} initial="hidden" animate="visible">
+          <Card className={SCAN_RESULTS_CARD}>
+            <div className={SECTION_HEAD.ROOT}>
+              <div className={SECTION_HEAD.TITLES}>
+                <h2 className={SECTION_HEAD.TITLE}>
+                  {t("cell_scanner.results.title")}
+                </h2>
+                <p className={SECTION_HEAD.DESC}>
+                  {t("cell_scanner.results.description")}
+                </p>
               </div>
-            </>
-          ) : (
-            // Idle, or a completed sweep that listed nothing — same panel,
-            // no button: the hero above already carries the "Sweep" action.
-            <ScanEmptyState
-              title={t("cell_scanner.results.empty_title")}
-              body={t("cell_scanner.results.empty_body")}
-            />
-          )}
-        </Card>
-      </motion.div>
+            </div>
+
+            {isScanning ? (
+              <ScannerSkeleton />
+            ) : posture === "failed" ? (
+              // No `message`: the hero's status cell already names the reason.
+              <ScanErrorState
+                title={t("cell_scanner.results.error_title")}
+                body={t("cell_scanner.results.error_body")}
+                retryLabel={t("cell_scanner.results.error_retry")}
+                onRetry={startScan}
+              />
+            ) : results.length > 0 ? (
+              <ScanResultView
+                data={results}
+                onLockCell={handleLockCell}
+                canLockCell={canLockCell}
+                toolbarActions={
+                  <Button
+                    type="button"
+                    variant="tonal-neutral"
+                    className={cn(PILL_QUIET, "gap-1.5")}
+                    onClick={handleDownload}
+                    aria-label={t("cell_scanner.run.download")}
+                  >
+                    <MaterialSymbol name="download" size={16} />
+                    <span className="hidden @sm/section:inline">
+                      {t("cell_scanner.run.download")}
+                    </span>
+                  </Button>
+                }
+              />
+            ) : (
+              // Only after a completed sweep that listed nothing; no button.
+              <Empty className={EMPTY_PANEL}>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <MaterialSymbol name="radar" size={24} aria-hidden />
+                  </EmptyMedia>
+                  <EmptyTitle>{t("cell_scanner.results.empty_title")}</EmptyTitle>
+                  <EmptyDescription className="text-pretty">
+                    {t("cell_scanner.results.empty_body")}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            )}
+          </Card>
+        </motion.div>
+      )}
 
       <LockCellDialog
         target={lockTarget}

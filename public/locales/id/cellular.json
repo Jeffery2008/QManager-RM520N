@@ -295,6 +295,18 @@
     },
     "run": {
       "title": "Pemindaian seluruh jaringan",
+      "link_neighbour_short": "Tetangga",
+      "progress_label": "Perkiraan kemajuan pemindaian",
+      "ledger": {
+        "col_carrier": "Operator",
+        "col_cells": "Sel",
+        "col_bands": "Band",
+        "col_best": "Sinyal terbaik",
+        "your_sim": "SIM Anda",
+        "cells_unit_one": "sel",
+        "cells_unit_other": "sel",
+        "dbm_unit": "dBm"
+      },
       "description": "Satu putaran pada setiap band yang didukung modem.",
       "start": "Pindai semua band",
       "rerun": "Pindai lagi",
@@ -304,8 +316,6 @@
       "link_blocked": "Tersedia setelah pemindaian selesai.",
       "summary_empty": "Pemindaian selesai tanpa mendaftar satu sel pun, jadi tidak ada yang bisa diuraikan.",
       "summary_provider_unknown": "Operator tanpa nama",
-      "summary_best": "terbaik {{value}} dBm",
-      "summary_no_reading": "tidak ada sinyal yang dilaporkan",
       "summary_others_one": "1 operator lagi",
       "summary_others_other": "{{count}} operator lagi",
       "verdict_all_good_one": "Satu-satunya sel yang melaporkan level hasilnya baik. Pemindaian mengukur tanpa bantuan sel pelayan, jadi pembacaan pada level ini benar-benar kandidat yang kuat.",
@@ -320,7 +330,6 @@
       "scanning_title": "Menyetel setiap band",
       "scanning_body": "Biarkan tab ini terbuka — hasilnya muncul di sini setelah modem selesai.",
       "complete_title": "Pemindaian selesai",
-      "summary_total_cells": "Total sel",
       "failed_title": "Pemindaian gagal",
       "failed_body": "Modem mungkin sedang sibuk atau tidak dapat dihubungi. Periksa koneksi lalu pindai ulang."
     },
@@ -342,7 +351,7 @@
       "error_title": "Pemindaian gagal",
       "error_body": "Modem mungkin sedang sibuk atau tidak dapat dihubungi. Periksa koneksi lalu pindai ulang.",
       "error_retry": "Coba pindai lagi",
-      "note_lock": "Mengunci sebuah baris akan menyalin band, EARFCN, dan PCI-nya ke Penguncian Tower, dan modem akan menempel pada sel itu sampai kuncinya dilepas.",
+      "note_lock": "Mengunci sebuah baris akan langsung mengunci modem ke sel itu, sampai kuncinya dilepas di Penguncian Tower.",
       "tally_rows_one": "1 baris",
       "tally_rows_other": "{{count}} baris",
       "tally_good_one": "1 baik",
@@ -376,7 +385,8 @@
       "none": "Tidak ada data"
     },
     "actions": {
-      "lock_cell": "Kunci ke sel ini"
+      "lock_cell": "Kunci ke sel ini",
+      "lock_other_network": "Bukan jaringan SIM Anda"
     },
     "a11y": {
       "network_codes": "Kode jaringan",
@@ -418,6 +428,12 @@
       },
       "run": {
         "title": "Pemindaian sel tetangga",
+        "ledger": {
+          "figure_unit_one": "band tersedia",
+          "figure_unit_other": "band tersedia",
+          "bands_unit_one": "band",
+          "bands_unit_other": "band"
+        },
         "description": "Meminta sel tetangga yang sudah dilacak sel pelayan, tanpa memindai band tambahan.",
         "start": "Baca sel tetangga",
         "rerun": "Baca lagi",
@@ -425,9 +441,6 @@
         "link_sweep": "Pemindai Sel",
         "link_blocked": "Tersedia setelah pembacaan ini selesai.",
         "summary_empty": "Pembacaan selesai tanpa menyebut satu sel tetangga pun, jadi tidak ada yang bisa diuraikan.",
-        "summary_measured_label": "Dengan pengukuran",
-        "available_bands_one": "1 band tersedia",
-        "available_bands_other": "{{count}} band tersedia",
         "verdict_channel_only_one": "1 sel tetangga dikembalikan hanya sebagai kanal: sel pelayan tahu sel itu ada tetapi tidak punya pengukuran terkini untuknya, jadi ia tidak membawa kualitas dan tidak bisa dikunci.",
         "verdict_channel_only_other": "{{count}} sel tetangga dikembalikan hanya sebagai kanal: sel pelayan tahu sel-sel itu ada tetapi tidak punya pengukuran terkini untuknya, jadi mereka tidak membawa kualitas dan tidak bisa dikunci.",
         "idle_title": "Belum ada pembacaan",
@@ -446,13 +459,11 @@
         "empty_body": "Jalankan pembacaan untuk menampilkan sel yang sedang diukur menara pelayan, beserta kanal dan sinyalnya.",
         "error_title": "Pembacaan gagal",
         "error_retry": "Coba baca lagi",
-        "note_channel_only": "Sel tetangga yang dilaporkan hanya sebagai kanal tidak punya pengukuran di baliknya, jadi ia tidak membawa kualitas dan tombol kuncinya tetap nonaktif. Mengunci baris LTE yang terukur akan menyalin kanal dan PCI-nya ke Penguncian Tower.",
+        "note_channel_only": "Sel tetangga yang dilaporkan hanya sebagai kanal tidak punya pengukuran di baliknya, jadi ia tidak membawa kualitas dan tombol kuncinya tetap nonaktif. Mengunci baris LTE yang terukur akan langsung mengunci modem ke sel itu, sampai kuncinya dilepas di Penguncian Tower.",
         "tally_measured_one": "1 terukur",
         "tally_measured_other": "{{count}} terukur",
         "tally_channel_only_one": "1 hanya kanal",
-        "tally_channel_only_other": "{{count}} hanya kanal",
-        "tally_bands_one": "1 band",
-        "tally_bands_other": "{{count}} band"
+        "tally_channel_only_other": "{{count}} hanya kanal"
       },
       "columns": {
         "cell_type": "Relasi",

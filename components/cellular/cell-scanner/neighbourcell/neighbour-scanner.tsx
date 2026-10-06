@@ -6,6 +6,13 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { useNeighbourScanner } from "@/hooks/use-neighbour-scanner";
 import { downloadCSV } from "@/lib/download-csv";
@@ -15,22 +22,19 @@ import type { NeighbourCellResult } from "@/types/cell-scanner";
 
 import LockCellDialog, { type LockCellTarget } from "../lock-cell-dialog";
 import RunHero from "../run-hero";
-import RunSummary, {
-  type SummaryTile,
-  type SummaryVerdict,
-} from "../run-summary";
-import { ScanEmptyState, ScanErrorState } from "../scan-states";
+import LedgerRows, { type LedgerRow } from "../run-summary";
+import { ScanErrorState } from "../scan-states";
 import { ScannerSkeleton } from "../scanner-skeleton";
 import SiblingRouteLink from "../sibling-link";
 import {
+  EMPTY_PANEL,
   PILL_ACTION,
-  POSTURE_DISC,
-  POSTURE_GLYPH,
-  RESULTS_CARD,
+  PILL_QUIET,
+  SCAN_RESULTS_CARD,
   SECTION_HEAD,
-  SUMMARY,
+  VERDICT,
+  VERDICT_TONE,
   runPosture,
-  type SignalTier,
 } from "../shapes";
 import { summariseNeighbours } from "../summaries";
 import NeighbourScanResultView, {
@@ -40,55 +44,7 @@ import NeighbourScanResultView, {
 // =============================================================================
 // Neighbour cells — the read and its results
 // =============================================================================
-// The same two objects as the full-scan route, from the same components: a hero
-// that owns the run and a card that owns the rows. This file used to be a FORK
-// of `scanner.tsx` — the error block, the action row, the lock dialog and the
-// CSV button were byte-for-byte identical, and because they were authored twice
-// this copy silently missed four things the parent later gained. It now shares
-// all four rather than restating them, and what remains here is only what is
-// genuinely different about a neighbour read.
-//
-// WHAT IS GENUINELY DIFFERENT IS THE COST, AND THE BUTTONS SAY SO. A sweep
-// holds the modem's single AT channel for up to three minutes; this asks the
-// serving cell for a list it already maintains and is done in about two. Both
-// routes previously shipped a button reading the identical string "Start New
-// Scan"; they now read "Sweep all bands" and "Read neighbours". The standing
-// cost PARAGRAPH that used to sit in the hero was removed on 2026-08-14 by user
-// decision — see `shapes.ts`'s file header.
-//
-// THERE IS NO ELAPSED CLOCK HERE, deliberately. A timer on a two-second
-// operation is a progress indicator for something that has already finished by
-// the time the reader's eye reaches it; the hero's `metric` slot carries the
-// result count instead.
-//
-// -----------------------------------------------------------------------------
-// AND NO IDLE COLLAPSE, FOR THE SAME REASON (2026-08-24)
-// -----------------------------------------------------------------------------
-// The sweep route's hero collapses to a launch bar at idle and GROWS into its
-// body when a run starts, on the 800ms emphasized clock. This route takes every
-// other part of that change — the stacked section head, the neutral summary
-// tiles with their tier discs, the header action row, the returned ink — and
-// deliberately NOT the height morph. `RunHero` exposes it as `idleCollapsed`,
-// and this file is the reason the prop exists rather than the behaviour being
-// unconditional.
-//
-// The cost asymmetry that separates these two routes everywhere else separates
-// them here too. A sweep holds the AT lock for 30-180 seconds, so its grow lands
-// once, early, and the reader then waits inside the shape it grew into — the
-// morph reads as the page committing to a long operation. A neighbour read is
-// done in about two seconds: the container would finish an 800ms grow, hold the
-// skeleton for barely a second, and swap to the result. Same gesture, and at
-// that cadence it reads as the panel twitching rather than as progress. Growth
-// that resolves before the reader has finished registering it is not
-// choreography, it is jitter.
-//
-// So this hero is always open. Its rail is present at idle carrying the `idle`
-// posture, which is also the only place on this route that explains what a
-// neighbour read IS before you run one — and with no summary beside it yet, the
-// rail takes the full width rather than anchoring an empty split (see
-// `HERO_RAIL_ONLY`). The results card stays mounted at idle with its quiet
-// `ScanEmptyState` for the same reason: a two-second act does not need the page
-// rearranged around it.
+// The sweep's launch bar, ledger and results card; no progress bar (a read takes seconds).
 // =============================================================================
 
 function buildCsvRows(results: NeighbourCellResult[]): string[] {
@@ -109,7 +65,7 @@ function buildCsvRows(results: NeighbourCellResult[]): string[] {
 const NEIGHBOUR_CSV_HEADER =
   "Network,Cell Type,Frequency,PCI,Signal (dBm),RSRQ,RSSI,SINR";
 
-/** Posture -> its copy keys, spelled out as LITERALS for `i18n:check`. */
+/** Posture -> its copy keys, as literals for `i18n:check`. */
 const POSTURE_COPY = {
   idle: {
     title: "cell_scanner.neighbour.run.idle_title",
@@ -119,7 +75,7 @@ const POSTURE_COPY = {
     title: "cell_scanner.neighbour.run.scanning_title",
     body: "cell_scanner.neighbour.run.scanning_body",
   },
-  // No `body` on `complete` — the rail's figure is the count. See `shapes.ts`.
+  // No body on complete: the figure is the count.
   complete: { title: "cell_scanner.neighbour.run.complete_title" },
   failed: {
     title: "cell_scanner.neighbour.run.failed_title",
@@ -130,18 +86,10 @@ const POSTURE_COPY = {
 /** The full-sweep route, for the header cross-link. */
 const SWEEP_ROUTE = "/cellular/cell-scanner";
 
-/**
- * A signal tier -> its label key, as LITERALS. Restated from the sweep route
- * rather than shared, by the same house convention `shapes.ts`'s header states:
- * four keys are cheaper than a copy module, and neither route should be able to
- * re-word the other's accessible labels.
- */
-const SIGNAL_LABEL_KEY: Record<SignalTier, string> = {
-  good: "cell_scanner.signal.good",
-  fair: "cell_scanner.signal.fair",
-  poor: "cell_scanner.signal.poor",
-  none: "cell_scanner.signal.none",
-};
+/** The ledger's dBm figure, or `null` for the blank mark. */
+function formatDbm(value: number | null): string | null {
+  return value === null ? null : String(value);
+}
 
 export function NeighbourScanner() {
   const { t } = useTranslation("cellular");
@@ -155,9 +103,7 @@ export function NeighbourScanner() {
   const hasResults = posture === "complete" && results.length > 0;
 
   const handleLockCell = React.useCallback((cell: NeighbourCellResult) => {
-    // Always the LTE payload: `tower/lock.sh`'s NR branch needs a band and an
-    // SCS, and a neighbour report carries neither. The column suppresses the
-    // action for non-LTE rows, so this never sees one.
+    // Always the LTE payload: a neighbour report carries no band or SCS for NR.
     setLockTarget({
       kind: "lte",
       networkType: cell.networkType,
@@ -176,109 +122,61 @@ export function NeighbourScanner() {
 
   const copy = POSTURE_COPY[posture];
 
-  // The run's own status, folded into the tile grid as a peer card instead of a
-  // differently-sized rail beside it — see `RunHero`'s `hideRail` and
-  // `RunSummary`'s `leading`. Built only when there is a completed count to
-  // show; `RunHero` falls back to its own rail whenever this is absent.
-  const readFinishedTile = hasResults ? (
-    <div className={SUMMARY.TILE}>
-      <span className={cn(SUMMARY.DISC, POSTURE_DISC.complete)}>
-        <MaterialSymbol
-          name={POSTURE_GLYPH.complete.glyph}
-          size={26}
-          filled={POSTURE_GLYPH.complete.filled}
-        />
-      </span>
-      <div className={SUMMARY.COPY}>
-        <span className={SUMMARY.LABEL}>{t(POSTURE_COPY.complete.title)}</span>
-        <span className={SUMMARY.DETAILS}>
-          <span className={SUMMARY.DETAIL_FIGURE}>
-            {t("cell_scanner.neighbour.run.available_bands", {
-              count: results.length,
-            })}
-          </span>
-        </span>
-      </div>
-    </div>
-  ) : null;
-
-  // Pure and total: an empty read, a single row and an all-sentinel read all
-  // produce a well-formed summary rather than `NaN` or `-Infinity`.
   const summary = React.useMemo(() => summariseNeighbours(results), [results]);
 
-  const summaryTiles = React.useMemo<SummaryTile[]>(() => {
-    // One tile per relation the read actually returned, then the measurement
-    // split. `nr5g` gets a tile of its own when it appears rather than being
-    // silently absent from an intra/inter pair that would then not add up.
-    const tiles: SummaryTile[] = summary.groups.map((group) => ({
-      id: group.type,
-      label: t(CELL_TYPE_KEY[group.type]),
-      // The disc is the relation's best measured tier, graded in
-      // `summaries.ts`. `tierLabel` is that tier in words for a screen reader —
-      // the glyph carrying it is a ligature and is always aria-hidden.
-      tier: group.tier,
-      tierLabel: t(SIGNAL_LABEL_KEY[group.tier]),
-      details: [
-        // Just the band count — the channel list and best-signal figure that
-        // used to sit alongside it were dropped by user decision; the table
-        // rows carry that detail already.
-        {
-          text: t("cell_scanner.neighbour.results.tally_bands", {
-            count: group.count,
-          }),
-          voice: "figure" as const,
-        },
-      ],
-    }));
-
-    if (summary.total > 0) {
-      tiles.push({
-        id: "__measured",
-        label: t("cell_scanner.neighbour.run.summary_measured_label"),
-        // This tile is a COUNT rather than a relation, so it has no tier of its
-        // own; it takes the best tier across the whole read. That is the honest
-        // reading of "with measurements": when nothing was measured the tier is
-        // `none` and the disc says so, which is exactly this tile's subject.
-        tier: summary.tier,
-        tierLabel: t(SIGNAL_LABEL_KEY[summary.tier]),
-        details: [
-          {
-            text: t("cell_scanner.neighbour.results.tally_measured", {
-              count: summary.measured,
-            }),
-            voice: "figure" as const,
-          },
-        ],
-      });
-    }
-
-    return tiles;
-  }, [summary, t]);
-
-  // One verdict, and only when there is something to explain: the rows the
-  // serving cell named but did not measure. They carry no quality and cannot be
-  // locked, which is otherwise learned by clicking a disabled menu item.
-  const verdict = React.useMemo<SummaryVerdict | null>(
+  const ledgerRows = React.useMemo<LedgerRow[]>(
     () =>
-      summary.channelOnly > 0
-        ? {
-            tone: "muted",
-            glyph: "visibility_off",
-            text: t("cell_scanner.neighbour.run.verdict_channel_only", {
-              count: summary.channelOnly,
-            }),
-          }
-        : null,
-    [summary.channelOnly, t],
+      summary.groups.map((group) => ({
+        id: group.type,
+        name: t(CELL_TYPE_KEY[group.type]),
+        cells: group.count,
+        cellsUnit: t("cell_scanner.neighbour.run.ledger.bands_unit", {
+          count: group.count,
+        }),
+        bands: [],
+        strength: group.best,
+        dbmText: formatDbm(group.best),
+      })),
+    [summary, t],
   );
 
-  // The modem's own message beats a generic failure line when it gave one — and
-  // when it is the modem's own string it is a raw machine string, so it takes
-  // machine voice. Authored English never does.
   const usesModemMessage = posture === "failed" && Boolean(error);
   const postureTitle = usesModemMessage && error ? error : t(copy.title);
-
   const postureBody = "body" in copy ? t(copy.body) : null;
+
+  // Scanning or complete only: on failed, `results` may hold the previous read.
+  const ledgerRowsNode =
+    isScanning || posture === "complete" ? (
+      <LedgerRows
+        rows={ledgerRows}
+        isLoading={isScanning}
+        emptyText={t("cell_scanner.neighbour.run.summary_empty")}
+        head={{
+          carrier: t("cell_scanner.neighbour.columns.cell_type"),
+          cells: t("cell_scanner.run.ledger.col_bands"),
+          best: t("cell_scanner.run.ledger.col_best"),
+        }}
+        dbmUnit={t("cell_scanner.run.ledger.dbm_unit")}
+      />
+    ) : null;
+
+  // The one verdict: rows the serving cell named but did not measure.
+  const verdictNode =
+    posture === "complete" && summary.channelOnly > 0 ? (
+      <p className={cn(VERDICT.ROOT, VERDICT_TONE.muted)}>
+        <MaterialSymbol
+          name="visibility_off"
+          size={18}
+          filled
+          className="flex-none"
+        />
+        <span className={VERDICT.TEXT}>
+          {t("cell_scanner.neighbour.run.verdict_channel_only", {
+            count: summary.channelOnly,
+          })}
+        </span>
+      </p>
+    ) : null;
 
   return (
     <>
@@ -300,105 +198,108 @@ export function NeighbourScanner() {
           postureTitle={postureTitle}
           postureTitleIsMachine={usesModemMessage}
           postureBody={postureBody}
-          metric={hasResults ? results.length : null}
-          // NO `idleCollapsed` — see this file's header. A two-second read does
-          // not earn an 800ms container morph.
-          // `hideRail` only when there is a folded-in `readFinishedTile` to take
-          // its place — `RunHero` falls back to its own rail otherwise.
-          hideRail={hasResults}
-          summary={
-            isScanning || posture === "complete" ? (
-              <RunSummary
-                isLoading={isScanning}
-                tiles={summaryTiles}
-                verdict={verdict}
-                emptyText={t("cell_scanner.neighbour.run.summary_empty")}
-                leading={readFinishedTile}
-              />
-            ) : null
+          metric={posture === "complete" ? summary.total : null}
+          metricUnit={
+            posture === "complete"
+              ? t("cell_scanner.neighbour.run.ledger.figure_unit", {
+                  count: summary.total,
+                })
+              : null
           }
+          rows={ledgerRowsNode}
+          verdict={verdictNode}
+          idleCollapsed
           actions={
-            <Button
-              type="button"
-              onClick={startScan}
-              disabled={isScanning}
-              className={PILL_ACTION}
-            >
-              <MaterialSymbol
-                name={isScanning ? "progress_activity" : "cell_tower"}
-                size={18}
-                className={
-                  isScanning
-                    ? "animate-spin motion-reduce:animate-none"
-                    : undefined
-                }
-              />
-              {isScanning
-                ? t("cell_scanner.neighbour.run.scanning_action")
-                : hasResults
-                  ? t("cell_scanner.neighbour.run.rerun")
-                  : t("cell_scanner.neighbour.run.start")}
-            </Button>
+            // None on failed: the results card carries the retry.
+            posture === "failed" ? null : (
+              <Button
+                type="button"
+                onClick={startScan}
+                disabled={isScanning}
+                className={PILL_ACTION}
+              >
+                <MaterialSymbol
+                  name={isScanning ? "progress_activity" : "cell_tower"}
+                  size={18}
+                  className={
+                    isScanning
+                      ? "animate-spin motion-reduce:animate-none"
+                      : undefined
+                  }
+                />
+                {isScanning
+                  ? t("cell_scanner.neighbour.run.scanning_action")
+                  : hasResults
+                    ? t("cell_scanner.neighbour.run.rerun")
+                    : t("cell_scanner.neighbour.run.start")}
+              </Button>
+            )
           }
         />
       </motion.div>
 
-      <motion.div variants={staggerItem}>
-        <Card className={RESULTS_CARD}>
-          <div className={SECTION_HEAD.ROOT}>
-            <div className={SECTION_HEAD.TITLES}>
-              <h2 className={SECTION_HEAD.TITLE}>
-                {t("cell_scanner.neighbour.results.title")}
-              </h2>
-              <p className={SECTION_HEAD.DESC}>
-                {t("cell_scanner.neighbour.results.description")}
-              </p>
+      {posture === "idle" ? null : (
+        <motion.div variants={staggerItem} initial="hidden" animate="visible">
+          <Card className={SCAN_RESULTS_CARD}>
+            <div className={SECTION_HEAD.ROOT}>
+              <div className={SECTION_HEAD.TITLES}>
+                <h2 className={SECTION_HEAD.TITLE}>
+                  {t("cell_scanner.neighbour.results.title")}
+                </h2>
+                <p className={SECTION_HEAD.DESC}>
+                  {t("cell_scanner.neighbour.results.description")}
+                </p>
+              </div>
             </div>
-          </div>
 
-          {isScanning ? (
-            <ScannerSkeleton />
-          ) : posture === "failed" ? (
-            <ScanErrorState
-              // No `message`: the hero rail above already carries the modem's
-              // own words. See the sweep route for the full reasoning.
-              title={t("cell_scanner.neighbour.results.error_title")}
-              body={t("cell_scanner.results.error_body")}
-              retryLabel={t("cell_scanner.neighbour.results.error_retry")}
-              onRetry={startScan}
-            />
-          ) : results.length > 0 ? (
-            <>
+            {isScanning ? (
+              <ScannerSkeleton />
+            ) : posture === "failed" ? (
+              // No `message`: the hero's status cell already names the reason.
+              <ScanErrorState
+                title={t("cell_scanner.neighbour.results.error_title")}
+                body={t("cell_scanner.neighbour.run.failed_body")}
+                retryLabel={t("cell_scanner.neighbour.results.error_retry")}
+                onRetry={startScan}
+              />
+            ) : results.length > 0 ? (
               <NeighbourScanResultView
                 data={results}
                 onLockCell={handleLockCell}
+                toolbarActions={
+                  <Button
+                    type="button"
+                    variant="tonal-neutral"
+                    className={cn(PILL_QUIET, "gap-1.5")}
+                    onClick={handleDownload}
+                    aria-label={t("cell_scanner.run.download")}
+                  >
+                    <MaterialSymbol name="download" size={16} />
+                    <span className="hidden @sm/section:inline">
+                      {t("cell_scanner.run.download")}
+                    </span>
+                  </Button>
+                }
               />
-
-              {/* End-justified, below the table's own footer/pager — the
-                  header action row now carries only the one act you can take on
-                  this whole read ("Read again"); exporting what it found is a
-                  fact about the finished table, so it lives at the table's own
-                  bottom edge. */}
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="tonal-neutral"
-                  className={PILL_ACTION}
-                  onClick={handleDownload}
-                >
-                  <MaterialSymbol name="download" size={18} />
-                  {t("cell_scanner.run.download")}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <ScanEmptyState
-              title={t("cell_scanner.neighbour.results.empty_title")}
-              body={t("cell_scanner.neighbour.results.empty_body")}
-            />
-          )}
-        </Card>
-      </motion.div>
+            ) : (
+              // Only after a completed read that listed nothing; no button.
+              <Empty className={EMPTY_PANEL}>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <MaterialSymbol name="radar" size={24} aria-hidden />
+                  </EmptyMedia>
+                  <EmptyTitle>
+                    {t("cell_scanner.neighbour.results.empty_title")}
+                  </EmptyTitle>
+                  <EmptyDescription className="text-pretty">
+                    {t("cell_scanner.neighbour.results.empty_body")}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            )}
+          </Card>
+        </motion.div>
+      )}
 
       <LockCellDialog
         target={lockTarget}

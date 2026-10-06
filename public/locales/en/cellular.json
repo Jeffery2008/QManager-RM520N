@@ -295,6 +295,18 @@
     },
     "run": {
       "title": "Full network sweep",
+      "link_neighbour_short": "Neighbors",
+      "progress_label": "Estimated sweep progress",
+      "ledger": {
+        "col_carrier": "Carrier",
+        "col_cells": "Cells",
+        "col_bands": "Bands",
+        "col_best": "Best signal",
+        "your_sim": "Your SIM",
+        "cells_unit_one": "cell",
+        "cells_unit_other": "cells",
+        "dbm_unit": "dBm"
+      },
       "description": "One pass across every band this modem supports.",
       "start": "Sweep all bands",
       "rerun": "Sweep again",
@@ -304,8 +316,6 @@
       "link_blocked": "Available once the sweep finishes.",
       "summary_empty": "The sweep finished without listing a single cell, so there is nothing to break down.",
       "summary_provider_unknown": "Unnamed operator",
-      "summary_best": "best {{value}} dBm",
-      "summary_no_reading": "no signal reported",
       "summary_others_one": "1 more provider",
       "summary_others_other": "{{count}} more providers",
       "verdict_all_good_one": "The one cell that reported a level came back good. A sweep measures without the serving cell's help, so a reading at this level is a genuinely strong candidate.",
@@ -320,7 +330,6 @@
       "scanning_title": "Tuning every band",
       "scanning_body": "Keep this tab open — the results land here when the modem finishes.",
       "complete_title": "Sweep finished",
-      "summary_total_cells": "Total Cells",
       "failed_title": "Sweep failed",
       "failed_body": "The modem may be busy or unreachable. Check the connection and run the sweep again."
     },
@@ -342,7 +351,7 @@
       "error_title": "Sweep failed",
       "error_body": "The modem may be busy or unreachable. Check the connection and run the sweep again.",
       "error_retry": "Retry sweep",
-      "note_lock": "Locking a row copies its band, EARFCN and PCI into Tower Locking, and the modem camps on that cell until you clear the lock.",
+      "note_lock": "Locking a row locks the modem to that cell straight away, and it stays there until you clear the lock on Tower Locking.",
       "tally_rows_one": "1 row",
       "tally_rows_other": "{{count}} rows",
       "tally_good_one": "1 good",
@@ -376,7 +385,8 @@
       "none": "No data"
     },
     "actions": {
-      "lock_cell": "Lock to this cell"
+      "lock_cell": "Lock to this cell",
+      "lock_other_network": "Not your SIM's network"
     },
     "a11y": {
       "network_codes": "Network codes",
@@ -418,6 +428,12 @@
       },
       "run": {
         "title": "Neighbourcell scan",
+        "ledger": {
+          "figure_unit_one": "available band",
+          "figure_unit_other": "available bands",
+          "bands_unit_one": "band",
+          "bands_unit_other": "bands"
+        },
         "description": "Requests the neighbour cells the serving tower already tracks, without sweeping additional bands.",
         "start": "Read neighbours",
         "rerun": "Read again",
@@ -425,9 +441,6 @@
         "link_sweep": "Cell Scanner",
         "link_blocked": "Available once this read finishes.",
         "summary_empty": "The read finished without naming a single neighbour, so there is nothing to break down.",
-        "summary_measured_label": "With measurements",
-        "available_bands_one": "1 available band",
-        "available_bands_other": "{{count}} available bands",
         "verdict_channel_only_one": "1 neighbour came back as a channel only: the serving cell knows it is there but has no current measurement for it, so it carries no quality and cannot be locked.",
         "verdict_channel_only_other": "{{count}} neighbours came back as a channel only: the serving cell knows they are there but has no current measurements for them, so they carry no quality and cannot be locked.",
         "idle_title": "No read yet",
@@ -446,13 +459,11 @@
         "empty_body": "Run a read to list the cells the serving tower is already measuring, with their channel and signal.",
         "error_title": "Read failed",
         "error_retry": "Retry read",
-        "note_channel_only": "A neighbour reported as a channel only has no measurement behind it, so it carries no quality and its lock action stays disabled. Locking a measured LTE row copies its channel and PCI into Tower Locking.",
+        "note_channel_only": "A neighbour reported as a channel only has no measurement behind it, so it carries no quality and its lock action stays disabled. Locking a measured LTE row locks the modem to it straight away, until you clear the lock on Tower Locking.",
         "tally_measured_one": "1 measured",
         "tally_measured_other": "{{count}} measured",
         "tally_channel_only_one": "1 channel only",
-        "tally_channel_only_other": "{{count}} channel only",
-        "tally_bands_one": "1 band",
-        "tally_bands_other": "{{count}} bands"
+        "tally_channel_only_other": "{{count}} channel only"
       },
       "columns": {
         "cell_type": "Relation",

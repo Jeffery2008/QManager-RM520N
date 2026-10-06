@@ -13,6 +13,11 @@ Every settings card in the app now saves from the same place — a row along the
 - **Saving is confirmed by a toast, not a label that fades.** The "Saved" text that blinked beside the Save button in Alerts, Watchdog, Scheduled Reboot and the Ethernet speed limit is gone, and **Cellular → Settings** now shows a toast when your changes apply (or names the settings that failed). (The five fading labels all ran on a 1.8 s timer; the toast already existed on four of them.)
 - **"No automatic recovery" is now blue.** On **Cellular → Frequency Locking**, the chip on the locked verdict is a filled info chip instead of a grey one, so it reads as a fact rather than a disabled state.
 - **Frequency Calculator channel label has a separator.** On **Cellular → Cell Scanner → Frequency Calculator**, the answer now reads "EARFCN 1350 · downlink" instead of running the two together. (`readout.channel_lte` / `channel_nr` in all five language packs.)
+- **Cell Scanner and Neighboring Cells have a new layout.** Both pages start as a compact launch bar and show results as one summary card (the total, then a row per carrier with your SIM's first, or per neighbour type) above a table sorted strongest signal first, with **Download CSV** beside the filter. The sweep shows an estimated progress bar, and **Lock to this cell** is greyed out, with the reason, for cells on another carrier. (The bar is an estimate: the modem reports nothing until the sweep ends.)
+
+## 🐛 Fixes
+
+- **Neighboring Cells "Read failed" card gives the right advice.** It used to tell you to run the sweep again; it now says to read again.
 
 ## 📥 Installation
 

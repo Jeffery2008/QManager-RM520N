@@ -295,6 +295,18 @@
     },
     "run": {
       "title": "Scansione completa della rete",
+      "link_neighbour_short": "Vicine",
+      "progress_label": "Avanzamento stimato della scansione",
+      "ledger": {
+        "col_carrier": "Operatore",
+        "col_cells": "Celle",
+        "col_bands": "Bande",
+        "col_best": "Segnale migliore",
+        "your_sim": "La tua SIM",
+        "cells_unit_one": "cella",
+        "cells_unit_other": "celle",
+        "dbm_unit": "dBm"
+      },
       "description": "Un passaggio su ogni banda supportata dal modem.",
       "start": "Analizza tutte le bande",
       "rerun": "Ripeti la scansione",
@@ -304,8 +316,6 @@
       "link_blocked": "Disponibile al termine della scansione.",
       "summary_empty": "La scansione è terminata senza elencare nemmeno una cella, quindi non c'è nulla da analizzare.",
       "summary_provider_unknown": "Operatore senza nome",
-      "summary_best": "migliore {{value}} dBm",
-      "summary_no_reading": "nessun segnale riportato",
       "summary_others_one": "1 altro operatore",
       "summary_others_other": "altri {{count}} operatori",
       "verdict_all_good_one": "L'unica cella che ha riportato un livello risulta buona. Una scansione misura senza l'aiuto della cella di servizio, quindi una lettura a questo livello indica una candidata davvero forte.",
@@ -320,7 +330,6 @@
       "scanning_title": "Sintonizzazione di ogni banda",
       "scanning_body": "Lascia aperta questa scheda: i risultati compaiono qui quando il modem termina.",
       "complete_title": "Scansione terminata",
-      "summary_total_cells": "Celle totali",
       "failed_title": "Scansione non riuscita",
       "failed_body": "Il modem potrebbe essere occupato o irraggiungibile. Controlla la connessione e ripeti la scansione."
     },
@@ -342,7 +351,7 @@
       "error_title": "Scansione non riuscita",
       "error_body": "Il modem potrebbe essere occupato o irraggiungibile. Controlla la connessione e ripeti la scansione.",
       "error_retry": "Riprova la scansione",
-      "note_lock": "Bloccando una riga se ne copiano banda, EARFCN e PCI in Blocco BTS, e il modem resta agganciato a quella cella finché non rimuovi il blocco.",
+      "note_lock": "Bloccando una riga il modem si aggancia subito a quella cella e ci resta finché non rimuovi il blocco in Blocco BTS.",
       "tally_rows_one": "1 riga",
       "tally_rows_other": "{{count}} righe",
       "tally_good_one": "1 buona",
@@ -376,7 +385,8 @@
       "none": "Nessun dato"
     },
     "actions": {
-      "lock_cell": "Blocca su questa cella"
+      "lock_cell": "Blocca su questa cella",
+      "lock_other_network": "Non è la rete della tua SIM"
     },
     "a11y": {
       "network_codes": "Codici di rete",
@@ -418,6 +428,12 @@
       },
       "run": {
         "title": "Scansione celle vicine",
+        "ledger": {
+          "figure_unit_one": "banda disponibile",
+          "figure_unit_other": "bande disponibili",
+          "bands_unit_one": "banda",
+          "bands_unit_other": "bande"
+        },
         "description": "Richiede le celle vicine che la cella di servizio già monitora, senza scansionare bande aggiuntive.",
         "start": "Leggi le celle vicine",
         "rerun": "Leggi di nuovo",
@@ -425,9 +441,6 @@
         "link_sweep": "Scanner celle",
         "link_blocked": "Disponibile al termine di questa lettura.",
         "summary_empty": "La lettura è terminata senza indicare nemmeno una cella vicina, quindi non c'è nulla da analizzare.",
-        "summary_measured_label": "Con misurazioni",
-        "available_bands_one": "1 banda disponibile",
-        "available_bands_other": "{{count}} bande disponibili",
         "verdict_channel_only_one": "1 cella vicina è stata restituita con il solo canale: la cella di servizio sa che è lì ma non ne ha una misurazione attuale, quindi non porta alcuna qualità e non può essere bloccata.",
         "verdict_channel_only_other": "{{count}} celle vicine sono state restituite con il solo canale: la cella di servizio sa che sono lì ma non ne ha misurazioni attuali, quindi non portano alcuna qualità e non possono essere bloccate.",
         "idle_title": "Nessuna lettura",
@@ -446,13 +459,11 @@
         "empty_body": "Esegui una lettura per elencare le celle che la torre di servizio sta già misurando, con canale e segnale.",
         "error_title": "Lettura non riuscita",
         "error_retry": "Riprova la lettura",
-        "note_channel_only": "Una cella vicina riportata con il solo canale non ha dietro alcuna misurazione, quindi non porta alcuna qualità e la sua azione di blocco resta disattivata. Bloccando una riga LTE misurata se ne copiano canale e PCI in Blocco BTS.",
+        "note_channel_only": "Una cella vicina riportata con il solo canale non ha dietro alcuna misurazione, quindi non porta alcuna qualità e la sua azione di blocco resta disattivata. Bloccando una riga LTE misurata il modem si aggancia subito a quella cella, finché non rimuovi il blocco in Blocco BTS.",
         "tally_measured_one": "1 misurata",
         "tally_measured_other": "{{count}} misurate",
         "tally_channel_only_one": "1 con solo canale",
-        "tally_channel_only_other": "{{count}} con solo canale",
-        "tally_bands_one": "1 banda",
-        "tally_bands_other": "{{count}} bande"
+        "tally_channel_only_other": "{{count}} con solo canale"
       },
       "columns": {
         "cell_type": "Relazione",

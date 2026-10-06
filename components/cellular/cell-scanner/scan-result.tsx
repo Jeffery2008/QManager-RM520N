@@ -2,7 +2,11 @@
 
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
+import type {
+  ColumnDef,
+  SortingState,
+  VisibilityState,
+} from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,21 +26,15 @@ import type { CellScanResult } from "@/types/cell-scanner";
 import ScanTable from "./scan-table";
 import ScanTableNote from "./table-note";
 import { NetworkTypeBadge, SignalBadge } from "./signal-badges";
+import { signalSortingFn, signalSortValue } from "./sort";
 import { TABLE } from "./shapes";
 import { summariseSweep } from "./summaries";
 
 // =============================================================================
 // The full scan's columns
 // =============================================================================
-// Definitions only. The toolbar, filter, column menu, sorting, pagination, count
-// and row cascade all live in `scan-table.tsx`, which the neighbour route reads
-// too — this file's job is to say what a scanned cell's columns ARE.
-//
-// THE MACHINE-VOICE SPLIT IS PER COLUMN, not per table. Band, EARFCN, PCI, Cell
-// ID and TAC are identifiers that hold steady until something reconfigures them,
-// so they take `TABLE.IDENT` (mono). Signal is a READING that moves on its own,
-// so it takes `TABLE.FIGURE` — the interface font with tabular figures. The
-// incumbent set every cell to `font-semibold` and neither.
+// Definitions only; the shell is `scan-table.tsx`. Opens sorted by signal,
+// strongest first, with unmeasured rows last in both directions (`sort.ts`).
 // =============================================================================
 
 /** Columns folded away below the narrow breakpoint. Identifiers first: they are
@@ -69,9 +67,16 @@ export type CellScanColumnCopy = {
 
 export function createCellScanColumns(
   copy: CellScanColumnCopy,
-  labels: { networkCodes: string; rowMenu: string; lockCell: string },
+  labels: {
+    networkCodes: string;
+    rowMenu: string;
+    lockCell: string;
+    lockOtherNetwork: string;
+  },
   format: { bandwidth: (value: number) => string; signal: (value: number) => string },
   onLockCell?: (cell: CellScanResult) => void,
+  /** Rows answering `false` keep the item, disabled: the SIM cannot register there. */
+  canLockCell: (cell: CellScanResult) => boolean = () => true,
 ): ColumnDef<CellScanResult>[] {
   return [
     {
@@ -162,7 +167,11 @@ export function createCellScanColumns(
       ),
     },
     {
-      accessorKey: "signalStrength",
+      // The accessor feeds sorting only; the cell reads `row.original`.
+      id: "signalStrength",
+      accessorFn: (row) => signalSortValue(row.signalStrength),
+      sortingFn: signalSortingFn,
+      sortUndefined: "last",
       header: ({ column }) => (
         <Button
           type="button"
@@ -177,12 +186,7 @@ export function createCellScanColumns(
       cell: ({ row }) => (
         <span className="flex items-center gap-2">
           <SignalBadge strength={row.original.signalStrength} />
-          {/* The worker's 0 is "unreported", not 0 dBm — `signalTier` already
-              maps it to the muted "No data" chip, but the value beside the chip
-              was printed unconditionally, so an unmeasured cell read "No data
-              0 dBm": a sentinel rendered as a confident measurement, directly
-              contradicting the chip next to it. The neighbour table has always
-              suppressed it here; this column now agrees. */}
+          {/* 0 is "unreported": the chip says No data and no value is printed. */}
           {row.original.signalStrength !== 0 ? (
             <span className={TABLE.FIGURE}>
               {format.signal(row.original.signalStrength)}
@@ -195,38 +199,64 @@ export function createCellScanColumns(
       id: "actions",
       header: () => null,
       enableHiding: false,
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              className="text-on-surface-variant data-[state=open]:bg-surface-container-high rounded-pill"
-              aria-label={labels.rowMenu}
-            >
-              <MaterialSymbol name="more_vert" size={16} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => onLockCell?.(row.original)}>
-              <MaterialSymbol name="lock" size={16} />
-              {labels.lockCell}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      cell: ({ row }) => {
+        const lockable = canLockCell(row.original);
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="text-on-surface-variant data-[state=open]:bg-surface-container-high rounded-pill"
+                aria-label={labels.rowMenu}
+              >
+                <MaterialSymbol name="more_vert" size={16} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                disabled={!lockable}
+                onClick={() => onLockCell?.(row.original)}
+                className="items-start"
+              >
+                <MaterialSymbol name="lock" size={16} className="mt-0.5" />
+                <span className="flex flex-col">
+                  {labels.lockCell}
+                  {lockable ? null : (
+                    <span className="text-xs text-on-surface-variant">
+                      {labels.lockOtherNetwork}
+                    </span>
+                  )}
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 }
 
+/** Strongest signal first; a module constant so its identity is stable. */
+const DEFAULT_SORTING: SortingState = [{ id: "signalStrength", desc: true }];
+
 export interface ScanResultViewProps {
   data: CellScanResult[];
   onLockCell?: (cell: CellScanResult) => void;
+  /** See `createCellScanColumns`'s `canLockCell`. */
+  canLockCell?: (cell: CellScanResult) => boolean;
+  /** Rendered in the table toolbar, before the column menu (Download CSV). */
+  toolbarActions?: React.ReactNode;
 }
 
 /** The full scan's table: this route's columns poured into the shared shell. */
-export function ScanResultView({ data, onLockCell }: ScanResultViewProps) {
+export function ScanResultView({
+  data,
+  onLockCell,
+  canLockCell,
+  toolbarActions,
+}: ScanResultViewProps) {
   const { t } = useTranslation("cellular");
 
   const columnCopy: CellScanColumnCopy = React.useMemo(
@@ -252,26 +282,25 @@ export function ScanResultView({ data, onLockCell }: ScanResultViewProps) {
           networkCodes: t("cell_scanner.a11y.network_codes"),
           rowMenu: t("cell_scanner.a11y.row_menu"),
           lockCell: t("cell_scanner.actions.lock_cell"),
+          lockOtherNetwork: t("cell_scanner.actions.lock_other_network"),
         },
         {
           bandwidth: (value) => t("cell_scanner.cells.bandwidth", { value }),
           signal: (value) => t("cell_scanner.cells.signal", { value }),
         },
         onLockCell,
+        canLockCell,
       ),
-    [columnCopy, onLockCell, t],
+    [columnCopy, onLockCell, canLockCell, t],
   );
 
-  // The tier tally under the table. Derived from the WHOLE result set rather
-  // than the filtered page: it describes what the sweep found, and the pager's
-  // own count directly beneath it already describes what the filter left.
+  // The tier tally covers the whole sweep, not the filtered page.
   const tally = React.useMemo(() => {
     const summary = summariseSweep(data);
     const items = [
       t("cell_scanner.results.tally_rows", { count: summary.total }),
     ];
-    // Only tiers that actually occurred. A row of zeroes is noise, and "0 good"
-    // beside "8 weak" reads as a scoreboard rather than a description.
+    // Only tiers that occurred.
     if (summary.tiers.good > 0)
       items.push(t("cell_scanner.results.tally_good", { count: summary.tiers.good }));
     if (summary.tiers.fair > 0)
@@ -294,12 +323,12 @@ export function ScanResultView({ data, onLockCell }: ScanResultViewProps) {
           tally={tally}
         />
       }
-      // The menu's labels ARE the headers, so they cannot drift apart: the
-      // incumbent maintained a second hand-written map and the neighbour fork
-      // had none at all, which is why its menu offered "signalStrength".
+      // The menu's labels are the headers, so they cannot drift apart.
       columnLabels={columnCopy}
       filterColumnId="provider"
       narrowHidden={CELL_SCAN_NARROW_HIDDEN}
+      initialSorting={DEFAULT_SORTING}
+      toolbarActions={toolbarActions}
       labels={{
         filterPlaceholder: t("cell_scanner.results.filter_placeholder"),
         columns: t("cell_scanner.results.columns"),

@@ -295,6 +295,18 @@
     },
     "run": {
       "title": "全網路掃描",
+      "link_neighbour_short": "鄰區",
+      "progress_label": "預估掃描進度",
+      "ledger": {
+        "col_carrier": "電信業者",
+        "col_cells": "小區",
+        "col_bands": "頻段",
+        "col_best": "最佳訊號",
+        "your_sim": "你的 SIM",
+        "cells_unit_one": "個小區",
+        "cells_unit_other": "個小區",
+        "dbm_unit": "dBm"
+      },
       "description": "在模組支援的每個頻段上各掃描一遍。",
       "start": "掃描全部頻段",
       "rerun": "重新掃描",
@@ -304,8 +316,6 @@
       "link_blocked": "掃描結束後可用。",
       "summary_empty": "本次掃描結束時未列出任何小區，因此沒有可分析的內容。",
       "summary_provider_unknown": "未命名電信業者",
-      "summary_best": "最佳 {{value}} dBm",
-      "summary_no_reading": "未回報訊號",
       "summary_others_one": "另有 1 家電信業者",
       "summary_others_other": "另有 {{count}} 家電信業者",
       "verdict_all_good_one": "唯一回報了電平的小區結果為良好。掃描是在沒有服務細胞協助的情況下測量的，因此達到該電平的讀數是確實很強的候選。",
@@ -320,7 +330,6 @@
       "scanning_title": "正在逐一調諧頻段",
       "scanning_body": "請保持此分頁開啟——模組完成後結果會顯示在這裡。",
       "complete_title": "掃描完成",
-      "summary_total_cells": "小區總數",
       "failed_title": "掃描失敗",
       "failed_body": "模組可能正忙或無法連線。請檢查連線後重新掃描。"
     },
@@ -342,7 +351,7 @@
       "error_title": "掃描失敗",
       "error_body": "模組可能正忙或無法連線。請檢查連線後重新掃描。",
       "error_retry": "重新掃描",
-      "note_lock": "鎖定某一列會把它的頻段、頻點與 PCI 複製到基站鎖定，模組隨後會一直駐留在該小區，直到你解除鎖定。",
+      "note_lock": "鎖定某一列會立即把模組鎖定到該小區，直到你在基站鎖定中解除鎖定。",
       "tally_rows_one": "1 列",
       "tally_rows_other": "{{count}} 列",
       "tally_good_one": "1 個良好",
@@ -376,7 +385,8 @@
       "none": "無資料"
     },
     "actions": {
-      "lock_cell": "鎖定到此小區"
+      "lock_cell": "鎖定到此小區",
+      "lock_other_network": "不是你的 SIM 所屬網路"
     },
     "a11y": {
       "network_codes": "網路代碼",
@@ -418,6 +428,12 @@
       },
       "run": {
         "title": "鄰區掃描",
+        "ledger": {
+          "figure_unit_one": "個可用頻段",
+          "figure_unit_other": "個可用頻段",
+          "bands_unit_one": "個頻段",
+          "bands_unit_other": "個頻段"
+        },
         "description": "請求服務細胞已經追蹤的鄰區，無需掃描額外的頻段。",
         "start": "讀取鄰區",
         "rerun": "重新讀取",
@@ -425,9 +441,6 @@
         "link_sweep": "小區掃描",
         "link_blocked": "本次讀取結束後可用。",
         "summary_empty": "本次讀取結束時未列出任何鄰區，因此沒有可分析的內容。",
-        "summary_measured_label": "有測量值",
-        "available_bands_one": "1 個可用頻段",
-        "available_bands_other": "{{count}} 個可用頻段",
         "verdict_channel_only_one": "1 個鄰區僅回傳了通道：服務細胞知道它存在，但沒有對它的目前測量值，因此它不帶品質資訊，也無法鎖定。",
         "verdict_channel_only_other": "{{count}} 個鄰區僅回傳了通道：服務細胞知道它們存在，但沒有對它們的目前測量值，因此它們不帶品質資訊，也無法鎖定。",
         "idle_title": "尚未讀取",
@@ -446,13 +459,11 @@
         "empty_body": "執行一次讀取，即可列出服務基地台正在測量的細胞及其通道與訊號。",
         "error_title": "讀取失敗",
         "error_retry": "重新讀取",
-        "note_channel_only": "僅以通道形式回報的鄰區背後沒有測量值，因此它不帶品質資訊，其鎖定操作維持停用。鎖定一個有測量值的 LTE 列會把它的通道與 PCI 複製到基站鎖定。",
+        "note_channel_only": "僅以通道形式回報的鄰區背後沒有測量值，因此它不帶品質資訊，其鎖定操作維持停用。鎖定一個有測量值的 LTE 列會立即把模組鎖定到該小區，直到你在基站鎖定中解除鎖定。",
         "tally_measured_one": "1 個有測量值",
         "tally_measured_other": "{{count}} 個有測量值",
         "tally_channel_only_one": "1 個僅通道",
-        "tally_channel_only_other": "{{count}} 個僅通道",
-        "tally_bands_one": "1 個頻段",
-        "tally_bands_other": "{{count}} 個頻段"
+        "tally_channel_only_other": "{{count}} 個僅通道"
       },
       "columns": {
         "cell_type": "關係",
