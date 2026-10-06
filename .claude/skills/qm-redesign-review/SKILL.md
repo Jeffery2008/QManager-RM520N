@@ -34,7 +34,7 @@ one added card is Lite work and does not come here.
 | File | Read it when |
 |---|---|
 | `references/philosophy.md` | Every run, before critiquing. It holds the user's reasoning behind the Scanning Rules, the Full-Width Page Rule and convention over explanation. Argue from it. |
-| `references/critique-checklist.md` | Step 3. The measured audit (A–P), how to read pixels off a screenshot, the code-provenance checks, and the finding format. |
+| `references/critique-checklist.md` | Step 3. The measured audit (A–Q), how to read pixels off a screenshot, the code-provenance checks, and the finding format. |
 | `references/artifact-spec.md` | Steps 4–5. Section anatomy, token and geometry fidelity, mock craft rules, data realism and the at-rest checklist. |
 | `assets/template.html` | Step 5. Start every artifact from a copy. It has the tokens (light plus both dark blocks), doc chrome, pinned figure, demo bar, stage with Wide/Phone, theme toggle, mock primitives, the before/after pair and the change table. |
 | `assets/exemplar-frequency-calculator.html` | Once per run, skimmed. The reference output, on this repo's Frequency Calculator: how findings cite constants, how a mock computes real data (3GPP EARFCN arithmetic), how states are named, what a before/after looks like. |
@@ -64,10 +64,12 @@ needs Pillow, which the Anaconda `python` on this machine has.
   - Components > Chips and tags, Cards / Containers, Tiles, Metric rows, Inputs / Fields, Icons,
     and its Named Rules
   - Components > Copy & Help (The No-Default-Tip Rule, `HintIcon`)
+  - Layout > The Card-Foot Apply Rule; Components > Confirmation Toasts (The Toast-Confirms Rule),
+    Segmented pills, and The Fact-Is-Info Rule
   - Typography > The Two-Voice Rule and The Machine-Voice Rule
   - Shapes and Elevation & Depth (radius scale, card sheen)
 
-  And `PRODUCT.md` Principles 4, 7 and 8 plus the anti-references. Much of the app is
+  And `PRODUCT.md` Principles 3, 4, 7 and 8 plus its Anti-references block. Much of the app is
   pre-migration, so check what's actually enforced before calling something a regression.
 - **The page's code.** Start at `app/<route>/page.tsx` and follow it to the components and the
   family's `shapes.ts` (`components/cellular/*/shapes.ts`, `components/dashboard/shapes.ts`, …).
@@ -159,13 +161,34 @@ for the sake of it".
 - **Stay inside the fences.**
   - The Full-Width Page Rule: never `max-w` on the page; readability is capped inside a card.
   - The Card-Wrapped Surface Rule, and one inner container per card (One-Nest).
+  - The Card-Foot Apply Rule: a card that edits a draft commits it from a persistent, borderless
+    `CardFoot` row on its own bottom edge. Status holds the left edge; Discard and any other
+    secondary action (ghost or `tonal-neutral`, never a stroked `outline` button) come first and the
+    `SaveButton` is last, on the right. The row is always there (an idle card shows Apply disabled
+    with its reason), has no divider line and holds a fixed height so the card never jumps between
+    idle, dirty, applying and failed. Never a mid-card Save, a `SaveButton` beside a field, or a
+    sticky or page-level save bar. Exempt: dialogs and wizards, per-row and inline actions, and
+    operational actions that are not a draft commit (start a scan, send a message, download).
+  - The Toast-Confirms Rule: a finished user action is confirmed by one `sonner` toast, success or
+    failure, fired by the handler that owns it, and by nothing that fades. The mock never draws an
+    "Applied" or "Saved" chip; when it shows a result it shows a toast. `SaveButton`'s own
+    Saving/Saved state and a persistent status line stay.
+  - On/off preferences and short mutually exclusive choices use the shared `SegmentedField` pill,
+    never a bare `Switch` (new and redesigned surfaces only: an untouched page still on `Switch` is
+    not a finding). It is `components/ui/segmented-field.tsx`; the caller passes the check glyph, so
+    lucide routes can use it.
   - Copy within the Copy & Help budgets, no default `HintIcon` (No-Default-Tip), no em dashes or
     `·` glue (No-Dot-Separator).
-  - Status is a filled `Badge` with a 12px glyph; identity is an outline `Tag` (Two-Form).
+  - Status is a filled `Badge` with a 12px glyph; identity is an outline `Tag` (Two-Form). A fact that
+    is neither a fault nor health is a filled `info` chip with a glyph, only while it applies
+    (Fact-Is-Info), never a grey outline, amber or green. `CardHeader` is a plain title and
+    description with no icon.
   - The Two-Voice Rule: Rethink Sans for the interface and every figure (`tabular-nums`), JetBrains
     Mono for opaque strings. The Machine-Voice tell: a quantity you read (EARFCN, PCI, band, RSRP)
     is Rethink `tabular-nums`; an opaque string you compare (IMEI, ICCID, IP, MAC, paths, raw AT)
     is mono.
+  - Fonts are vendored (`app/fonts/`, `next/font/local`). Never propose `next/font/google` or a CDN
+    `<link>`: the device has no guaranteed egress.
   - The route's icon set only.
   - No capability the target modem lacks (`docs/reference/platform-matrix.md`).
 
@@ -230,6 +253,9 @@ approved page matches what gets built.
 - **No horizontal page scroll at 390px.** Only the change table's wrapper scrolls.
 - **Mock copy obeys the Copy & Help budgets.** The doc chrome stays terse ("All that matters is the
   design").
+- **Mock actions obey the apply and confirmation rules.** An editable card ends in a `CardFoot`
+  (status left, `SaveButton` last on the right, no divider), and a finished action shows a toast,
+  never a fading chip.
 - **No invented hardware claims.** Data is real or computed with the real formulas; samples are
   labelled as samples.
 - **Single HTML file.** Screenshot as a data URI, fonts only from Google Fonts, under 16MB.

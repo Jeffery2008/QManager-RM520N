@@ -38,6 +38,7 @@ The ticket's original request text, acceptance criteria, `PROOF:` line and `READ
 - Evidence is a command you ran or a line you read. Figures recorded in the diff, the ticket or a report are the thing under test, not proof of it.
 - An unreachable surface is `internally consistent, not verified` — never a PASS.
 - Reject hedge language in anything you assert.
+- UI diffs: while reading the page, flag as findings (ranked by severity; the ticket's criteria decide FAIL) any of: a transient "Applied" / "Saved" chip, or no toast on a finished mutation (Toast-Confirms); a Save not in the card's `CardFoot`, a mid-card Save or a page-level save bar, a stroked `outline` secondary beside Save (Card-Foot Apply); a worth-knowing fact drawn as a grey outline, amber or green instead of a filled `info` Badge (Fact-Is-Info); a bare `Switch` for a boolean or short exclusive choice on a new surface (`SegmentedField`); an icon in a `CardHeader`; a `max-w-*` page wrapper; a `next/font/google` import. Read-only; nothing here changes the protocol.
 
 ## Verdict format
 

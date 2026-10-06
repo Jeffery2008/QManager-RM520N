@@ -23,6 +23,8 @@ Run all of them, never a weaker proxy.
 | Backend | `bash .claude/check-crlf.sh <files>`, plus an on-device `sh -n` / `bash -n` |
 | Frontend | `bunx tsc --noEmit`, `bun run lint`, `bun run i18n:check` (100% parity across the five locale packs, which are CRLF), `bun run build`, and `bun run icons:check` when an icon changed |
 
+**UI diffs also get a read-only design-gate pass** (no harness, nothing to run beyond the page load): one toast per finished mutation and no transient "Applied" / "Saved" chip; an editable card's Save in its `CardFoot` (status left, `SaveButton` last, secondary ghost or `tonal-neutral`, no divider) with no mid-card Save or page-level bar; a fact worth knowing as a filled `info` Badge; a short exclusive choice or boolean preference on a `SegmentedField`; no icon in a `CardHeader`; no `max-w-*` page wrapper; no `next/font/google` import. These live in `DESIGN.md`, `ui-builder` and the `qm-redesign-review` checklist (section Q).
+
 **Read `bun run build`'s output.** It reports `Found N warnings while optimizing generated CSS` with a code frame naming the class, then drops the rule and **exits 0** — so the Tailwind prose hazard passes every exit-status check. Mechanism: `docs/reference/tailwind-prose-hazard.md`.
 
 **A green gate proves nothing about rendering.** `next build`, `tsc --noEmit`, `eslint` and `i18n:check` were all green on a tree where every route in `next dev` returned 500. Gates are necessary, never sufficient. A failing gate needs no verifier — it goes straight into a fix ticket.

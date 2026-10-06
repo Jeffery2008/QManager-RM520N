@@ -131,7 +131,7 @@ not merely fill the width.
 
 This rule comes from this repo's design-language adoption (2026-08-30 to 09-07). The Traffic Engine
 settings-in-a-card became the reference. Full-page Custom Profiles compositions and a UniFi-style hero
-mosaic were rejected (`PRODUCT.md` anti-references). The user's pain points from that period:
+mosaic were rejected (`PRODUCT.md` Anti-references). The user's pain points from that period:
 
 - "Its hero is the biggest offender for me … it looks confusing, bloated, and 'too much'."
   (Cellular Basic Settings, 2026-08-30)

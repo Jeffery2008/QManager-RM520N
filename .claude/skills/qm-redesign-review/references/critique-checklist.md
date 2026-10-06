@@ -35,6 +35,7 @@ silently rather than reporting a pass.
 - N. Type voice, colour layer, radius, surface
 - O. Phone composition
 - P. Code provenance
+- Q. Apply placement, confirmation and choice controls
 - Writing the finding
 
 ---
@@ -61,8 +62,8 @@ silently rather than reporting a pass.
 ## A. Reading order
 
 The eye starts top-left and follows edges. Check that the question comes before the answer, that
-the primary action sits where the input ends, and that the first thing seen is the thing the visitor
-came for.
+the primary action sits where the input ends (on a card that edits a draft, that is its `CardFoot`,
+see Q), and that the first thing seen is the thing the visitor came for.
 
 - *Measure:* the order a first-time eye meets input, action and result.
 - *Typical cause:* a two-column split with the result column first (`HERO_SPLIT` with the readout
@@ -89,7 +90,8 @@ For every empty region over about 40px, find the element that *sets* the height:
 
 - Segmented controls or tab lists wider than about 4× their longest label.
 - Inputs sized for a phone column running across 1,000px or more.
-- A primary button far from the field it submits.
+- A primary button far from the field it submits (not a finding when it is the `SaveButton` in the
+  card's `CardFoot`: that distance is the rule, see Q).
 - A full-width button on desktop.
 
 - *Measure:* the control's width against its content ("three words, 1,190px; about 400px each").
@@ -134,10 +136,13 @@ The same fact said in two or more places. For example:
 - a status chip plus a sentence saying the same thing
 - a colour that repeats what a badge already says (Neutral-Default)
 - a caption that restates the title
+- a transient "Applied" / "Saved" chip or success line beside a control whose result also toasts,
+  or standing in for the toast (Toast-Confirms: the toast is the only confirmation message; see Q)
 
 - *Measure:* how many times, and where.
 - *Fix direction:* one voice, in the region the visitor is already looking at. Keep the field's
-  `aria-invalid` ring as the in-place signal.
+  `aria-invalid` ring as the in-place signal. A failure may also leave one persistent line beside
+  its field if it sits outside any `aria-live` region, because the toast already announces it.
 
 ## H. Card pairs that should share a row
 
@@ -201,8 +206,16 @@ Flag any of these:
 - a status chip with no glyph, or two states in one slot sharing a glyph (Glyph-Carries-The-State)
 - an identity hue meaning "healthy" (Identity-Never-Acts)
 - every row wearing a filled chip when most are in the expected state (the Quiet-Default Rule)
-- an icon in a `CardHeader`
+- an icon in a `CardHeader` (it is a plain `CardTitle` + `CardDescription`; the glyph belongs in a
+  `Badge`, a `Tag` or `CardAction`)
 - a `Badge` doing a `Tag`'s job, or the reverse
+- a fact worth knowing that is neither a fault nor health (a note that applies only sometimes, such
+  as "this takes about a minute") drawn as a grey outline (reads disabled), in amber (reads as a
+  problem) or in green (reads healthy), instead of a filled `info` Badge with a glyph shown only
+  while it applies (Fact-Is-Info, with the Quiet-Default Rule). An `info` chip is
+  `bg-primary-container`, so on a promoted `primary-container` row it dissolves; the chip needs its
+  own re-ground there (agent memory `reference-info-chip-dissolves-on-primary-container.md`)
+- a stroked `variant="outline"` button beside a `SaveButton` (see Q)
 
 ## M. Icon-boundary and subset violations
 
@@ -272,9 +285,60 @@ any single file, which is why they survive:
   (tiles are a pinned 104px; `components/cellular/tile-shape.ts`).
 - **An opacity wash where a token exists** (`bg-primary/10` where `primary-container` is the role).
 - **Geometry imported across families** instead of restated per family `shapes.ts`.
+- **A font fetched at build time.** Fonts are vendored under `app/fonts/` and loaded with
+  `next/font/local`; `next/font/google` is a build-time fetch the device cannot rely on, so any
+  import of it is a finding.
 
 These usually become rows in the change table rather than pins, unless they also show on screen. Cite
 file, line and value.
+
+## Q. Apply placement, confirmation and choice controls
+
+Three rules about what a card does when the user changes something. All three are target rules for
+the surface under review: an untouched page that still breaks one is a tracked delta in `DESIGN.md`
+Migration Deltas, not a finding, unless the page is the one being reworked.
+
+- **Apply placement (The Card-Foot Apply Rule).** A card that edits a draft commits it from a
+  persistent, borderless `CardFoot` row on its own bottom edge: status on the left, then Discard or
+  another secondary action (ghost or `tonal-neutral`), then the `SaveButton` last on the right. The
+  row has no divider line and a fixed height. Flag:
+  - a Save or Apply floating mid-card, beside a field, or in a sticky or page-level bar under the
+    grid
+  - a footer that mounts only when something is dirty, so the card jumps (an idle card shows Apply
+    disabled with its reason)
+  - a divider line above the row, or shadcn `CardFooter` with its own border
+  - status on the right, or the `SaveButton` not last
+  - Discard, Cancel or Restore drawn as a stroked `outline` button
+  - a plain `Button` doing a `SaveButton`'s job
+
+  Exempt: dialogs and wizards (their own `DialogFooter`), per-row and inline actions, operational
+  actions that are not a draft commit (start a scan, send a message, download a profile). Field
+  errors stay with their field, not in the footer.
+  - *Measure:* the distance from the commit control to the card's bottom edge, and whether the row's
+    height changes between idle, dirty, applying and failed.
+  - *Fix direction:* move the commit into `CardFoot` and delete the bar.
+- **Confirmation (The Toast-Confirms Rule).** Every user-initiated mutation that finishes (save,
+  apply, a persistent toggle, add, delete, reset, install, copy) fires one `toast.success` or
+  `toast.error`: plain `sonner`, one sentence through `t()`, from the handler that owns the action,
+  at the terminal moment. The failure reason comes from the call's returned result, never from
+  `error` state read after an `await`. Copy goes through `lib/clipboard.ts` `copyText`. Flag:
+  - a fading "Applied" or "Saved" chip, or an inline success line standing in for the toast
+  - a handler that toasts success without checking the returned result, or reads the reason from
+    stale `error` state
+  - a toast for polling, background work, a draft edit or Discard
+  - a hard-coded English toast string
+  - a raw `navigator.clipboard` call in a changed handler
+
+  One exception: a mutation that ends in navigation or a reload (the reboot hand-off, a password
+  change) or advances a wizard step keeps that transition as its success signal and still toasts a
+  failure. `SaveButton`'s own Saving/Saved state and a persistent status line stay.
+  - *Measure:* count the places a result is announced; the answer is one.
+- **Choice controls (Segmented pills).** On/off preferences and short mutually exclusive choices use
+  the shared `SegmentedField` pill, never a bare `Switch`. Flag, on a new or redesigned surface only,
+  a `Switch` for a boolean preference, or a `Select` or radio group for two to four short exclusive
+  options. The pill is sized to content (section C) and drops to a `Select` below its container
+  breakpoint, so check the narrow case too. The primitive is `components/ui/segmented-field.tsx`: the
+  caller passes the check glyph, so a lucide route can use it without crossing the icon boundary.
 
 ## Writing the finding
 
