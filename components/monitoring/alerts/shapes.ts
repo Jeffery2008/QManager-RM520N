@@ -275,13 +275,12 @@ export const SWITCH_ROW = {
 } as const;
 
 // -----------------------------------------------------------------------------
-// The save bar
+// The channels card's foot (the row itself is the shared `CardFoot`)
 // -----------------------------------------------------------------------------
 
-export const SAVEBAR = {
-  ROOT: "flex flex-wrap items-center gap-3 pt-1",
-  STATUS: "text-on-surface-variant flex items-center gap-2 text-[0.8125rem]",
-  ACTIONS: "ml-auto flex gap-2.5",
+export const FOOT = {
+  /** One status line: glyph or dot, then a sentence that wraps. */
+  LINE: "flex min-w-0 items-center gap-2",
   /** The one ambient loop on this surface, and only while something is unsaved. */
   PULSE: "animate-pulse-ring size-[7px] flex-none rounded-pill bg-primary",
 } as const;

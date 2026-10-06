@@ -1418,7 +1418,7 @@
       "discard": "Discard",
       "action": "Save",
       "clean": "All changes saved",
-      "dirty": "You have unsaved changes",
+      "dirty": "Unsaved changes in {{cards}}",
       "blockedIn": "Check {{fields}} before saving",
       "toastOk": "Watchdog settings saved",
       "toastFail": "Could not save the watchdog settings",

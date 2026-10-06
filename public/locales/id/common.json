@@ -1418,7 +1418,7 @@
       "discard": "Buang",
       "action": "Simpan",
       "clean": "Semua perubahan tersimpan",
-      "dirty": "Anda memiliki perubahan yang belum disimpan",
+      "dirty": "Ada perubahan yang belum disimpan di {{cards}}",
       "blockedIn": "Periksa {{fields}} sebelum menyimpan",
       "toastOk": "Pengaturan watchdog tersimpan",
       "toastFail": "Tidak dapat menyimpan pengaturan watchdog",

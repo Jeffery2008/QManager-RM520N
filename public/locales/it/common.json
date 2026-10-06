@@ -1418,7 +1418,7 @@
       "discard": "Scarta",
       "action": "Salva",
       "clean": "Tutte le modifiche sono state salvate",
-      "dirty": "Ci sono modifiche non salvate",
+      "dirty": "Modifiche non salvate in {{cards}}",
       "blockedIn": "Controlla {{fields}} prima di salvare",
       "toastOk": "Impostazioni del watchdog salvate",
       "toastFail": "Impossibile salvare le impostazioni del watchdog",

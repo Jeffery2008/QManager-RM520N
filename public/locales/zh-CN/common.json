@@ -1418,7 +1418,7 @@
       "discard": "放弃",
       "action": "保存",
       "clean": "所有更改已保存",
-      "dirty": "您有未保存的更改",
+      "dirty": "{{cards}}中有未保存的更改",
       "blockedIn": "保存前请检查 {{fields}}",
       "toastOk": "看门狗设置已保存",
       "toastFail": "无法保存看门狗设置",

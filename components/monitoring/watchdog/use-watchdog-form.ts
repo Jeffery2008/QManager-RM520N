@@ -38,7 +38,7 @@ const FIELD_ORDER = [
   "maxReboots",
 ] as const;
 
-/** The blocked save bar names the FIELD, not a tab. There are no tabs now. */
+/** A blocked save names the FIELD, not a tab. There are no tabs now. */
 export const FIELD_LABEL_KEY: Record<keyof WatchdogFormErrors, string> = {
   probeInterval: "watchdog.detection.probe.label",
   failThreshold: "watchdog.detection.threshold.label",
@@ -92,6 +92,8 @@ export interface WatchdogForm {
   masterDirty: boolean;
   /** Per rung: the switch or the rung's own field carries an unsaved edit. */
   tierDirty: Record<TierIndex, boolean>;
+  /** A Detection-card field carries an unsaved edit. */
+  detectionDirty: boolean;
   /** Fields blocking the save, in reading order. Empty when nothing blocks. */
   blockedFields: (keyof WatchdogFormErrors)[];
   /**
@@ -228,7 +230,7 @@ export function useWatchdogForm({
 
   // Per-control dirty state. A chip that reads "On" for an unsaved draft is the
   // page reporting a policy the device has not been told about, so each rung
-  // carries its own marker rather than relying on the save bar far below it.
+  // carries its own marker rather than relying on the ladder foot to say so.
   const savedBackupSlot =
     settings.backup_sim_slot != null ? String(settings.backup_sim_slot) : "";
   const masterDirty = isEnabled !== settings.enabled;
@@ -246,6 +248,10 @@ export function useWatchdogForm({
       tier4Enabled !== settings.tier4_enabled ||
       maxRebootsPerHour !== String(settings.max_reboots_per_hour),
   };
+  const detectionDirty =
+    probeInterval !== String(settings.probe_interval) ||
+    failThreshold !== String(settings.fail_threshold) ||
+    cooldown !== String(settings.cooldown);
 
   const isDirty = useMemo(
     () =>
@@ -416,6 +422,7 @@ export function useWatchdogForm({
     isDirty,
     masterDirty,
     tierDirty,
+    detectionDirty,
     blockedFields,
     grantsRebootAuthority,
     registerField,
