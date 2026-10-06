@@ -24,6 +24,7 @@ installer-gui/**/*.toml text eol=lf
 installer-gui/**/*.md text eol=lf
 installer-gui/.gitignore text eol=lf
 installer-gui/**/*.woff2 binary
+app/fonts/*.woff2 binary
 
 # Test fixtures are byte-compared. scripts/test/poller-defork-equivalence.sh
 # diffs a golden dump of parse_serving_cell against a fresh run over the raw

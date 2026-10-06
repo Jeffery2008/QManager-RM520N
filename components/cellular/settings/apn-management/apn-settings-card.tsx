@@ -26,6 +26,11 @@ import {
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import {
+  SEGMENTED,
+  SegmentedField,
+  type SegmentedOption,
+} from "@/components/ui/segmented-field";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -42,7 +47,6 @@ import type {
 } from "@/types/apn-settings";
 import { PDP_TYPE_OPTIONS } from "@/types/apn-settings";
 
-import SegmentedField, { type SegmentedOption } from "../segmented-field";
 import SettingRow from "../setting-row";
 import {
   BADGE_GLYPH_SIZE,
@@ -57,6 +61,18 @@ import {
   SELECT_TRIGGER,
   SETTING_ROW,
 } from "../shapes";
+
+// The check glyph this family reserves on every segment (Material Symbols
+// route). The shared primitive stays free of any one icon set.
+const renderCheckGlyph = (className: string) => (
+  <MaterialSymbol
+    name="check"
+    filled
+    size={SEGMENTED.GLYPH}
+    aria-hidden="true"
+    className={className}
+  />
+);
 
 // =============================================================================
 // APN Configuration — the write surface
@@ -447,6 +463,7 @@ export function ApnSettingsCard({
                   options={pdpOptions}
                   ariaLabel={t(`${K}.rows.pdp_type.label`)}
                   disabled={isSaving}
+                  glyph={renderCheckGlyph}
                 />
               }
             />

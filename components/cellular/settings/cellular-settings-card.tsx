@@ -11,6 +11,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { MaterialSymbol } from "@/components/ui/material-symbol";
+import {
+  SEGMENTED,
+  SegmentedField,
+  type SegmentedFieldProps,
+  type SegmentedOption,
+} from "@/components/ui/segmented-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { staggerRowItem, staggerRows } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -25,10 +32,6 @@ import type {
 } from "@/types/cellular-settings";
 import type { UseCellularSettingsReturn } from "@/hooks/use-cellular-settings";
 
-import SegmentedField, {
-  type SegmentedFieldProps,
-  type SegmentedOption,
-} from "./segmented-field";
 import SettingRow from "./setting-row";
 import {
   CARD_NOTICE,
@@ -38,6 +41,18 @@ import {
   ROW_GROUP,
   SETTING_ROW,
 } from "./shapes";
+
+// The check glyph this family reserves on every segment (Material Symbols
+// route). The shared primitive stays free of any one icon set.
+const renderCheckGlyph = (className: string) => (
+  <MaterialSymbol
+    name="check"
+    filled
+    size={SEGMENTED.GLYPH}
+    aria-hidden="true"
+    className={className}
+  />
+);
 
 // =============================================================================
 // Modem Radio Settings — the write surface, split into two section cards
@@ -403,6 +418,7 @@ export function CellularSettingsCard({
                       // step because its track is the one that starves the
                       // text column. See both constants above.
                       breakpoint={row.breakpoint ?? ROW_BREAKPOINT}
+                      glyph={renderCheckGlyph}
                     />
                   }
                 />

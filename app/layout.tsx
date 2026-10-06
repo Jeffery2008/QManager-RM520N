@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 import localFont from "next/font/local";
-import { JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MotionProvider } from "@/components/motion-provider";
 import { MotionPreferenceProvider } from "@/components/motion-preference";
@@ -11,10 +10,39 @@ import { I18nProvider } from "@/components/i18n/i18n-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 // Machine-voice mono font — bound to --font-jetbrains-mono, which globals.css
-// maps to --font-mono (font-mono utility). Self-hosted at build time.
-const jetbrainsMono = JetBrains_Mono({
+// maps to --font-mono (font-mono utility).
+//
+// VENDORED, NOT `next/font/google`. That loader self-hosts its OUTPUT but still
+// makes a live request to fonts.googleapis.com on every cold build; on a slow
+// link it times out and the production build dies. This app is built to be
+// served BY the modem, often from a field machine on a poor connection, so a
+// build-time dependency on a third-party CDN is the wrong shape. All faces here
+// are local; the build touches no network.
+//
+// The file is Google's own latin cut of the variable font, byte-for-byte:
+//   https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbV2o-flEEny0FZhsfKu5WU4xD7OwE.woff2
+//   sha256 18be452724bfdc236c074ca94a249a7f41a86752c7d04ab258ce9ed5651f6a7e
+// `weight: "100 800"` and the `unicode-range` below are copied from that same
+// stylesheet, so the declaration the browser sees is unchanged — only where the
+// bytes come from changed. Re-vendoring means re-fetching the `css2?family=
+// JetBrains+Mono:wght@100..800` stylesheet and taking its `/* latin */` block.
+const jetbrainsMono = localFont({
   variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
+  display: "swap",
+  src: [
+    {
+      path: "./fonts/JetBrainsMono-Variable.woff2",
+      weight: "100 800",
+      style: "normal",
+    },
+  ],
+  declarations: [
+    {
+      prop: "unicode-range",
+      value:
+        "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD",
+    },
+  ],
 });
 
 // Icon typeface for the sidebar and the dashboard route (DESIGN.md > Icons:
