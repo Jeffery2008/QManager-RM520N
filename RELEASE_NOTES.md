@@ -1,22 +1,18 @@
-# 🚀 QManager RM520N BETA v0.1.16
+# 🚀 QManager RM520N BETA v0.1.17-draft
 
-Upstream resolvers can be switched back off again, and a visual pass: every page looks a little tighter this time — smaller, squarer corners throughout — and in dark mode, cards and every panel that opens over the page now catch a little light along their top edge.
+Save buttons now live in one consistent place — the bottom edge of the card they belong to — starting with the cellular locking cards, then Local Network, then Monitoring (where the Watchdog page loses its separate save bar).
 
 > One-click OTA from **System Settings → Software Update** if you're on v0.1.5 or newer.
 
 ## 🛠️ Improvements
 
-- **The Frequency Calculator has a new layout.** In **Cellular → Cell Scanner → Frequency Calculator**, the channel field and its answer now sit side by side, each matching band lists its downlink/uplink frequencies with a marker for where your channel falls in the band, and Possible Bands and Calculation History now sit side by side on a wide screen — tap a history entry to run it again (the band table still fits inside its card on a phone).
-- **Corners are tighter across the whole app, and dark mode cards now catch a little light.** Cards, tiles, inputs and dialogs everywhere moved to a smaller corner radius, so a panel reads as a panel rather than a lozenge; in dark mode each card also picks up a faint highlight along its top edge that lifts it off the background. (One radius scale in the stylesheet — no page was re-laid-out.)
-- **Confirmation prompts and slide-out panels no longer look flatter than the dialogs beside them.** In dark mode the same top-edge highlight now reaches every panel that opens over the page, not just the main dialog, so a "are you sure?" prompt sits at the same depth as the window it came from.
-
-## 🐛 Fixes
-
-- **Turning off custom upstream resolvers no longer fails with "enabled must be true or false".** In **Local Network → Upstream resolvers**, switching *Use my own resolvers* off and pressing **Save and apply** now clears the QManager block and hands DNS back to the carrier, instead of rejecting the save. (The endpoint read the flag with jq's `//` operator, which treats a literal `false` as a missing value — so every disable request arrived as an empty string.)
+- **Settings cards now save from a bottom row on the card itself.** On the cellular locking cards, the Local Network pages and the Monitoring pages, status sits on the left and **Discard** then **Save** sit on the right, instead of a button in the middle of the card, a bar under the card grid, or a bar that floats over the page. (Card-Foot Apply sweep: the remaining `SaveButton` sites move to `CardFoot`, grouped by route family.)
+- **Watchdog saves from its card.** **Monitoring → Watchdog** no longer has a page-level save bar; each card carries its own Save row.
+- **Secondary buttons beside Save are quieter.** Actions such as **Restore all** in the band grid now use a plain or softly tinted button instead of a stroked outline, so **Save** stays the one button that stands out.
 
 ## 📥 Installation
 
-### Upgrading from v0.1.15
+### Upgrading from v0.1.16
 
 **System Settings → Software Update** → Download → Install. No SSH/ADB needed. All settings preserved.
 
