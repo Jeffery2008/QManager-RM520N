@@ -2,7 +2,11 @@
 
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import type { ColumnDef, VisibilityState } from "@tanstack/react-table";
+import type {
+  ColumnDef,
+  SortingState,
+  VisibilityState,
+} from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,27 +24,15 @@ import type {
 import ScanTable from "../scan-table";
 import ScanTableNote from "../table-note";
 import { NetworkTypeBadge, SignalBadge } from "../signal-badges";
+import { signalSortingFn, signalSortValue } from "../sort";
 import { TABLE } from "../shapes";
 import { summariseNeighbours } from "../summaries";
 
 // =============================================================================
 // The neighbour read's columns
 // =============================================================================
-// Definitions only; the shell is `scan-table.tsx`. Three defects the incumbent
-// fork carried are fixed here rather than inherited:
-//
-//   1. RSRQ, RSSI and SINR were FETCHED and written to the CSV export, but no
-//      column displayed them. They were downloadable and invisible — the one
-//      thing a neighbour read is actually for, available only by opening a
-//      spreadsheet. They are columns now, folded away on narrow widths.
-//   2. The text filter was bound to `cellType`, whose entire domain is three
-//      values the user cannot type. It is bound to the channel now.
-//   3. `cellType` rendered raw as `intra` / `inter` / `nr5g`.
-//
-// THE MACHINE-VOICE SPLIT IS PER COLUMN. Channel and PCI are identifiers that
-// hold steady until something reconfigures them, so they take `TABLE.IDENT`
-// (mono). RSRP, RSRQ, RSSI and SINR are READINGS, so they take `TABLE.FIGURE` —
-// the interface font with tabular figures.
+// Definitions only; the shell is `scan-table.tsx`. Opens sorted by signal,
+// strongest first, unmeasured rows last (`sort.ts`). Only LTE rows lock.
 // =============================================================================
 
 /**
@@ -141,7 +133,11 @@ export function createNeighbourColumns(
         ),
     },
     {
-      accessorKey: "signalStrength",
+      // The accessor feeds sorting only; the cell reads `row.original`.
+      id: "signalStrength",
+      accessorFn: (row) => signalSortValue(row.signalStrength),
+      sortingFn: signalSortingFn,
+      sortUndefined: "last",
       header: ({ column }) => (
         <Button
           type="button"
@@ -155,9 +151,7 @@ export function createNeighbourColumns(
       ),
       cell: ({ row }) => (
         <span className="flex items-center gap-2">
-          {/* `signalTier` maps 0 to the `none` tier, so an unmeasured port shows
-              a muted "No data" chip rather than the destructive "Bad" the
-              incumbent rendered — a verdict where there was no reading. */}
+          {/* 0 is "unreported": the chip says No data and no value is printed. */}
           <SignalBadge strength={row.original.signalStrength} />
           {row.original.signalStrength !== 0 ? (
             <span className={TABLE.FIGURE}>
@@ -253,14 +247,20 @@ export function createNeighbourColumns(
   ];
 }
 
+/** Strongest signal first; a module constant so its identity is stable. */
+const DEFAULT_SORTING: SortingState = [{ id: "signalStrength", desc: true }];
+
 export interface NeighbourScanResultViewProps {
   data: NeighbourCellResult[];
   onLockCell?: (cell: NeighbourCellResult) => void;
+  /** Rendered in the table toolbar, before the column menu (Download CSV). */
+  toolbarActions?: React.ReactNode;
 }
 
 export function NeighbourScanResultView({
   data,
   onLockCell,
+  toolbarActions,
 }: NeighbourScanResultViewProps) {
   const { t } = useTranslation("cellular");
 
@@ -298,9 +298,7 @@ export function NeighbourScanResultView({
     [columnCopy, onLockCell, t],
   );
 
-  // Measured versus channel-only, over the WHOLE read — not over what the
-  // channel filter left. This is the only count on the surface now (the pager's
-  // "N cells" was removed on 2026-08-14), so it counts the read, not the view.
+  // Measured versus channel-only, over the whole read rather than the filtered view.
   const tally = React.useMemo(() => {
     const summary = summariseNeighbours(data);
     return [
@@ -326,12 +324,11 @@ export function NeighbourScanResultView({
         />
       }
       columnLabels={columnCopy}
-      // Bound to the channel, not `cellType`. The incumbent filtered on a column
-      // whose whole domain is three words the reader cannot guess; the channel is
-      // how the rest of the product (band locking, frequency locking) reasons
-      // about a cell.
+      // Bound to the channel: the relation's three words are not something to type.
       filterColumnId="frequency"
       narrowHidden={NEIGHBOUR_NARROW_HIDDEN}
+      initialSorting={DEFAULT_SORTING}
+      toolbarActions={toolbarActions}
       labels={{
         filterPlaceholder: t(
           "cell_scanner.neighbour.results.filter_placeholder",
@@ -342,10 +339,7 @@ export function NeighbourScanResultView({
         noMatchTitle: t("cell_scanner.results.no_match_title"),
         noMatchBody: t("cell_scanner.results.no_match_body"),
       }}
-      // NO `countLabel`, deliberately (2026-08-14). The footer note directly
-      // above already tallies this read three ways, and a fourth line reading
-      // "10 cells" under it was the same count in a different noun. The sweep
-      // route keeps its count — see `ScanTableProps.countLabel`.
+      // No `countLabel`: the footer tally already counts the read.
     />
   );
 }

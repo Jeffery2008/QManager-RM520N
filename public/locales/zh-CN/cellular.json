@@ -295,6 +295,18 @@
     },
     "run": {
       "title": "全网络扫描",
+      "link_neighbour_short": "邻区",
+      "progress_label": "预计扫描进度",
+      "ledger": {
+        "col_carrier": "运营商",
+        "col_cells": "小区",
+        "col_bands": "频段",
+        "col_best": "最佳信号",
+        "your_sim": "你的 SIM",
+        "cells_unit_one": "个小区",
+        "cells_unit_other": "个小区",
+        "dbm_unit": "dBm"
+      },
       "description": "在模块支持的每个频段上各扫描一遍。",
       "start": "扫描全部频段",
       "rerun": "重新扫描",
@@ -304,8 +316,6 @@
       "link_blocked": "扫描结束后可用。",
       "summary_empty": "本次扫描结束时未列出任何小区，因此没有可分析的内容。",
       "summary_provider_unknown": "未命名运营商",
-      "summary_best": "最佳 {{value}} dBm",
-      "summary_no_reading": "未报告信号",
       "summary_others_one": "另有 1 家运营商",
       "summary_others_other": "另有 {{count}} 家运营商",
       "verdict_all_good_one": "唯一报告了电平的小区结果为良好。扫描是在没有服务小区协助的情况下测量的，因此达到该电平的读数是确实很强的候选。",
@@ -320,7 +330,6 @@
       "scanning_title": "正在逐个频段调谐",
       "scanning_body": "请保持此标签页打开——模块完成后结果会显示在这里。",
       "complete_title": "扫描完成",
-      "summary_total_cells": "小区总数",
       "failed_title": "扫描失败",
       "failed_body": "模块可能正忙或无法访问。请检查连接后重新扫描。"
     },
@@ -342,7 +351,7 @@
       "error_title": "扫描失败",
       "error_body": "模块可能正忙或无法访问。请检查连接后重新扫描。",
       "error_retry": "重新扫描",
-      "note_lock": "锁定某一行会把它的频段、频点与 PCI 复制到基站锁定，模块随后会一直驻留在该小区，直到你解除锁定。",
+      "note_lock": "锁定某一行会立即把模块锁定到该小区，直到你在基站锁定中解除锁定。",
       "tally_rows_one": "1 行",
       "tally_rows_other": "{{count}} 行",
       "tally_good_one": "1 个良好",
@@ -376,7 +385,8 @@
       "none": "无数据"
     },
     "actions": {
-      "lock_cell": "锁定到此小区"
+      "lock_cell": "锁定到此小区",
+      "lock_other_network": "不是你的 SIM 所属网络"
     },
     "a11y": {
       "network_codes": "网络代码",
@@ -418,6 +428,12 @@
       },
       "run": {
         "title": "邻区扫描",
+        "ledger": {
+          "figure_unit_one": "个可用频段",
+          "figure_unit_other": "个可用频段",
+          "bands_unit_one": "个频段",
+          "bands_unit_other": "个频段"
+        },
         "description": "请求服务小区已经跟踪的邻区，无需扫描额外的频段。",
         "start": "读取邻区",
         "rerun": "重新读取",
@@ -425,9 +441,6 @@
         "link_sweep": "小区扫描",
         "link_blocked": "本次读取结束后可用。",
         "summary_empty": "本次读取结束时未列出任何邻区，因此没有可分析的内容。",
-        "summary_measured_label": "有测量值",
-        "available_bands_one": "1 个可用频段",
-        "available_bands_other": "{{count}} 个可用频段",
         "verdict_channel_only_one": "1 个邻区仅返回了信道：服务小区知道它存在，但没有对它的当前测量值，因此它不带质量信息，也无法锁定。",
         "verdict_channel_only_other": "{{count}} 个邻区仅返回了信道：服务小区知道它们存在，但没有对它们的当前测量值，因此它们不带质量信息，也无法锁定。",
         "idle_title": "尚未读取",
@@ -446,13 +459,11 @@
         "empty_body": "执行一次读取，即可列出服务基站正在测量的小区及其信道和信号。",
         "error_title": "读取失败",
         "error_retry": "重新读取",
-        "note_channel_only": "仅以信道形式报告的邻区背后没有测量值，因此它不带质量信息，其锁定操作保持禁用。锁定一个有测量值的 LTE 行会把它的信道与 PCI 复制到基站锁定。",
+        "note_channel_only": "仅以信道形式报告的邻区背后没有测量值，因此它不带质量信息，其锁定操作保持禁用。锁定一个有测量值的 LTE 行会立即把模块锁定到该小区，直到你在基站锁定中解除锁定。",
         "tally_measured_one": "1 个有测量值",
         "tally_measured_other": "{{count}} 个有测量值",
         "tally_channel_only_one": "1 个仅信道",
-        "tally_channel_only_other": "{{count}} 个仅信道",
-        "tally_bands_one": "1 个频段",
-        "tally_bands_other": "{{count}} 个频段"
+        "tally_channel_only_other": "{{count}} 个仅信道"
       },
       "columns": {
         "cell_type": "关系",

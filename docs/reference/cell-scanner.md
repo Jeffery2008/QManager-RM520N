@@ -7,7 +7,7 @@
 
 This doc records the invariants and sharp edges a contributor needs **before** touching the family: the single `flock` that makes the two scanning routes mutually exclusive and how it survives the CGI that took it, why the two routes are deliberately not merged, the `/tmp/qmanager_long_running` maintenance contract that was described in two docs long before anything implemented it, why this surface keeps signal thresholds that disagree with the rest of the product, why `0` is a sentinel rather than a reading, why the two result types were not widened into one, and why the calculator takes the family's anchor geometry while taking none of its run vocabulary.
 
-The rationale for the individual design moves lives in the commits (`a2394ee`, `e4e5441`, `5871e8c`, `16d129c`) and in the long file header of `components/cellular/cell-scanner/shapes.ts`. This doc does not restate them.
+The rationale for the individual design moves lives in the commits (`a2394ee`, `e4e5441`, `5871e8c`, `16d129c`, and the 2026-10-06 the101 adoption). This doc does not restate them.
 
 ## Quick Reference
 
@@ -26,13 +26,15 @@ The rationale for the individual design moves lives in the commits (`a2394ee`, `
 | Result + transport types | `types/cell-scanner.ts` |
 | Full-sweep coordinator | `components/cellular/cell-scanner/scanner.tsx` |
 | Neighbour coordinator | `components/cellular/cell-scanner/neighbourcell/neighbour-scanner.tsx` |
-| Shared run hero | `components/cellular/cell-scanner/run-hero.tsx` |
-| Shared run summary ("What this sweep found") | `components/cellular/cell-scanner/run-summary.tsx` |
+| Shared run hero (launch bar → ledger status cell, progress bar) | `components/cellular/cell-scanner/run-hero.tsx` |
+| Shared ledger rows (`LedgerRows`, one row per carrier or relation) | `components/cellular/cell-scanner/run-summary.tsx` |
 | **All** derived aggregates (pure, no copy) | `components/cellular/cell-scanner/summaries.ts` |
+| Signal sort: unmeasured rows last in both directions | `components/cellular/cell-scanner/sort.ts` |
+| SIM's home network from the IMSI (`simPlmnFromImsi`, `cellMatchesSim`) | `components/cellular/cell-scanner/sim-plmn.ts` |
 | Shared cross-route link | `components/cellular/cell-scanner/sibling-link.tsx` |
 | Shared under-table strip | `components/cellular/cell-scanner/table-note.tsx` |
 | Shared empty / error panels | `components/cellular/cell-scanner/scan-states.tsx` |
-| Shared results table | `components/cellular/cell-scanner/scan-table.tsx` |
+| Shared results table (toolbar: filter, Download CSV, Columns; pager only when the set pages) | `components/cellular/cell-scanner/scan-table.tsx` |
 | Shared skeleton | `components/cellular/cell-scanner/scanner-skeleton.tsx` |
 | Shared signal + identity chips | `components/cellular/cell-scanner/signal-badges.tsx` |
 | Shared lock dialog (**owns the write**) | `components/cellular/cell-scanner/lock-cell-dialog.tsx` |
@@ -45,7 +47,8 @@ The rationale for the individual design moves lives in the commits (`a2394ee`, `
 | Sweep worker | `scripts/usr/bin/qmanager_cell_scanner` |
 | Neighbour worker | `scripts/usr/bin/qmanager_neighbour_scanner` |
 | Lock a scanned cell | `POST …/tower/lock.sh` — see [tower-locking.md](tower-locking.md) |
-| i18n | `cell_scanner.*` in `public/locales/{en,zh-CN,zh-TW,it,id}/cellular.json` (**225 paths in `en`**, covering all three routes — `cell_scanner.neighbour.*` (**58 paths**) and `cell_scanner.calculator.*` (**68 paths**) are subtrees. The whole family had **zero** i18n before 2026-08-12; the count dropped 227 → 225 on 2026-08-24 when the two `summary_title` keys retired with the summary panel's heading). All five locales now carry the same 225, and `bun run i18n:check` is clean at `strict` |
+| i18n | `cell_scanner.*` in `public/locales/{en,zh-CN,zh-TW,it,id}/cellular.json` (**238 paths in `en`**, covering all three routes — `cell_scanner.neighbour.*` (**57 paths**) and `cell_scanner.calculator.*` (**73 paths**) are subtrees. The whole family had **zero** i18n before 2026-08-12; the 2026-10-06 the101 adoption took it 231 → 238, +15 keys for the ledger, progress bar, short link label and SIM lock reason, −8 for the retired summary tiles). All five locales carry the same 238 |
+| SIM IMSI (lock gating) | `useModemStatus({ pollInterval: 10000 })` → `device.imsi`, read in `scanner.tsx` |
 
 ### Runtime files
 
@@ -73,7 +76,7 @@ The rationale for the individual design moves lives in the commits (`a2394ee`, `
 | Enable NR5G measurement reporting | `AT+QNWCFG="nr5g_meas_info",1` | `qmanager_neighbour_scanner:115` |
 | Read NR5G measurements | `AT+QNWCFG="nr5g_meas_info"` | `qmanager_neighbour_scanner:119` |
 
-The frequency calculator issues **nothing**. It has no fetch and no AT contact, which is why it has no posture chip, no elapsed clock, no spinner and no cost statement — nothing is spent. It *does* take the family's anchor card, at `rounded-hero`, via `CALC_HERO` and the shared `HERO_SPLIT` — see [The calculator takes the anchor, not the run](#the-calculator-takes-the-anchor-not-the-run).
+The frequency calculator issues **nothing**. It has no fetch and no AT contact, which is why it has no posture chip, no elapsed clock, no spinner and no cost statement — nothing is spent. It *does* take the family's anchor card, at `rounded-hero`, via `CALC_HERO` and its own `CALC_SPLIT` — see [The calculator takes the anchor, not the run](#the-calculator-takes-the-anchor-not-the-run).
 
 ## The cost asymmetry, and why the routes are not merged
 
@@ -108,11 +111,11 @@ Corollaries that follow from the same asymmetry, and should not be "harmonised" 
 
 - The sweep hook polls every **2 s**; the neighbour hook polls every **1 s** (`use-cell-scanner.ts:15`, `use-neighbour-scanner.ts:41`). A sweep that answers in 180 s does not deserve 180 requests; a read that answers in 2 s should not spend a whole extra poll waiting.
 - The sweep route has a `beforeunload` guard (`use-cell-scanner.ts:236-245`); the neighbour route deliberately does not. Losing a two-second read costs nothing, so prompting over it would invent a stake the operation does not have.
-- `useCellScanner` still computes and returns `elapsedSeconds`, and **no component consumes it** — see [The running state carries no numbers](#the-running-state-carries-no-numbers). That is not dead code left behind by accident: leaving the transport intact is what keeps the number-free running state a *surface* decision, revisitable without touching a hook that also owns the poll loop, the failure counter and the `sessionStorage` restore.
+- Only the sweep shows a progress bar. `useCellScanner`'s `elapsedSeconds` feeds `estimateScanProgress()` in `scanner.tsx`; the neighbour route passes no `progress`, so its running state is the spinner and skeleton rows only — see [The progress bar is an estimate](#the-progress-bar-is-an-estimate-sweep-only).
 
 ## What the two runs are called
 
-**Four titles were reworded on 2026-08-24. No key was added or removed** — the family is still 225 paths in `en`, all five packs moved together, and `bun run i18n:check` was clean at `strict` before and after.
+**Four titles were reworded on 2026-08-24. No key was added or removed** — the family was 225 paths in `en` at the time, all five packs moved together, and `bun run i18n:check` was clean at `strict` before and after.
 
 | Key | Was | Now |
 | --- | --- | --- |
@@ -128,6 +131,8 @@ The sweep's title named the **mechanism** — a pass across every band — where
 ## Cross-navigation between the two routes
 
 Until 2026-08-12 there was **no path between the sweep and the neighbour read except the sidebar**, on a surface whose whole argument is that these are two answers to one question at prices that differ by 100x. Each hero header now carries a link to the sibling route (`sibling-link.tsx`), in the slot the retired posture chip used to occupy.
+
+On the sweep the link takes `shortLabel` ("Neighbors", `cell_scanner.run.link_neighbour_short`) below `@xl/section`, and `label` stays its accessible name; below that width `RUN_HERO_META` puts the link on the left edge and the action on the right.
 
 The calculator's anchor carries the same component in the same slot, pointing at the full sweep — and it passes **no** `blockedReason`, because nothing runs there to block it.
 
@@ -227,7 +232,7 @@ The 300 s expiry is the only thing that recovers a flag from a worker killed wit
 
 ## Signal thresholds: deliberately divergent
 
-This surface rates cells with **three** tiers at **-85 / -100 dBm** (`shapes.ts:344-345`). The rest of the product rates the serving cell with the **four**-tier `RSRP_THRESHOLDS` in `types/modem-status.ts:296` (-80 / -100 / -110 / -140).
+This surface rates cells with **three** tiers at **-85 / -100 dBm** (`SIGNAL_GOOD_DBM` / `SIGNAL_FAIR_DBM` in `shapes.ts`). The rest of the product rates the serving cell with the **four**-tier `RSRP_THRESHOLDS` in `types/modem-status.ts` (-80 / -100 / -110 / -140).
 
 That is not an oversight and not drift. A scan rates **candidate** cells the modem is *not camped on* — a different judgement from grading the link you are currently carrying traffic over. The divergence was reviewed and kept on purpose on 2026-08-11.
 
@@ -237,22 +242,41 @@ That is not an oversight and not drift. A scan rates **candidate** cells the mod
 
 **Both workers emit `0` for an unreported reading, not `null`.** The sweep worker's jq stage coerces an empty field to `0` for `signalStrength`, `pci`, `earfcn`, `band`, `bandwidth`, `cellID` and `tac` (`qmanager_cell_scanner:249-255`); the neighbour worker does the same for `signalStrength`, `frequency` and `pci` (`qmanager_neighbour_scanner:190-192`). Only `rsrq` / `rssi` / `sinr` are allowed to be `null`.
 
-0 dBm is not a physically meaningful RSRP, so `signalTier()` (`shapes.ts:347-355`) treats it as the sentinel and returns the `none` tier — a **muted** "No data" chip with `signal_cellular_off`, not a verdict. The incumbent rendered 0 as the destructive **"Bad"** chip, which asserted a judgement where there was no reading at all.
+0 dBm is not a physically meaningful RSRP, so `signalTier()` (`shapes.ts`) treats it as the sentinel and returns the `none` tier — a **muted** "No data" chip with `signal_cellular_off`, not a verdict. The incumbent rendered 0 as the destructive **"Bad"** chip, which asserted a judgement where there was no reading at all.
 
 Two rules follow:
 
 - `none` is **muted**, never `warning`. The same table column already spends `warning` on "Fair"; giving "No data" the warning role puts two unrelated states in one tone in one slot.
+- **Unmeasured rows sort last in both directions.** 0 dBm is numerically above every real RSRP, so a plain numeric sort would float "No data" rows to the top of a strongest-first table. Both tables' signal column reads through `signalSortValue()` (`sort.ts`), which maps the sentinel to `undefined`, and sets `sortUndefined: "last"` — TanStack places `undefined` before it applies the descending flip, so the rows stay at the bottom whichever way the reader sorts. Both tables open on `[{ id: "signalStrength", desc: true }]`. Dropping either half (the accessor or `sortUndefined`) puts the sentinel rows back at the top with no error.
 - If a worker is ever changed to emit `null` instead of `0`, `signalTier` already handles it (`null` and `undefined` both map to `none`) — but the numeric fields' TypeScript types in `types/cell-scanner.ts` would need widening, and every `tabular-nums` cell that prints the raw number needs a formatter.
 
 ## Lock is LTE-only on the neighbour route
 
-The lock action on a neighbour row is enabled only when `networkType` starts with `LTE` (`neighbour-scan-result.tsx:214-215`). The reason is upstream, in the backend: `tower/lock.sh`'s NR-SA branch requires **four** fields — `pci`, `arfcn`, `scs` and `band` — and refuses the request with `missing_fields` if any is absent (`scripts/www/cgi-bin/quecmanager/tower/lock.sh:221-222`), then validates SCS against `15|30|60|120|240` (`:227-231`).
+The lock action on a neighbour row is enabled only when `networkType` starts with `LTE` and both `pci` and `frequency` are non-zero (the `actions` column in `neighbour-scan-result.tsx`). The reason is upstream, in the backend: `tower/lock.sh`'s NR-SA branch requires **four** fields — `pci`, `arfcn`, `scs` and `band` — and refuses the request with `missing_fields` if any is absent (`scripts/www/cgi-bin/quecmanager/tower/lock.sh:221-222`), then validates SCS against `15|30|60|120|240` (`:227-231`).
 
 A neighbour report carries neither a band nor an SCS. `AT+QNWCFG="nr5g_meas_info"` returns only `<arfcn>,<pci>,<rsrp>,<rsrq>,<sinr>` (`qmanager_neighbour_scanner:131-139`), and `NeighbourCellResult` has no field for either. So an NR neighbour is structurally unlockable from this route — not merely unsupported.
 
 The control is **disabled with a reason**, not hidden: `cell_scanner.neighbour.actions.lock_lte_only` renders in place of the label. The incumbent suppressed the button entirely for non-LTE rows, which left the reader to infer a rule from an absence.
 
 The full-sweep route *is* able to lock NR, because `AT+QSCAN` reports band and SCS (`qmanager_cell_scanner:131-137`). Where the modem reported no SCS, the shared dialog applies the common 30 kHz default at the point of use (`NR_DEFAULT_SCS`, `lock-cell-dialog.tsx:67`, applied at `:85`) rather than fabricating one in the worker — one place to look when a lock lands on the wrong numerology.
+
+## Lock is gated on the SIM's network (sweep only)
+
+A sweep lists every operator the modem can hear, and a lock onto another operator's cell is one the SIM cannot register on. So on the sweep, "Lock to this cell" stays in each row's menu but is **disabled with a reason** (`cell_scanner.actions.lock_other_network`, "Not your SIM's network") for any cell whose MCC/MNC is not the SIM's.
+
+| Piece | Where | Rule |
+| ----- | ----- | ---- |
+| SIM home network | `simPlmnFromImsi(device.imsi)` (`sim-plmn.ts`), IMSI from `useModemStatus` | MCC = first 3 digits; MNC is 2 or 3 digits, fixed per MCC |
+| 3-digit MNC MCCs | `THREE_DIGIT_MNC_MCCS` | Not exhaustive: an unlisted MCC falls back to 2 digits |
+| Mixed MCC | `MIXED_MNC_MCCS` (`405`) | Both readings are kept, and a cell matching either passes |
+| Row gate | `cellMatchesSim(cell, sim)` → `canLockCell` on `ScanResultView` | **Answers `true` when the SIM is unknown** |
+| "Your SIM" tag | `ProviderGroup.isSim` in `summariseSweep` | **Fails closed**: `false` with no SIM PLMN, and `true` only when *every* cell in the group matches |
+
+The two defaults are opposite on purpose. With no IMSI (no SIM, a malformed reply, the first poll not back yet) the page cannot tell which network is yours, so it blocks nothing — the confirmation dialog still guards the write. The tag makes a claim, so it is shown only when the claim is proven.
+
+> ⚠️ **An MCC that uses 3-digit MNCs but is missing from `THREE_DIGIT_MNC_MCCS` reads the IMSI as a 2-digit MNC**, and every cell on that SIM's own network is then wrongly disabled. If a user reports "Not your SIM's network" on their own carrier, add the MCC to the set.
+
+The neighbour route has no SIM gate: `NeighbourCellResult` carries no MCC or MNC to compare.
 
 ## Types: the inversion that was fixed, and the merge that was refused
 
@@ -270,37 +294,37 @@ Both transport shapes now live in `types/cell-scanner.ts`, and the direction is 
 
 Only `id`, `networkType`, `pci` and `signalStrength` genuinely overlap, and the two even disagree on what to call the channel. Widening one type to cover both would make ten fields optional and push "which of these is actually populated?" into every call site. **The shell is shared; the shapes are not.**
 
-`ScanStatus` (`idle` | `running` | `complete` | `error`) *is* shared — it is the workers' transport vocabulary, identical on both routes. It is mapped to the surface's `RunPosture` (`idle` | `scanning` | `complete` | `failed`) in exactly one place, `runPosture()` in `shapes.ts:283`. The two vocabularies use different words on purpose: "running" is what the modem is doing, "scanning" is what the page is showing, and collapsing them would make a rename of one a silent rename of the other. `runPosture` takes a structural union rather than importing `ScanStatus`, which keeps `shapes.ts` free of app-code imports while still failing the build at the call site if the two unions diverge.
+`ScanStatus` (`idle` | `running` | `complete` | `error`) *is* shared — it is the workers' transport vocabulary, identical on both routes. It is mapped to the surface's `RunPosture` (`idle` | `scanning` | `complete` | `failed`) in exactly one place, `runPosture()` in `shapes.ts`. The two vocabularies use different words on purpose: "running" is what the modem is doing, "scanning" is what the page is showing, and collapsing them would make a rename of one a silent rename of the other. `runPosture` takes a structural union rather than importing `ScanStatus`, which keeps `shapes.ts` free of app-code imports while still failing the build at the call site if the two unions diverge.
 
 ## What is shared, and what is deliberately not
 
-Eleven modules are shared by the two scanning routes: `lock-cell-dialog.tsx`, `run-hero.tsx`, `run-summary.tsx`, `sibling-link.tsx`, `table-note.tsx`, `summaries.ts`, `scan-states.tsx`, `scan-table.tsx`, `scanner-skeleton.tsx`, `signal-badges.tsx` and `shapes.ts`. (The sweep now takes both `ScanErrorState` and `ScanEmptyState` from `scan-states.tsx` — the former `EMPTY_PANEL` shape it used instead is gone; see [The sweep's empty state owns no action](#the-sweeps-empty-state-owns-no-action).)
+Twelve modules are shared by the two scanning routes: `lock-cell-dialog.tsx`, `run-hero.tsx`, `run-summary.tsx`, `sibling-link.tsx`, `table-note.tsx`, `summaries.ts`, `sort.ts`, `scan-states.tsx`, `scan-table.tsx`, `scanner-skeleton.tsx`, `signal-badges.tsx` and `shapes.ts`. `sim-plmn.ts` is read by the sweep only (`scanner.tsx`, and `summariseSweep` for the "Your SIM" tag). Both routes take only `ScanErrorState` from `scan-states.tsx`; their zero-results panel is the `Empty` primitive on `EMPTY_PANEL` — see [The results card](#the-results-card-is-not-mounted-at-idle).
 
-The four added in 2026-08-12's refinement follow the same rule as the hero: **shape shared, words not**. `run-summary.tsx`, `sibling-link.tsx` and `table-note.tsx` take every string as a prop; `summaries.ts` returns numbers, tiers and identifiers and never a sentence.
+Shared modules follow the same rule as the hero: **shape shared, words not**. `run-hero.tsx`, `run-summary.tsx`, `sibling-link.tsx` and `table-note.tsx` take every string as a prop; `summaries.ts` and `sort.ts` return numbers, tiers and identifiers and never a sentence.
 
-Three of the eleven reach across to the **calculator** as well: `shapes.ts` (which holds the calculator's own section), `sibling-link.tsx` (its anchor's cross-route link) and `scan-states.tsx` (`ScanEmptyState`, for the bands card and the empty history). The calculator's own four modules live under `freq-calculator/` and are used by nothing else.
+Three of the twelve reach across to the **calculator** as well: `shapes.ts` (which holds the calculator's own section), `sibling-link.tsx` (its anchor's cross-route link) and `scan-states.tsx` (`ScanEmptyState`, for the bands card and the empty history). The calculator's own four modules live under `freq-calculator/` and are used by nothing else.
 
 `lock-cell-dialog.tsx` is the one worth calling out: **it owns the write, not just the confirmation.** A component that only asked the question and handed back a callback would have left both routes holding their own identical `fetch`, payload builder and toast set — which is the duplication that actually cost something. The caller owns exactly one thing: which cell is targeted, cleared when the dialog closes. `kind: "nr_sa" | "lte"` is a discriminator on the *target* rather than a flag on the request, because `AT+QNWLOCK` takes two different shapes and the modem rejects the wrong one outright.
 
-**The CSV builders are NOT shared, and should not be.** Each route keeps its own `buildCsvRows` and header constant (`scanner.tsx:41`/`:59`, `neighbour-scanner.tsx:45`/`:60`) because the two row shapes have different columns; both go through the shared `lib/download-csv.ts` for the actual download. Sharing the *builder* would require the widened type this doc argues against.
+**The CSV builders are NOT shared, and should not be.** Each route keeps its own `buildCsvRows` and header constant (`CELL_SCAN_CSV_HEADER` in `scanner.tsx`, `NEIGHBOUR_CSV_HEADER` in `neighbour-scanner.tsx`) because the two row shapes have different columns; both go through the shared `lib/download-csv.ts` for the actual download. Sharing the *builder* would require the widened type this doc argues against.
 
-> ℹ️ **The download BUTTON moved on 2026-08-24; the builders did not.** Both routes took "Download CSV" out of the hero header's `actions` slot and now render it in an end-justified row (`flex justify-end`) directly under the results table, inside the results card, only when there are rows. The header's `actions` therefore carries exactly one act — "Sweep again" / "Read again", the thing you do to the *run* — while exporting is a fact about a finished table and sits at that table's own bottom edge. It is the same `Button` (`variant="tonal-neutral"`, `size="action"`), the same `handleDownload`, and still the one shared `cell_scanner.run.download` key on both routes. Nothing about `buildCsvRows`, either header constant or `lib/download-csv.ts` changed. Both routes moved together on purpose: the two are siblings a click apart, and a control that changes rows between them is the defect the [empty panel's button](#the-sweeps-empty-state-owns-no-action) was retired for.
+> ℹ️ **The download button lives in the table toolbar.** Both routes pass it to the table as `toolbarActions`, which `ScanTable` renders in `TOOLBAR.ACTIONS` before the icon-only Columns menu (`tune` glyph, accessible name `cell_scanner.results.columns`). It is `tonal-neutral` + `PILL_QUIET`, and its text label hides below `@sm/section`, where `aria-label` carries the name. The hero header's `actions` therefore carries exactly one act — the thing you do to the *run*. It only exists when there are rows, because the toolbar only renders with the table. Both routes keep the same placement on purpose: the two are siblings a click apart.
 
 ## The calculator takes the anchor, not the run
 
-`/cellular/cell-scanner/frequency-calculator` shares the route prefix and the canon — `CellularPageHeader`, `SECTION_HEAD`, role radii, the `nr`/`lte` identity variants, the machine-voice split — and now also the family's **anchor geometry**. It takes `CALC_HERO`, built from the shared `HERO_SHELL` plus its own `gap-5` rather than aliasing `RUN_HERO` outright — the alias broke when the run hero dropped that gap for its idle collapse, and nothing on the calculator collapses. The split inside it is calculator-only too, recomposed 2026-09-26: `CALC_SPLIT` puts the form in a fixed `25rem` column on the left and the answer rail filling the rest on the right, from `@3xl/section`, rather than reusing the shared `HERO_SPLIT` — so a retune of the run hero's own split never moves the calculator. What it still does **not** take is the **run vocabulary**: no posture chip, no elapsed clock, no spinner, no cost statement — it makes no request, holds no lock and spends nothing.
+`/cellular/cell-scanner/frequency-calculator` shares the route prefix and the canon — `CellularPageHeader`, `SECTION_HEAD`, role radii, the `nr`/`lte` identity variants, the machine-voice split — and now also the family's **anchor geometry**. It takes `CALC_HERO`, built from the shared `HERO_SHELL` plus its own `gap-5` rather than aliasing `RUN_HERO` outright — the alias broke when the run hero dropped that gap for its idle collapse, and nothing on the calculator collapses. The split inside it is calculator-only too, recomposed 2026-09-26: `CALC_SPLIT` puts the form in a fixed `25rem` column on the left and the answer rail filling the rest on the right, from `@3xl/section` — calculator-only, so a retune of the run hero's ledger never moves the calculator. What it still does **not** take is the **run vocabulary**: no posture chip, no elapsed clock, no spinner, no cost statement — it makes no request, holds no lock and spends nothing.
 
 The form's spec citation no longer lives on the form. `FORM.NOTE` and its `noteText` slot are gone; the result's citing spec (`NR_SPEC` / `LTE_SPEC`) now renders as a `Tag` in the **matching-bands card's own header**, once there is a result to cite — it is a fact about that card's contents, not about the form. The pre-calculation hint that used to fill the old slot (`cell_scanner.calculator.form.hint_auto`, *"Auto picks LTE or NR from the number's range"*) stays removed for the same reason it was removed on 2026-08-14: the three mode tabs directly above the field, now a `Tabs` control, already say Auto is one of three choices.
 
 **This inverts what this doc and both of those files used to say**, and the old argument is worth keeping because the interesting part of it was the mistake: it held that a `rounded-hero` radius here was "a promise of importance the page cannot keep", on the grounds that the family's heroes are *run* heroes and nothing here runs. Right about runs, wrong about heroes. What an anchor promises is not that something ran — it is that **one object on the page is the thing the reader came for**, and everything else on the page reports on it. That is unambiguous here: you came to turn a channel number into a frequency, and the bands grid and the history are both readings of that one answer. The incumbent's two peer cards claimed the converter and its own history were equally important, which is the single thing this page is certain they are not.
 
-The layout that follows is three cards: the anchor (form left, answer rail right), the matching bands, the history. **The middle card never disappears** — it carries an empty state before the first calculation, as the sweep's results card does, so the page fills in rather than assembling itself. (Both are `ScanEmptyState`, and since 2026-09-10 the sweep's card is mounted before its first run too: see [The sweep's empty state owns no action](#the-sweeps-empty-state-owns-no-action).) Bands and history are no longer just two stacked cards — from `@4xl/main` they share one row, `3fr`/`2fr`, `items-stretch`, so the shorter card doesn't dangle in whitespace beside the taller one.
+The layout that follows is three cards: the anchor (form left, answer rail right), the matching bands, the history. **The middle card never disappears** — it carries a `ScanEmptyState` before the first calculation, so the page fills in rather than assembling itself. This is the opposite of the scanning routes, whose results card is not mounted until a run starts: a calculation is instant and costs nothing, so there is no launch state to keep compact (see [The results card is not mounted at idle](#the-results-card-is-not-mounted-at-idle)). Bands and history are no longer just two stacked cards — from `@4xl/main` they share one row, `3fr`/`2fr`, `items-stretch`, so the shorter card doesn't dangle in whitespace beside the taller one.
 
-`shapes.ts` (`components/cellular/cell-scanner/shapes.ts`, "The frequency calculator" section) carries the long form of the decision. It no longer keys the calculator off the shared module-level `IDENT`/`FIGURE` that back the scanning tables: the calculator has its own `CALC_IDENT` (`text-[13px] tabular-nums`, no `font-mono`), because a channel number or band label is a quantity you read under the amended Machine-Voice Rule, not an opaque string you compare — see [Machine voice on this surface](#machine-voice-on-this-surface).
+`shapes.ts` (`components/cellular/cell-scanner/shapes.ts`, "The frequency calculator" section) carries the calculator's own section. The calculator keys off its own `CALC_IDENT` (`text-[13px] tabular-nums`, no `font-mono`) rather than the shared `IDENT`; since 2026-10-06 the two strings are identical, but they stay separate constants so a retune of the scan tables never moves the calculator — see [Machine voice on this surface](#machine-voice-on-this-surface).
 
 ### The answer rail
 
-The anchor's right column (`calc-readout.tsx`) is a **horizontal** rail (`CALC_RAIL.ROOT`, a `min-h-[6.5rem]` row) rather than the scanning routes' vertical posture stack — it took over the anchor's overall shell, not that stack's own shape. The form sits to its left under `CALC_SPLIT` (see [The calculator takes the anchor, not the run](#the-calculator-takes-the-anchor-not-the-run)), so on a phone the two stack form-over-rail and from `@3xl/section` they sit side by side.
+The anchor's right column (`calc-readout.tsx`) is a **horizontal** rail (`CALC_RAIL.ROOT`, a `min-h-[6.5rem]` row). It shares the anchor's shell with the run hero, not the run hero's ledger. The form sits to its left under `CALC_SPLIT` (see [The calculator takes the anchor, not the run](#the-calculator-takes-the-anchor-not-the-run)), so on a phone the two stack form-over-rail and from `@3xl/section` they sit side by side.
 
 **Three states, three distinct glyphs**: `tune` when nothing has been calculated, `graphic_eq` for a resolved frequency on **either** radio, `error` for a failure. Idle and resolved share the rail's layout but never its glyph or tone.
 
@@ -394,13 +418,16 @@ Two smaller rules the coordinator holds:
 
 ## Machine voice on this surface
 
-The two voices are **module-level** `IDENT` and `FIGURE` (`shapes.ts:579`, `:582`), and `TABLE.IDENT`/`TABLE.FIGURE` alias them for the three scan tables — but the calculator no longer does. Under the 2026-09-26 amendment to DESIGN.md's Machine-Voice Rule (mono is for a string compared character by character, not any value that happens to be numeric), a channel number or band label is a *quantity you read*, so the calculator keys its band sections, input and history rows off its own `CALC_IDENT` (`text-[13px] tabular-nums`, no `font-mono`) instead of the shared `IDENT`. `TABLE.IDENT` stays mono for the scan tables' EARFCN/PCI/band/TAC columns — that migration is tracked but not yet done elsewhere on this surface, and the calculator is the one place it has already landed.
+Since 2026-10-06 the scan tables follow the amended Machine-Voice Rule (DESIGN.md > Typography): mono is for a string compared character by character, not for any value that happens to be numeric. Module-level `IDENT` in `shapes.ts` is `text-[13px] tabular-nums` with **no** `font-mono`, and `TABLE.IDENT` aliases it for band, EARFCN, PCI, Cell ID, TAC, the neighbour channel, the MCC/MNC tooltip and the lock dialog's identifier line. `FIGURE` (`tabular-nums`) carries the readings — RSRP, RSRQ, SINR, RSSI, bandwidth. Counts (`TOOLBAR.COUNT`, `TABLE_NOTE.TALLY`, `LEDGER.STATUS_FIG_NUM`, `LEDGER.CELLS`, `LEDGER.DBM_VALUE`) are interface-font `tabular-nums` too.
 
-`TABLE.IDENT` is `font-mono` and carries band, EARFCN, PCI, Cell ID and TAC — identifiers that hold steady until something reconfigures them. `TABLE.FIGURE` is interface-font `tabular-nums` and carries RSRP, RSRQ, SINR and RSSI — readings. `POSTURE.CLOCK`, `TOOLBAR.COUNT`, `SUMMARY.VALUE` and `TABLE_NOTE.TALLY` are changing figures and therefore also interface-font `tabular-nums`, never mono. This is DESIGN.md's Machine-Voice Rule applied per value; see DESIGN.md > Named Rules.
+Mono survives in exactly two places on the scanning routes, both opaque strings:
 
-The split runs **per detail, not per tile**, inside the run summary: a provider's band list and a relation's channel numbers are identifiers (`SUMMARY.DETAIL_IDENT`, mono), while "best −113 dBm" and "5 channel only" are readings and counts (`SUMMARY.DETAIL_FIGURE`). The caller tags each detail with its voice, because only the caller knows what the string is.
+- `LEDGER.STATUS_TITLE_MACHINE` — the modem's own error text, used as the failed status title.
+- `LEDGER.NAME_TEXT_MACHINE` — a provider the worker could only name as `<mcc>/<mnc>` (`NUMERIC_PROVIDER_RE` in `scanner.tsx`).
 
-Every count on this surface must be assembled by the i18n layer's plural machinery, never by a JS ternary — the table's row count, the four tier tallies, the verdict, the summary tiles' overflow and channel labels. The incumbent hardcoded `filtered === 1 ? "cell" : "cells"` in *both* copies, which is wrong in four of the five shipped locales before a translator ever sees it. That is also why the tally is a **list of separate strings** rather than one sentence: one plural rule cannot carry four independent counts, and the No-Dot-Separator Rule bans the `·` that would otherwise glue them (DESIGN.md > Named Rules).
+The calculator's `CALC_IDENT` is the same string as `IDENT`, kept as a separate constant (see [The calculator takes the anchor, not the run](#the-calculator-takes-the-anchor-not-the-run)).
+
+Every count on this surface must be assembled by the i18n layer's plural machinery, never by a JS ternary — the table's row count, the four tier tallies, the verdict, the ledger's unit words and its "N more providers" row. The incumbent hardcoded `filtered === 1 ? "cell" : "cells"` in *both* copies, which is wrong in four of the five shipped locales before a translator ever sees it. That is also why the tally is a **list of separate strings** rather than one sentence: one plural rule cannot carry four independent counts, and the No-Dot-Separator Rule bans the `·` that would otherwise glue them (DESIGN.md > Named Rules).
 
 ## The posture chip is gone
 
@@ -413,137 +440,64 @@ Removed on both routes and all four postures (user decision, 2026-08-12). What f
 - `SKELETON_SHAPE.CHIP` stayed — `scanner-skeleton.tsx` still mirrors the column menu with it.
 - The vacated header slot now holds the [cross-route link](#cross-navigation-between-the-two-routes).
 
-## The running state carries no numbers
+## Layout grammar shared with the101
 
-While a sweep is in flight the rail shows a spinning disc, a title and a body line. **No `m:ss`, no count, no percentage, no ETA** — the elapsed clock was removed and nothing replaced it (user decision, 2026-08-12).
+**On 2026-10-06 both scanning routes adopted the layout and every state of QManager-the101's Cell Scanner** (user decision). They now render the same two cards through the same four postures. The differences are deliberate and few: only the sweep has a progress bar, only the sweep gates the lock on the SIM, and a ledger row groups by carrier on the sweep and by relation on the neighbour route.
 
-The reason is what the modem reports, which is nothing at all: `AT+QSCAN=3,1` publishes no per-band progress, no partial rows and no remaining time, and the status endpoint returns only `idle|running|complete|error`. The results arrive exactly once, as one JSON array, at completion. So every figure a running state could show would be either the one honest number available (elapsed) or a number the page invented about a process it cannot see — and elapsed itself invites the reader to estimate a remaining time that does not exist.
+| Posture | Hero (`RunHero`) | Results card |
+| ------- | ---------------- | ------------ |
+| `idle` | A compact **launch bar**: title, description, sibling link and the start action. The body is collapsed (`idleCollapsed`, passed by both routes) | **Not mounted** |
+| `scanning` | The ledger: a status cell (spinning `progress_activity` disc, title, body; on the sweep an estimated progress bar) beside `SKELETON_SHAPE.LEDGER_ROWS` (2) skeleton rows. The start button stays, disabled, with a spinner | `ScannerSkeleton` |
+| `complete` | The status cell carries the run's total with its unit; the ledger rows sit beside it; an optional verdict strip sits below | The table, or the dashed zero-results panel |
+| `failed` | The status cell only, no rows, titled with the modem's own error in machine voice — **and no action in the header** | `ScanErrorState`, which carries the single retry |
 
-The "is it hung?" risk is answered by the **disc's ambient spin** (the surface's single sanctioned loop, and now the only thing carrying "still working") and by copy that sets the expectation, not by a figure.
+### The ledger
 
-`POSTURE.CLOCK` survives under its old name with one occupant, the completed result count; its doc comment records the change. Restoring a clock means restoring `formatElapsed` and `cell_scanner.a11y.elapsed`, both deleted for the same reason.
+`LEDGER` (`shapes.ts`) is one `rounded-tile` fill holding a status cell and, in `scanning` and `complete` only, a rows region. `ROOT_SPLIT` puts the two side by side from `@2xl/section`; on a phone the status cell is a strip above the rows. `LedgerRows` (`run-summary.tsx`) is **copy-blind and SIM-blind**: every string arrives as a prop, and "Your SIM" is a boolean on the row.
 
-## The completed rail is two marks, not five
+- **Sweep:** one row per carrier from `summariseSweep`, capped at `MAX_PROVIDER_TILES` (5). The SIM's group sorts first and carries the "Your SIM" tag, then the strongest best reading, then the most cells. Groups past the fifth fold into one "N more providers" row (`cell_scanner.run.summary_others`) carrying their cell count and their best reading. Because the SIM's group sorts first, it is never folded.
+- **Neighbour:** one row per relation that appeared, in `intra`, `inter`, `nr5g` order, with no band column. The count is worded as bands (`neighbour.run.ledger.bands_unit`) and the total as "available bands" (`neighbour.run.ledger.figure_unit`).
+- **Each row's chip is `SignalBadge` on the group's best reading** — the same chip, and the same `signalTier`, as a table row. An unmeasured group shows the muted "No data" chip and `—` in place of a dBm figure.
+- **The status figure is `summary.total`**, the run's total rows, never a count of rendered ledger rows.
+- **Rows render in `scanning` and `complete` only; the verdict in `complete` only.** On `failed`, and while a new run is scanning, `results` can still hold the *previous* run, and drawing it under the current status would report an old run as this one.
 
-Also a user decision, 2026-08-12, and the second half of the same argument. The completed posture used to stack **disc → count → context line → title → body**:
+### The progress bar is an estimate (sweep only)
 
-> ( ✓ ) · **8** · "across 3 providers on 7 bands" · "Sweep finished" · "8 cells in range."
+The sweep's status cell shows a `Progress` bar while scanning. **It is a UI curve over elapsed time, not a measurement.** `AT+QSCAN=3,1` still publishes no per-band progress, no partial rows and no remaining time, and the status endpoint still returns only `idle|running|complete|error` — the results arrive once, as one JSON array, at completion.
 
-Three of those five say the same thing. The body sentence restated the figure directly above it, and the context line re-derived a provider and band breakdown that the summary panel two hundred pixels to its right already gives provider by provider. Both lines are **gone on the complete posture only** — `postureBody` is still rendered for idle, scanning and failed, where it is the only copy explaining what is happening — and the two survivors were sized up to carry the rail alone: the disc 52 → **64 px** with a 24 → **32 px** glyph, the count 28 → **48 px**. Both sizes survive the 2026-08-24 rebuild unchanged; what moved is which constant holds them — the hero's rail is now `RAIL` (a row) and the constants are `RAIL.DISC` and `RAIL.COUNT`, while `POSTURE.DISC` keeps the 64 px disc for the results card's panels. `SKELETON_SHAPE.POSTURE` is gone with the hero's use of `POSTURE.ROOT`; the sweep's results card now shares `ScanEmptyState` on that same `POSTURE.ROOT`, so nothing restates the 13 rem a second time. Both remaining literals exist rather than a shared interpolated string because Tailwind's JIT scans source text and an interpolated `min-h-[${X}]` compiles to nothing.
+`estimateScanProgress(elapsedSeconds)` in `scanner.tsx` rises linearly to 90 % over `SCAN_EXPECTED_SECONDS` (150 s, against the worker's 180 s ceiling), then approaches 99 % and never reaches it. The bar never shows 100 %: `complete` replaces it with the total. Its accessible name is `cell_scanner.run.progress_label` ("Estimated sweep progress").
 
-What went with the lines:
+Rules that follow:
 
-- `POSTURE.CONTEXT` and `RunHeroProps.metricContext`, deleted.
-- `SweepSummary.providerCount` / `.bandCount` and `NeighbourSummary.channelCount`, deleted — the context caption was their only reader, and an aggregate with no consumer is an untested aggregate.
-- Ten locale keys across all five packs: `cell_scanner.run.context_providers_*`, `context_bands_*`, `complete_body_*` and `cell_scanner.neighbour.run.context_channels_*`, `complete_body_*`.
-
-**The rail's figure carries no unit**, and that is deliberate rather than an oversight: the results card below it is headed "Cells found", and each summary tile beside it now states its own count *with* a unit ("12 cells"). A later canon pass should restore neither retired line, and should not "recover" the unit with a new caption under the figure.
-
-> ℹ️ The summary panel's own "What this sweep found" heading was **deleted** on 2026-08-24 along with the panel wrapper — see [The summary tiles are neutral and the colour is on the disc](#the-summary-tiles-are-neutral-and-the-colour-is-on-the-disc). The unit argument above therefore now rests on the results card's heading and the tiles' own fact lines, not on that heading.
-
-The 32 px glyph propagates to `scan-states.tsx`, which shares `POSTURE.DISC` for the results card's empty and error panels — the same 64 px disc as the hero's `RAIL.DISC`, so a 24 px glyph would have floated inside an oversized circle there.
-
-## The hero is as tall as it has something to say
-
-**The sweep page asks three questions in sequence, and since 2026-08-24 the hero is only as big as the one it is currently answering.** Before a run the reader wants to know *how do I start this*; during, *is it still working*; after, *what did it find*. The hero used to give all three the same fixed height, sized for the third — a `minmax(0,17rem) 1fr` split holding a 13 rem posture rail beside a summary column that at idle contained nothing but the launch button. Roughly 280 px of card spent saying that nothing had happened yet, which the reader could already see.
-
-The three phases now:
-
-| Posture | The hero | The results card |
-| ------- | -------- | ---------------- |
-| `idle` | a compact **launch bar**: title with the description stacked beneath it, and the primary action in the header's `META` slot. No rail, no summary column | mounted, showing the shared `ScanEmptyState` panel (2026-09-10 — see [The sweep's empty state owns no action](#the-sweeps-empty-state-owns-no-action)) |
-| `scanning` | the same container **grows** into the rail-plus-summary body. The rail carries the spinning disc and the copy; the summary arrives as a skeleton | `ScannerSkeleton` |
-| `complete` | rail carries the 48 px count; summary carries real tiles | the table, or the empty panel if the run listed nothing |
-| `failed` | rail carries the modem's own error string, in machine voice (`RAIL.TITLE_MACHINE`) — **and the hero withholds its launch button entirely** | `ScanErrorState`, which carries the single recovery action |
+- **Do not wire the bar to a backend field.** None exists, and a worker change that pretended to report progress would be inventing it.
+- **No text figure beside it** — no `m:ss`, no percentage, no ETA. A printed number reads as a measurement; the bar's shape alone says "about this far".
+- **A tab that attaches to a sweep it did not start begins the estimate at zero.** The start time lives in that tab's `sessionStorage` (`use-cell-scanner.ts`); another tab or browser writes its own start time when it first sees the run.
+- **The neighbour route never gets a bar.** A ~2 s read would fill an estimate before the reader registered it; its running state is the spinning disc and the skeleton rows only. Do not pass `progress` to its hero.
 
 ### The morph
 
-The growth is a real container morph, not a swap: `HERO_MORPH` (`shapes.ts`) is a `grid-template-rows: 0fr → 1fr` wrapper over an `overflow-hidden` clip, so the card genuinely grows to whatever the body measures rather than animating toward a guessed pixel height. It runs on `--duration-emphasized` / `--ease-emphasized` (800 ms), because DESIGN.md files container size and shape changes there and this is the largest single re-proportion on the surface. The idiom already exists in the product at `components/onboarding/steps/step-connection.tsx`; only the clock differs.
+The growth from launch bar to ledger is a real container morph, not a swap: `HERO_MORPH` (`shapes.ts`) is a `grid-template-rows: 0fr → 1fr` wrapper over an `overflow-hidden` clip, so the card grows to whatever the body measures rather than animating toward a guessed pixel height. It runs on `--duration-emphasized` / `--ease-emphasized`, because DESIGN.md files container size and shape changes there. Both routes take it since 2026-10-06; the neighbour route used to opt out on the grounds that a two-second read would make the grow look like jitter, and the adoption overruled that.
 
 Four details that are easy to undo by accident:
 
-- **`RUN_HERO` carries no `gap-5`, and that is load-bearing.** A flex gap is paid whether or not the item it separates has any height, so a gap on the card would leave 20 px of unexplained space under the launch bar — in exactly the state the redesign exists to compact. The separation lives in `HERO_MORPH.BODY`'s own top padding, *inside* the clipped region, where it collapses with everything else.
+- **`RUN_HERO` carries no `gap-5`, and that is load-bearing.** A flex gap is paid whether or not the item it separates has any height, so a gap on the card would leave 20 px of unexplained space under the launch bar. The separation lives in `HERO_MORPH.BODY`'s own top padding, *inside* the clipped region, where it collapses with everything else.
 - **`HERO_MORPH.CLIP` needs `min-h-0`.** Without it a grid row will not shrink below its content and the collapse silently does nothing.
 - **`motion-reduce:transition-none` is not optional.** A reader who asked for less motion still needs the body; they need it instantly.
 - **The open/closed pair lives in one constant**, driven by `data-[open=true]` rather than a conditional class string at the call site, so the two states cannot drift apart.
 
-`isLoading` forces the body **open**. A first paint that starts collapsed and then grows the moment the worker's status arrives is a morph the reader did not cause.
+`isLoading` forces the body **open**, because a grow the reader did not cause is noise. No caller passes it today.
 
-### The structural consequences
+> ⚠️ **The failed posture's missing hero button is deliberate.** `RunHero` has no opinion about it — each route passes `actions={null}` when `posture === "failed"`. The recovery affordance exists exactly once, in `ScanErrorState`. Adding a launch button back to the hero puts two buttons on one screen for one act.
 
-- **The primary action moved into the header** (`SECTION_HEAD.META`, beside the sibling link). There is no action row under the summary any more, because at idle there is no summary for it to sit under — and a button that changes which row it belongs to depending on posture is the incumbent's problem in miniature.
-- **The hero's rail is a row (`RAIL`), not the centred `POSTURE` stack.** Its height *is* the hero's height in every open state, so every pixel has to be carrying something; a centred 13 rem block was mostly air once the complete posture was down to a disc and a figure. `min-h-[6.5rem]` is the row measured (40 px of padding around a 64 px disc), mirrored by `SKELETON_SHAPE.RAIL`. It is `items-center` with **no** `justify-center`: the disc anchors the left edge, so variable-length copy beside it does not move the disc on every posture change.
-- **`POSTURE` is now the results card's empty and error panels, and the calculator's readout rail — nothing else.** `SKELETON_SHAPE.POSTURE` is gone with it: those are terminal states that never stand in for data still loading.
-- **`HERO_SPLIT` went 17 rem → 19 rem** on its fixed column, because a row has to fit a 64 px disc, a gap and a wrapping title where the old centred stack only had to fit the widest of them.
-- **`CALC_HERO` is no longer an alias of `RUN_HERO`.** Both now read from a private `HERO_SHELL`, and the calculator appends `gap-5` — nothing on that page collapses, so its sections still want a real flex gap. A retune of the anchor's radius, padding or shadow still moves both.
+### The results card is not mounted at idle
 
-> ⚠️ **The failed posture's missing hero button is deliberate.** `RunHero` has no opinion about it — the route passes `actions={null}` when `posture === "failed"` (`scanner.tsx`). The recovery affordance exists exactly once, in `ScanErrorState`. Adding a launch button back to the hero puts two buttons on one screen for one act, which is the same defect that retired the empty panel's trigger.
+Both routes render `{posture === "idle" ? null : <Card …>}`. The card enters when a run starts and stays through `scanning`, `complete` and `failed`. This reverses the 2026-09-10 rule that kept the card mounted at every posture; the launch bar is the whole page until there is something to show.
 
-### The neighbour route deliberately does not morph
+- **The card's wrapper declares `initial="hidden" animate="visible"` itself.** It mounts long after the page's entrance cascade has settled, and a variants-only child that mounts late stays pinned at `hidden`, which renders a complete DOM at zero opacity with no error.
+- **The dashed panel is the zero-results state only.** A `complete` run with no rows renders the `Empty` primitive on `EMPTY_PANEL` (`min-h-[13rem] rounded-tile border border-dashed border-outline`, a `radar` glyph, `results.empty_title` / `empty_body`). Idle no longer shares that branch. The hero's action above it reads "Sweep all bands" / "Read neighbours" in this state, because `hasResults` is false.
+- **`POSTURE` is now the results card's error panel and the calculator's empty panels**, nothing else. `ScanEmptyState` is used only by the calculator.
 
-`RunHero` exposes the collapse as `idleCollapsed`, and the neighbour route is the reason the prop exists rather than the behaviour being unconditional. That route takes **every other part** of the 2026-08-24 change — the stacked section head, the neutral summary tiles with their tier discs, the header action row, the returned ink — and **not** the height morph.
-
-It is the same cost asymmetry that keeps the two routes unmerged. A sweep holds the AT lock for 30–180 seconds, so the grow lands once, early, and the reader then waits *inside* the shape it grew into; the morph reads as the page committing to a long operation. A neighbour read is done in about two seconds: the container would finish an 800 ms grow, hold the skeleton for barely a second, and swap to the result. **Growth that resolves before the reader has finished registering it is jitter, not progress.**
-
-Two consequences on that route:
-
-- **Its hero is always open**, and its rail is present at idle carrying the `idle` posture — which is also the only place on the route that explains what a neighbour read *is* before you run one.
-- **With no summary beside it, the rail takes the full width** via `HERO_RAIL_ONLY` rather than anchoring a 19 rem column with two thirds of a hero blank next to it. That blank is precisely the void the sweep's redesign removed from its own idle state, and passing an empty right-hand cell would import it here.
-
-The results card also stays mounted at idle on that route, for the same reason: a two-second act does not need the page rearranged around it.
-
-### …but its completed rail folds into the tile grid
-
-**Short version: on the neighbour route's `complete` posture with rows, the hero stops drawing its own posture rail and the run's status is rendered instead as the first card *inside* the summary tile grid — so "Read finished", "Same frequency", "Other frequency" and "With measurements" are four cards of one size, rather than a fixed-width rail beside three auto-fitted tiles.** User-reported, 2026-08-24.
-
-They are four peer facts about one finished read, and the split said the opposite: the rail's 64 px disc and 48 px count held a fixed `minmax(0,19rem)` column while the tiles' 52 px discs shared what was left, so the object with the least to say was the widest thing on the row and read as a different kind of object.
-
-The mechanism is two optional props and no new component:
-
-- **`RunHero` gained `hideRail`** (default `false`). When it is true **and** a `summary` is present, the hero skips its own rail and wraps the body in the single-column `HERO_RAIL_ONLY` instead of `HERO_SPLIT`, so the summary fills the whole width. `HERO_RAIL_ONLY`'s doc comment now records this as its second use — same shape, two reasons to reach for it.
-- **`RunSummary` gained `leading`**, a `ReactNode` rendered as the first child *inside* `SUMMARY.GRID`. That placement is the whole point: the folded rail is subject to the identical `auto-fit` column sizing as the tiles rather than approximating it, which is what makes the four cards match rather than nearly match. `RunSummary` stays **copy-blind and posture-blind** — it does not build the node, it only owns a slot in the grid it already owns. (`tiles.length === 0` alone no longer means "empty": the empty sentence is shown only when there is also no `leading`.)
-- **`neighbour-scanner.tsx` builds `readFinishedTile`** and is the only caller of either prop. The node restates the tile classes exactly (`SUMMARY.TILE` / `DISC` / `COPY` / `LABEL` / `DETAILS`) and reuses `cell_scanner.results.tally_rows` for its fact line, so it carries its siblings' typographic weight and their "N rows" phrasing. What it keeps of the rail is the run's own `POSTURE_DISC.complete` fill and `check_circle` glyph, **not** a `SignalTier` tone: the card is peer-sized but it is still the *run's* status, and keying it onto a tier would put a signal-coloured disc there for a reason that has nothing to do with signal.
-
-**`hideRail` fails safe.** The route passes `hideRail={hasResults}`, and `RunHero` derives `showOwnRail = !hideRail || !hasSummary` — with no summary there is nothing carrying the folded status, so the rail is drawn regardless of what the caller asked for. Without that fallback a `true` on an `idle`, `scanning` or `failed` posture would delete the only object reporting what the page is doing. Those three postures, and a completed read that listed nothing, are otherwise untouched: they keep the hero's own rail, in `HERO_SPLIT` where a summary sits beside it and `HERO_RAIL_ONLY` at idle.
-
-> ⚠️ **Do not "unify" the sweep route the same way.** It passes neither prop, and its rail keeps the 64 px disc, 48 px numeral and 19 rem column described in [The hero is as tall as it has something to say](#the-hero-is-as-tall-as-it-has-something-to-say) and [The completed rail is two marks, not five](#the-completed-rail-is-two-marks-not-five). That rail spends 30–180 seconds answering *is it still working*, and its size is what makes it readable from across a room while you wait; the neighbour route's two-second read never has that job, so its rail is only ever a completed count. The same cost asymmetry that keeps the height morph off this route keeps the fold off that one.
-
-## The summary tiles are neutral and the colour is on the disc
-
-**A tile's colour now means the strongest signal in that group.** `SUMMARY_TILE_TONE` / `summaryTileTone(index)` — a three-tone triad (`bg-primary` / `bg-primary-container` / `bg-uplink-container`) rotated by array position — was **deleted** on 2026-08-24. Tile bodies are `bg-surface-container` on every tile, and the hue moved to a 52 px disc (`SUMMARY.DISC`, 26 px glyph) keyed on the group's best measured tier.
-
-The triad's stated problem was real: every tile on the identical `surface-container-high` made three (or nine) peer findings read as one grey block with numbers in it. But rotating by index solved it with colour that encodes nothing — tile 0 wore the brand's one acting fill because it sorted first, so a reader who learned "the blue one matters" had learned a fact about sort order. The body is neutral now and the differentiation *is* the finding.
-
-`SUMMARY_TILE_DISC` (`shapes.ts`) is keyed onto `SignalTier` and `MaterialSymbolName`, so a tier with no tone or a glyph the subset does not ship fails the build rather than rendering untinted or as the literal ligature text:
-
-| Tier | Disc tone | Glyph |
-| ---- | --------- | ----- |
-| `good` | `bg-success-container text-on-success-container` | `signal_cellular_alt` |
-| `fair` | `bg-warning-container text-on-warning-container` | `signal_cellular_alt_2_bar` |
-| `poor` | `bg-destructive-container text-on-destructive-container` | `signal_cellular_alt_1_bar` |
-| `none` | `bg-surface-container-high text-on-surface-variant` | `signal_cellular_off` |
-
-> ⚠️ **Every tier carries its own glyph, and that is not decoration.** `success-container` and `warning-container` measure **1.03:1** apart — the same surface to the eye, and identical under deuteranopia — so on a disc with no text inside it the glyph is the only thing separating good from fair. `signal_cellular_alt_1_bar` and `_2_bar` were added to the Material subset for this and the font was regenerated; a tier added later needs its own glyph in the subset before it will render at all.
-
-Rules that follow:
-
-- **`none` is not `warning`.** It means "the modem listed this group but measured none of it" — the absence of a verdict rather than a poor one. Same distinction `SIGNAL_BADGE.none` draws, and the incumbent table's bug.
-- **The tier is derived in `summaries.ts`, never at a call site.** `ProviderGroup.tier`, `RelationGroup.tier`, `SweepSummary.overflowTier` and `NeighbourSummary.tier` are all computed there, because a tier is a judgement over a nullable reading and computing it inside a `.map()` in a component is how the same judgement ends up spelled two different ways on two routes. `summaries.ts` still returns no copy — the routes turn the enum into a label.
-- **The overflow tile takes the best tier among the *folded* groups**, not `none`. The folded groups may hold the strongest reading of the run, and a muted disc there would claim nothing in them was measured.
-- **The neighbour route's measurement-split tile takes the best tier across the whole read**, because it is a count rather than a relation and has no tier of its own. When nothing was measured the tier is `none`, which is exactly that tile's subject.
-- **The disc's meaning must survive greyscale and a screen reader.** `MaterialSymbol` is ligature-driven and therefore always `aria-hidden`, so each tile carries an `sr-only` `tierLabel`. Both routes map the tier onto `cell_scanner.signal.{good,fair,poor,none}` through a literal-keyed record (`SIGNAL_LABEL_KEY`), restated per route rather than shared — `i18n:check` cannot see an interpolated stem, and a key it cannot see is a key nothing will ever report as missing.
-- **The tier ladder is a different mark from the table's.** `signal_cellular_alt*` on a tile disc summarises a *group's* best reading; `SIGNAL_BADGE`'s `signal_cellular_N_bar` rates *one* cell. A sweep renders both on the same screen, so the two ladders must stay visually distinct.
-
-### What went with the triad
-
-- **The three `opacity-85` ink washes.** `SUMMARY.LABEL`, `DETAIL_IDENT` and `DETAIL_FIGURE` carried them only because a fixed neutral ink sat wrong on a solid `bg-primary` tile. With a neutral body the wash is a contrast reduction with nothing left to compensate for; the JSDoc that argued for it said as much.
-- **The panel wrapper and its heading.** `SUMMARY.ROOT` (a `surface-container` panel) and `SUMMARY.TITLE` are gone, and the two `summary_title` keys — `cell_scanner.run.summary_title` ("What this sweep found") and `cell_scanner.neighbour.run.summary_title` — were deleted from all five locale packs. A `surface-container` panel holding `surface-container` tiles is not a tone step, it is a tile-shaped hole; the only way to keep a step would have been to push the tiles up to `surface-container-high`, which is the undifferentiated grey block the triad existed to fix. The tiles sit on the hero's own `surface` instead, which is a real step. The heading went with the panel because "What this sweep found" over four tiles inside a card titled "Full band sweep" (now "Full network sweep" — see [What the two runs are called](#what-the-two-runs-are-called)) was the third thing on one screen naming the same run.
-- **`SummaryTile.value`.** The big numeral moved into the fact line *with* a unit — `t("cell_scanner.results.count", { count })` on the sweep, `tally_rows` / `tally_measured` on the neighbour route, all reusing existing plurals. On a row-shaped tile the disc holds the left edge, and a bare numeral with no unit beside it read as a second figure competing with the rail's count.
-- **`SKELETON_SHAPE.SUMMARY`, the single tall bar.** The skeleton now mirrors **by composition**: the same `SUMMARY.GRID` holding the same `SUMMARY.TILE` boxes with a disc placeholder and two line boxes inside (`SUMMARY_DISC` / `SUMMARY_LABEL` / `SUMMARY_DETAILS`, `SUMMARY_TILES = 4`). A single `h-[13.5rem]` bar is a shape the loaded panel can no longer take.
-
-> ℹ️ `SKELETON_SHAPE.SUMMARY_DISC` restates `rounded-pill` and `size-13` rather than importing `SUMMARY.DISC`. That is not laziness: `cn()` is bare `twMerge`, which cannot dedupe this codebase's custom radius names, so `Skeleton`'s own `rounded-md` beats a custom radius alphabetically. `size-13` has no default to lose to.
-
-> ⚠️ **`VERDICT_TONE.muted` moved `bg-surface` → `bg-surface-container-high` in the same pass, and the move is not cosmetic.** The rule is that a muted verdict must not read as one more, wider tile — `muted` is the tone the neighbour route's only verdict uses, so that is its normal appearance rather than an edge case. It used to be `surface` because the tiles were `surface-container-high` inside a `surface-container` panel. With the panel gone and the tiles on `surface-container` sitting directly on the card's `surface`, a `surface` verdict would be **invisible**, and the lift is now `surface-container-high`. If the tiles' step ever moves again, this token moves with it.
+> ⚠️ **Do not add a button to the zero-results panel.** That decision (2026-08-24) still stands: the hero directly above already holds the start action, and two triggers for one act, forty pixels apart, is the duplication this surface spent a whole pass removing.
 
 ## The section head stacks its description
 
@@ -555,56 +509,26 @@ Two mechanics worth keeping:
 
 - **The root is `items-start`**, which is what keeps `META` on the *title's* row however many lines the description wraps to.
 - **`META` carries `ms-auto` rather than the root carrying `justify-between`.** The row wraps, and with `justify-between` a wrap leaves the meta slot marooned against the right edge of its own line.
+- **The run hero overrides `META` below `@xl/section` with `RUN_HERO_META`**: the sibling link takes the left edge and the action the right, on their own full-width row. The calculator shares plain `META`.
 
-## The sweep's empty state owns no action
+## The ledger, the verdict and the tally
 
-**One act gets one affordance.** Since 2026-08-24 (user decision) the sweep's empty panel carries no button.
-
-> ℹ️ **The other half of that decision was reverted on 2026-09-10 (user decision).** The same pass also made the sweep's results card unmount entirely while the posture was `idle` (`{posture === "idle" ? null : …}` around the `<Card>` in `scanner.tsx`). That gate is **gone**: the card is now always mounted on both routes, and `idle` shares one `else` branch with a completed sweep that listed nothing — both render `ScanEmptyState`. The button decision below is unaffected and still holds; the reasoning for it is kept because it is still the reason no button exists.
-
-The retired shape, kept here so nobody re-derives it: from 2026-08-14 the sweep's pre-run panel was the shared `Empty` primitive (`components/ui/empty.tsx`) with its own "Sweep all bands" / "Sweep again" button in an `EmptyContent` slot, wired to the same `startScan` the hero's button used. The argument was that before a run the results card *is* the whole page, so a reader looking at an empty table should not have to travel back up to the hero to start one. The neighbour route kept the quieter `ScanEmptyState` posture stack with no button, and the two panels were described as **deliberately different objects**.
-
-Why it was overturned:
-
-- **The pair read as awkward.** Two buttons on one screen, forty pixels apart in the vertical, both starting the same three-minute sweep.
-- **Two triggers for one act is the thing this surface spent a whole pass removing.** It is the same duplication that retired the posture chip and the completed rail's third and fourth lines.
-- **The trigger moving between rows is what made the layout lurch.** The empty panel's button existed only at idle, so pressing it swapped the card's dashed box for a taller skeleton at the same instant the hero grew — one click, two panels resizing, and only one of the moves meant anything. See [The hero is as tall as it has something to say](#the-hero-is-as-tall-as-it-has-something-to-say).
-
-What holds now, on both routes:
-
-| Route | Before the first run | After a run that listed nothing |
-| ----- | -------------------- | ------------------------------- |
-| **Full sweep** | the results card **stays mounted** with `ScanEmptyState`, i.e. the `POSTURE` stack, and no button | the same panel — **and still no button**. The hero directly above is already showing a `0` and a "Sweep again" action in exactly this state |
-| **Neighbour read** | the results card **stays mounted** with `ScanEmptyState`, i.e. the `POSTURE` stack, and no button | the same panel |
-
-> ℹ️ **The two empty panels are one object again.** Both routes render `ScanEmptyState` in both states, so the sweep's pre-run panel and its completed-and-empty panel are the same branch in `scanner.tsx` and read alike — the card never has to unmount, and the reader is not shown two different treatments for "no rows here". The 2026-08-24 divergence (the sweep's panel existing only after a run) was the reverted half; the cost asymmetry it was argued from still governs the [hero's morph](#the-hero-is-as-tall-as-it-has-something-to-say), which the neighbour route still does not take.
-
-Two things about the sweep's panel that are still load-bearing:
-
-- **It is the branch two unrelated causes fall into.** `scanning` renders `ScannerSkeleton` and `failed` renders `ScanErrorState`, so what reaches the empty panel is either the pre-run state or a completed run that listed nothing. Neither one wants a button: the first has the hero's launch action directly above it, the second the hero's "Sweep again".
-- **The panel is `ScanEmptyState` on `POSTURE.ROOT`'s `min-h-[13rem]`**, the same object and the same height the neighbour route's empty state uses, so swapping between the skeleton, the error panel and the table does not jump the card. The former `EMPTY_PANEL` shape — a second literal that had to move in step with `POSTURE.ROOT` — is gone now that both routes share one component.
-
-The dashed stroke is this codebase's vocabulary for a slot with nothing in it yet (the same idiom as `custom-profiles/empty-profile.tsx`), not a compensation for a weak fill — No-Hairline-On-Fill does not apply.
-
-> ⚠️ **Do not restore the panel's button in a later pass.** That half of the 2026-08-24 decision stands: two triggers for one act, forty pixels apart, and a trigger that only exists at one posture. The *other* half — the card not mounting at idle — was reverted on 2026-09-10 and must not be reinstated either; the card is mounted on both routes at every posture.
-
-## The run summary, the verdict and the tally
-
-Three additions of the same 2026-08-12 pass, all derived from rows the surface already has — no new endpoint, no new poll.
+All three are derived from rows the surface already has — no new endpoint, no new poll.
 
 | Object | Where | Sweep | Neighbour |
 | ------ | ----- | ----- | --------- |
-| **Summary panel** | hero, right column, above the action row | one tile per provider: cell count, bands seen, best RSRP (capped at `MAX_PROVIDER_TILES` + one overflow tile) | one tile per relation that appeared, plus a measured-vs-channel-only tile |
-| **Verdict strip** | under the tiles, only when true | shown only when every *measured* cell shares one tier; explains that a sweep measures without the serving cell's help and reads low indoors | explains the channel-only rows: named by the serving cell, unmeasured, so no quality and not lockable |
-| **Tally** | under the table, beside the lock explainer | rows + per-tier counts, tiers with 0 omitted | rows, measured, channel-only — and since 2026-08-14 this is the route's **only** count: `ScanTableProps.countLabel` is now optional and the neighbour table omits it, because the pager's "N cells" restated the tally's row count twelve pixels lower. The sweep still passes one |
-| **Context line** | under the result count | "across N providers on M bands" | "on N channels around the serving cell" |
+| **Ledger rows** | hero, beside the status cell | one row per carrier, SIM's first, capped at 5 plus an overflow row — see [The ledger](#the-ledger) | one row per relation that appeared |
+| **Verdict strip** | under the ledger, `complete` only, only when true | every *measured* cell shares one tier (`success` / `warning` / `destructive`, each with its own bar-count glyph), or nothing was measured at all (`muted`, `signal_cellular_off`). A mixed spread gets none | some rows came back channel-only (`muted`, `visibility_off`, `neighbour.run.verdict_channel_only`) |
+| **Tally** | `ScanTableNote` under the table, beside the lock note | rows plus per-tier counts, tiers with 0 omitted, over the whole sweep rather than the filtered view | rows, measured, channel only |
+| **Count** | the pager row, rendered only when the set pages (more than TanStack's default 10 rows) | `countLabel` | none — `countLabel` is omitted because the tally already counts the read |
 
-Two rules hold this together:
+Rules that hold this together:
 
 - **All arithmetic lives in `summaries.ts`, and it contains no copy.** `Math.max()` of an empty list is `-Infinity`, a mean over zero rows is `NaN`, and both render as confident text beside real numbers. One pure, total function per route means "survives an empty array, a single row and all-sentinel data" is a property of one file rather than of a rendering path nobody re-reads. And a pure function that returns English is an i18n hole the checker cannot see — the frequency calculator on this same prefix shipped exactly that bug once.
-- **A mixed spread gets NO verdict.** "The readings vary" is not an explanation, and a strip that is always present stops being read. The tone follows the tier being described (`destructive` when every reading is weak, `muted` when nothing was measured at all), and each verdict carries a distinct bar-count glyph — three of them can appear in one slot, and `success-container` / `warning-container` are 1.03:1 apart.
+- **A mixed spread gets NO verdict.** "The readings vary" is not an explanation, and a strip that is always present stops being read. Each verdict carries a distinct glyph because `success-container` and `warning-container` measure 1.03:1 apart.
+- **`VERDICT_TONE.muted` is `bg-surface-container-high`, one step off the ledger's `bg-surface-container`.** `muted` is the neighbour route's only verdict tone, so this is its normal look: on the ledger's own fill it would read as one more, wider ledger row.
 
-`run-summary.tsx`, like `run-hero.tsx`, is **copy-blind**: every string arrives as a prop and every number pre-derived, because the two routes disagree about all of them.
+> ℹ️ **The lock note says what a lock does.** `cell_scanner.results.note_lock` and `neighbour.results.note_channel_only` used to say a lock "copies" the cell into Tower Locking. `LockCellDialog` posts straight to `tower/lock.sh`, so the modem is locked at once and stays locked until the lock is cleared on Tower Locking; the copy now says that.
 
 ## `idle` means two different things, and the hooks must tell them apart
 

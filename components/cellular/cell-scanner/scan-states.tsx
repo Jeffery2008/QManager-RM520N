@@ -11,21 +11,8 @@ import { PILL_QUIET, POSTURE, POSTURE_DISC } from "./shapes";
 // =============================================================================
 // scan-states — the results card's empty and error panels
 // =============================================================================
-// The error block below existed byte-for-byte in BOTH scanning routes, down to
-// the `py-16` and the `max-w-xs`. It also carried two of the patterns the canon
-// replaces: `bg-destructive/10` (an opacity wash where a tone step belongs) and
-// a `rounded-full` disc (a radius outside the role scale).
-//
-// Both panels are the same object — a disc, a title, a line of body, centred in
-// a tile — so they import `POSTURE` rather than restating it, and the frequency
-// calculator's readout rail is the third call site.
-//
-// THEY ARE NO LONGER THE HERO'S RAIL. The hero's rail became a horizontal row
-// (`RAIL`) when the hero's height became a function of its posture, because a
-// centred 13rem block cannot collapse to nothing at idle. `POSTURE` keeps the
-// centred stack, which is still the right shape for a panel that owns a card
-// body with nothing in it — and it is why `SKELETON_SHAPE.POSTURE` is gone:
-// these are terminal states, never a stand-in for data still loading.
+// One object, a disc, a title and a line of body centred in a tile, on
+// `POSTURE`. Terminal states only: never a stand-in for data still loading.
 //
 // THE ERROR NAMES THE PROBLEM AND THE RECOVERY. The message from the worker is
 // the title; the body says what to do about it; the button does it. An error
@@ -60,8 +47,7 @@ export function ScanStatePanel({
   return (
     <div className={POSTURE.ROOT} role={tone === "error" ? "alert" : undefined}>
       <span className={cn(POSTURE.DISC, spec.disc)}>
-        {/* 32, matching `RAIL.DISC` in the hero. Both discs are 64px, so a 24px
-            glyph would float inside an oversized circle here only. */}
+        {/* 32px glyph in a 64px disc. */}
         <MaterialSymbol name={spec.glyph} size={32} filled={spec.filled} />
       </span>
       <span className={POSTURE.TITLE}>{title}</span>

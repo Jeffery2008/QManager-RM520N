@@ -163,9 +163,7 @@ export function LockCellDialog({
             {t("cell_scanner.lock.description")}
           </AlertDialogDescription>
           {target ? (
-            // Machine voice: every figure on this line is an identifier that
-            // holds steady until something reconfigures it, which is exactly
-            // the test `TABLE.IDENT` encodes.
+            // The cell's identifiers, in the table's own figure voice.
             <p className={`${TABLE.IDENT} text-on-surface-variant`}>
               {/* Two literal keys rather than one key plus a hand-glued
                   ` · ${provider}` tail: the separator belongs to the sentence,

@@ -15,10 +15,12 @@ Every settings card in the app now saves from the same place — a row along the
 - **"No automatic recovery" is now blue.** On **Cellular → Frequency Locking**, the chip on the locked verdict is a filled info chip instead of a grey one, so it reads as a fact rather than a disabled state.
 - **Frequency Calculator channel label has a separator.** On **Cellular → Cell Scanner → Frequency Calculator**, the answer now reads "EARFCN 1350 · downlink" instead of running the two together. (`readout.channel_lte` / `channel_nr` in all five language packs.)
 - **Buttons and fields look the same everywhere.** Every button is a rounded pill, main page actions share one 42px size (the Monitoring pages' buttons grew to match), and text boxes and dropdowns share one shape and fill on every page. (`Button size="action"`; `Input`, `Select`, `Textarea` and `InputGroup` share one field style with a `host` fill.)
+- **Cell Scanner and Neighboring Cells have a new layout.** Both pages start as a compact launch bar and show results as one summary card (the total, then a row per carrier with your SIM's first, or per neighbour type) above a table sorted strongest signal first, with **Download CSV** beside the filter. The sweep shows an estimated progress bar, and **Lock to this cell** is greyed out, with the reason, for cells on another carrier. (The bar is an estimate: the modem reports nothing until the sweep ends.)
 
 ## 🐛 Fixes
 
 - **TTL & MTU Apply buttons match their Discard buttons.** On **Local Network → TTL & MTU Settings**, the Apply buttons were smaller and squarer than the Discard pill beside them; they are now the same 42px pill.
+- **Neighboring Cells "Read failed" card gives the right advice.** It used to tell you to run the sweep again; it now says to read again.
 
 ## 📥 Installation
 

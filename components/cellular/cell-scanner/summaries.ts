@@ -5,6 +5,7 @@ import type {
 } from "@/types/cell-scanner";
 
 import { signalTier, type SignalTier } from "./shapes";
+import { cellMatchesSim, type SimPlmn } from "./sim-plmn";
 
 // =============================================================================
 // The run summaries — every aggregate on this surface, in one place
@@ -74,14 +75,7 @@ function uniformTier(
 // The full sweep
 // -----------------------------------------------------------------------------
 
-/**
- * How many provider tiles the grid draws before it folds the rest into one.
- *
- * Five plus an overflow tile is what fits three columns twice over without the
- * panel outgrowing the posture rail beside it. A dense urban sweep can return a
- * dozen operator entries — including roaming partners the reader has never heard
- * of — and a grid that grows with them turns the hero into a list.
- */
+/** How many carrier rows the ledger draws before folding the rest into one. The SIM's group is never folded. */
 export const MAX_PROVIDER_TILES = 5;
 
 export interface ProviderGroup {
@@ -92,43 +86,21 @@ export interface ProviderGroup {
   bands: string[];
   /** Strongest RSRP among this provider's measured cells; `null` if none were. */
   best: number | null;
-  /**
-   * `best` graded on this surface's own three-tier scale — what the summary
-   * tile's disc is tinted and glyphed by.
-   *
-   * DERIVED HERE, not at the call site, for the reason every other aggregate in
-   * this file is: a tier is a judgement over a nullable reading, and computing
-   * it inside a `.map()` in a component is how the same judgement ends up
-   * spelled two different ways on two routes. `signalTier(null)` is `none`, so a
-   * group nothing was measured in grades as an absence rather than as "poor".
-   *
-   * Still no copy: this is the tier ENUM. The routes turn it into a label.
-   */
+  /** `best` on the three-tier scale; `signalTier(null)` is `none`. */
   tier: SignalTier;
+  /** Every cell is on the SIM's network. Fails closed: `false` for every group with no SIM PLMN. */
+  isSim: boolean;
 }
 
 export interface SweepSummary {
   total: number;
-  /** Capped at `MAX_PROVIDER_TILES`, strongest-populated first. */
+  /** Capped at `MAX_PROVIDER_TILES`: the SIM's group first, then strongest reading first. */
   groups: ProviderGroup[];
   /** Providers and cells folded out of the capped list. Both 0 when nothing was. */
   overflowProviders: number;
   overflowCells: number;
-  /**
-   * The best tier among the FOLDED groups — the overflow tile's disc.
-   *
-   * Without it the tile that stands for "3 more providers" would have to pick a
-   * tier it does not have, and the honest-looking choice (`none`) would paint it
-   * "nothing was measured here" when the folded groups may hold the strongest
-   * reading of the run. `none` when the list folded nothing, which is also when
-   * the tile is not rendered.
-   */
-  overflowTier: SignalTier;
-  // `providerCount` and `bandCount` lived here for the posture rail's context
-  // caption ("across 3 providers on 6 bands"). That line was removed by user
-  // decision (see `shapes.ts`'s header) and nothing else read them, so they are
-  // gone rather than left as a field only a future caller might want — an
-  // aggregate with no consumer is an untested aggregate.
+  /** The strongest measured reading among the folded groups, or `null`. */
+  overflowBest: number | null;
   measured: number;
   tiers: Record<SignalTier, number>;
   uniform: Exclude<SignalTier, "none"> | null;
@@ -141,7 +113,11 @@ function bandLabel(cell: CellScanResult): string | null {
   return `${prefix}${cell.band}`;
 }
 
-export function summariseSweep(results: CellScanResult[]): SweepSummary {
+/** `simPlmn` defaults to `null` (no group is "yours") for callers that only need the tally. */
+export function summariseSweep(
+  results: CellScanResult[],
+  simPlmn: SimPlmn | null = null,
+): SweepSummary {
   const byProvider = new Map<string, CellScanResult[]>();
 
   for (const cell of results) {
@@ -174,16 +150,21 @@ export function summariseSweep(results: CellScanResult[]): SweepSummary {
         bands,
         best,
         tier: signalTier(best),
+        isSim:
+          simPlmn !== null &&
+          cells.every((cell) => cellMatchesSim(cell, simPlmn)),
       };
     })
-    // Most cells first; a tie is broken by the stronger reading, and a group with
-    // no reading at all sorts last rather than winning on a `null`.
-    .sort(
-      (a, b) =>
-        b.cells - a.cells ||
+    // The SIM's group first, then the strongest reading (no reading sorts
+    // last), then more cells.
+    .sort((a, b) => {
+      if (a.isSim !== b.isSim) return a.isSim ? -1 : 1;
+      const bestDiff =
         (b.best ?? Number.NEGATIVE_INFINITY) -
-          (a.best ?? Number.NEGATIVE_INFINITY),
-    );
+        (a.best ?? Number.NEGATIVE_INFINITY);
+      if (bestDiff !== 0) return bestDiff;
+      return b.cells - a.cells;
+    });
 
   const shown = groups.slice(0, MAX_PROVIDER_TILES);
   const folded = groups.slice(MAX_PROVIDER_TILES);
@@ -197,7 +178,7 @@ export function summariseSweep(results: CellScanResult[]): SweepSummary {
     overflowCells: folded.reduce((sum, group) => sum + group.cells, 0),
     // `?? 0` maps a group with no reading onto the same sentinel the workers
     // use, so `bestSignal` skips it rather than treating null as a level.
-    overflowTier: signalTier(bestSignal(folded.map((group) => group.best ?? 0))),
+    overflowBest: bestSignal(folded.map((group) => group.best ?? 0)),
     measured: strengths.filter(isMeasured).length,
     tiers,
     uniform: uniformTier(tiers),
@@ -211,10 +192,8 @@ export function summariseSweep(results: CellScanResult[]): SweepSummary {
 export interface RelationGroup {
   type: NeighbourCellType;
   count: number;
-  /** Distinct reported channels. The worker's 0 is "not reported" and is dropped. */
-  channels: number[];
   best: number | null;
-  /** `best` on the three-tier scale — the tile disc. See `ProviderGroup.tier`. */
+  /** `best` on the three-tier scale. See `ProviderGroup.tier`. */
   tier: SignalTier;
 }
 
@@ -224,19 +203,8 @@ export interface NeighbourSummary {
   groups: RelationGroup[];
   /** Rows carrying an RSRP. */
   measured: number;
-  /**
-   * Rows the serving cell named but did not measure. These carry no quality and
-   * cannot be locked — the one fact this route's verdict exists to explain.
-   */
+  /** Rows the serving cell named but did not measure: no quality, not lockable. */
   channelOnly: number;
-  /**
-   * The best tier across the WHOLE read — the disc on the measurement-split
-   * tile, which is a count rather than a relation and so has no tier of its own.
-   * `none` when nothing was measured, which is exactly what that tile then says.
-   */
-  tier: SignalTier;
-  // `channelCount` is gone for the same reason `providerCount` is on the sweep
-  // side: it fed only the posture rail's context caption, which was removed.
 }
 
 const RELATION_ORDER: NeighbourCellType[] = ["intra", "inter", "nr5g"];
@@ -250,11 +218,6 @@ export function summariseNeighbours(
     return {
       type,
       count: rows.length,
-      channels: [
-        ...new Set(
-          rows.map((row) => row.frequency).filter((channel) => channel !== 0),
-        ),
-      ].sort((a, b) => a - b),
       best,
       tier: signalTier(best),
     };
@@ -267,6 +230,5 @@ export function summariseNeighbours(
     groups,
     measured,
     channelOnly: results.length - measured,
-    tier: signalTier(bestSignal(results.map((row) => row.signalStrength))),
   };
 }
