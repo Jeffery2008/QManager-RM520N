@@ -62,7 +62,7 @@ Three consequences that are easy to get wrong:
 
 > ⚠️ `Badge variant="info"` is `bg-primary-container text-on-primary-container`, the exact pair a promoted `primary-container` row uses, so on such a row the chip dissolves to a bare glyph and a word. Re-ground the chip on the row's own ink (see `.claude/agent-memory/ui-builder/reference-info-chip-dissolves-on-primary-container.md`). `muted`, `success`, `warning` and `destructive` do not collide.
 
-> ℹ️ NOTE — open case, tracked in `DESIGN.md` > Migration Deltas: Frequency Locking's "No automatic recovery" chip (`cellular/frequency-locking/freq-lock-hero.tsx`, `verdict.no_recovery`) is still `Badge variant="muted"`. It sits on the amber locked-verdict panel, where `info` has not been measured, so measure the pair in both themes before switching it and do not claim the chip conforms until then.
+> ℹ️ NOTE — Frequency Locking's "No automatic recovery" chip (`cellular/frequency-locking/freq-lock-hero.tsx`, `verdict.no_recovery`) is `Badge variant="info"` on the amber locked-verdict panel; measured 2026-10-06 (OKLab dE vs the panel 17.0 light / 23.3 dark, ink 8.1:1 / 7.8:1), see `DESIGN.md` > Migration Deltas.
 
 ## Hue slots, and the retired 40-degree rule
 

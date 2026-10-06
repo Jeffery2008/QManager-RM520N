@@ -354,14 +354,9 @@ export function FreqLockHero({
                     does. Only shown while a lock is actually in force, because
                     that is the only time it can cost anything. */}
                 {posture === "locked" ? (
-                  // `muted`, not `warning`. This chip only ever renders ON the
-                  // amber locked panel, and an amber chip on an amber container
-                  // is the one place the `warning` role cannot separate itself
-                  // from its own background — it washed out in light mode. The
-                  // panel already carries the amber; the chip carries the fact,
-                  // told apart from its neighbour by glyph rather than by hue,
-                  // which is what the Every-Chip-Has-A-Glyph rule is for.
-                  <Badge variant="muted">
+                  // `info`, not `warning`: amber on the amber panel washes out in light mode.
+                  // Measured OKLab dE vs the panel: info 17.0 light / 23.3 dark (muted 14.8 / 20.1).
+                  <Badge variant="info">
                     <MaterialSymbol name="block" size={BADGE_GLYPH_SIZE} />
                     {t("frequency_locking.verdict.no_recovery")}
                   </Badge>

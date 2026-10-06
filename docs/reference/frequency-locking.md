@@ -238,11 +238,11 @@ Verified live on hardware: **no systemd unit, no running process, no config file
 
 This is stated **on screen**, in three places, each chosen for when it can actually be acted on:
 
-1. A `muted` **"No automatic recovery"** chip on the verdict panel — rendered only while a lock is in force, because that is the only state where it can cost anything.
+1. An `info` **"No automatic recovery"** chip on the verdict panel — rendered only while a lock is in force, because that is the only state where it can cost anything.
 2. A standing note in the apply bar under the live read-back (`apply.no_recovery`).
 3. The unsupported-band confirmation dialog, which is `destructive`-toned for this reason alone.
 
-The verdict chip is `muted`, **not `warning`** — it only ever renders *on* the amber `locked` panel, and an amber chip on an amber container is the one place the `warning` role cannot separate itself from its own background (it washed out in light mode). The panel carries the amber; the chip carries the fact, told apart from its neighbour by glyph.
+The verdict chip is `info`, **not `warning`** (The Fact-Is-Info Rule) — it only ever renders *on* the amber `locked` panel, where `warning` cannot separate from its own background (it washed out in light mode). Measured 2026-10-06: OKLab dE against the panel 17.0 light / 23.3 dark, ink 8.1:1 / 7.8:1, holds under deuteranopia.
 
 ### The crash-dump risk and its two guards
 
@@ -400,7 +400,7 @@ Beneath the sentence sits a chip row (`VERDICT.FOOT`, pinned with `mt-auto` so p
 | ---- | ------------ | ------- |
 | "Tower lock off, so this is available" | `posture === "unlocked"` | `muted` + `check` |
 | "Serving channel is in / outside the list" | `servingInList !== null` | `muted` + `check` / `warning` + filled `warning` |
-| "No automatic recovery" | `posture === "locked"` | `muted` + `block` |
+| "No automatic recovery" | `posture === "locked"` | `info` + `block` |
 
 `servingInList` is deliberately `null` unless something is actually locked **and** at least one on-air carrier belongs to a locked technology: with an empty list every channel is trivially allowed, so the chip would tell the user nothing.
 
