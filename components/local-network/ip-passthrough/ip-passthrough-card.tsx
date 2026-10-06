@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  useId,
   useMemo,
   useState,
   type ChangeEvent,
@@ -31,6 +32,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CardFoot } from "@/components/ui/card-foot";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import {
   Select,
@@ -57,7 +59,6 @@ import {
   CARD_TITLE,
   DELTA,
   FIELD,
-  FOOTER,
   MAC_FIELD,
   PILL_ACTION,
   PROVENANCE,
@@ -278,6 +279,7 @@ export function IPPassthroughCard({
 }: IpPassthroughCardProps) {
   const { t } = useTranslation("common");
   const { saved, markSaved } = useSaveFlash();
+  const formId = useId();
 
   /**
    * THE DRAFT IS DERIVED, NOT SYNCED.
@@ -471,7 +473,11 @@ export function IPPassthroughCard({
         </CardHeader>
 
         <CardContent className={cn(CARD_PAD, "flex flex-col gap-3.5")}>
-          <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
+          <form
+            id={formId}
+            className="flex flex-col gap-3.5"
+            onSubmit={handleSubmit}
+          >
             <div className={ROW_GROUP}>
               {state === null && (isLoading || !failed) ? (
                 // Five boxes at the row's own resting height, mirrored BY
@@ -730,52 +736,51 @@ export function IPPassthroughCard({
               )}
             </div>
 
-            <div className={FOOTER.ROOT}>
-              <div className={FOOTER.ACTIONS}>
-                {/* Destructive only while the MODE row is dirty. Changing NAT or
-                    the USB protocol also reboots, but it does not take the
-                    gateway away — reserving the loudest affordance for the one
-                    change that cuts the route in is what keeps it meaningful. */}
-                <SaveButton
-                  type="submit"
-                  variant={modeDirty ? "destructive" : "default"}
-                  isSaving={isSaving}
-                  saved={saved}
-                  label={t(`${K}.card.apply`)}
-                  blockedReason={blockedReason}
-                  className={PILL_ACTION}
-                />
-                {dirtyCount > 0 ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={handleDiscard}
-                    disabled={isSaving}
-                    className={PILL_ACTION}
-                  >
-                    {t(`${K}.card.discard`)}
-                  </Button>
-                ) : null}
-              </div>
-
-              {/* The path is a machine string, so it takes the machine voice. It
-                  sits after a colon rather than inside the sentence: a path
-                  spliced mid-sentence would force every locale to keep it at the
-                  English word position, which is the one thing a translator must
-                  be free to move. */}
-              <span className={PROVENANCE} aria-live="polite">
-                {dirtyCount > 0 ? (
-                  t(`${K}.card.provenance_dirty`, { count: dirtyCount })
-                ) : (
-                  <>
-                    {t(`${K}.card.provenance`)}{" "}
-                    <span className="font-mono">{CONFIG_PATH}</span>
-                  </>
-                )}
-              </span>
-            </div>
           </form>
         </CardContent>
+
+        {/* Outside the form so `mt-auto` reaches the card edge; `form=` keeps Enter-to-submit.
+            The path sits after a colon so a locale can move it. */}
+        <CardFoot
+          className={CARD_PAD}
+          status={
+            <span className={PROVENANCE}>
+              {dirtyCount > 0 ? (
+                t(`${K}.card.provenance_dirty`, { count: dirtyCount })
+              ) : (
+                <>
+                  {t(`${K}.card.provenance`)}{" "}
+                  <span className="font-mono">{CONFIG_PATH}</span>
+                </>
+              )}
+            </span>
+          }
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleDiscard}
+                disabled={isSaving || dirtyCount === 0}
+                className={PILL_ACTION}
+              >
+                {t(`${K}.card.discard`)}
+              </Button>
+              {/* Destructive only while the MODE row is dirty: that is the one
+                  change that takes the gateway away. */}
+              <SaveButton
+                type="submit"
+                form={formId}
+                variant={modeDirty ? "destructive" : "default"}
+                isSaving={isSaving}
+                saved={saved}
+                label={t(`${K}.card.apply`)}
+                blockedReason={blockedReason}
+                className={PILL_ACTION}
+              />
+            </>
+          }
+        />
       </Card>
 
       {/* Veto A: the dialog STAYS. A reboot is a deliberate act, and this is

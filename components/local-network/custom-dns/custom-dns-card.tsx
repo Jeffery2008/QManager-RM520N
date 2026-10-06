@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useId,
   useMemo,
   useState,
   type ChangeEvent,
@@ -10,7 +11,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { PlusIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 
 import {
   Card,
@@ -19,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CardFoot } from "@/components/ui/card-foot";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,7 +33,6 @@ import type {
 import type { CustomDnsSettingsResponse } from "@/types/custom-dns";
 
 import {
-  CARD_FOOT,
   CARD_PAD,
   CARD_SHELL,
   CARD_TITLE,
@@ -162,6 +163,7 @@ export function CustomDnsCard({
   onSaved,
 }: CustomDnsCardProps) {
   const { t } = useTranslation("common");
+  const formId = useId();
 
   // ---------------------------------------------------------------------------
   // Local form state — seeded from the device ONCE, at mount
@@ -373,7 +375,11 @@ export function CustomDnsCard({
       </CardHeader>
 
       <CardContent className={cn(CARD_PAD, "flex flex-col gap-4")}>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <form
+          id={formId}
+          className="flex flex-col gap-4"
+          onSubmit={handleSubmit}
+        >
           <div className={ROW_GROUP}>
             {/* Row 1 — the switch the whole page hangs off. */}
             <div className={ROW.ROOT}>
@@ -522,47 +528,51 @@ export function CustomDnsCard({
             </div>
           ) : null}
 
-          <div className={CARD_FOOT.ROOT}>
-            <div className={CARD_FOOT.ACTIONS}>
-              {/* `blockedReason`, never `disabled`. A disabled button cannot be
-                  focused and receives no pointer events, so the reason it is
-                  blocked would be unreachable by exactly the people who need it —
-                  and every reason this control can be blocked for is a sentence
-                  worth reading before pressing anything. */}
-              <SaveButton
-                type="submit"
-                isSaving={isSaving}
-                saved={saved}
-                label={t(`${K}.card.save`)}
-                blockedReason={blockedReason}
-                className={PILL_ACTION}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                className={PILL_ACTION}
-                onClick={addRow}
-                disabled={rowsDisabled || localServers.length >= MAX_RESOLVERS}
-              >
-                <PlusIcon className="size-4" />
-                {t(`${K}.card.add`)}
-              </Button>
-            </div>
-
-            <p className={PROVENANCE}>
-              <span>
-                {t(
-                  blockCorrupt
-                    ? `${K}.card.provenance_corrupt`
-                    : `${K}.card.provenance`,
-                  { used: usedCount, max: MAX_RESOLVERS },
-                )}
-              </span>
-              <span className="font-mono">{DNSMASQ_CONF}</span>
-            </p>
-          </div>
         </form>
       </CardContent>
+
+      {/* Outside the form so `mt-auto` reaches the card edge; `form=` keeps Enter-to-submit. */}
+      <CardFoot
+        className={CARD_PAD}
+        liveStatus={false}
+        status={
+          <p className={PROVENANCE}>
+            <span>
+              {t(
+                blockCorrupt
+                  ? `${K}.card.provenance_corrupt`
+                  : `${K}.card.provenance`,
+                { used: usedCount, max: MAX_RESOLVERS },
+              )}
+            </span>
+            <span className="font-mono">{DNSMASQ_CONF}</span>
+          </p>
+        }
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              className={PILL_ACTION}
+              onClick={addRow}
+              disabled={rowsDisabled || localServers.length >= MAX_RESOLVERS}
+            >
+              {t(`${K}.card.add`)}
+            </Button>
+            {/* `blockedReason`, never `disabled`: a disabled button cannot be
+                focused, so its reason would be unreachable. */}
+            <SaveButton
+              type="submit"
+              form={formId}
+              isSaving={isSaving}
+              saved={saved}
+              label={t(`${K}.card.save`)}
+              blockedReason={blockedReason}
+              className={PILL_ACTION}
+            />
+          </>
+        }
+      />
     </Card>
   );
 }
@@ -606,14 +616,20 @@ export function CustomDnsCardSkeleton() {
           ))}
         </div>
 
-        <div className={CARD_FOOT.ROOT} aria-hidden="true">
-          <div className={CARD_FOOT.ACTIONS}>
-            <Skeleton className="h-[2.625rem] w-[9.5rem] rounded-pill" />
-            <Skeleton className="h-[2.625rem] w-[8.5rem] rounded-pill" />
-          </div>
-          <Skeleton className="h-3 w-[18rem] max-w-full rounded-pill" />
-        </div>
       </CardContent>
+
+      <CardFoot
+        className={CARD_PAD}
+        liveStatus={false}
+        aria-hidden="true"
+        status={<Skeleton className="h-3 w-[18rem] max-w-full rounded-pill" />}
+        actions={
+          <>
+            <Skeleton className={cn(PILL_ACTION, "w-[8.5rem]")} />
+            <Skeleton className={cn(PILL_ACTION, "w-[9.5rem]")} />
+          </>
+        }
+      />
     </Card>
   );
 }

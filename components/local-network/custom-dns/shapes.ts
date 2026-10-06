@@ -473,9 +473,3 @@ export const ERROR_TEXT = "text-[0.8125rem] leading-relaxed text-pretty";
  * would separate it from the only thing it is ever true of.
  */
 export const PROVENANCE = "text-on-surface-variant flex flex-wrap items-center gap-x-1 px-1 text-xs";
-
-/** The card's footer: the save action, the add pill, then provenance below. */
-export const CARD_FOOT = {
-  ROOT: "flex flex-col gap-3",
-  ACTIONS: "flex flex-wrap items-center gap-2.5",
-} as const;
