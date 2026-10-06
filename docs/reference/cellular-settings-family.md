@@ -2,6 +2,8 @@
 
 > **Applies to:** RM520N-GL (SDX65) · verified 2026-08
 > **RG501Q-EU (SDX55):** unverified — see [`platform-matrix.md`](./platform-matrix.md)
+>
+> **Moved 2026-10-06:** the segmented geometry (`SEGMENTED`, `SEGMENTED_BREAKPOINTS`, `segmentedBreakpoint`) now lives in `components/ui/segmented-field.tsx`, not `shapes.ts`; where this doc says `shapes.ts` for those, read that file.
 
 > The five routes under `/cellular/settings/` share one geometry-and-tone contract (`components/cellular/settings/shapes.ts`) rather than each hand-rolling its own card. This doc covers that shared contract and the four surfaces that adopted it in the 2026-08-13 rebuild — **APN Management**, **Network Priority**, **IMEI Settings**, and **Blocked Networks (FPLMN)**. The fifth route, `/cellular/settings` itself, has its own doc: [cellular-basic-settings.md](cellular-basic-settings.md).
 

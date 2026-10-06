@@ -1429,6 +1429,11 @@
         "section": "layout"
       },
       {
+        "name": "The Segmented-Pills Rule",
+        "body": "On/off and short mutually exclusive choices use the shared `SegmentedField` pill (primary thumb and a check glyph in a rounded track) from `components/ui/segmented-field.tsx`, never a bare `Switch`. Applies to new and redesigned surfaces; it is not a sweep, and a page still on `Switch` is a tracked Migration Delta. The caller supplies the check glyph, so the control never crosses the icon boundary.",
+        "section": "layout"
+      },
+      {
         "name": "The Container-Query Rule",
         "body": "New responsive behavior is a container query against `@container/main` or a card-local `@container/card`. Reach for a viewport breakpoint only for the page gutter or the shell itself.",
         "section": "layout"

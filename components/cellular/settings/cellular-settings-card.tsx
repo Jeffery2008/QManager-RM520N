@@ -101,7 +101,7 @@ const renderCheckGlyph = (className: string) => (
 // segment is what widened the track from ~386px and turned that from a latent
 // problem into a visible one. The step therefore travels on the RowDef rather
 // than being special-cased at the JSX site. See `segmentedBreakpoint()` in
-// shapes.ts for the sweep.
+// components/ui/segmented-field.tsx for the sweep.
 // =============================================================================
 
 export interface CellularSettingsCardProps {
@@ -140,7 +140,7 @@ const ROW_BREAKPOINT = "lg" as const;
  * Its track is 452px (625px at five), which starves the row's text column at
  * every width between the row's own 672px stacked/side-by-side flip and
  * ~1024px. Below `@5xl/card` it falls back to its Select, which is bound to
- * the same state. See `segmentedBreakpoint()` in shapes.ts for the measured
+ * the same state. See `segmentedBreakpoint()` in components/ui/segmented-field.tsx for the measured
  * sweep and for why 64rem rather than 56rem.
  */
 const WIDE_ROW_BREAKPOINT = "5xl" as const;

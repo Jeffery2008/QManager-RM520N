@@ -32,7 +32,7 @@ app/                            # Next.js App Router
 ├── layout.tsx                  # Root layout (fonts, ThemeProvider, Toaster)
 ├── page.tsx                    # Redirect → /dashboard
 ├── globals.css                 # Tailwind + OKLCH theme variables
-├── fonts/                      # Rethink Sans WOFF2 files
+├── fonts/                      # Rethink Sans + JetBrains Mono (vendored) + Material Symbols WOFF2 files
 ├── login/page.tsx              # Authentication page
 ├── dashboard/                  # Home dashboard
 ├── cellular/                   # Cellular management
