@@ -489,17 +489,9 @@ export const DELTA = {
 export const PROVENANCE = "text-on-surface-variant px-1 text-xs";
 export const PROVENANCE_BLOCKED = "text-destructive-on-surface px-1 text-xs";
 
-/** The card footer: the save action, an optional discard, then provenance. */
-export const CARD_FOOT = {
-  ROOT: "flex flex-col gap-3",
-  ACTIONS: "flex flex-wrap items-center gap-2.5",
-  /**
-   * The 42px control height, on its own so the footer's SKELETON can mirror the
-   * action by reference instead of restating the number a third time.
-   */
-  ACTION_HEIGHT: "h-[2.625rem]",
-  /** The ghost discard. Same 42px pill, no fill until hovered. */
-  DISCARD:
-    "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold hover:bg-surface-container",
-  GLYPH: "size-4",
-} as const;
+/** The footer action height, on its own so the footer skeleton mirrors it by reference. */
+export const ACTION_HEIGHT = "h-[2.625rem]";
+
+/** The `CardFoot` ghost Discard: the same 42px pill, no fill until hovered. */
+export const DISCARD =
+  "h-[2.625rem] rounded-pill px-5 text-sm font-semibold hover:bg-surface-container";

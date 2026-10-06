@@ -49,7 +49,7 @@ import {
  * argument was about the OLD pairing — APN config beside a right-column AMBR
  * reference block with nothing in common. APN config and MBN are a closer
  * match for it: both are write surfaces of comparable weight (a handful of
- * rows plus a save bar), and MBN's own bundle list is height-capped at
+ * rows plus a footer), and MBN's own bundle list is height-capped at
  * `CHOICE_ROW.SCROLL_CAP` (17rem) rather than growing unbounded, so the
  * "dead space in whichever card has less to say" failure mode the rule warns
  * about does not reproduce here the way it did for AMBR. Kept page-local
@@ -91,7 +91,7 @@ const WRITE_CELL = "h-full [&>fieldset]:h-full [&_[data-slot=card]]:h-full";
 // for the reason DESIGN.md gives: SPLIT A PAGE BY CADENCE, NOT BY SYMMETRY.
 // That argument was against pairing a write card with a read-only reference
 // block on an unrelated clock. B and C are a different pairing: two write
-// surfaces of comparable weight, each with its own save bar, and MBN's own
+// surfaces of comparable weight, each with its own apply footer, and MBN's own
 // list is height-capped (`CHOICE_ROW.SCROLL_CAP`) rather than open-ended — so
 // side by side does not strand the dead space the rule warns about. See
 // `WRITE_GRID` / `WRITE_CELL` below for the mechanics. `PAGE_GRID` itself
@@ -684,7 +684,7 @@ const APNSettingsComponent = () => {
       {/* The resting re-read. `refresh` was wired but reachable ONLY from
           inside the error banner, so the affordance existed exactly when the
           page had already failed. Hidden while a write is in flight — the
-          card's own save bar owns that moment, and two status lines would
+          card's own footer owns that moment, and two status lines would
           contradict each other. The poller feeding Band A re-reads itself. */}
       {!isLoading && !isSaving && !isReconciling ? (
         <div className="flex flex-wrap items-center gap-3">

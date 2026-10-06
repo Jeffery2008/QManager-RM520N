@@ -23,20 +23,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CardFoot } from "@/components/ui/card-foot";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { TonalBanner } from "@/components/ui/tonal-banner";
-import {
-  DUR,
-  EASE_STANDARD,
-  staggerRowItem,
-  staggerRows,
-} from "@/lib/motion";
+import { staggerRowItem, staggerRows } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { MbnProfile, MbnSaveRequest } from "@/types/mbn-settings";
 
+import { ApplyFootSkeleton } from "../apply-foot";
 import SettingRow from "../setting-row";
 import {
   BANNER_ACTION,
@@ -47,7 +44,6 @@ import {
   CHOICE_ROW,
   PILL_ACTION,
   ROW_GROUP,
-  SAVE_BAR,
   SETTING_ROW,
 } from "../shapes";
 
@@ -145,6 +141,7 @@ export function MBNCard({
             ))}
           </div>
         </CardContent>
+        <ApplyFootSkeleton />
       </Card>
     );
   }
@@ -407,7 +404,7 @@ export function MBNCard({
         {/* THE STANDING REBOOT WARNING IS GONE. A `warning` TonalBanner
             rendered here unconditionally — at rest, nothing pending, nothing
             selected — and said what two other elements on this card already
-            say: `pending_note` in the save bar below, and `reboot.description`
+            say: `pending_note` in the footer below, and `reboot.description`
             in the confirm dialog. Two of the three were on screen at once.
 
             A warning that has no off state is not a warning, it is wallpaper,
@@ -415,50 +412,44 @@ export function MBNCard({
             fact survives in the two places that carry it when it is actually
             actionable: the moment a change is pending, and the moment of
             committing it. */}
-
-        {/* The bar exists only while something is pending. Enter-only motion —
-            `SaveButton` keeps all three of its layers mounted to hold its width
-            lock, so it is never placed under an AnimatePresence. */}
-        {changeCount > 0 || isSaving ? (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: DUR.quick, ease: EASE_STANDARD }}
-            className={SAVE_BAR.ROOT}
-            role="status"
-            aria-live="polite"
-          >
-            <div className={SAVE_BAR.TEXT}>
-              <span className={SAVE_BAR.COUNT}>
-                {t("core_settings.basic.save_bar.count", {
-                  count: changeCount,
-                })}
-              </span>
-              <span className={SAVE_BAR.NOTE}>{t(`${K}.pending_note`)}</span>
-            </div>
-            <div className={SAVE_BAR.ACTIONS}>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={discard}
-                disabled={isSaving || changeCount === 0}
-                className={cn(PILL_ACTION, "gap-0")}
-              >
-                {t("core_settings.basic.save_bar.discard")}
-              </Button>
-              <SaveButton
-                type="button"
-                onClick={handleSave}
-                isSaving={isSaving}
-                saved={saved}
-                label={t(`${K}.save`)}
-                disabled={changeCount === 0}
-                className={PILL_ACTION}
-              />
-            </div>
-          </motion.div>
-        ) : null}
       </CardContent>
+
+      {/* Persistent; the reboot note shows only while a change is pending. */}
+      <CardFoot
+        className={CARD_PAD}
+        status={
+          changeCount > 0 ? (
+            <>
+              <span className="text-foreground font-semibold tabular-nums">
+                {t("core_settings.basic.save_bar.count", { count: changeCount })}
+              </span>
+              <span className="text-pretty">{t(`${K}.pending_note`)}</span>
+            </>
+          ) : null
+        }
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={discard}
+              disabled={isSaving || changeCount === 0}
+              className={cn(PILL_ACTION, "gap-0")}
+            >
+              {t("core_settings.basic.save_bar.discard")}
+            </Button>
+            <SaveButton
+              type="button"
+              onClick={handleSave}
+              isSaving={isSaving}
+              saved={saved}
+              label={t(`${K}.save`)}
+              disabled={changeCount === 0}
+              className={PILL_ACTION}
+            />
+          </>
+        }
+      />
 
       {/* Deferred reboot. Opened only AFTER a successful write, never as part
           of it — the modem serving this page is the one being rebooted. */}

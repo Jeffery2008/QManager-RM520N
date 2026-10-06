@@ -410,17 +410,6 @@ export const MAC_FIELD = `${FIELD} font-mono uppercase placeholder:normal-case p
 export const FIELD_GLYPH = "size-3.5";
 
 /**
- * The card's footer: the two actions, then the provenance line.
- *
- * The provenance wraps to its own line below `@2xl/card` rather than competing
- * with the buttons for width — a truncated file path is worse than no path.
- */
-export const FOOTER = {
-  ROOT: "flex flex-col gap-3 @2xl/card:flex-row @2xl/card:items-center",
-  ACTIONS: "flex flex-wrap items-center gap-2.5",
-} as const;
-
-/**
  * The provenance line under the card.
  *
  * It names the file the values are read back FROM, which is the one thing this
@@ -435,4 +424,4 @@ export const FOOTER = {
  * to that one string, and hoisting a single voice token into a shared module
  * would separate it from the only thing it is ever true of.
  */
-export const PROVENANCE = "text-on-surface-variant text-xs @2xl/card:ml-auto";
+export const PROVENANCE = "text-on-surface-variant text-xs";

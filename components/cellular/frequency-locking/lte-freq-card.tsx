@@ -21,12 +21,12 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CARD_FOOT, CARD_FOOT_ACTIONS } from "@/components/ui/card-foot";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,13 +38,11 @@ import type { ModemStatus } from "@/types/modem-status";
 import { BandMatchDisplay } from "./band-match-display";
 import {
   BADGE_GLYPH_SIZE,
-  CARD_FOOT,
   CARD_PAD,
   CARD_SHELL,
   LOCK_BADGE,
   NOTICE,
   NOTICE_TONE,
-  PILL_ACTION,
   PILL_ACTION_PLAIN,
   PILL_QUIET,
   PILL_USE_CURRENT,
@@ -385,12 +383,12 @@ export function LteFreqCard({
             ))}
           </div>
         </CardContent>
-        <CardFooter className={`${CARD_PAD} ${CARD_FOOT}`}>
-          <div className="flex flex-wrap items-center gap-2">
+        <div className={`${CARD_PAD} ${CARD_FOOT}`}>
+          <div className={CARD_FOOT_ACTIONS}>
             <Skeleton className={SKELETON_SHAPE.ACTION} />
             <Skeleton className={SKELETON_SHAPE.ACTION} />
           </div>
-        </CardFooter>
+        </div>
       </Card>
     );
   }
@@ -586,11 +584,28 @@ export function LteFreqCard({
           {isLocking ? t("frequency_locking.card.status_applying") : ""}
         </div>
 
-        {/* `CARD_FOOT` carries `mt-auto`: these cards sit in an equal-height row,
-            so the LTE/NR asymmetry collects behind the actions rather than as a
-            gap in the middle of the shorter card. */}
-        <CardFooter className={`${CARD_PAD} ${CARD_FOOT}`}>
-          <div className="flex flex-wrap items-center gap-2">
+        {/* `CARD_FOOT`'s `mt-auto` collects the LTE/NR height asymmetry behind the actions. */}
+        <div className={`${CARD_PAD} ${CARD_FOOT}`}>
+          <div className={CARD_FOOT_ACTIONS}>
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              className={PILL_QUIET}
+              onClick={clearFields}
+              disabled={isLocking || towerLockActive || !hasAnyValue}
+            >
+              {t("frequency_locking.actions.clear_fields")}
+            </Button>
+            {/* Gated on the posture, not the draft: clearing a lock the modem does not report has no effect. */}
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              className={PILL_ACTION_PLAIN}
+              onClick={() => setShowUnlockDialog(true)}
+              disabled={isLocking || posture !== "locked"}
+            >
+              {t("frequency_locking.actions.clear_lte")}
+            </Button>
             <SaveButton
               onClick={requestLock}
               isSaving={isLocking}
@@ -605,30 +620,8 @@ export function LteFreqCard({
               }
               className={PILL_ACTION_PLAIN}
             />
-            {/* Gated on the posture, not on the draft: offering to clear a lock
-                the modem does not report is offering an action with no effect,
-                and `unknown` means nobody has read the modem successfully. */}
-            <Button
-              type="button"
-              variant="outline"
-              className={PILL_ACTION}
-              onClick={() => setShowUnlockDialog(true)}
-              disabled={isLocking || posture !== "locked"}
-            >
-              <MaterialSymbol name="lock_open" size={18} />
-              {t("frequency_locking.actions.clear_lte")}
-            </Button>
           </div>
-          <Button
-            type="button"
-            variant="tonal-neutral"
-            className={PILL_QUIET}
-            onClick={clearFields}
-            disabled={isLocking || towerLockActive || !hasAnyValue}
-          >
-            {t("frequency_locking.actions.clear_fields")}
-          </Button>
-        </CardFooter>
+        </div>
       </Card>
 
       {/* --- Lock confirmation ---------------------------------------------- */}

@@ -24,6 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CardFoot } from "@/components/ui/card-foot";
 import { SaveButton } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -52,8 +53,8 @@ import {
   CONDITION,
   CONDITION_TONE,
   FIELD,
+  FOOT,
   RAIL,
-  SAVEBAR,
   SKELETON,
   type ConditionTone,
 } from "./shapes";
@@ -278,38 +279,46 @@ export function AlertsSettingsCard({
                 {fault.message}
               </ChannelNotice>
             ) : null}
-
-            <div className={SAVEBAR.ROOT}>
-              <SaveStatus
-                isDirty={form.isDirty}
-                blocked={form.blocked}
-                blockedNames={blockedNames}
-              />
-              <div className={SAVEBAR.ACTIONS}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className={cn(CHANNEL_BUTTON, "text-on-surface-variant")}
-                  onClick={form.discard}
-                  disabled={!form.isDirty || form.isSaving}
-                >
-                  {t("alerts.channels.save.discard")}
-                </Button>
-                <SaveButton
-                  type="button"
-                  className={CHANNEL_BUTTON}
-                  label={t("alerts.channels.save.action")}
-                  isSaving={form.isSaving}
-                  saved={form.saved}
-                  blockedReason={saveBlockedReason}
-                  disabled={!form.isDirty || form.isSaving}
-                  onClick={handleSave}
-                />
-              </div>
-            </div>
           </>
         )}
       </CardContent>
+
+      {/* No foot on the empty/error condition: there is no draft to commit. */}
+      {channelsUsable ? (
+        <CardFoot
+          className={CARD_PAD}
+          status={
+            <SaveStatus
+              isDirty={form.isDirty}
+              blocked={form.blocked}
+              blockedNames={blockedNames}
+            />
+          }
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                className={cn(CHANNEL_BUTTON, "text-on-surface-variant")}
+                onClick={form.discard}
+                disabled={!form.isDirty || form.isSaving}
+              >
+                {t("alerts.channels.save.discard")}
+              </Button>
+              <SaveButton
+                type="button"
+                className={CHANNEL_BUTTON}
+                label={t("alerts.channels.save.action")}
+                isSaving={form.isSaving}
+                saved={form.saved}
+                blockedReason={saveBlockedReason}
+                disabled={!form.isDirty || form.isSaving}
+                onClick={handleSave}
+              />
+            </>
+          }
+        />
+      ) : null}
     </Card>
   );
 }
@@ -726,7 +735,7 @@ function MailerInstall({ hook }: { hook: UseAlertsReturn }) {
 }
 
 // -----------------------------------------------------------------------------
-// SaveStatus — the three truthful states of the bar's left half.
+// SaveStatus — the three truthful states of the foot's left edge.
 // -----------------------------------------------------------------------------
 function SaveStatus({
   isDirty,
@@ -741,33 +750,29 @@ function SaveStatus({
 
   if (isDirty && blocked) {
     return (
-      <p className={cn(SAVEBAR.STATUS, "text-destructive-on-surface min-w-0")}>
+      <span className={cn(FOOT.LINE, "text-destructive-on-surface")}>
         <AlertCircleIcon className="size-3.5 flex-none" aria-hidden />
-        <span className="truncate font-medium">
+        <span className="font-medium text-pretty">
           {blockedNames.length > 0
             ? t("alerts.channels.save.blocked_in", {
                 channels: blockedNames.join(", "),
               })
             : t("alerts.channels.save.blocked")}
         </span>
-      </p>
+      </span>
     );
   }
   if (isDirty) {
     return (
-      <p className={cn(SAVEBAR.STATUS, "min-w-0")}>
-        <span className={SAVEBAR.PULSE} aria-hidden />
-        <span className="text-on-surface truncate font-medium">
+      <span className={FOOT.LINE}>
+        <span className={FOOT.PULSE} aria-hidden />
+        <span className="text-on-surface font-medium text-pretty">
           {t("alerts.channels.save.dirty")}
         </span>
-      </p>
+      </span>
     );
   }
-  return (
-    <p className={cn(SAVEBAR.STATUS, "min-w-0")}>
-      <span className="truncate">{t("alerts.channels.save.clean")}</span>
-    </p>
-  );
+  return <span className="text-pretty">{t("alerts.channels.save.clean")}</span>;
 }
 
 // -----------------------------------------------------------------------------
@@ -867,15 +872,20 @@ export function AlertsSettingsCardSkeleton() {
             <Skeleton className={cn(CHANNEL_BUTTON, "w-44")} />
           </div>
         </div>
+      </CardContent>
 
-        <div className={SAVEBAR.ROOT} aria-hidden>
-          <Skeleton className={cn(SKELETON.LINE, "h-4 w-36")} />
-          <div className={SAVEBAR.ACTIONS}>
+      <CardFoot
+        className={CARD_PAD}
+        liveStatus={false}
+        aria-hidden="true"
+        status={<Skeleton className={cn(SKELETON.LINE, "h-4 w-36")} />}
+        actions={
+          <>
             <Skeleton className={cn(CHANNEL_BUTTON, "w-24")} />
             <Skeleton className={cn(CHANNEL_BUTTON, "w-36")} />
-          </div>
-        </div>
-      </CardContent>
+          </>
+        }
+      />
     </Card>
   );
 }

@@ -20,6 +20,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { CARD_FOOT, CARD_FOOT_ACTIONS } from "@/components/ui/card-foot";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { cn } from "@/lib/utils";
 
@@ -251,15 +252,19 @@ export default function SSHPasswordCard() {
             </div>
           ) : null}
 
-          <div className="flex justify-end">
-            <SaveButton
-              type="submit"
-              isSaving={isSubmitting}
-              saved={saved}
-              label={t(`${K}.card.save`)}
-              disabled={!canSubmit}
-              className={PILL_ACTION}
-            />
+          {/* The form is the flex column, so `mt-auto` reaches the card's
+              bottom edge and the submit stays inside the form. */}
+          <div className={CARD_FOOT}>
+            <div className={CARD_FOOT_ACTIONS}>
+              <SaveButton
+                type="submit"
+                isSaving={isSubmitting}
+                saved={saved}
+                label={t(`${K}.card.save`)}
+                disabled={!canSubmit}
+                className={PILL_ACTION}
+              />
+            </div>
           </div>
         </form>
       </CardContent>

@@ -12,9 +12,9 @@ import type { BadgeVariant } from "@/components/ui/badge";
 /** The route wrapper. Container queries key off `@container/main`. */
 export const PAGE_ROOT = "@container/main flex flex-col gap-5 px-4 pb-6 lg:px-6";
 
-/** A 36px header pill. The coarse-pointer bump is what reaches the 44px floor. */
-export const PILL_ACTION =
-  "h-9 gap-2 rounded-pill px-4 text-sm font-medium pointer-coarse:h-11";
+/** A 36px pill. The coarse-pointer bump is what reaches the 44px floor. */
+const PILL_HEIGHT = "h-9 pointer-coarse:h-11";
+export const PILL_ACTION = `${PILL_HEIGHT} gap-2 rounded-pill px-4 text-sm font-medium`;
 
 /** The lucide glyph inside a pill. */
 export const PILL_GLYPH = "size-4";
@@ -64,7 +64,7 @@ export type DiscTone = keyof typeof DISC_TONE;
 /**
  * The surface's ONE ambient loop (One-Loop Rule), spent on the state disc and
  * only while the daemon is actually working through the ladder. An unsaved
- * edit is a marker, not a live thing, so the save bar's dot does not loop.
+ * edit is a marker, not a live thing, so the ladder foot's dot does not loop.
  */
 export const DISC_LIVE = "animate-pulse-ring";
 
@@ -346,16 +346,14 @@ export const CONDITION_TONE = {
 >;
 
 // -----------------------------------------------------------------------------
-// The save bar
+// The ladder card's foot: one commit for the Ladder AND Detection drafts
 // -----------------------------------------------------------------------------
 
-/** Page-level and NOT sticky: the form is short enough to reach its own foot. */
-export const SAVEBAR = {
-  ROOT: "flex flex-wrap items-center gap-3 pt-1",
-  STATUS: "text-on-surface-variant flex items-center gap-2 text-[0.8125rem]",
-  ACTIONS: "ml-auto flex gap-2.5",
+export const FOOT = {
+  /** One status line: glyph or dot, then a sentence that wraps. */
+  LINE: "flex min-w-0 items-center gap-2",
   /** A static marker: nothing is happening, so nothing loops here. */
-  PULSE: "size-[7px] flex-none rounded-pill bg-primary",
+  DOT: "size-[7px] flex-none rounded-pill bg-primary",
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -370,4 +368,5 @@ export const SKELETON = {
   ROW: `${ROW_HEIGHT} rounded-tile`,
   FIELD: `${FIELD_HEIGHT} rounded-field`,
   LINE: "rounded-inline",
+  PILL: `${PILL_HEIGHT} rounded-pill`,
 } as const;

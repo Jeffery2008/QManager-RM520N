@@ -21,11 +21,11 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { CARD_FOOT, CARD_FOOT_ACTIONS } from "@/components/ui/card-foot";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import {
@@ -56,14 +56,12 @@ import { SCS_OPTIONS } from "@/types/tower-locking";
 import { BandMatchDisplay } from "./band-match-display";
 import {
   BADGE_GLYPH_SIZE,
-  CARD_FOOT,
   CARD_PAD,
   CARD_SHELL,
   EMPTY,
   LOCK_BADGE,
   NOTICE,
   NOTICE_TONE,
-  PILL_ACTION,
   PILL_ACTION_PLAIN,
   PILL_QUIET,
   PILL_USE_CURRENT,
@@ -445,12 +443,12 @@ export function NrFreqCard({
             ))}
           </div>
         </CardContent>
-        <CardFooter className={`${CARD_PAD} ${CARD_FOOT}`}>
-          <div className="flex flex-wrap items-center gap-2">
+        <div className={`${CARD_PAD} ${CARD_FOOT}`}>
+          <div className={CARD_FOOT_ACTIONS}>
             <Skeleton className={SKELETON_SHAPE.ACTION} />
             <Skeleton className={SKELETON_SHAPE.ACTION} />
           </div>
-        </CardFooter>
+        </div>
       </Card>
     );
   }
@@ -761,8 +759,30 @@ export function NrFreqCard({
           {isLocking ? t("frequency_locking.card.status_applying") : ""}
         </div>
 
-        <CardFooter className={`${CARD_PAD} ${CARD_FOOT}`}>
-          <div className="flex flex-wrap items-center gap-2">
+        <div className={`${CARD_PAD} ${CARD_FOOT}`}>
+          <div className={CARD_FOOT_ACTIONS}>
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              className={PILL_QUIET}
+              onClick={clearFields}
+              disabled={
+                isLocking ||
+                towerLockActive ||
+                (draft.length === 0 && newArfcn.trim() === "")
+              }
+            >
+              {t("frequency_locking.actions.clear_fields")}
+            </Button>
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              className={PILL_ACTION_PLAIN}
+              onClick={() => setShowUnlockDialog(true)}
+              disabled={isLocking || posture !== "locked"}
+            >
+              {t("frequency_locking.actions.clear_nr")}
+            </Button>
             <SaveButton
               onClick={requestLock}
               isSaving={isLocking}
@@ -776,31 +796,8 @@ export function NrFreqCard({
               }
               className={PILL_ACTION_PLAIN}
             />
-            <Button
-              type="button"
-              variant="outline"
-              className={PILL_ACTION}
-              onClick={() => setShowUnlockDialog(true)}
-              disabled={isLocking || posture !== "locked"}
-            >
-              <MaterialSymbol name="lock_open" size={18} />
-              {t("frequency_locking.actions.clear_nr")}
-            </Button>
           </div>
-          <Button
-            type="button"
-            variant="tonal-neutral"
-            className={PILL_QUIET}
-            onClick={clearFields}
-            disabled={
-              isLocking ||
-              towerLockActive ||
-              (draft.length === 0 && newArfcn.trim() === "")
-            }
-          >
-            {t("frequency_locking.actions.clear_fields")}
-          </Button>
-        </CardFooter>
+        </div>
       </Card>
 
       {/* --- Lock confirmation ---------------------------------------------- */}

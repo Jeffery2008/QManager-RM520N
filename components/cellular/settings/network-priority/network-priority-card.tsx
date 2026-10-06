@@ -43,7 +43,7 @@ import { SORTABLE_TRANSITION, staggerRowItem, staggerRows } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { NetworkType } from "@/types/modem-status";
 
-import PendingSaveBar from "../pending-save-bar";
+import { ApplyFoot, ApplyFootSkeleton } from "../apply-foot";
 import {
   BADGE_GLYPH_SIZE,
   CARD_PAD,
@@ -388,7 +388,7 @@ const NetworkPriorityCard = () => {
         return;
       }
 
-      // Adopt the written order as the baseline immediately, so the save bar
+      // Adopt the written order as the baseline immediately, so the footer count
       // retires on the frame the write succeeded rather than waiting on a
       // read-back that happens across a re-registration.
       setFetchedOrder(newOrder);
@@ -485,67 +485,41 @@ const NetworkPriorityCard = () => {
         retryLabel={tCommon("actions.retry")}
       />
     ) : (
-      <>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis]}
-          onDragEnd={handleDragEnd}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis]}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={networks}
+          strategy={verticalListSortingStrategy}
         >
-          <SortableContext
-            items={networks}
-            strategy={verticalListSortingStrategy}
+          {/* No hairline dividers between these rows, unlike the settings
+              group next door: a divider belongs to the gap between two rows,
+              and during a drag that gap is in motion — the rule would detach
+              and float over whichever row passed under it. The rank pills
+              already separate the rows. */}
+          <motion.div
+            className={ROW_GROUP.ROOT}
+            initial="hidden"
+            animate="visible"
+            variants={staggerRows}
           >
-            {/* No hairline dividers between these rows, unlike the settings
-                group next door: a divider belongs to the gap between two rows,
-                and during a drag that gap is in motion — the rule would detach
-                and float over whichever row passed under it. The rank pills
-                already separate the rows. */}
-            <motion.div
-              className={ROW_GROUP.ROOT}
-              initial="hidden"
-              animate="visible"
-              variants={staggerRows}
-            >
-              {networks.map((id, index) => (
-                <motion.div key={id} variants={staggerRowItem}>
-                  <PriorityRow
-                    id={id}
-                    rank={index + 1}
-                    total={networks.length}
-                    serving={serving.has(id)}
-                    disabled={isSaving}
-                  />
-                </motion.div>
-              ))}
-            </motion.div>
-          </SortableContext>
-        </DndContext>
-
-        <PendingSaveBar
-          changeCount={changeCount}
-          isSaving={isSaving}
-          applyPhase={applyPhase}
-          onDiscard={handleDiscard}
-          onSave={handleSave}
-          saved={saved}
-          copy={{
-            count: t(`${K}.save_bar.count`, { count: changeCount }),
-            note: t(`${K}.save_bar.note`),
-            discard: t(`${K}.save_bar.discard`),
-            save: t(`${K}.save_bar.save`),
-            // Unreachable on this surface, and deliberately not given a key of
-            // its own: the write is one AT parameter, so it succeeds or fails
-            // whole — there is no per-field failure list to name.
-            failed: t(`${K}.save_bar.note`),
-            steps: {
-              writing: t(`${K}.apply.writing`),
-              recovering: t(`${K}.apply.recovering`),
-              verifying: t(`${K}.apply.verifying`),
-            },
-          }}
-        />
-      </>
+            {networks.map((id, index) => (
+              <motion.div key={id} variants={staggerRowItem}>
+                <PriorityRow
+                  id={id}
+                  rank={index + 1}
+                  total={networks.length}
+                  serving={serving.has(id)}
+                  disabled={isSaving}
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        </SortableContext>
+      </DndContext>
     );
 
   return (
@@ -568,6 +542,30 @@ const NetworkPriorityCard = () => {
           </motion.div>
         </AnimatePresence>
       </CardContent>
+
+      {/* No footer under a condition: a live Save beside an empty group is the bug. */}
+      {state === "loading" ? <ApplyFootSkeleton /> : null}
+      {state === "loaded" ? (
+        <ApplyFoot
+          changeCount={changeCount}
+          isSaving={isSaving}
+          applyPhase={applyPhase}
+          onDiscard={handleDiscard}
+          onSave={handleSave}
+          saved={saved}
+          copy={{
+            count: t(`${K}.save_bar.count`, { count: changeCount }),
+            note: t(`${K}.save_bar.note`),
+            discard: t(`${K}.save_bar.discard`),
+            save: t(`${K}.save_bar.save`),
+            steps: {
+              writing: t(`${K}.apply.writing`),
+              recovering: t(`${K}.apply.recovering`),
+              verifying: t(`${K}.apply.verifying`),
+            },
+          }}
+        />
+      ) : null}
     </Card>
   );
 };

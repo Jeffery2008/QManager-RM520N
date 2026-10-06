@@ -29,7 +29,7 @@ Nothing in that rebuild touched a CGI script, a systemd unit, the installer, or 
 | Motion tokens | `lib/motion.ts` (incl. `SORTABLE_TRANSITION`) |
 | Shared page header | `components/cellular/page-header.tsx` |
 | Shared full-body condition | `components/cellular/condition-screen.tsx` |
-| Shared save bar | `components/cellular/settings/pending-save-bar.tsx` |
+| Shared apply footer | `components/cellular/settings/apply-foot.tsx` (`ApplyFoot` on Cellular Settings and Network Priority; `ApplyFootSkeleton` on IMEI, Backup IMEI, APN and MBN, which build their own `CardFoot`) |
 | Shared setting row | `components/cellular/settings/setting-row.tsx` |
 | i18n namespace | `cellular` → `core_settings.{apn,network_priority,imei,fplmn}.*` |
 
@@ -211,7 +211,7 @@ Three full-width bands under the page header. **Live state → what you can chan
 
 > ℹ️ NOTE: **`PAGE_GRID` is gone as of 2026-08-31.** It survived this change only because `imei-settings.tsx` was still consuming it; the IMEI design-language adoption replaced that call site with `WORKBENCH_SPLIT`, whose justification names the columns it actually has. (It shipped with `items-start`; the 2026-08-31 layout pass replaced that with an explicit `grid-rows-[auto_1fr]` row template — see *The row template, and why `items-start` was not the fix* below.) With its last consumer gone, `PAGE_GRID` was deleted rather than left exported — same disposal as `PAGE_TITLE` / `PAGE_DESCRIPTION` above. `CARD_CELL` stays: it still has real consumers on `/cellular/settings` itself, where the two cards genuinely are peers.
 
-A resting **"Re-read from modem"** footer (`readout.reread`) calls `refresh()` + `refreshMbn()`. Before this change `refresh` was wired but reachable **only** from inside the error banner — the affordance existed exactly when the page had already failed. It is hidden while `isLoading || isSaving || isReconciling`, so it cannot contradict the card's own save bar.
+A resting **"Re-read from modem"** footer (`readout.reread`) calls `refresh()` + `refreshMbn()`. Before this change `refresh` was wired but reachable **only** from inside the error banner — the affordance existed exactly when the page had already failed. It is hidden while `isLoading || isSaving || isReconciling`, so it cannot contradict the card's own apply footer.
 
 > ℹ️ NOTE: **No "read N seconds ago" stamp, deliberately.** The approved mock drew one beside that footer. This page's writable half is not polled, so the number would count from a fetch the user cannot see. Staleness *is* reported — but as the poller's own `isStale` boolean, not as an elapsed-seconds clock. Do not add the counter back.
 
@@ -317,10 +317,10 @@ The frontend cannot tell a measured CID from a fallback, so the UI is worded for
 - **The save is sequential, in dependency order** (bug fix): `auto_sel` is written first, and `apply_profile` only if that write landed. Auto-select must be OFF before a pinned bundle means anything. The previous card applied whichever single change it noticed first, so turning auto off *and* picking a bundle in the same pass **silently dropped the bundle**.
 - **The reboot is offered, never taken.** QManager is served *by* the modem, so a reboot kills its own HTTP response. The write completes first; the reboot is a separate confirmed action that hands off to `/reboot/`.
 - **The empty state is gated on a real read.** `bundles = profiles ?? []` collapsed `profiles === null` (never fetched, or the fetch failed) and `profiles === []` (the firmware genuinely reported none) into one `.length === 0` branch — so on a failed fetch the user read the destructive banner *"Failed to load carrier profiles"* and, directly underneath it, a paragraph asserting the firmware had reported none. A contradiction on one screen, not a silence. The block is now gated on `profiles !== null`; when the read failed, the banner is the whole story.
-- **The standing reboot warning is deleted.** The card rendered `<TonalBanner tone="warning">` unconditionally — at rest, nothing pending, nothing selected — saying what `pending_note` says in the save bar and what `reboot.description` says in the confirm dialog; two of the three were on screen at once. A warning with no off state is wallpaper, and it spends the Functional-Color Promise on a static caption. The fact survives in the two places that carry it when it is actionable, and `mbn.reboot_notice` was deleted from all five packs.
+- **The standing reboot warning is deleted.** The card rendered `<TonalBanner tone="warning">` unconditionally — at rest, nothing pending, nothing selected — saying what `pending_note` says in the footer and what `reboot.description` says in the confirm dialog; two of the three were on screen at once. A warning with no off state is wallpaper, and it spends the Functional-Color Promise on a static caption. The fact survives in the two places that carry it when it is actionable, and `mbn.reboot_notice` was deleted from all five packs.
 - The card was **100 % untranslated** and is now fully keyed under `core_settings.apn.mbn.*`.
 
-> ℹ️ NOTE: MBN's save bar borrows `core_settings.basic.save_bar.count` / `.discard` **cross-namespace**, so rewording the basic-settings bar silently rewords this page. Recorded as drift rather than fixed — and it is why `readout.reread` is a new key rather than a borrow of the identically-worded `core_settings.basic.footer.reread`. A second cross-namespace instance to save five words is not a trade worth making.
+> ℹ️ NOTE: MBN's `CardFoot` (persistent since 2026-10-06; it was a conditional tonal bar) borrows `core_settings.basic.save_bar.count` / `.discard` **cross-namespace**, so rewording the basic-settings footer copy silently rewords this page. Recorded as drift rather than fixed — and it is why `readout.reread` is a new key rather than a borrow of the identically-worded `core_settings.basic.footer.reread`. A second cross-namespace instance to save five words is not a trade worth making.
 
 ### Deleted files
 
@@ -352,7 +352,7 @@ The "Serving now" chip is a separate decision and takes `success` — that chip 
 
 ### What else was retired
 
-- **Dirty tracking exists now.** There was none: Save was disabled only when the list was empty, Discard was always live, and a no-op save was caught *after* the round trip with `toast.info("No changes to save")`. The order is diffed against `fetchedOrder`, and the save bar exists only while that diff is non-empty. **A reorder is one change, not N** — the user is staging a single write of a single AT parameter, so an adjacent swap reads "1 change pending".
+- **Dirty tracking exists now.** There was none: Save was disabled only when the list was empty, Discard was always live, and a no-op save was caught *after* the round trip with `toast.info("No changes to save")`. The order is diffed against `fetchedOrder`; the `ApplyFoot` is persistent once the card has loaded, and Save and Discard are enabled only while that diff is non-empty. **A reorder is one change, not N** — the user is staging a single write of a single AT parameter, so an adjacent swap reads "1 change pending".
 - **A GET failure is visible.** It used to land in a bare `catch {}` commented "silently fail — keep current state", leaving a permanently blank card indistinguishable from a modem that genuinely reported no technologies. Error and empty are now separate `ConditionScreen`s that **replace the card body** — rendering an empty group beside a live Save button is the bug this page shipped with. Empty is `neutral`, not `warning`: "we do not know what this modem will try" is not a fault.
 - **The drag shadow works.** The old one was `hsl(var(--foreground) / 0.12)` — an `hsl()` wrapper around an OKLCH token, which resolves to nothing.
 - **Keyboard reorder works.** The `KeyboardSensor` was mounted but inert: without `sortableKeyboardCoordinates` it never resolves a drop target, so Space picked a row up and the arrows did nothing. The handle is a real focusable `<button>` with an `sr-only` label naming the row and its position.
@@ -377,7 +377,7 @@ Marking both legs under EN-DC (5G non-standalone, where an LTE anchor carries th
 
 ### Write timing
 
-A `rat_acq_order` write takes effect on the next registration, so the radio drops and re-attaches. The card adopts the written order as its baseline **immediately** on a successful POST (so the save bar retires on that frame rather than waiting across a re-registration), then waits `RECOVERY_WAIT_MS` (3000) before a silent read-back. **The silent read-back never surfaces an error** — a failed read there means "still coming back", not "the card is broken".
+A `rat_acq_order` write takes effect on the next registration, so the radio drops and re-attaches. The card adopts the written order as its baseline **immediately** on a successful POST (so the footer returns to its clean state on that frame rather than waiting across a re-registration), then waits `RECOVERY_WAIT_MS` (3000) before a silent read-back. **The silent read-back never surfaces an error** — a failed read there means "still coming back", not "the card is broken".
 
 ---
 
@@ -396,7 +396,7 @@ The route was the last in the family still outside the finalized language. What 
 | `CARD_TITLE` on all three titles | All three were unsized `CardTitle`, inheriting 16 px — the anti-pattern flagged but left out of scope by `96f32aa`. This closes it for `imei-settings/` |
 | `REVEAL` on the backup-identifier row | The row the toggle *creates* used to blink in. It now animates `grid-template-rows` 0fr→1fr, and is `inert` + `aria-hidden` while closed — it was neither, so a keyboard user could tab into an invisible field |
 | `WORKBENCH_SPLIT` replaces `PAGE_GRID` + `CARD_CELL` | The height lock pinned the workbench card to the **combined** height of the two write cards beside it. Split by symmetry; see the note under *There is no two-column grid* above. Superseded in part on 2026-08-31 — the lock is back by request, but only after the row template made it cheap |
-| `FIELD_CLUSTER`, `FIELD_COUNTER`, `ICON_ACTION`, `READOUT_ICON_ACTION`, `SECTION_LABEL`, `BREAKDOWN` promoted to `shapes.ts` | Seven call-site strings, several written out twice across the two write cards. `BREAKDOWN` had also been a module-local constant in `imei-tools-card.tsx` |
+| `FIELD_CLUSTER`, `FIELD_COUNTER`, `ICON_ACTION`, `READOUT_ICON_ACTION`, `SECTION_LABEL`, `BREAKDOWN` promoted to `shapes.ts` | Seven call-site strings, several written out twice across the two write cards. `BREAKDOWN` had also been a module-local constant in `imei-tools-card.tsx`. `ICON_ACTION` (and `ICON_ACTION_GLYPH`) were deleted again on 2026-10-06 when both IMEI cards' Reset became a text-only ghost action in the `CardFoot`; the `ICON_ACTION` still exported from `components/cellular/custom-profiles/shapes.ts` is that family's own |
 
 > ⚠️ WARNING: **a bare-var duration arbitrary is a silent no-op, not an off-scale duration.** Tailwind v4 compiles the custom property written directly in the brackets with no `var()` wrapper to a declaration whose value is the property *name*. That parses, so nothing warns anywhere — and the browser discards it, so the transition ships as **no transition at all**. Six sites in this family carried it (`shapes.ts` ×5, `imei-settings-card.tsx` ×1) and all now wrap the property in `var()`. Verified by compiling the class with `bunx @tailwindcss/cli` and by grepping `out/_next/static/chunks/*.css` before and after. **The last two sites in the tree were in `components/local-network/ethernet-card.tsx:155,163`, a different route family; they were closed on 2026-08-31 by that page's re-authoring** — see [ethernet.md](ethernet.md) — a mutation-tested assertion in the now-deleted `scripts/test/ethernet-design-language.sh` (removed 2026-09-03) confirmed the form was extinct under `components/local-network/`; there is no harness left to re-run, so re-check with a source grep for a bare-var duration arbitrary if this class of bug is suspected again.
 >
@@ -584,5 +584,5 @@ See [i18n.md](i18n.md) for the `bun run i18n:check` gate, which exits non-zero o
 - [wan-profile-management.md](wan-profile-management.md) — `apn.sh`, the `apn_apply.sh` attach-cycle primitive, and the sidecars
 - [sim-profiles.md](sim-profiles.md) — the Custom SIM Profile override gate that makes APN Management read-only
 - [icon-system.md](icon-system.md) — the Material/lucide route boundary these surfaces sit inside
-- [dashboard-state-motion.md](dashboard-state-motion.md) — `SaveButton`'s three states and its width lock, used by the save bar
+- [dashboard-state-motion.md](dashboard-state-motion.md) — `SaveButton`'s three states and its width lock, used by every apply footer
 - [i18n.md](i18n.md) — the translation gate

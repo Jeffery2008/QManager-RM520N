@@ -716,7 +716,7 @@ export const PILL_ACTION_PLAIN =
  *
  * Carries no fill or ink of its own — pair with `variant="tonal-neutral"` on
  * `Button`, never `variant="ghost"`. A ghost button has no resting fill at
- * all, so next to a filled `Apply` and an outlined `Restore all` it read as
+ * all, so next to a filled `Apply` and `Restore all` it read as
  * disabled rather than as a third, quieter action. `tonal-neutral` gives it a
  * real (if muted) presence — `surface-container` — instead of asking the
  * reader to discover it by hovering.

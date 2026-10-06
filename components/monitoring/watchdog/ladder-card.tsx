@@ -50,6 +50,7 @@ import {
   type RegisterField,
   type WatchdogForm,
 } from "./use-watchdog-form";
+import { WatchdogFoot, WatchdogFootSkeleton } from "./watchdog-foot";
 
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -138,6 +139,8 @@ export function LadderCard({
           ))}
         </ul>
       </CardContent>
+      {/* The one commit for Ladder AND Detection: the hero is where it belongs most. */}
+      <WatchdogFoot form={form} />
     </Card>
   );
 }
@@ -196,7 +199,7 @@ function Rung({
         </div>
 
         {/* A rung's own field carries the same label + hint + error a Detection
-            field does — the blocked save bar names it, so it must be findable. */}
+            field does — the blocked foot names it, so it must be findable. */}
         {rung.tier === 3 && rung.enabled ? (
           <div className={cn(RUNG.FIELD_SLOT, FIELD.ROW)}>
             <label className={FIELD.LABEL} htmlFor={FIELD_ID.backupSim}>
@@ -334,7 +337,7 @@ function RungChip({ state }: { state: Exclude<RungView["state"], "running"> }) {
   );
 }
 
-/** Mirrors the loaded card: one switch row over four rungs, same constants. */
+/** Mirrors the loaded card: one switch row over four rungs, then the foot. */
 export function LadderCardSkeleton() {
   return (
     <Card className={HERO_SHELL} aria-hidden>
@@ -350,6 +353,7 @@ export function LadderCardSkeleton() {
           ))}
         </div>
       </CardContent>
+      <WatchdogFootSkeleton />
     </Card>
   );
 }

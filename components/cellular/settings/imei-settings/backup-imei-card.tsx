@@ -23,8 +23,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CARD_FOOT, CARD_FOOT_ACTIONS } from "@/components/ui/card-foot";
 import { FieldError } from "@/components/ui/field";
-import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -33,6 +33,7 @@ import { staggerRowItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { BackupImeiConfig } from "@/types/imei-settings";
 
+import { ApplyFootSkeleton } from "../apply-foot";
 import SettingRow from "../setting-row";
 import {
   CARD_PAD,
@@ -41,8 +42,6 @@ import {
   FIELD_CLUSTER,
   FIELD_COUNTER,
   FIELD_SHELL,
-  ICON_ACTION,
-  ICON_ACTION_GLYPH,
   INLINE_ERROR,
   PILL_ACTION,
   REVEAL,
@@ -88,6 +87,7 @@ const BackupIMEICard = ({
   const K = "core_settings.imei.backup";
 
   const { saved, markSaved } = useSaveFlash();
+  const formId = React.useId();
   const [enabled, setEnabled] = React.useState(false);
   const [imei, setImei] = React.useState("");
   const [explainOpen, setExplainOpen] = React.useState(false);
@@ -159,7 +159,7 @@ const BackupIMEICard = ({
   );
 
   const form = (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+    <form id={formId} className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <div className={ROW_GROUP.ROOT}>
         <SettingRow
           label={t(`${K}.rows.keep.label`)}
@@ -254,27 +254,6 @@ const BackupIMEICard = ({
         </FieldError>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <SaveButton
-          type="submit"
-          isSaving={isSaving}
-          saved={saved}
-          label={t(`${K}.actions.save`)}
-          disabled={!canSave}
-          className={PILL_ACTION}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={handleReset}
-          disabled={isSaving || !hasChanged}
-          aria-label={t(`${K}.actions.reset`)}
-          className={ICON_ACTION}
-        >
-          <MaterialSymbol name="restart_alt" size={ICON_ACTION_GLYPH} />
-        </Button>
-      </div>
     </form>
   );
 
@@ -297,6 +276,34 @@ const BackupIMEICard = ({
           </motion.div>
         </AnimatePresence>
       </CardContent>
+
+      {/* No status, so the constants directly; `form=` keeps Enter-to-submit. */}
+      {isLoading ? (
+        <ApplyFootSkeleton />
+      ) : (
+        <div className={cn(CARD_PAD, CARD_FOOT)}>
+          <div className={CARD_FOOT_ACTIONS}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleReset}
+              disabled={isSaving || !hasChanged}
+              className={cn(PILL_ACTION, "gap-0")}
+            >
+              {t(`${K}.actions.reset`)}
+            </Button>
+            <SaveButton
+              type="submit"
+              form={formId}
+              isSaving={isSaving}
+              saved={saved}
+              label={t(`${K}.actions.save`)}
+              disabled={!canSave}
+              className={PILL_ACTION}
+            />
+          </div>
+        </div>
+      )}
 
       <AlertDialog open={explainOpen} onOpenChange={setExplainOpen}>
         <AlertDialogContent>

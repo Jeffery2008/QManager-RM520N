@@ -418,7 +418,7 @@ Both incumbent cards carried a per-leg `Switch`. It is gone, and it must not com
 
 The footer button is now the only write path, and it is always behind an `AlertDialog`. There is no `Switch` anywhere on this surface.
 
-Each footer reads: **Apply LTE/NR lock** (a `SaveButton` on `PILL_ACTION_PLAIN`), **Clear LTE/NR lock** (`variant="outline"` with a `lock_open` glyph), and **Clear fields** (`PILL_QUIET` + `variant="tonal-neutral"`, pushed to the far edge by `justify-between`). Two writes grouped together, then a form reset that touches nothing on the modem — the same construction Band Locking and Tower Locking already settled on.
+Each footer is the Card-Foot Apply row with no status slot (`CARD_FOOT` + `CARD_FOOT_ACTIONS` from `components/ui/card-foot.tsx`, right-aligned) and reads, left to right: **Clear fields** (`PILL_QUIET` + `variant="tonal-neutral"`), **Clear LTE/NR lock** (`PILL_ACTION_PLAIN` + `variant="tonal-neutral"`, text only), then **Apply LTE/NR lock** (a `SaveButton` on `PILL_ACTION_PLAIN`) last. A form reset that touches nothing on the modem, then the two writes — the same construction Band Locking and Tower Locking use. Clear lock was a stroked `variant="outline"` with a `lock_open` glyph until 2026-10-06; DESIGN.md forbids a stroke beside a Save.
 
 ### Both cards gate Apply on a real change
 

@@ -4,7 +4,6 @@ import * as React from "react";
 import { useCallback, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Undo2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CardFoot } from "@/components/ui/card-foot";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -21,12 +21,13 @@ import { cn } from "@/lib/utils";
 import type { MutationResult } from "@/types/mutation-result";
 
 import {
+  ACTION_HEIGHT,
   CARD_BODY,
-  CARD_FOOT,
   CARD_PAD,
   CARD_SHELL,
   CARD_TITLE,
   DELTA,
+  DISCARD,
   FIELD,
   FIELD_INVALID,
   PROVENANCE,
@@ -66,7 +67,7 @@ import {
 // An out-of-range value takes an INSET ring rather than a border — a border
 // would change the field's box and shift every neighbour by 2px the moment a
 // digit went out of range, i.e. a layout that moves while you are typing into
-// it. Apply goes dead, and the provenance slot under it becomes the specific
+// it. Apply goes dead, and the provenance slot beside it becomes the specific
 // reason in destructive ink. That is one slot doing two jobs on purpose: "why
 // can't I press this" and "where did this number come from" are asked in the
 // same glance, and growing a second line would push the button out from under
@@ -158,6 +159,7 @@ export function MtuSettingsCard({
   const { t } = useTranslation("common");
   const { saved, markSaved } = useSaveFlash();
 
+  const formId = useId();
   const switchId = useId();
   const switchLabelId = useId();
   const mtuId = useId();
@@ -290,12 +292,15 @@ export function MtuSettingsCard({
               />
             ))}
           </div>
-          <div className={CARD_FOOT.ROOT}>
-            <Skeleton
-              className={cn(CARD_FOOT.ACTION_HEIGHT, "w-32 rounded-pill")}
-            />
-          </div>
         </CardContent>
+        <CardFoot
+          className={CARD_PAD}
+          liveStatus={false}
+          aria-hidden="true"
+          actions={
+            <Skeleton className={cn(ACTION_HEIGHT, "w-32 rounded-pill")} />
+          }
+        />
       </Card>
     );
   }
@@ -306,7 +311,7 @@ export function MtuSettingsCard({
     <Card className={CARD_SHELL}>
       {header}
       <CardContent className={cn(CARD_PAD, CARD_BODY)}>
-        <form onSubmit={handleSubmit} className={CARD_BODY}>
+        <form id={formId} onSubmit={handleSubmit} className={CARD_BODY}>
           <div className={ROW_GROUP}>
             {/* Row 1 — the override switch. */}
             <div className={ROW.ROOT}>
@@ -385,47 +390,51 @@ export function MtuSettingsCard({
             </div>
           </div>
 
-          <div className={CARD_FOOT.ROOT}>
-            <div className={CARD_FOOT.ACTIONS}>
-              <SaveButton
-                type="submit"
-                isSaving={isSaving}
-                saved={saved}
-                label={t("actions.apply")}
-                disabled={!canApply}
-              />
-              {dirtyCount > 0 ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleDiscard}
-                  disabled={isSaving}
-                  className={CARD_FOOT.DISCARD}
-                >
-                  <Undo2Icon className={CARD_FOOT.GLYPH} aria-hidden="true" />
-                  {t(`${K}.footer.discard`)}
-                </Button>
-              ) : null}
-            </div>
-
-            <span
-              className={blockedKey !== null ? PROVENANCE_BLOCKED : PROVENANCE}
-              role={blockedKey !== null ? "alert" : undefined}
-            >
-              {blockedKey !== null ? (
-                t(blockedKey, { min: MTU_MIN, max: MTU_MAX })
-              ) : dirtyCount > 0 ? (
-                t(`${K}.footer.unsaved`, { count: dirtyCount })
-              ) : (
-                <>
-                  {t(`${K}.cards.mtu.provenance`)}{" "}
-                  <span className="font-mono">{RMNET_GLOB}</span>
-                </>
-              )}
-            </span>
-          </div>
         </form>
       </CardContent>
+      {/* Outside the form so `mt-auto` reaches the card edge; `form=` keeps Enter-to-submit. */}
+      <CardFoot
+        className={CARD_PAD}
+        liveStatus={false}
+        status={
+          <span
+            className={blockedKey !== null ? PROVENANCE_BLOCKED : PROVENANCE}
+            role={blockedKey !== null ? "alert" : undefined}
+          >
+            {blockedKey !== null ? (
+              t(blockedKey, { min: MTU_MIN, max: MTU_MAX })
+            ) : dirtyCount > 0 ? (
+              t(`${K}.footer.unsaved`, { count: dirtyCount })
+            ) : (
+              <>
+                {t(`${K}.cards.mtu.provenance`)}{" "}
+                <span className="font-mono">{RMNET_GLOB}</span>
+              </>
+            )}
+          </span>
+        }
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleDiscard}
+              disabled={isSaving || dirtyCount === 0}
+              className={DISCARD}
+            >
+              {t(`${K}.footer.discard`)}
+            </Button>
+            <SaveButton
+              type="submit"
+              form={formId}
+              isSaving={isSaving}
+              saved={saved}
+              label={t("actions.apply")}
+              disabled={!canApply}
+            />
+          </>
+        }
+      />
     </Card>
   );
 }

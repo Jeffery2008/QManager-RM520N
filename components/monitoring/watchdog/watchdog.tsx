@@ -27,7 +27,6 @@ import {
 } from "./derive";
 import { LadderCard, LadderCardSkeleton } from "./ladder-card";
 import { RecoveryActivityCard } from "./recovery-activity-card";
-import { SaveBar, SaveBarSkeleton } from "./save-bar";
 import {
   CONDITION,
   CONDITION_TONE,
@@ -119,9 +118,6 @@ const WatchdogComponent = () => {
           </motion.div>
           <motion.div variants={staggerItem}>
             <DetectionCardSkeleton />
-          </motion.div>
-          <motion.div variants={staggerItem}>
-            <SaveBarSkeleton />
           </motion.div>
           <motion.div variants={staggerItem}>
             <RecoveryActivityCard />
@@ -239,12 +235,6 @@ function WatchdogSurface({
 
       <motion.div variants={staggerItem}>
         <DetectionCard form={form} registerField={form.registerField} />
-      </motion.div>
-
-      {/* The commit control sits directly under the form it commits, so a long
-          history cannot push Save away from the fields that filled it. */}
-      <motion.div variants={staggerItem}>
-        <SaveBar form={form} />
       </motion.div>
 
       <motion.div variants={staggerItem}>

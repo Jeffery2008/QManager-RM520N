@@ -1418,7 +1418,7 @@
       "discard": "捨棄",
       "action": "儲存",
       "clean": "所有變更已儲存",
-      "dirty": "您有未儲存的變更",
+      "dirty": "{{cards}}中有未儲存的變更",
       "blockedIn": "儲存前請檢查 {{fields}}",
       "toastOk": "看門狗設定已儲存",
       "toastFail": "無法儲存看門狗設定",

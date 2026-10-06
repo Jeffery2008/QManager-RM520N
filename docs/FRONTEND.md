@@ -425,7 +425,7 @@ const { saved, markSaved } = useSaveFlash();
 - Discard and any secondary action beside Save are ghost or `tonal-neutral`, never a stroked `outline` button. Never wrap `SaveButton` in `AnimatePresence`.
 - The `feature.*` keys above are illustrative: a real card adds its own keys to **all five** catalogs (`en id it zh-CN zh-TW`).
 - Exempt: dialogs and wizards (their own `DialogFooter`), per-row and inline actions, and operational actions that are not a draft commit.
-- **Migration Delta:** the rule governs new and reworked cards. Existing placements (the page-level `cellular/settings/pending-save-bar.tsx` and `monitoring/watchdog/save-bar.tsx`, in-card save rows, stock `CardFooter` footers) are tracked in `DESIGN.md` > Migration Deltas and are not swept.
+- **Swept 2026-10-06:** every non-exempt `SaveButton` now commits from a `CardFoot` or the `CARD_FOOT` + `CARD_FOOT_ACTIONS` constants. A page whose one apply spans several cards puts one footer on the card it belongs to most: Watchdog on the Ladder card (`monitoring/watchdog/watchdog-foot.tsx`), Cellular Settings on the Network card (`cellular/settings/apply-foot.tsx`). There is no page-level save bar anywhere; don't add one.
 
 ### Loading / Error / Empty States
 

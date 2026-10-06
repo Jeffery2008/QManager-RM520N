@@ -1,14 +1,15 @@
 # 🚀 QManager RM520N BETA v0.1.17-draft
 
-Save buttons now live in one consistent place — the bottom edge of the card they belong to — starting with the cellular locking cards, then Local Network, then Monitoring (where the Watchdog page loses its separate save bar).
+Every settings card in the app now saves from the same place — a row along the bottom edge of the card — and the separate save bars on Watchdog and Cellular Settings are gone.
 
 > One-click OTA from **System Settings → Software Update** if you're on v0.1.5 or newer.
 
 ## 🛠️ Improvements
 
-- **Settings cards now save from a bottom row on the card itself.** On the cellular locking cards, the Local Network pages and the Monitoring pages, status sits on the left and **Discard** then **Save** sit on the right, instead of a button in the middle of the card, a bar under the card grid, or a bar that floats over the page. (Card-Foot Apply sweep: the remaining `SaveButton` sites move to `CardFoot`, grouped by route family.)
-- **Watchdog saves from its card.** **Monitoring → Watchdog** no longer has a page-level save bar; each card carries its own Save row.
-- **Secondary buttons beside Save are quieter.** Actions such as **Restore all** in the band grid now use a plain or softly tinted button instead of a stroked outline, so **Save** stays the one button that stands out.
+- **Settings cards save from a bottom row on the card itself.** Band, frequency and tower locking, IMEI, APN, MBN, Network Priority, SMS Forwarding, TTL, MTU, Custom DNS, IP Passthrough, System Settings, SSH password, Connection Quality and Alerts now show status on the left and **Discard** then **Save** on the right, instead of a button mid-card or a bar under the cards. (21 `SaveButton` sites moved to `CardFoot`; Discard is always shown and greyed out until you change something.)
+- **Watchdog has one Save, on the Recovery ladder card.** **Monitoring → Watchdog** no longer has a separate save bar below the page; the footer on the ladder card saves everything and says which cards have unsaved edits.
+- **Cellular Settings saves from the Network card.** On **Cellular → Settings**, the SIM and Network cards still share one Save, now in the Network card's footer, and **Re-read from modem** moved into that footer too.
+- **Buttons beside Save are quieter.** **Restore all supported** (band locking), **Clear LTE/NR lock** (frequency locking), **Remove Lock** (tower locking) and **Add resolver** (Custom DNS) are now plain tinted buttons with no outline or icon, so **Save** is the one button that stands out.
 - **Saving is confirmed by a toast, not a label that fades.** The "Saved" text that blinked beside the Save button in Alerts, Watchdog, Scheduled Reboot and the Ethernet speed limit is gone, and **Cellular → Settings** now shows a toast when your changes apply (or names the settings that failed). (The five fading labels all ran on a 1.8 s timer; the toast already existed on four of them.)
 
 ## 📥 Installation

@@ -21,12 +21,12 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CARD_FOOT, CARD_FOOT_ACTIONS } from "@/components/ui/card-foot";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import {
@@ -55,7 +55,6 @@ import {
   LEG_BADGE,
   NOTICE,
   NOTICE_TONE,
-  PILL_ACTION,
   PILL_ACTION_PLAIN,
   PILL_QUIET,
   READBACK,
@@ -640,17 +639,14 @@ export default function LteTowerCard({
             ))}
           </div>
         </CardContent>
-        {/* Mirrors the loaded footer's grouping too, not just its controls: two
-            writes together, the form reset at the far edge. */}
-        <CardFooter
-          className={`${CARD_PAD} flex flex-wrap items-center justify-between gap-x-2 gap-y-3`}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <Skeleton className={SKELETON_SHAPE.ACTION} />
+        {/* Mirrors the loaded footer: form reset, unlock, then the lock last. */}
+        <div className={`${CARD_PAD} ${CARD_FOOT}`}>
+          <div className={CARD_FOOT_ACTIONS}>
+            <Skeleton className={SKELETON_SHAPE.ACTION_QUIET} />
             <Skeleton className={SKELETON_SHAPE.ACTION_SECONDARY} />
+            <Skeleton className={SKELETON_SHAPE.ACTION} />
           </div>
-          <Skeleton className={SKELETON_SHAPE.ACTION_QUIET} />
-        </CardFooter>
+        </div>
       </Card>
     );
   }
@@ -1097,21 +1093,29 @@ export default function LteTowerCard({
           {isLocking ? t("tower_locking.a11y.applying", { leg: shortName }) : ""}
         </div>
 
-        {/* `mt-auto` pins the actions to the card's floor — these cards sit in
-            an equal-height grid row, so without it a card shorter than its
-            row-mate leaves its buttons floating above a void.
-
-            TWO WRITES, THEN A FORM RESET. The two consequential actions are
-            grouped and `Clear fields` is pushed to the far edge, so the footer
-            cannot read as three equal pills — same construction as
-            `band-grid-card.tsx`'s footer, which this surface is converging on. */}
-        <CardFooter
-          className={`${CARD_PAD} mt-auto flex flex-wrap items-center justify-between gap-x-2 gap-y-3`}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Symmetrical with the NR card: a form that parses is always
-                lockable while nothing is locked, and only a leg already holding
-                these exact cells has nothing left to write. See `hasChanges`. */}
+        {/* `CARD_FOOT`'s `mt-auto` pins the actions to the floor of an equal-height row. */}
+        <div className={`${CARD_PAD} ${CARD_FOOT}`}>
+          <div className={CARD_FOOT_ACTIONS}>
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              className={PILL_QUIET}
+              onClick={() => setSlots(slotsFromCells(undefined))}
+              disabled={isLocking || !hasAnyValue}
+            >
+              {t("tower_locking.actions.clear_fields")}
+            </Button>
+            {/* Gated on `posture`, not `config.lte.enabled`: `unknown` means nobody has read the modem. */}
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              className={PILL_ACTION_PLAIN}
+              onClick={() => setShowUnlockDialog(true)}
+              disabled={isLocking || posture !== "locked"}
+            >
+              {t("tower_locking.actions.unlock")}
+            </Button>
+            {/* Symmetrical with NR: lockable while nothing is locked; see `hasChanges`. */}
             <SaveButton
               onClick={requestLock}
               isSaving={isLocking}
@@ -1120,31 +1124,8 @@ export default function LteTowerCard({
               blockedReason={lockBlockedReason}
               className={PILL_ACTION_PLAIN}
             />
-            {/* Gated on `posture`, NOT on `config.lte.enabled`: offering to
-                remove a lock the modem does not report is offering an action
-                with no effect, and `unknown` means nobody has successfully read
-                the modem — so it is disabled rather than optimistically live. */}
-            <Button
-              type="button"
-              variant="outline"
-              className={PILL_ACTION}
-              onClick={() => setShowUnlockDialog(true)}
-              disabled={isLocking || posture !== "locked"}
-            >
-              <MaterialSymbol name="lock_open" size={18} />
-              {t("tower_locking.actions.unlock")}
-            </Button>
           </div>
-          <Button
-            type="button"
-            variant="tonal-neutral"
-            className={PILL_QUIET}
-            onClick={() => setSlots(slotsFromCells(undefined))}
-            disabled={isLocking || !hasAnyValue}
-          >
-            {t("tower_locking.actions.clear_fields")}
-          </Button>
-        </CardFooter>
+        </div>
       </Card>
 
       {/* --- Lock confirmation --------------------------------------------- */}

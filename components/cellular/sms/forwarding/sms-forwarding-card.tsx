@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CARD_FOOT, CARD_FOOT_ACTIONS } from "@/components/ui/card-foot";
 import {
   Field,
   FieldDescription,
@@ -144,6 +145,7 @@ const SmsForwardingCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
   } = fwd;
 
   const { saved, markSaved } = useSaveFlash();
+  const formId = React.useId();
   const [prevData, setPrevData] = useState<SmsForwardingData | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
   const [targetPhone, setTargetPhone] = useState("");
@@ -194,7 +196,7 @@ const SmsForwardingCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
   };
 
   // --- Loading ---------------------------------------------------------------
-  // Mirrors the real form geometry (toggle pill → labelled input → pill action)
+  // Mirrors the real form geometry (toggle pill → labelled input → footer action)
   // from FORM_SKELETON, so the card holds its height and the handoff is a pure
   // crossfade with no snap.
   if (isLoading) {
@@ -212,9 +214,13 @@ const SmsForwardingCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
               <Skeleton className={FORM_SKELETON.INPUT} />
               <Skeleton className={FORM_SKELETON.HELP} />
             </div>
-            <Skeleton className={FORM_SKELETON.ACTION} />
           </div>
         </CardContent>
+        <div className={CARD_FOOT}>
+          <div className={CARD_FOOT_ACTIONS}>
+            <Skeleton className={FORM_SKELETON.ACTION} />
+          </div>
+        </div>
       </Card>
     );
   }
@@ -263,6 +269,7 @@ const SmsForwardingCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
             card rather than at t=0 alongside its sibling's rows. Restating the
             clock here detaches it. */}
         <motion.form
+          id={formId}
           className="flex flex-col gap-5"
           onSubmit={handleSave}
           variants={staggerRows}
@@ -356,24 +363,22 @@ const SmsForwardingCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
             </Field>
           </motion.div>
 
-          {/* Save. `SaveButton` owns the loading animation and the product's one
-              sanctioned overshoot (the 1.03 confirmation check). It stays
-              mounted in every state so its grid width-lock holds, and it is
-              never wrapped in `AnimatePresence`. Its glyphs are lucide, which is
-              correct: it is a route-agnostic primitive that the Icon-Boundary
-              Rule pins to lucide wherever it mounts. */}
-          <motion.div variants={staggerRowItem}>
-            <SaveButton
-              type="submit"
-              isSaving={isSaving}
-              saved={saved}
-              disabled={!canSave}
-              label={t("sms.forwarding.buttons.save")}
-              className={cn(PILL_ACTION, "w-fit")}
-            />
-          </motion.div>
         </motion.form>
       </CardContent>
+      {/* No status and no draft reset, so the constants directly; `form=` keeps Enter-to-submit. */}
+      <div className={CARD_FOOT}>
+        <div className={CARD_FOOT_ACTIONS}>
+          <SaveButton
+            type="submit"
+            form={formId}
+            isSaving={isSaving}
+            saved={saved}
+            disabled={!canSave}
+            label={t("sms.forwarding.buttons.save")}
+            className={PILL_ACTION}
+          />
+        </div>
+      </div>
     </Card>
   );
 };

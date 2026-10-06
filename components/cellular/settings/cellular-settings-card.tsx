@@ -32,6 +32,7 @@ import type {
 } from "@/types/cellular-settings";
 import type { UseCellularSettingsReturn } from "@/hooks/use-cellular-settings";
 
+import { ApplyFootSkeleton } from "./apply-foot";
 import SettingRow from "./setting-row";
 import {
   CARD_NOTICE,
@@ -63,11 +64,8 @@ const renderCheckGlyph = (className: string) => (
 // Type, 5G Architecture, Roaming Preference) — the split follows the physical
 // thing being configured, not the backend's field order.
 //
-// THE SAVE BAR LIVES UPSTAIRS. Both cards share ONE form state, one save bar
-// and one re-read footer; they are rendered by the route shell below the
-// cards, not here — a per-card save bar would show the same "N changes
-// pending" twice, and the backend accepts any subset of fields in a single
-// POST, so one save is the honest unit.
+// ONE APPLY FOR BOTH CARDS. They share one form state and the backend takes
+// any subset in one POST, so the shell passes a single `foot` to one card only.
 //
 // ON THE OPTION SETS. Three of these rows have more options than the approved
 // comp drew. That is deliberate and it is a correctness fix, not scope creep:
@@ -108,6 +106,8 @@ export interface CellularSettingsCardProps {
   form: UseCellularSettingsReturn;
   /** Which half of the six rows this card renders. */
   section: "sim" | "network";
+  /** The shared apply footer, passed to the one card that carries it. */
+  foot?: React.ReactNode;
 }
 
 /** One declarative row. The value/onChange pair binds the modem's own strings. */
@@ -148,6 +148,7 @@ const WIDE_ROW_BREAKPOINT = "5xl" as const;
 export function CellularSettingsCard({
   form,
   section,
+  foot,
 }: CellularSettingsCardProps) {
   const { t } = useTranslation("cellular");
   const {
@@ -268,6 +269,7 @@ export function CellularSettingsCard({
             ))}
           </div>
         </CardContent>
+        {foot ? <ApplyFootSkeleton /> : null}
       </Card>
     );
   }
@@ -427,6 +429,7 @@ export function CellularSettingsCard({
           ))}
         </motion.div>
       </CardContent>
+      {foot}
     </Card>
   );
 }

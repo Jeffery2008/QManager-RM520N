@@ -24,6 +24,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CardFoot } from "@/components/ui/card-foot";
 import { FieldError } from "@/components/ui/field";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
@@ -33,6 +34,7 @@ import { validateImei } from "@/lib/imei-utils";
 import { staggerRowItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
+import { ApplyFootSkeleton } from "../apply-foot";
 import SettingRow from "../setting-row";
 import {
   BADGE_GLYPH_SIZE,
@@ -42,8 +44,6 @@ import {
   FIELD_CLUSTER,
   FIELD_COUNTER,
   FIELD_SHELL,
-  ICON_ACTION,
-  ICON_ACTION_GLYPH,
   INLINE_ERROR,
   PILL_ACTION,
   READOUT_ICON_ACTION,
@@ -109,6 +109,7 @@ const IMEISettingsCard = ({
   const K = "core_settings.imei.device";
 
   const { saved, markSaved } = useSaveFlash();
+  const formId = React.useId();
   const [imei, setImei] = React.useState("");
   const [rebootOpen, setRebootOpen] = React.useState(false);
 
@@ -200,7 +201,7 @@ const IMEISettingsCard = ({
   );
 
   const form = (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+    <form id={formId} className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <div className={ROW_GROUP.ROOT}>
         <SettingRow
           label={t(`${K}.rows.current.label`)}
@@ -292,44 +293,6 @@ const IMEISettingsCard = ({
         </FieldError>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <SaveButton
-          type="submit"
-          isSaving={isSaving}
-          saved={saved}
-          label={t(`${K}.actions.write`)}
-          disabled={!canWrite}
-          className={PILL_ACTION}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={handleReset}
-          disabled={isSaving || !hasChanged}
-          aria-label={t(`${K}.actions.reset`)}
-          className={ICON_ACTION}
-        >
-          <MaterialSymbol name="restart_alt" size={ICON_ACTION_GLYPH} />
-        </Button>
-
-        {/* One status line, and only when there is no error occupying the
-                same slot — two contradicting sentences under one field is how
-                the incumbent form read. */}
-        {!shapeError && !luhnError ? (
-          <span
-            id="imei-write-status"
-            aria-live="polite"
-            className={SETTING_ROW.CONSEQUENCE}
-          >
-            {isEmpty
-              ? t(`${K}.status.empty`)
-              : !hasChanged
-                ? t(`${K}.status.unchanged`)
-                : t(`${K}.status.ready`)}
-          </span>
-        ) : null}
-      </div>
     </form>
   );
 
@@ -356,6 +319,51 @@ const IMEISettingsCard = ({
           </motion.div>
         </AnimatePresence>
       </CardContent>
+
+      {/* Outside the form so `mt-auto` reaches the card edge; `form=` keeps Enter-to-submit. */}
+      {isLoading ? (
+        <ApplyFootSkeleton />
+      ) : (
+        <CardFoot
+          className={CARD_PAD}
+          // The status span is its own live region; one announcement per change.
+          liveStatus={false}
+          status={
+            // Hidden while a field error owns the message, so two sentences never contradict.
+            !shapeError && !luhnError ? (
+              <span id="imei-write-status" aria-live="polite">
+                {isEmpty
+                  ? t(`${K}.status.empty`)
+                  : !hasChanged
+                    ? t(`${K}.status.unchanged`)
+                    : t(`${K}.status.ready`)}
+              </span>
+            ) : null
+          }
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleReset}
+                disabled={isSaving || !hasChanged}
+                className={cn(PILL_ACTION, "gap-0")}
+              >
+                {t(`${K}.actions.reset`)}
+              </Button>
+              <SaveButton
+                type="submit"
+                form={formId}
+                isSaving={isSaving}
+                saved={saved}
+                label={t(`${K}.actions.write`)}
+                disabled={!canWrite}
+                className={PILL_ACTION}
+              />
+            </>
+          }
+        />
+      )}
 
       {/* Deferred-reboot dialog. "Later" is a real answer that is RECORDED —
           it hands the pending state up to the page, which then keeps the

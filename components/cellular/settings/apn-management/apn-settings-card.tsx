@@ -23,6 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CardFoot } from "@/components/ui/card-foot";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import {
@@ -47,6 +48,7 @@ import type {
 } from "@/types/apn-settings";
 import { PDP_TYPE_OPTIONS } from "@/types/apn-settings";
 
+import { ApplyFootSkeleton } from "../apply-foot";
 import SettingRow from "../setting-row";
 import {
   BADGE_GLYPH_SIZE,
@@ -57,7 +59,6 @@ import {
   FIELD_SHELL,
   PILL_ACTION,
   ROW_GROUP,
-  SAVE_BAR,
   SELECT_TRIGGER,
   SETTING_ROW,
 } from "../shapes";
@@ -186,6 +187,7 @@ export function ApnSettingsCard({
 }: ApnSettingsCardProps) {
   const { t } = useTranslation("cellular");
   const { saved, markSaved } = useSaveFlash();
+  const formId = React.useId();
   const K = "core_settings.apn";
 
   // --- Draft state -----------------------------------------------------------
@@ -283,11 +285,8 @@ export function ApnSettingsCard({
               />
             ))}
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Skeleton className="h-[2.625rem] w-32 rounded-pill" />
-            <Skeleton className="h-[2.625rem] w-44 rounded-pill" />
-          </div>
         </CardContent>
+        <ApplyFootSkeleton />
       </Card>
     );
   }
@@ -404,7 +403,7 @@ export function ApnSettingsCard({
       </CardHeader>
 
       <CardContent className={cn(CARD_PAD, "flex flex-col gap-4")}>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <form id={formId} className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <div className={ROW_GROUP.ROOT}>
             <SettingRow
               labelId="apn-name-label"
@@ -536,16 +535,9 @@ export function ApnSettingsCard({
             />
           </div>
 
-          <div className="flex flex-col gap-2.5">
+          {/* Operational, not a draft commit, so it stays in the body (Card-Foot exemption). */}
+          {active === 1 ? (
             <div className="flex flex-wrap items-center gap-2">
-              <SaveButton
-                type="submit"
-                isSaving={isSaving}
-                saved={saved}
-                label={t(`${K}.save_apn`)}
-                disabled={changeCount === 0}
-                className={PILL_ACTION}
-              />
               {/* GATED ON A POSITIVE STATE, not on "not zero". `active` is
                   `null` before the first read resolves and stays `null` when
                   that read fails, and `null !== 0` is true — so this button
@@ -555,22 +547,36 @@ export function ApnSettingsCard({
                   the card was disabling the reversible action and arming the
                   irreversible one. "We do not know" is not permission to
                   detach the bearer. */}
-              {active === 1 ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setConfirmDeactivate(true)}
-                  disabled={isSaving}
-                  className={PILL_ACTION}
-                >
-                  {t(`${K}.carrier_default.button`)}
-                </Button>
-              ) : null}
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setConfirmDeactivate(true)}
+                disabled={isSaving}
+                className={PILL_ACTION}
+              >
+                {t(`${K}.carrier_default.button`)}
+              </Button>
             </div>
-            <p className={SAVE_BAR.NOTE}>{t(`${K}.save_connection_notice`)}</p>
-          </div>
+          ) : null}
         </form>
       </CardContent>
+
+      {/* Outside the form so `mt-auto` reaches the card edge; `form=` keeps Enter-to-submit. */}
+      <CardFoot
+        className={CARD_PAD}
+        status={<span className="text-pretty">{t(`${K}.save_connection_notice`)}</span>}
+        actions={
+          <SaveButton
+            type="submit"
+            form={formId}
+            isSaving={isSaving}
+            saved={saved}
+            label={t(`${K}.save_apn`)}
+            disabled={changeCount === 0}
+            className={PILL_ACTION}
+          />
+        }
+      />
 
       {/* Reserved-context confirmation. Preserved verbatim in behaviour: a data
           APN written onto the IMS or emergency context can break VoLTE or SOS
