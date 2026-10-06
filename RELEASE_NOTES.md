@@ -12,6 +12,7 @@ Every settings card in the app now saves from the same place — a row along the
 - **Buttons beside Save are quieter.** **Restore all supported** (band locking), **Clear LTE/NR lock** (frequency locking), **Remove Lock** (tower locking) and **Add resolver** (Custom DNS) are now plain tinted buttons with no outline or icon, so **Save** is the one button that stands out.
 - **Saving is confirmed by a toast, not a label that fades.** The "Saved" text that blinked beside the Save button in Alerts, Watchdog, Scheduled Reboot and the Ethernet speed limit is gone, and **Cellular → Settings** now shows a toast when your changes apply (or names the settings that failed). (The five fading labels all ran on a 1.8 s timer; the toast already existed on four of them.)
 - **"No automatic recovery" is now blue.** On **Cellular → Frequency Locking**, the chip on the locked verdict is a filled info chip instead of a grey one, so it reads as a fact rather than a disabled state.
+- **Frequency Calculator channel label has a separator.** On **Cellular → Cell Scanner → Frequency Calculator**, the answer now reads "EARFCN 1350 · downlink" instead of running the two together. (`readout.channel_lte` / `channel_nr` in all five language packs.)
 
 ## 📥 Installation
 

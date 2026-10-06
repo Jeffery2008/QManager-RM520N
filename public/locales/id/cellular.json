@@ -574,8 +574,8 @@
         "idle_body": "Frekuensi dan band-nya muncul di sini.",
         "failed_title": "Tidak ada yang bisa ditampilkan",
         "failed_body": "Perbaiki nomor kanalnya lalu hitung lagi.",
-        "channel_lte": "EARFCN {{value}} downlink",
-        "channel_nr": "NR-ARFCN {{value}} downlink",
+        "channel_lte": "EARFCN {{value}} · downlink",
+        "channel_nr": "NR-ARFCN {{value}} · downlink",
         "several_bands_one": "{{count}} band bisa membawa kanal ini.",
         "several_bands_other": "{{count}} band bisa membawa kanal ini."
       }
