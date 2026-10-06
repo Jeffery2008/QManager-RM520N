@@ -133,9 +133,9 @@ export function AlertsSettingsCard({
     if (form.blocked) return;
     setFault(null);
     setTested(null);
-    const ok = await hook.saveSettings(form.buildPayload());
-    if (!ok) {
-      const message = hook.error || t("alerts.channels.save.failed");
+    const result = await hook.saveSettings(form.buildPayload());
+    if (!result.ok) {
+      const message = result.error || t("alerts.channels.save.failed");
       setFault({ scope: "save", message });
       toast.error(message);
       return;
@@ -152,12 +152,12 @@ export function AlertsSettingsCard({
   const handleTest = async (ch: AlertChannel) => {
     setFault(null);
     setTested(null);
-    const ok = await hook.sendTest(ch);
-    if (ok) {
+    const result = await hook.sendTest(ch);
+    if (result.ok) {
       setTested(ch);
       toast.success(t("alerts.channels.test.succeeded", { channel: channelName[ch] }));
     } else {
-      const message = hook.error || t("alerts.channels.test.failed");
+      const message = result.error || t("alerts.channels.test.failed");
       setFault({ scope: "test", channel: ch, message });
       toast.error(message);
     }

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { authFetch } from "@/lib/auth-fetch";
+import type { MutationResult } from "@/types/mutation-result";
 import type {
   AlertsState,
   AlertsSavePayload,
@@ -28,8 +29,8 @@ export interface UseAlertsReturn {
   testingChannel: AlertChannel | null;
   installResult: InstallResult;
   error: string | null;
-  saveSettings: (payload: AlertsSavePayload) => Promise<boolean>;
-  sendTest: (channel: AlertChannel) => Promise<boolean>;
+  saveSettings: (payload: AlertsSavePayload) => Promise<MutationResult>;
+  sendTest: (channel: AlertChannel) => Promise<MutationResult>;
   runInstall: () => Promise<void>;
   refresh: () => void;
 }
@@ -101,7 +102,7 @@ export function useAlerts(): UseAlertsReturn {
   // Save (one atomic POST covering all channels + routing)
   // ---------------------------------------------------------------------------
   const saveSettings = useCallback(
-    async (payload: AlertsSavePayload): Promise<boolean> => {
+    async (payload: AlertsSavePayload): Promise<MutationResult> => {
       setError(null);
       setIsSaving(true);
       try {
@@ -113,19 +114,22 @@ export function useAlerts(): UseAlertsReturn {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
 
         const json = await resp.json();
-        if (!mountedRef.current) return false;
+        if (!mountedRef.current) return { ok: false, error: null };
 
         if (!json.success) {
-          setError(json.detail || json.error || "Failed to save settings");
-          return false;
+          const message = json.detail || json.error || "Failed to save settings";
+          setError(message);
+          return { ok: false, error: message };
         }
 
         await fetchState(true);
-        return true;
+        return { ok: true, error: null };
       } catch (err) {
-        if (!mountedRef.current) return false;
-        setError(err instanceof Error ? err.message : "Failed to save settings");
-        return false;
+        if (!mountedRef.current) return { ok: false, error: null };
+        const message =
+          err instanceof Error ? err.message : "Failed to save settings";
+        setError(message);
+        return { ok: false, error: message };
       } finally {
         if (mountedRef.current) setIsSaving(false);
       }
@@ -137,7 +141,7 @@ export function useAlerts(): UseAlertsReturn {
   // Per-channel test send (real path, gated on saved config by the caller)
   // ---------------------------------------------------------------------------
   const sendTest = useCallback(
-    async (channel: AlertChannel): Promise<boolean> => {
+    async (channel: AlertChannel): Promise<MutationResult> => {
       setError(null);
       setTestingChannel(channel);
       try {
@@ -149,17 +153,20 @@ export function useAlerts(): UseAlertsReturn {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
         const json = await resp.json();
-        if (!mountedRef.current) return false;
+        if (!mountedRef.current) return { ok: false, error: null };
 
         if (!json.success) {
-          setError(json.detail || json.error || "Failed to send test");
-          return false;
+          const message = json.detail || json.error || "Failed to send test";
+          setError(message);
+          return { ok: false, error: message };
         }
-        return true;
+        return { ok: true, error: null };
       } catch (err) {
-        if (!mountedRef.current) return false;
-        setError(err instanceof Error ? err.message : "Failed to send test");
-        return false;
+        if (!mountedRef.current) return { ok: false, error: null };
+        const message =
+          err instanceof Error ? err.message : "Failed to send test";
+        setError(message);
+        return { ok: false, error: message };
       } finally {
         if (mountedRef.current) setTestingChannel(null);
       }
