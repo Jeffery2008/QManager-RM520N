@@ -1,12 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2Icon, EyeIcon, EyeOffIcon } from "lucide-react";
+import { CheckCircle2Icon, CheckIcon, EyeIcon, EyeOffIcon } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { LucideIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import {
+  SegmentedField,
+  SEGMENTED,
+  type SegmentedOption,
+} from "@/components/ui/segmented-field";
 import { cn } from "@/lib/utils";
 
 import {
@@ -27,6 +32,11 @@ const ADORNMENT = "absolute top-1/2 right-3 flex -translate-y-1/2 items-center";
 // -----------------------------------------------------------------------------
 // ChannelSwitchRow — a channel's master enable, tinted by its own state.
 // -----------------------------------------------------------------------------
+/** The lucide check that SegmentedField reserves on every segment. */
+const renderCheckGlyph = (className: string) => (
+  <CheckIcon size={SEGMENTED.GLYPH} className={className} aria-hidden="true" />
+);
+
 export interface ChannelSwitchRowProps {
   id: string;
   title: string;
@@ -42,27 +52,33 @@ export function ChannelSwitchRow({
   checked,
   onCheckedChange,
 }: ChannelSwitchRowProps) {
+  const { t } = useTranslation("common");
+  const options: SegmentedOption<"on" | "off">[] = [
+    { value: "on", label: t("state.on") },
+    { value: "off", label: t("state.off") },
+  ];
   return (
     <div
+      id={id}
       className={cn(
         SWITCH_ROW.ROOT,
         SWITCH_ROW.TRANSITION,
         checked ? SWITCH_ROW.ON : SWITCH_ROW.REST,
+        "flex-wrap",
       )}
     >
-      <div className={SWITCH_ROW.TEXT}>
-        <label htmlFor={id} className={cn(SWITCH_ROW.TITLE, "block")}>
-          {title}
-        </label>
+      {/* The min width wraps the pill under the text on a phone-width card. */}
+      <div className={cn(SWITCH_ROW.TEXT, "min-w-40")}>
+        <p className={cn(SWITCH_ROW.TITLE, "block")}>{title}</p>
         <p className={SWITCH_ROW.DESC}>{description}</p>
       </div>
-      {/* The pseudo-element target reaches 44px without a layout box, so the
-          label above keeps its baseline. */}
-      <Switch
-        id={id}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        className="relative flex-none before:absolute before:-inset-x-3 before:-inset-y-3.5 before:content-['']"
+      <SegmentedField
+        value={checked ? "on" : "off"}
+        onValueChange={(next) => onCheckedChange(next === "on")}
+        options={options}
+        ariaLabel={title}
+        breakpoint="never"
+        glyph={renderCheckGlyph}
       />
     </div>
   );

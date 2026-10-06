@@ -20,7 +20,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { MaterialSymbol } from "@/components/ui/material-symbol";
+import { SEGMENTED, SegmentedField } from "@/components/ui/segmented-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { ConditionScreen } from "@/components/cellular/condition-screen";
@@ -285,17 +286,27 @@ const SmsForwardingCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
                 enabledDirty ? ROW_DIRTY : "bg-surface-container",
               )}
             >
-              <FieldLabel
-                htmlFor="sms-forwarding-enabled"
-                className={TOGGLE_LABEL}
-              >
+              <FieldLabel className={TOGGLE_LABEL}>
                 {t("sms.forwarding.fields.enabled_label")}
               </FieldLabel>
-              <Switch
-                id="sms-forwarding-enabled"
-                className="shrink-0"
-                checked={isEnabled}
-                onCheckedChange={setIsEnabled}
+              <SegmentedField
+                value={isEnabled ? "on" : "off"}
+                onValueChange={(next) => setIsEnabled(next === "on")}
+                options={[
+                  { value: "on", label: t("state.on", { ns: "common" }) },
+                  { value: "off", label: t("state.off", { ns: "common" }) },
+                ]}
+                ariaLabel={t("sms.forwarding.fields.enabled_label")}
+                breakpoint="never"
+                glyph={(className) => (
+                  <MaterialSymbol
+                    name="check"
+                    filled
+                    size={SEGMENTED.GLYPH}
+                    aria-hidden="true"
+                    className={className}
+                  />
+                )}
               />
             </Field>
           </motion.div>

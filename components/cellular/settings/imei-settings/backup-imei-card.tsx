@@ -26,9 +26,10 @@ import {
 } from "@/components/ui/card";
 import { CARD_FOOT, CARD_FOOT_ACTIONS } from "@/components/ui/card-foot";
 import { FieldError } from "@/components/ui/field";
+import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
+import { SEGMENTED, SegmentedField } from "@/components/ui/segmented-field";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { validateImei } from "@/lib/imei-utils";
 import { staggerRowItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -174,12 +175,25 @@ const BackupIMEICard = ({
           dirty={enabled !== storedEnabled}
           labelId="backup-imei-toggle-label"
           control={
-            <Switch
-              id="backup-imei-toggle"
-              checked={enabled}
-              onCheckedChange={handleToggle}
+            <SegmentedField
+              value={enabled ? "on" : "off"}
+              onValueChange={(next) => handleToggle(next === "on")}
+              options={[
+                { value: "on", label: t("state.on", { ns: "common" }) },
+                { value: "off", label: t("state.off", { ns: "common" }) },
+              ]}
+              ariaLabel={t(`${K}.rows.keep.label`)}
               disabled={isSaving}
-              aria-labelledby="backup-imei-toggle-label"
+              breakpoint="never"
+              glyph={(className) => (
+                <MaterialSymbol
+                  name="check"
+                  filled
+                  size={SEGMENTED.GLYPH}
+                  aria-hidden="true"
+                  className={className}
+                />
+              )}
             />
           }
         />

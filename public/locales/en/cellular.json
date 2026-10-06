@@ -574,8 +574,8 @@
         "idle_body": "Its frequency and band appear here.",
         "failed_title": "Nothing to show",
         "failed_body": "Fix the channel number and calculate again.",
-        "channel_lte": "EARFCN {{value}} downlink",
-        "channel_nr": "NR-ARFCN {{value}} downlink",
+        "channel_lte": "EARFCN {{value}} · downlink",
+        "channel_nr": "NR-ARFCN {{value}} · downlink",
         "several_bands_one": "{{count}} band can carry this channel.",
         "several_bands_other": "{{count}} bands can carry this channel."
       }

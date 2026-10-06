@@ -26,8 +26,8 @@ import {
 import { CardFoot } from "@/components/ui/card-foot";
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
+import { SEGMENTED, SegmentedField } from "@/components/ui/segmented-field";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { TonalBanner } from "@/components/ui/tonal-banner";
 import { staggerRowItem, staggerRows } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -299,14 +299,25 @@ export function MBNCard({
             consequence={t(`${K}.auto.consequence`)}
             dirty={autoDirty}
             control={
-              // The Switch ships as-is — no sizing classes. Its own track/thumb
-              // geometry is the product's, and a one-off resize here would make
-              // this the only switch in the app at a different size.
-              <Switch
-                checked={autoOn}
-                onCheckedChange={setAutoOn}
+              <SegmentedField
+                value={autoOn ? "on" : "off"}
+                onValueChange={(next) => setAutoOn(next === "on")}
+                options={[
+                  { value: "on", label: t("state.on", { ns: "common" }) },
+                  { value: "off", label: t("state.off", { ns: "common" }) },
+                ]}
+                ariaLabel={t(`${K}.auto.label`)}
                 disabled={isSaving}
-                aria-labelledby="mbn-auto-label"
+                breakpoint="never"
+                glyph={(className) => (
+                  <MaterialSymbol
+                    name="check"
+                    filled
+                    size={SEGMENTED.GLYPH}
+                    aria-hidden="true"
+                    className={className}
+                  />
+                )}
               />
             }
           />

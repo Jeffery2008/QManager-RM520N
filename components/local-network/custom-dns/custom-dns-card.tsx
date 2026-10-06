@@ -11,7 +11,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { XIcon } from "lucide-react";
+import { CheckIcon, XIcon } from "lucide-react";
 
 import {
   Card,
@@ -23,9 +23,13 @@ import {
 import { CardFoot } from "@/components/ui/card-foot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SaveButton } from "@/components/ui/save-button";
+import {
+  SegmentedField,
+  SEGMENTED,
+  type SegmentedOption,
+} from "@/components/ui/segmented-field";
 import { cn } from "@/lib/utils";
 import type {
   CustomDnsApplyData,
@@ -96,6 +100,13 @@ import {
 
 const K = "customDns";
 
+type OnOff = "on" | "off";
+
+/** The lucide check that SegmentedField reserves on every segment. */
+const renderCheckGlyph = (className: string) => (
+  <CheckIcon size={SEGMENTED.GLYPH} className={className} aria-hidden="true" />
+);
+
 const MAX_RESOLVERS = 4;
 
 /**
@@ -165,6 +176,10 @@ export function CustomDnsCard({
 }: CustomDnsCardProps) {
   const { t } = useTranslation("common");
   const formId = useId();
+  const onOffOptions: SegmentedOption<OnOff>[] = [
+    { value: "on", label: t("state.on") },
+    { value: "off", label: t("state.off") },
+  ];
 
   // ---------------------------------------------------------------------------
   // Local form state — seeded from the device ONCE, at mount
@@ -386,9 +401,9 @@ export function CustomDnsCard({
             <div className={ROW.ROOT}>
               <div className={ROW.TEXT}>
                 <div className="flex items-center gap-2">
-                  <label htmlFor="custom-dns-enabled" className={ROW.LABEL}>
+                  <span className={ROW.LABEL}>
                     {t(`${K}.rows.enabled.label`)}
-                  </label>
+                  </span>
                   <span className={cn(DELTA.ROOT, !enabledDirty && DELTA.CLEAN)}>
                     {t(`${K}.delta.unsaved`)}
                   </span>
@@ -398,11 +413,14 @@ export function CustomDnsCard({
                 </span>
               </div>
               <div className={ROW.CONTROL}>
-                <Switch
-                  id="custom-dns-enabled"
-                  checked={localEnabled}
-                  onCheckedChange={setLocalEnabled}
+                <SegmentedField
+                  value={localEnabled ? "on" : "off"}
+                  onValueChange={(next) => setLocalEnabled(next === "on")}
+                  options={onOffOptions}
+                  ariaLabel={t(`${K}.rows.enabled.label`)}
                   disabled={formDisabled}
+                  breakpoint="never"
+                  glyph={renderCheckGlyph}
                 />
               </div>
             </div>
@@ -496,12 +514,9 @@ export function CustomDnsCard({
             <div className={ROW.ROOT}>
               <div className={cn(ROW.TEXT, rowsDisabled && ROW.DIM)}>
                 <div className="flex items-center gap-2">
-                  <label
-                    htmlFor="custom-dns-ignore-carrier"
-                    className={ROW.LABEL}
-                  >
+                  <span className={ROW.LABEL}>
                     {t(`${K}.rows.ignore_carrier.label`)}
-                  </label>
+                  </span>
                   <span className={cn(DELTA.ROOT, !ignoreDirty && DELTA.CLEAN)}>
                     {t(`${K}.delta.unsaved`)}
                   </span>
@@ -511,11 +526,14 @@ export function CustomDnsCard({
                 </span>
               </div>
               <div className={ROW.CONTROL}>
-                <Switch
-                  id="custom-dns-ignore-carrier"
-                  checked={localIgnoreCarrier}
-                  onCheckedChange={setLocalIgnoreCarrier}
+                <SegmentedField
+                  value={localIgnoreCarrier ? "on" : "off"}
+                  onValueChange={(next) => setLocalIgnoreCarrier(next === "on")}
+                  options={onOffOptions}
+                  ariaLabel={t(`${K}.rows.ignore_carrier.label`)}
                   disabled={rowsDisabled}
+                  breakpoint="never"
+                  glyph={renderCheckGlyph}
                 />
               </div>
             </div>

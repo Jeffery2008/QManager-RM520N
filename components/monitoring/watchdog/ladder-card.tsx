@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { CheckIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  SegmentedField,
+  SEGMENTED,
+  type SegmentedOption,
+} from "@/components/ui/segmented-field";
 import { Tag } from "@/components/ui/tag";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +67,13 @@ export interface LadderCardProps {
   registerField: RegisterField;
 }
 
+type OnOff = "on" | "off";
+
+/** The lucide check that SegmentedField reserves on every segment. */
+const renderCheckGlyph = (className: string) => (
+  <CheckIcon size={SEGMENTED.GLYPH} className={className} aria-hidden="true" />
+);
+
 /**
  * The recovery ladder — the one anchor card on this surface. It replaces both
  * the read-only stepper and the settings card's Recovery tab, so a rung states
@@ -72,6 +85,10 @@ export function LadderCard({
   registerField,
 }: LadderCardProps) {
   const { t } = useTranslation("common");
+  const onOffOptions: SegmentedOption<OnOff>[] = [
+    { value: "on", label: t("state.on") },
+    { value: "off", label: t("state.off") },
+  ];
 
   const setters: Record<TierIndex, (v: boolean) => void> = {
     1: form.setTier1Enabled,
@@ -107,9 +124,11 @@ export function LadderCard({
             SWITCH_ROW.ROOT,
             SWITCH_ROW.TRANSITION,
             form.isEnabled ? SWITCH_ROW.ON : SWITCH_ROW.REST,
+            "flex-wrap",
           )}
         >
-          <div className={SWITCH_ROW.TEXT}>
+          {/* The min width wraps the pill under the text on a phone-width card. */}
+          <div className={cn(SWITCH_ROW.TEXT, "min-w-40")}>
             <p className={SWITCH_ROW.TITLE}>
               <span className="min-w-0">{t("watchdog.master.title")}</span>
               {form.masterDirty ? (
@@ -118,11 +137,13 @@ export function LadderCard({
             </p>
             <p className={SWITCH_ROW.DESC}>{t("watchdog.master.description")}</p>
           </div>
-          <Switch
-            checked={form.isEnabled}
-            onCheckedChange={form.setIsEnabled}
-            aria-label={t("watchdog.master.aria")}
-            className={SWITCH_TARGET}
+          <SegmentedField
+            value={form.isEnabled ? "on" : "off"}
+            onValueChange={(next) => form.setIsEnabled(next === "on")}
+            options={onOffOptions}
+            ariaLabel={t("watchdog.master.aria")}
+            breakpoint="never"
+            glyph={renderCheckGlyph}
           />
         </div>
 

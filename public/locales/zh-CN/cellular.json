@@ -574,8 +574,8 @@
         "idle_body": "其频率和频段会显示在这里。",
         "failed_title": "无内容可显示",
         "failed_body": "修正信道号后重新计算。",
-        "channel_lte": "EARFCN {{value}} 下行",
-        "channel_nr": "NR-ARFCN {{value}} 下行",
+        "channel_lte": "EARFCN {{value}} · 下行",
+        "channel_nr": "NR-ARFCN {{value}} · 下行",
         "several_bands_one": "有 {{count}} 个频段可以承载该信道。",
         "several_bands_other": "有 {{count}} 个频段可以承载该信道。"
       }

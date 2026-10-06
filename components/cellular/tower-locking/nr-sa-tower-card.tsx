@@ -38,8 +38,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SEGMENTED, SegmentedField } from "@/components/ui/segmented-field";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import { Tag } from "@/components/ui/tag";
 import {
   Tooltip,
@@ -197,22 +197,16 @@ const CARD_ROW =
  */
 const CARD_ROW_LABEL = "text-sm font-semibold";
 
-/**
- * The 44px coarse-pointer target for a `Switch`.
- *
- * The primitive paints at 18x32px, which is well under this project's floor. An
- * overlay reaches the target without adding a layout box that would push the
- * row's label off its baseline.
- *
- * Byte-identical to the LTE card's `SWITCH_TARGET` and restated for the house
- * reason — but the reason it exists AT ALL is that this card never had one. Both
- * its switches paint under the floor; retiring the "Tower lock" switch left this
- * one as the only control in the row, directly beside an LTE card whose
- * equivalent switch does meet it. Two cards in one grid row must not disagree
- * about how big a tap target is.
- */
-const SWITCH_TARGET =
-  "relative before:absolute before:-inset-x-3 before:-inset-y-3.5 before:content-['']";
+/** The SegmentedField check glyph, from this route's icon set. */
+const renderCheckGlyph = (className: string) => (
+  <MaterialSymbol
+    name="check"
+    filled
+    size={SEGMENTED.GLYPH}
+    aria-hidden="true"
+    className={className}
+  />
+);
 
 /**
  * ONE VALUE CELL IN THE 2x2 GRID.
@@ -968,28 +962,24 @@ export default function NrSaTowerCard({
             {/* --- Simple Mode ------------------------------------------- */}
             <motion.div variants={staggerRowItem} className="flex flex-col gap-1.5">
               <div className={CARD_ROW}>
-                <Label
-                  htmlFor={`${fieldId}-simple`}
-                  className={CARD_ROW_LABEL}
-                >
+                <Label className={CARD_ROW_LABEL}>
                   <MaterialSymbol name="tune" size={18} />
                   {t("tower_locking.card.simple_mode")}
                 </Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-on-surface-variant text-xs font-medium">
-                    {pickerActive ? tc("state.on") : tc("state.off")}
-                  </span>
-                  {/* Also off while gated: the picker fills a form that
-                      cannot be written, so leaving it live would advertise a
-                      path to a dead end. The NOTICE above says why. */}
-                  <Switch
-                    id={`${fieldId}-simple`}
-                    className={SWITCH_TARGET}
-                    checked={pickerActive}
-                    onCheckedChange={handleSimpleModeToggle}
-                    disabled={!hasOptions || formDisabled}
-                  />
-                </div>
+                {/* Also off while gated: the picker fills a form that cannot
+                    be written. The NOTICE above says why. */}
+                <SegmentedField
+                  value={pickerActive ? "on" : "off"}
+                  onValueChange={(next) => handleSimpleModeToggle(next === "on")}
+                  options={[
+                    { value: "on", label: tc("state.on") },
+                    { value: "off", label: tc("state.off") },
+                  ]}
+                  ariaLabel={t("tower_locking.card.simple_mode")}
+                  disabled={!hasOptions || formDisabled}
+                  breakpoint="never"
+                  glyph={renderCheckGlyph}
+                />
               </div>
             </motion.div>
 
