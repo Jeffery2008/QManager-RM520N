@@ -484,8 +484,8 @@ export const SLOT_GLYPH = {
 } as const satisfies Record<string, MaterialSymbolName>;
 
 /** The page-header action pill. Restated, not imported — see custom-profiles. */
-export const PILL_ACTION =
-  "h-[2.625rem] gap-2 rounded-pill px-5 text-sm font-semibold";
+export const PILL_ACTION_HEIGHT = "h-[2.625rem]";
+export const PILL_ACTION = `${PILL_ACTION_HEIGHT} gap-2 rounded-pill px-5 text-sm font-semibold`;
 
 /**
  * The glyph inside a `PILL_ACTION`.
@@ -1036,67 +1036,27 @@ export const BREAKDOWN = {
 } as const;
 
 // -----------------------------------------------------------------------------
-// The pending-changes save bar
+// The apply footer (`apply-foot.tsx`)
 // -----------------------------------------------------------------------------
 
-/**
- * The bar only exists while something is pending — it is not a permanently
- * mounted footer that greys out.
- *
- * ON THE EXIT ANIMATION. DESIGN.md bans exit animations on BANNERS, scoped to
- * "conditions and navigation": a banner leaving means the condition cleared and
- * that should feel immediate. A save bar is not a condition — its disappearance
- * is the terminal frame of a commit the user initiated, and cutting it dead
- * reads as the app dropping the interaction. So it exits, but on the QUICK
- * clock, transform + opacity only (the Modal-Exit Rule's reasoning by analogy:
- * the exit clock is how long the user waits to see the result).
- *
- * `SaveButton` must never be wrapped in `AnimatePresence` — unmounting one of
- * its stacked layers removes that layer's width contribution and breaks its
- * width lock.
- */
-export const SAVE_BAR = {
-  ROOT: "flex flex-col gap-3 rounded-tile bg-surface-container px-5 py-4 @2xl/card:flex-row @2xl/card:items-center @2xl/card:gap-4",
-  /**
-   * The wrapper a save bar needs when it is NOT rendered inside a card.
-   *
-   * `ROOT` and `ACTIONS` key off `@2xl/card`, which is correct for the three
-   * call sites that live inside a `CARD_SHELL` (`@container/card` is declared
-   * there). The basic-settings shell renders `PendingSaveBar` under the card
-   * grid instead, where the only container ancestor is `@container/main` — so
-   * the query matched NOTHING at any width and the bar shipped as a
-   * left-aligned stacked column on full desktop, count above note above
-   * buttons.
-   *
-   * The fix is to give the bar the container it is written against rather than
-   * to re-key it: re-keying would need `@2xl/main` spelled beside every
-   * `@2xl/card` utility, and a bar sitting in a HALF-WIDTH card on a wide page
-   * would then go side-by-side at a width where it does not fit.
-   *
-   * `empty:hidden` is load-bearing. The bar only exists while something is
-   * pending, so this wrapper is an empty flex item the rest of the time — and
-   * an empty flex item still claims its parent's `gap-4`, leaving 16px of dead
-   * air above the re-read footer.
-   */
-  HOST: "@container/card empty:hidden",
-  TEXT: "flex min-w-0 flex-col gap-0.5",
-  COUNT: "text-sm font-semibold tabular-nums",
-  NOTE: "text-on-surface-variant text-[0.78125rem] leading-relaxed text-pretty",
-  ACTIONS: "flex flex-none items-center gap-2 @2xl/card:ml-auto",
+/** Placeholder pills for an `ApplyFoot` while the card loads. */
+export const APPLY_FOOT_SKELETON = {
+  DISCARD: `${PILL_ACTION_HEIGHT} w-24 rounded-pill`,
+  SAVE: `${PILL_ACTION_HEIGHT} w-36 rounded-pill`,
 } as const;
 
 /**
- * The step ledger the bar becomes while applying.
+ * The step ledger the footer status becomes while applying.
  *
  * A slot change holds the modem for ~35s (radio cycle, then up to ten
  * verification read-backs, then an 8s client recovery wait). A button that
- * simply spins for that long reads as a hang, so the bar names the phase it is
+ * simply spins for that long reads as a hang, so the footer names the phase it is
  * in. Progress is DOTS plus a spinner, never a fill bar — fills are reserved
  * for data visualisation (The Loader-and-Dots Rule).
  */
 export const APPLY_LEDGER = {
-  ROOT: "flex flex-col gap-2.5",
-  STEP: "flex items-center gap-2.5 text-[0.8125rem]",
+  ROOT: "flex flex-wrap items-center gap-x-4 gap-y-1",
+  STEP: "flex items-center gap-2",
   DOT: "size-1.5 flex-none rounded-pill",
   DOT_PENDING: "bg-outline",
   DOT_ACTIVE: "bg-primary",

@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { useSaveFlash } from "@/components/ui/save-button";
 import { TonalBanner } from "@/components/ui/tonal-banner";
 import CellularPageHeader from "@/components/cellular/page-header";
@@ -16,9 +15,9 @@ import { useModemStatus } from "@/hooks/use-modem-status";
 
 import CellularSettingsCard from "./cellular-settings-card";
 import LiveStateStrip from "./live-state-strip";
-import PendingSaveBar from "./pending-save-bar";
+import ApplyFoot from "./apply-foot";
 import RateCeilingDisclosure from "./rate-ceiling-disclosure";
-import { CARD_CELL, PAGE_ROOT, PILL_ACTION, SAVE_BAR } from "./shapes";
+import { CARD_CELL, PAGE_ROOT, PILL_ACTION } from "./shapes";
 
 // =============================================================================
 // Cellular Basic Settings — the route shell
@@ -41,7 +40,7 @@ import { CARD_CELL, PAGE_ROOT, PILL_ACTION, SAVE_BAR } from "./shapes";
 //
 // TWO DATA SOURCES, DELIBERATELY SEPARATE, AND NOW ONE PER BAND.
 // `useCellularSettings` owns the writable CGI surface (and the dirty/merge
-// contract behind the save bar); `useModemStatus` owns the read-only poller
+// contract behind the apply footer); `useModemStatus` owns the read-only poller
 // snapshot. They refresh on different clocks and must not be collapsed into one
 // — the settings hook re-reads only around a save, while the poller ticks
 // continuously. The hero mixed them and needed two readiness flags, two failure
@@ -51,11 +50,8 @@ import { CARD_CELL, PAGE_ROOT, PILL_ACTION, SAVE_BAR } from "./shapes";
 // it; band A2 is settings-only and carries its own provenance sentence. No
 // surface on this page holds two clocks, and that footnote is deleted.
 //
-// ONE SAVE BAR FOR BOTH CARDS. The two settings cards share a single form
-// state; the backend POST accepts any subset of fields in one request, so the
-// save bar lives HERE, under the grid, rather than inside either card — a
-// per-card bar would show the same "N changes pending" twice. The re-read
-// footer owns the same slot when nothing is pending.
+// ONE APPLY FOR BOTH CARDS. The backend POST takes any subset of fields, so one
+// footer commits both; it sits on the Network card, last in reading order.
 //
 // ON THE ERROR BANNER. The incumbent markup was a hand-rolled
 // `div[role=alert]` filled with `bg-destructive/10` — an alpha wash, which
@@ -67,7 +63,7 @@ import { CARD_CELL, PAGE_ROOT, PILL_ACTION, SAVE_BAR } from "./shapes";
 // under the old contract that overwrote every local field — so a user with
 // three staged edits who tapped Retry lost all three, silently. The hook's
 // merge rule now guarantees a refresh can only update fields the user has NOT
-// touched, which is what makes it safe to leave this button next to a save bar.
+// touched, which is what makes it safe to leave this button next to Save.
 // =============================================================================
 
 const CellularSettingsComponent = () => {
@@ -82,10 +78,14 @@ const CellularSettingsComponent = () => {
 
   const K = "core_settings.basic";
 
-  // The shared save bar's Save button flash; owned here because the bar is shared.
+  // The shared footer's Save flash; owned here because the footer spans both cards.
   const { saved, markSaved } = useSaveFlash();
 
   const failedLabels = (form.lastApply?.failedFields ?? []).map((key) =>
+    t(`${K}.rows.${key}.label`),
+  );
+
+  const pendingLabels = [...form.dirtyFields].map((key) =>
     t(`${K}.rows.${key}.label`),
   );
 
@@ -147,10 +147,8 @@ const CellularSettingsComponent = () => {
         </TonalBanner>
       ) : null}
 
-      {/* The card cascade: hero, then the write cards, 120ms apart on the
-          standard curve. The save bar and footer sit OUTSIDE the cascade —
-          they arrive on state changes with their own (quicker) entrance, and
-          a pending-changes action should never wait its turn. */}
+      {/* The card cascade: the bands, then the write cards, 120ms apart on
+          the standard curve. */}
       <motion.div
         className="flex flex-col gap-4"
         initial="hidden"
@@ -204,61 +202,52 @@ const CellularSettingsComponent = () => {
             <CellularSettingsCard form={form} section="sim" />
           </motion.div>
           <motion.div variants={staggerItem} className={CARD_CELL}>
-            <CellularSettingsCard form={form} section="network" />
+            <CellularSettingsCard
+              form={form}
+              section="network"
+              foot={
+                <ApplyFoot
+                  changeCount={form.changeCount}
+                  isSaving={form.isSaving}
+                  applyPhase={form.applyPhase}
+                  failedLabels={failedLabels}
+                  onDiscard={form.discard}
+                  onSave={handleSave}
+                  saved={saved}
+                  secondary={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={form.refresh}
+                      disabled={form.isSaving}
+                      className={PILL_ACTION}
+                    >
+                      {t(`${K}.footer.reread`)}
+                    </Button>
+                  }
+                  copy={{
+                    count: t(`${K}.save_bar.count`, { count: form.changeCount }),
+                    // Names fields on BOTH cards, so an edit on the SIM card reads here.
+                    detail: pendingLabels.join(", "),
+                    note: t(`${K}.save_bar.note`),
+                    discard: t(`${K}.save_bar.discard`),
+                    save: t(`${K}.save_bar.save`),
+                    failed: t(`${K}.save_bar.failed`, {
+                      fields: failedLabels.join(", "),
+                    }),
+                    idle: t(`${K}.footer.in_sync`),
+                    steps: {
+                      writing: t(`${K}.apply.writing`),
+                      recovering: t(`${K}.apply.recovering`),
+                      verifying: t(`${K}.apply.verifying`),
+                    },
+                  }}
+                />
+              }
+            />
           </motion.div>
         </motion.div>
 
-        {/* `SAVE_BAR` keys its side-by-side layout off `@2xl/card`, which is
-            correct for the three call sites inside a card and matched NOTHING
-            here — the shell's only container ancestor is `@container/main`, so
-            the bar shipped as a left-aligned stacked column at every width
-            including full desktop. `SAVE_BAR.HOST` gives it the container it is
-            written against. */}
-        <div className={SAVE_BAR.HOST}>
-          <PendingSaveBar
-            changeCount={form.changeCount}
-            isSaving={form.isSaving}
-            applyPhase={form.applyPhase}
-            failedLabels={failedLabels}
-            onDiscard={form.discard}
-            onSave={handleSave}
-            saved={saved}
-            copy={{
-              count: t(`${K}.save_bar.count`, { count: form.changeCount }),
-              note: t(`${K}.save_bar.note`),
-              discard: t(`${K}.save_bar.discard`),
-              save: t(`${K}.save_bar.save`),
-              failed: t(`${K}.save_bar.failed`, {
-                fields: failedLabels.join(", "),
-              }),
-              steps: {
-                writing: t(`${K}.apply.writing`),
-                recovering: t(`${K}.apply.recovering`),
-                verifying: t(`${K}.apply.verifying`),
-              },
-            }}
-          />
-        </div>
-
-        {/* The resting footer. Only shown when nothing is pending — otherwise
-            the save bar owns this slot and two status lines would contradict
-            each other. */}
-        {form.changeCount === 0 && !form.isSaving ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={form.refresh}
-              className={PILL_ACTION}
-            >
-              <MaterialSymbol name="refresh" size={17} />
-              {t(`${K}.footer.reread`)}
-            </Button>
-            <span className="text-on-surface-variant text-xs">
-              {t(`${K}.footer.in_sync`)}
-            </span>
-          </div>
-        ) : null}
       </motion.div>
     </div>
   );
