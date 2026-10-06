@@ -497,23 +497,9 @@ export const PILL_ACTION = `${PILL_ACTION_HEIGHT} gap-2 rounded-pill px-5 text-s
 export const PILL_ACTION_GLYPH = 17;
 
 /**
- * An icon-only action that sits BESIDE a `PILL_ACTION` in the same cluster —
- * Reset, and anything else that is a verb with no sentence.
- *
- * `size="icon"` resolves to 36px, under the 44px coarse-pointer floor DESIGN.md
- * sets. The bump is at the pointer media query rather than always, so a dense
- * desktop cluster keeps its proportions and a tablet still gets a real target.
- * Both IMEI write cards typed this string; they are one control in two places.
- */
-export const ICON_ACTION = "rounded-pill [@media(pointer:coarse)]:size-11";
-
-/** The glyph inside an `ICON_ACTION` — one step under `PILL_ACTION_GLYPH`. */
-export const ICON_ACTION_GLYPH = 18;
-
-/**
  * A 24px icon button riding INSIDE a readout pill (the copy-this-value affordance).
  *
- * It cannot take `ICON_ACTION`: at 44px it would be taller than the 41px pill it
+ * It cannot be a 44px coarse-pointer icon action: at 44px it would be taller than the 41px pill it
  * lives in. The target is bought with an inset `::before` overlay instead — the
  * visual control stays 24px and dense, while the hit area is 44px square and
  * overhangs the pill invisibly. This is the sanctioned way to keep a dense

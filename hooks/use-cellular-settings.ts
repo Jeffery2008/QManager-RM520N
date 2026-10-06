@@ -19,7 +19,7 @@ import {
 // useCellularSettings — Settings + AMBR fetch, edit-buffer, and apply hook
 // =============================================================================
 // Fetches current cellular settings and AMBR data on mount, and owns the
-// pending-edit buffer that backs the persistent "N changes pending" save bar.
+// pending-edit buffer that backs the persistent "N changes pending" apply footer.
 //
 // The CGI endpoint queries the modem via qcmd (several AT commands), so the
 // initial fetch may take a few seconds.
@@ -413,7 +413,7 @@ export function useCellularSettings(): UseCellularSettingsReturn {
       };
 
       // Clear only what actually landed — anything the modem rejected stays
-      // dirty so the save bar can offer a retry over just those fields.
+      // dirty so the footer can offer a retry over just those fields.
       if (applied.length > 0) {
         setPending((current) => {
           const next: CellularSettingsPatch = { ...current };
@@ -448,7 +448,7 @@ export function useCellularSettings(): UseCellularSettingsReturn {
       await fetchSettings(true);
 
       // `fetchSettings` clears `error` on entry, so a partial-failure message
-      // has to be re-asserted afterwards or the save bar goes quiet about the
+      // has to be re-asserted afterwards or the footer goes quiet about the
       // fields that did not land.
       if (mountedRef.current && result.error) setError(result.error);
       return result;

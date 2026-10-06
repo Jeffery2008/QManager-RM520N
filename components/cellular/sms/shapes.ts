@@ -117,7 +117,7 @@ export const INBOX_TITLE = "text-lg";
  * `@container/card` is declared here even though nothing queries it yet. Without
  * it on the shell, the first `@md/card:` a contributor writes inside one of these
  * cards matches NOTHING at any width and ships as a silently unresponsive layout
- * — the exact failure `settings/shapes.ts` records for its own save bar.
+ * — the exact failure `settings/shapes.ts` records for its own footer.
  */
 export const CARD_SHELL =
   "@container/card h-full gap-5 rounded-card border-0 bg-surface px-7 py-6 shadow-[var(--shadow-whisper)]";
