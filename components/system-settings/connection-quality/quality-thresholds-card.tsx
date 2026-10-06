@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CardFoot } from "@/components/ui/card-foot";
 import { MetricBar } from "@/components/ui/metric-bar";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,14 +49,12 @@ import {
   DELTA,
   FOCUS_RING,
   GROUP_FILL,
-  LABEL_LINE,
   NOTE,
   NOTICE,
   PILL_ACTION,
   PRESET,
   PRESET_LIMIT,
   READOUT,
-  RECEIPT_ROW,
   ROW_GROUP,
   SKELETON,
   SKELETON_LOCAL,
@@ -424,11 +423,9 @@ function ThresholdsForm({
         ) : null}
       </div>
 
-      <div className={RECEIPT_ROW}>
-        <span className={LABEL_LINE}>
-          <span className={cn(DELTA.ROOT, !dirty && DELTA.CLEAN)}>
-            {unsaved}
-          </span>
+      <CardFoot
+        status={dirty ? <span className={DELTA.ROOT}>{unsaved}</span> : null}
+        actions={
           <SaveButton
             onClick={handleSave}
             isSaving={quality.isSaving}
@@ -437,8 +434,8 @@ function ThresholdsForm({
             disabled={!canSave}
             className={PILL_ACTION}
           />
-        </span>
-      </div>
+        }
+      />
     </>
   );
 }
@@ -500,10 +497,11 @@ function ThresholdsSkeleton(): React.JSX.Element {
         <Skeleton className={cn(SKELETON_LOCAL.READOUT.BLURB, "w-full")} />
       </div>
 
-      {/* The receipt strip. Absent, the card grows by its height plus the gap. */}
-      <div className={RECEIPT_ROW}>
-        <Skeleton className={SKELETON.TIME.ACTION} />
-      </div>
+      {/* The card foot. Absent, the card grows by its height plus the gap. */}
+      <CardFoot
+        liveStatus={false}
+        actions={<Skeleton className={SKELETON.TIME.ACTION} />}
+      />
     </>
   );
 }

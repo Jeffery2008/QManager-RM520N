@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CARD_FOOT, CARD_FOOT_ACTIONS } from "@/components/ui/card-foot";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { staggerRowItem, staggerRows } from "@/lib/motion";
@@ -178,9 +179,11 @@ function PreferencesSkeleton(): React.JSX.Element {
           </div>
         ))}
       </div>
-      {/* The Save row. Absent, the card grows by its height plus the gap. */}
-      <div className="flex justify-end">
-        <Skeleton className={SKELETON.TIME.ACTION} />
+      {/* The card foot. Absent, the card grows by its height plus the gap. */}
+      <div className={CARD_FOOT}>
+        <div className={CARD_FOOT_ACTIONS}>
+          <Skeleton className={SKELETON.TIME.ACTION} />
+        </div>
       </div>
     </>
   );
@@ -466,15 +469,18 @@ function PreferencesForm({
         </motion.div>
       </motion.div>
 
-      <div className="flex justify-end">
-        <SaveButton
-          onClick={handleSave}
-          isSaving={isSaving}
-          saved={saved}
-          label={t(`${K}.card.save`)}
-          disabled={!canSave}
-          className={PILL_ACTION}
-        />
+      {/* No card-level status: each row carries its own unsaved marker. */}
+      <div className={CARD_FOOT}>
+        <div className={CARD_FOOT_ACTIONS}>
+          <SaveButton
+            onClick={handleSave}
+            isSaving={isSaving}
+            saved={saved}
+            label={t(`${K}.card.save`)}
+            disabled={!canSave}
+            className={PILL_ACTION}
+          />
+        </div>
       </div>
     </>
   );

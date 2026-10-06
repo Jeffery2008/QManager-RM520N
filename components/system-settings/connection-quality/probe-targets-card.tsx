@@ -23,6 +23,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CardFoot } from "@/components/ui/card-foot";
 import { Input } from "@/components/ui/input";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,7 +57,6 @@ import {
   NOTICE,
   PILL_ACTION,
   PILL_GLYPH,
-  RECEIPT_ROW,
   ROW_GROUP,
   SKELETON,
   SKELETON_LOCAL,
@@ -269,11 +269,11 @@ function ProbeTargetsSkeleton(): React.JSX.Element {
         </div>
       ))}
 
-      {/* The receipt row. Absent, the card jumps by a control height plus gap. */}
-      <div className={cn(RECEIPT_ROW, "items-center gap-3")}>
-        <Skeleton className={cn(SKELETON.TILE.EYEBROW, "w-16")} />
-        <Skeleton className={SKELETON.TIME.ACTION} />
-      </div>
+      {/* The card foot. Absent, the card jumps by its height plus gap. */}
+      <CardFoot
+        liveStatus={false}
+        actions={<Skeleton className={SKELETON.TIME.ACTION} />}
+      />
     </>
   );
 }
@@ -496,21 +496,19 @@ function ProbeChain({ profile, targets }: ProbeChainProps): React.JSX.Element {
         </p>
       </div>
 
-      {/* The marker RESERVES its box, so promoting the card from clean to dirty
-          moves nothing: `invisible` also drops it from the a11y tree. */}
-      <div className={cn(RECEIPT_ROW, "items-center gap-3")}>
-        <span className={cn(DELTA.ROOT, !isDirty && DELTA.CLEAN)}>
-          {unsaved}
-        </span>
-        <SaveButton
-          onClick={handleSave}
-          isSaving={isSaving}
-          saved={saved}
-          label={t(`${K}.save`)}
-          disabled={!canSave}
-          className={PILL_ACTION}
-        />
-      </div>
+      <CardFoot
+        status={isDirty ? <span className={DELTA.ROOT}>{unsaved}</span> : null}
+        actions={
+          <SaveButton
+            onClick={handleSave}
+            isSaving={isSaving}
+            saved={saved}
+            label={t(`${K}.save`)}
+            disabled={!canSave}
+            className={PILL_ACTION}
+          />
+        }
+      />
     </>
   );
 }
