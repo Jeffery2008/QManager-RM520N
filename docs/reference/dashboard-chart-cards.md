@@ -48,7 +48,7 @@ There were three ways to build it, and the two obvious ones lose more than they 
 1. **Recharts' own animation props** (`isAnimationActive`, `animationDuration`, `animationEasing`)
    cannot express the recipe. They offer one duration and one easing for the whole series, no way to
    stagger the fill behind the stroke, and, decisively, no "first paint only" mode. They are also
-   invisible to `MotionConfig`, the app-wide `prefers-reduced-motion` switch, because recharts animates
+   invisible to `MotionConfig`, the app-wide reduced-motion switch, because recharts animates
    through **react-smooth**, a separate engine motion/react knows nothing about. (These props are not
    unused — they own the *poll update*, a different job entirely. See "The two clocks" below.)
 2. **Hand-rolling the SVG** would give total control and lose the entire feature set these cards
@@ -56,7 +56,7 @@ There were three ways to build it, and the two obvious ones lose more than they 
    domain calculation, `connectNulls` gap handling, and monotone curve interpolation. That is a large
    amount of correct behaviour to re-implement in order to own one animation.
 3. **CSS over recharts**, which is what ships. The animation is authored in the design system's own
-   tokens, honours reduced motion through a normal `@media` block, and gets the recipe's hardest
+   tokens, honours reduced motion through an `@variant motion-reduce` block, and gets the recipe's hardest
    clause for free.
 
 ## The two clocks
@@ -94,7 +94,8 @@ recharts' default **1500ms `ease`**, 3.75x the motion ceiling on a curve from no
 unreachable by `MotionConfig` — but it also killed the poll-to-poll morph, so the trace *teleported*
 to each new shape in a single frame. `useChartSeriesMotion()` restores the movement without the
 defect: `standard` on `--ease-standard`, with reduced motion handled in the hook via
-`useReducedMotion()` because `MotionConfig` cannot reach react-smooth.
+`useMotionReduced()` because `MotionConfig` cannot reach react-smooth. That hook honours the in-app
+Animations preference ahead of the OS query; see [motion-preference.md](motion-preference.md).
 
 > ℹ️ NOTE: recharts types `animationEasing` as a union of the five CSS keyword easings. That union is
 > under-specified rather than restrictive — react-smooth's `configEasing` explicitly parses
@@ -302,9 +303,9 @@ does run per frame — is still a compositor-only transform, landing at `scaleX(
 distortion is zero. This is the mock's own technique.
 
 > ⚠️ WARNING: `motion-reduce:transition-none` on the fill is load-bearing. The `scaleX` entrance is a
-> motion prop and so obeys the app-wide `<MotionConfig reducedMotion="user">`, but the width retarget
-> is plain CSS and sits outside motion's reach — and `globals.css` carries only per-component
-> reduced-motion blocks, no blanket rule. Without the variant, moving the value out of `animate`
+> motion prop and so obeys the app-wide `<MotionConfig>`, but the width retarget is plain CSS and
+> sits outside motion's reach — and `globals.css` has no blanket rule for transitions (its one global
+> reduced rule zeroes tw-animate's movement variables only). Without the variant, moving the value out of `animate`
 > silently gives reduced-motion users an animation they cannot turn off.
 
 ## What the mock was deliberately not followed on

@@ -1135,7 +1135,7 @@ Two details of the jump are load-bearing:
   button that has just left the screen, so their next Tab lands somewhere they
   cannot see — the jump would be sighted-only. `preventScroll` because
   `scrollIntoView` has already positioned the card; letting focus scroll too
-  double-jumps past the `scroll-mt` offset. `useReducedMotion()` picks
+  double-jumps past the `scroll-mt` offset. `useMotionReduced()` picks
   `behavior: "auto"` over `"smooth"`.
 - **`SAVED_PROFILES_ANCHOR` carries an `h-full` that is not decoration.** The
   Saved Profiles `<Card>` is `h-full` and *was* the direct grid item, so its

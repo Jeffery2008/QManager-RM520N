@@ -5,7 +5,6 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  ...nextTs,
   // One resolver for "is motion reduced": the in-app preference outranks the OS query.
   {
     rules: {

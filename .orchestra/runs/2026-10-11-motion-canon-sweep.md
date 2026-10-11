@@ -28,13 +28,13 @@ base: c2ee0e99   branch: worktree-motion-canon-sweep (.claude/worktrees/motion-c
 | R1 | Reduced-motion mechanism census | recon | qm-scout haiku/low | .orchestra/scratch/motion-r1.md | ACCEPTED |
 | R2 | One-Scale census (durations/easings/keyframes) | recon | qm-scout haiku/low | .orchestra/scratch/motion-r2.md | ACCEPTED |
 | R3 | Rule census (width, exits, loops, overshoot, modals, nested stagger) | recon | qm-scout haiku/low | .orchestra/scratch/motion-r3.md | ACCEPTED |
-| W0 | Foundation: resolver fn+hook, chart hook, use-value-tick, globals.css reduced rules, eslint bans, delete magic-ui | build | ui-builder opus/medium | lib/motion-preference.ts, components/motion-preference.tsx, hooks/use-chart-motion.ts, hooks/use-value-tick.ts, app/globals.css, eslint.config.mjs, components/ui/animated-*.tsx | PENDING |
-| W1a | Sweep: components/ui, app, auth, public, onboarding | build | qm-worker sonnet/medium | those dirs | PENDING |
-| W1b | Sweep: components/cellular, components/dashboard | build | qm-worker sonnet/medium | those dirs | PENDING |
-| W1c | Sweep: all other components/ dirs + hooks (minus W0 files) | build | qm-worker sonnet/medium | those dirs | PENDING |
-| W2 | Judgment: rAF flips, nested stagger clocks, inline stagger children | build | ui-builder opus/medium | sites from R3 §6-7 | PENDING |
-| V | Blind verify + browser proof under System/Full/Reduced | verify | qm-verifier opus/high + conductor | — | PENDING |
-| DOC | DESIGN.md Motion + motion-preference.md + router row | docs | docs-writer opus/medium | DESIGN.md, docs/reference/* | PENDING |
+| W0 | Foundation: resolver fn+hook, chart hook, use-value-tick, globals.css reduced rules, eslint bans, delete magic-ui | build | ui-builder opus/medium | lib/motion-preference.ts, components/motion-preference.tsx, hooks/use-chart-motion.ts, hooks/use-value-tick.ts, app/globals.css, eslint.config.mjs, components/ui/animated-*.tsx | VERIFIED (b2b0a0d6) |
+| W1a | Sweep: components/ui, app, auth, public, onboarding | build | qm-worker sonnet/medium | those dirs | VERIFIED (fb396127) |
+| W1b | Sweep: components/cellular, components/dashboard | build | qm-worker sonnet/medium | those dirs | VERIFIED (fb396127) |
+| W1c | Sweep: all other components/ dirs + hooks (minus W0 files) | build | qm-worker sonnet/medium | those dirs | VERIFIED (fb396127) |
+| W2 | Judgment: rAF flips, nested stagger clocks, inline stagger children | build | ui-builder opus/medium | sites from R3 §6-7 | VERIFIED (d995bb44) |
+| V | Blind verify + browser proof under System/Full/Reduced | verify | qm-verifier opus/high + conductor | — | VERIFYING |
+| DOC | DESIGN.md Motion + motion-preference.md + router row | docs | docs-writer opus/medium | DESIGN.md, docs/reference/* | DISPATCHED |
 
 ## Attempts   (append-only)
 | task | # | seat | ticket rev | outcome | checks run | evidence path |
@@ -42,8 +42,11 @@ base: c2ee0e99   branch: worktree-motion-canon-sweep (.claude/worktrees/motion-c
 | R1 | 1 | qm-scout haiku | 1 | DONE_WITH_CONCERNS | census | .orchestra/scratch/motion-r1.md |
 | R2 | 1 | qm-scout haiku | 1 | DONE_WITH_CONCERNS | census (heuristic) | .orchestra/scratch/motion-r2.md |
 | R3 | 1 | qm-scout haiku | 1 | DONE_WITH_CONCERNS | census | .orchestra/scratch/motion-r3.md |
+| W0 | 1 | ui-builder opus | 1 | DONE_WITH_CONCERNS (ca-* opacity-only kept, accepted) | tsc 0, build 0, lint 12 expected | b2b0a0d6 |
 
 ## Findings that survive
+- Browser proof (static out/ served on :3078, /setup + injected probes): under data-motion=reduced motion-safe:animate-spin/pulse -> animation none, tw-animate --tw-enter-translate-y 0 and --tw-enter-scale 1, opacity kept; under full/absent they animate. Onboarding step dots settle 24px active / 8px idle. Console: only CGI 404s (no backend). OS-query branch not exercised in the pane (OS reduce = false).
+- W2: the 7 rAF calls only arm transitions or measure layout; own-clock stagger children all mount late (correct). Do not re-flag them.
 - Root cause of Full/Reduced inconsistency: 14 OS-only reads — 8x motion/react useReducedMotion (login-component:507, login-device-name:82, apply-progress-dialog:160, custom-profile-form:129, custom-profile:939, rate-ceiling-disclosure:286, overview/band-rows:139, overview-card:139), 5x raw matchMedia (imei-settings:123, use-watchdog-form:320, step-done:17, at-terminal/derive:167, hooks/use-value-tick:88), hooks/use-chart-motion:136.
 - ~50 animations with no reduced handling: 33/89 spinners, skeleton pulse, tw-animate animate-in on components/ui, globals.css .ca-skeleton-out/.ca-content-in.
 - Modal surfaces dialog/alert-dialog/sheet are compliant; drawer.tsx:40,56-63 is not.
@@ -53,4 +56,4 @@ base: c2ee0e99   branch: worktree-motion-canon-sweep (.claude/worktrees/motion-c
 Frontend-only run; DEVICE none.
 
 ## Handoff — NEXT ACTION
-Gate delegated to conductor (decisions D1-D9). Next: EnterWorktree wt/motion-canon-sweep from development, copy .orchestra/scratch/motion-r*.md into it, dispatch W0 (ui-builder). After W0 lands: W1a/b/c in parallel (disjoint dirs), then W2, V, DOC. Scratch recon files matter until W2 is done.
+Code done: b2b0a0d6 (W0), fb396127 (W1), d995bb44 (W2). Running: qm-verifier on 4285cdef..d995bb44; docs-writer on DESIGN.md/docs/RELEASE_NOTES (uncommitted in worktree). Next: act on verdict (one fix wave max), commit docs, close-out: AskUserQuestion merge/keep/discard, then post-merge gates on development.
