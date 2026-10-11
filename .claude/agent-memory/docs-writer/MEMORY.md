@@ -14,3 +14,4 @@
 - [A jq `//` default masks an ABSENT key as a truthy sentinel, never null](reference_jq_default_masks_absent_key.md) — so "null when missing" in a doc can be structurally impossible; document a producer's COMPLETE key list as a contract
 - [Connectivity probe shipped as Change A only — 3 approved follow-ups NOT landed](project_connectivity_probe_followups.md) — `fail_elapsed_sec` is emitted-and-unread by design, the inert `limited` branch is still present, and the Connection Quality route has zero locale keys
 - [A `systemctl show` readback on a MOUNT unit cannot fail](reference_mount_unit_property_readback_cannot_fail.md) — systemd derives the ordering properties from mountinfo, so it passes on an untouched device; the inverse holds for hand-written .service units
+- [Worktree Bash guard refuses computed args and compound git](reference_worktree_bash_guard_refuses_variables.md) — spell paths literally with `--`, use Edit, run each git call alone
