@@ -28,11 +28,8 @@
 # Targets are ICMP hosts (NOT HTTP URLs) — no scheme is prepended.
 #
 # --- Ownership ---------------------------------------------------------------
-# Connection Quality owns the whole ping_profile.json: label, targets and the
-# cadence keys (interval_sec / fail_secs / recover_secs). Every write is an
-# ATOMIC KEY-MERGE (read, set owned keys, temp-file + mv), so the daemon's
-# cadence overrides pass through a targets-only save untouched. GET reports the
-# effective cadence (override, else the profile table).
+# Connection Quality owns all of ping_profile.json; writes are atomic key-merges.
+# GET reports the effective cadence (override, else the profile table).
 #
 # Endpoint: GET/POST /cgi-bin/quecmanager/settings/ping_profile.sh
 # Install location: /www/cgi-bin/quecmanager/settings/ping_profile.sh

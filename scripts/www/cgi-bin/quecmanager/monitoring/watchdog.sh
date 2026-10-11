@@ -13,10 +13,8 @@
 # State:  /tmp/qmanager_watchcat.json (read-only, written by daemon)
 #
 # --- Ownership -----------------------------------------------------------
-# Connection Quality (settings/ping_profile.sh) owns the probe cadence. The
-# Watchdog owns only fail_threshold: it declares the link down after about
-# fail_threshold x interval_sec of continuous failure. GET reports the live
-# interval_sec as `probe_interval`; a changed POSTed probe_interval writes that one value.
+# Connection Quality owns the cadence; down = fail_threshold x interval_sec of failure.
+# probe_interval mirrors interval_sec; a changed POSTed value writes that one key.
 #
 # Endpoint: GET/POST /cgi-bin/quecmanager/monitoring/watchdog.sh
 # Install location: /www/cgi-bin/quecmanager/monitoring/watchdog.sh

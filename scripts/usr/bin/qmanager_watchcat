@@ -671,6 +671,10 @@ finish_cooldown() {
         qlog_warn "COOLDOWN: ping data still stale after 3 retries, result inconclusive, returning to monitor"
         cooldown_stale_retries=0
         rm -f "$RECOVERY_FLAG"
+        # An unconfirmed Tier 3 swap reverts to the original SIM, as an unrestored one does.
+        if [ "$current_tier" -eq 3 ] && [ "$current_sim_slot" != "$original_sim_slot" ] && [ "$original_sim_slot" != "null" ]; then
+            sim_failover_fallback
+        fi
         state="monitor"; current_tier=0; failure_counter=0
         return
     elif conn_state_is_up; then

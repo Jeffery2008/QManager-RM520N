@@ -373,6 +373,8 @@ main() {
     local last_end next_mono now_mono
 
     if [ -z "$ONESHOT" ]; then
+        # A pid file we do not own is untrusted: never let it block startup.
+        own_or_rm "$PID_FILE"
         if [ -f "$PID_FILE" ]; then
             old_pid=$(cat "$PID_FILE" 2>/dev/null)
             if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
