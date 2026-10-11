@@ -1,6 +1,6 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
+import { Loader2Icon, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,10 @@ export interface ConditionBlockProps {
   actionLabel?: string;
   onAction?: () => void;
   actionIcon?: LucideIcon;
+  /** `tonal` for an action that changes a setting rather than retrying a read. */
+  actionVariant?: "pill" | "tonal";
+  /** Disables the action and swaps its glyph for a spinner while it runs. */
+  actionBusy?: boolean;
 }
 
 export function ConditionBlock({
@@ -27,6 +31,8 @@ export function ConditionBlock({
   actionLabel,
   onAction,
   actionIcon: ActionIcon,
+  actionVariant = "pill",
+  actionBusy = false,
 }: ConditionBlockProps) {
   const skin = CONDITION_TONE[tone];
   return (
@@ -39,11 +45,19 @@ export function ConditionBlock({
       {actionLabel && onAction ? (
         <Button
           type="button"
-          variant="ghost"
+          variant={actionVariant === "tonal" ? "tonal" : "ghost"}
           onClick={onAction}
-          className={cn(CONDITION.ACTION, skin.ACTION)}
+          disabled={actionBusy}
+          className={cn(
+            CONDITION.ACTION,
+            actionVariant === "pill" && skin.ACTION,
+          )}
         >
-          {ActionIcon ? <ActionIcon className="size-4" /> : null}
+          {actionBusy ? (
+            <Loader2Icon className="size-4 motion-safe:animate-spin" />
+          ) : ActionIcon ? (
+            <ActionIcon className="size-4" />
+          ) : null}
           {actionLabel}
         </Button>
       ) : null}

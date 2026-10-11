@@ -150,82 +150,114 @@
   "latencyMonitor": {
     "page": {
       "title": "Monitoraggio della latenza",
-      "description": "Tempo di andata e ritorno (RTT), jitter e perdita di pacchetti, misurati dalle sonde del modem."
+      "description": "Quanto risponde in fretta il collegamento cellulare, al target delle sonde e ai siti che usi."
     },
     "status": {
-      "aria": "Stato della connessione",
       "connected": "Connesso",
       "degraded": "Instabile",
       "disconnected": "Disconnesso",
       "recovery": "In ripristino",
       "unknown": "Nessuna segnalazione"
     },
-    "band": {
-      "average_eyebrow": "RTT medio",
-      "average_min": "Min {{value}}",
-      "average_max": "Max {{value}}",
-      "average_unmeasured": "Nessuna finestra da mediare",
-      "jitter_eyebrow": "Jitter",
-      "jitter_samples_one": "{{count}} campione nella finestra",
-      "jitter_samples_other": "{{count}} campioni nella finestra",
-      "jitter_unmeasured": "Finestra troppo breve",
-      "loss_eyebrow": "Perdita di pacchetti",
-      "loss_counted": "{{lost}} persi su {{total}}",
-      "loss_unmeasured": "Finestra troppo breve",
-      "target_eyebrow": "Target della sonda",
-      "target_unknown": "Nessun target segnalato"
+    "now": {
+      "title": "Adesso",
+      "description": "Le sonde degli ultimi 5 minuti.",
+      "eyebrow": "Tempo di andata e ritorno",
+      "caption": "Media {{average}}, peggiore {{worst}}",
+      "no_reply": "Nessuna risposta",
+      "last_answer": "Ultima risposta alle {{time}}, {{value}}",
+      "bar_aria": "Tempo di andata e ritorno rispetto al limite di {{limit}}",
+      "strip_aria": "{{total}} sonde, {{failed}} senza risposta",
+      "strip_start": "{{minutes}} min fa",
+      "strip_end": "Ora",
+      "jitter": "Jitter",
+      "loss": "Perdita di pacchetti",
+      "target": "Target delle sonde",
+      "family_ipv4": "IPv4",
+      "family_ipv6": "IPv6",
+      "limits": "Limiti",
+      "limits_value": "{{latency}}, perdita {{loss}}",
+      "collecting": "In raccolta, {{done}} di {{total}}"
+    },
+    "unreachable": {
+      "title": "Impossibile raggiungere il modem",
+      "description": "Le letture dal vivo tornano appena risponde."
+    },
+    "history": {
+      "title": "Cronologia",
+      "description": "Tempo medio di andata e ritorno nell'intervallo.",
+      "range_aria": "Intervallo della cronologia",
+      "typical": "Tipico",
+      "worst": "Peggiore",
+      "loss": "Perdita",
+      "average": "Media",
+      "loss_count": "{{lost}} di {{total}}",
+      "legend_average": "Media",
+      "legend_limit": "Limite",
+      "chart_aria": "Tempo medio di andata e ritorno nelle ultime {{range}}",
+      "empty_title": "Ancora nessuna cronologia",
+      "empty_description": "Le letture compaiono qui mentre il modem misura il collegamento.",
+      "error_title": "Impossibile leggere la cronologia",
+      "error_description": "Riprova tra un momento."
     },
     "range": {
-      "aria": "Intervallo di tempo",
-      "realtime": "Tempo reale",
-      "hourly": "Oraria",
-      "twelvehour": "12 h",
-      "daily": "Giornaliera"
+      "h1": "1 h",
+      "h6": "6 h",
+      "h24": "24 h",
+      "d7": "7 g"
     },
-    "chart": {
-      "title": "Tempo di andata e ritorno",
-      "legend_latency": "Tempo di andata e ritorno",
-      "legend_loss": "Perdita di pacchetti",
-      "legend_spread": "Da min a max",
-      "legend_threshold": "Buono, fino a {{value}}",
-      "loss_label": "Perdita di pacchetti",
-      "description_realtime": "Le ultime {{count}} sonde, a {{seconds}} s di distanza.",
-      "description_hourly": "Medie orarie, {{count}} intervalli da {{from}} a {{to}}.",
-      "description_twelvehour": "Medie di 12 ore, {{count}} intervalli da {{from}} a {{to}}.",
-      "description_daily": "Medie giornaliere, {{count}} intervalli da {{from}} a {{to}}.",
-      "description_loading": "Lettura della cronologia delle sonde in corso.",
-      "description_unreadable": "Nessuna finestra da descrivere finché la cronologia non può essere letta.",
-      "description_empty": "Ancora nulla misurato in questo intervallo."
+    "sites": {
+      "title": "Siti",
+      "description": "Quanto risponde in fretta ogni sito sul collegamento cellulare.",
+      "range_aria": "Intervallo dei siti",
+      "manage": "Gestisci",
+      "check_now": "Controlla ora",
+      "not_checked": "Non ancora controllato",
+      "off_title": "Il monitoraggio dei siti è spento",
+      "off_description": "Accendilo per misurare ogni sito ogni {{interval}}.",
+      "turn_on": "Accendi",
+      "empty_title": "Ancora nessun sito",
+      "empty_description": "Aggiungi i siti che usi per vedere quanto risponde in fretta ciascuno.",
+      "error_title": "Impossibile leggere i siti",
+      "error_description": "Riprova tra un momento."
     },
-    "samples": {
-      "title": "Campioni",
-      "description": "Mostrando {{shown}} di {{total}} in questa finestra.",
-      "description_loading": "Lettura della cronologia delle sonde in corso.",
-      "description_unreadable": "Nessun campione da contare finché la cronologia non può essere letta.",
-      "col_time": "Ora",
-      "col_rtt": "RTT",
-      "col_jitter": "Jitter",
-      "col_loss": "Perdita",
-      "timeout": "Scaduto",
-      "sort_label": "Ordina per",
-      "sort_newest": "Più recenti prima",
-      "sort_oldest": "Meno recenti prima",
-      "day_today": "Oggi",
-      "day_yesterday": "Ieri"
+    "manage": {
+      "title": "Gestisci siti",
+      "description": "Fino a {{max}} siti, misurati sul collegamento cellulare.",
+      "monitor": "Monitoraggio",
+      "on": "Acceso",
+      "off": "Spento",
+      "interval": "Controlla ogni",
+      "list_aria": "Siti",
+      "remove": "Rimuovi {{host}}",
+      "add_placeholder": "Aggiungi un sito, ad esempio netflix.com",
+      "add_label": "Indirizzo del sito",
+      "add": "Aggiungi",
+      "error_invalid": "Inserisci il nome di un sito, ad esempio netflix.com.",
+      "error_duplicate": "Quel sito è già nell'elenco.",
+      "error_full": "L'elenco contiene al massimo {{max}} siti.",
+      "count": "{{n}} di {{max}}",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "empty": "Nessun sito nell'elenco."
     },
-    "empty": {
-      "title": "Ancora nessun campione",
-      "description": "La cronologia delle sonde si riempie man mano che il modem misura il collegamento. Non è stato registrato nulla per questo intervallo."
+    "interval": {
+      "seconds": "{{n}} s",
+      "minutes": "{{n}} min",
+      "hours": "{{n}} h"
     },
-    "error": {
-      "title": "Impossibile leggere la cronologia delle sonde",
-      "description": "{{message}}",
-      "retry": "Riprova"
+    "toast": {
+      "check_ok": "Controllo di tutti i siti avviato.",
+      "check_failed": "Impossibile avviare il controllo.",
+      "save_ok": "Siti salvati.",
+      "save_failed": "Impossibile salvare i siti.",
+      "turn_on_ok": "Monitoraggio dei siti acceso.",
+      "turn_on_failed": "Impossibile accendere il monitoraggio dei siti."
     },
-    "notice": {
-      "stale": "Vengono mostrati gli ultimi campioni che siamo riusciti a leggere. {{message}}"
-    },
+    "notice_stale": "Non si aggiorna. Mostra le ultime letture.",
+    "retry": "Riprova",
     "unit_ms": "ms",
+    "unit_s": "s",
     "unit_pct": "%",
     "unmeasured": "—"
   },

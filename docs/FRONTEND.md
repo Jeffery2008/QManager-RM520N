@@ -123,7 +123,7 @@ constants/                      # Static configuration data
 | `/local-network/ip-passthrough` | IPPassthrough | IP passthrough mode |
 | `/local-network/custom-dns` | CustomDNS | DNS override |
 | `/monitoring` | NetworkEvents | Event log hub |
-| `/monitoring/latency` | LatencyMonitoring | Real-time + history charts |
+| `/monitoring/latency` | LatencyMonitoring | Right now (live 60-probe strip), History (1 h / 6 h / 24 h average line) and Sites (per-site connect time) — see `docs/reference/latency-monitor.md` |
 | `/monitoring/alerts` | Alerts | Centralized SMS + email + Discord downtime/reboot alerts |
 | `/monitoring/email-alerts` | Redirect | → `/monitoring/alerts` (legacy bookmark) |
 | `/monitoring/sms-alerts` | Redirect | → `/monitoring/alerts` (legacy bookmark) |
@@ -186,7 +186,7 @@ Fetches ping history for latency charts.
 
 - **Endpoint**: `GET /cgi-bin/quecmanager/at_cmd/fetch_ping_history.sh`
 - **Returns**: `PingHistoryEntry[]`
-- **Tabs**: Real Time (last 10 samples), Hourly, 12h, Daily
+- **Consumers**: the dashboard Connection Quality card and the Latency Monitor's History card (1 h / 6 h / 24 h)
 
 #### `useDataUsed(options?)`
 

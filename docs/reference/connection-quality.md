@@ -37,7 +37,7 @@
 | Poller status output | `/tmp/qmanager_status.json` → `connectivity` block (typed as `ConnectivityStatus` in `types/modem-status.ts`) |
 | Dashboard "Internet" chip | `buildInternetChip()` in `components/dashboard/network-status.tsx` — reads `connectivity.status` and nothing else |
 | Dashboard card | `components/dashboard/connection-quality.tsx` — grades its bars and history strips on `connectivity.thresholds`; see [dashboard-chart-cards.md](dashboard-chart-cards.md#connection-quality) |
-| Latency displays | `components/dashboard/connection-quality.tsx` and `components/monitoring/latency-monitoring/latency-monitoring-card.tsx` — a `null` RTT is an **absent** reading, never 0 ms |
+| Latency displays | `components/dashboard/connection-quality.tsx` and the Latency Monitor page's `now-card.tsx` / `history-card.tsx` ([latency-monitor.md](latency-monitor.md)) — a `null` RTT is an **absent** reading, never 0 ms |
 
 **The three-daemon split, at a glance:**
 
@@ -331,7 +331,7 @@ From those, in a single pass, it derives the `connectivity` block written into `
 >
 > `min` / `avg` / `max` are **point** statistics — honest at a single sample — and are deliberately *not* nulled by this floor. And `append_ping_history()` archives the null into the persistent 24-hour record, so the archive now carries "unknown" rather than a fabricated zero.
 
-> ℹ️ NOTE — `history_size` is a **capacity, not a measurement.** It is a fixed 60 (the ring's length), never the number of samples actually held, and it now has **zero frontend consumers** — it is contract-only. The realtime chart in `components/monitoring/latency-monitoring/latency-monitoring-card.tsx` derives its timestamp math from the history array's own **length** instead. Never time-stamp a sample from `history_size`.
+> ℹ️ NOTE — `history_size` is a **capacity, not a measurement.** It is a fixed 60 (the ring's length), never the number of samples actually held, and it now has **zero frontend consumers** — it is contract-only. The Latency Monitor's Right now strip (`components/monitoring/latency-monitoring/now-card.tsx`) sizes itself from the history array's own **length** and a fixed 60 slots instead. Never time-stamp a sample from `history_size`.
 
 **Fields the poller no longer emits** (removed 2026-09-01, `000255e`): `state`, `limited_reason`, `down_reason`, `streak_limited`, `fail_secs`, `recover_secs`, `intercept_secs`. Every one of them was read from a key the shell daemon [never writes](#the-producer-key-contract), so each sat at its `jq` default forever; a repo-wide census found **zero** consumers of the six besides `state`. The matching members are gone from `ConnectivityStatus` too, so a component reading one now fails the build.
 
@@ -400,9 +400,7 @@ What to take from it when editing this pipeline:
 Both latency displays treat a `null` RTT sample as an **absent** reading rather than a fast one. Previously a total blackout drew a live-updating flat line pinned to the floor of the plot, which reads as a perfectly healthy 0 ms link:
 
 - `components/dashboard/connection-quality.tsx` passes a `null` `latency_ms` or `dns_lookup_ms` to `MetricBar` untouched, so the row shows an empty track and `—`. In the history strip a `null` `lat` counts as a lost probe in that cell (one 28th of 30 minutes, about 64 s): amber for a lone drop, red once two or more failed rows reach the loss cut as a share of the cell or the worst rolling `loss` among the cell's rows reaches it; it never contributes a latency or a jitter reading.
-- `components/monitoring/latency-monitoring/latency-monitoring-card.tsx` does the same for realtime samples and for aggregate buckets in which every ping was lost. Its rolling latency average **excludes** gaps rather than averaging in zeros — a window half of which timed out averages the readings it has, and the packet-loss figure beside it reports the other half.
-
-> ℹ️ NOTE — `ok` on a ping row is still wired: `PingEntriesCard` reads it to print "Timeout" in the latency cell, which is why an aggregate row can carry a printable `0` there without the table ever showing "null ms". Do not delete it as dead.
+- The Latency Monitor page does the same ([latency-monitor.md](latency-monitor.md)). In `now-card.tsx` a `null` `latency_ms` reads "No reply" and a `null` probe in the live strip is a full-height red bar. In `history-card.tsx` a bucket in which every ping was lost is a gap in the line, and a bucket's average **excludes** lost probes rather than averaging in zeros — the Loss figure reports them instead.
 
 > ℹ️ NOTE — the dashboard's `limited` internet badge was removed (`components/dashboard/network-status.tsx`), because the producer can no longer emit that state.
 

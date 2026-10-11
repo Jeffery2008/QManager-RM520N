@@ -150,82 +150,114 @@
   "latencyMonitor": {
     "page": {
       "title": "延迟监控",
-      "description": "往返时延（RTT）、抖动与丢包率，由调制解调器自身的探测测得。"
+      "description": "蜂窝链路响应有多快：到探测目标，以及到你常用的网站。"
     },
     "status": {
-      "aria": "连接状态",
       "connected": "已连接",
       "degraded": "不稳定",
       "disconnected": "已断开",
       "recovery": "恢复中",
       "unknown": "未上报"
     },
-    "band": {
-      "average_eyebrow": "平均 RTT",
-      "average_min": "最小 {{value}}",
-      "average_max": "最大 {{value}}",
-      "average_unmeasured": "没有可用于平均的窗口",
-      "jitter_eyebrow": "抖动",
-      "jitter_samples_one": "窗口内 {{count}} 个样本",
-      "jitter_samples_other": "窗口内 {{count}} 个样本",
-      "jitter_unmeasured": "窗口太短",
-      "loss_eyebrow": "丢包率",
-      "loss_counted": "丢失 {{lost}}（共 {{total}}）",
-      "loss_unmeasured": "窗口太短",
-      "target_eyebrow": "探测目标",
-      "target_unknown": "未报告目标"
+    "now": {
+      "title": "当前",
+      "description": "最近 5 分钟的探测。",
+      "eyebrow": "往返时延",
+      "caption": "平均 {{average}}，最差 {{worst}}",
+      "no_reply": "无响应",
+      "last_answer": "最后一次响应于 {{time}}，{{value}}",
+      "bar_aria": "往返时延与 {{limit}} 上限对比",
+      "strip_aria": "{{total}} 次探测，{{failed}} 次无响应",
+      "strip_start": "{{minutes}} 分钟前",
+      "strip_end": "现在",
+      "jitter": "抖动",
+      "loss": "丢包率",
+      "target": "探测目标",
+      "family_ipv4": "IPv4",
+      "family_ipv6": "IPv6",
+      "limits": "阈值",
+      "limits_value": "{{latency}}，丢包 {{loss}}",
+      "collecting": "采集中，{{done}} / {{total}}"
+    },
+    "unreachable": {
+      "title": "无法连接调制解调器",
+      "description": "调制解调器一旦响应，实时读数就会恢复。"
+    },
+    "history": {
+      "title": "历史",
+      "description": "所选时段内的平均往返时延。",
+      "range_aria": "历史时段",
+      "typical": "典型",
+      "worst": "最差",
+      "loss": "丢包",
+      "average": "平均",
+      "loss_count": "{{lost}} / {{total}}",
+      "legend_average": "平均",
+      "legend_limit": "上限",
+      "chart_aria": "最近 {{range}} 的平均往返时延",
+      "empty_title": "暂无历史",
+      "empty_description": "调制解调器测量链路后，读数会显示在这里。",
+      "error_title": "无法读取历史",
+      "error_description": "请稍后再试。"
     },
     "range": {
-      "aria": "时间范围",
-      "realtime": "实时",
-      "hourly": "每小时",
-      "twelvehour": "12 小时",
-      "daily": "每日"
+      "h1": "1 小时",
+      "h6": "6 小时",
+      "h24": "24 小时",
+      "d7": "7 天"
     },
-    "chart": {
-      "title": "往返时延",
-      "legend_latency": "往返时延",
-      "legend_loss": "丢包率",
-      "legend_spread": "最小至最大",
-      "legend_threshold": "良好，至多 {{value}}",
-      "loss_label": "丢包率",
-      "description_realtime": "最近 {{count}} 次探测，间隔 {{seconds}} 秒。",
-      "description_hourly": "每小时平均值，{{count}} 个区间，自 {{from}} 至 {{to}}。",
-      "description_twelvehour": "12 小时平均值，{{count}} 个区间，自 {{from}} 至 {{to}}。",
-      "description_daily": "每日平均值，{{count}} 个区间，自 {{from}} 至 {{to}}。",
-      "description_loading": "正在读取探测历史记录。",
-      "description_unreadable": "历史记录无法读取，暂无窗口可供描述。",
-      "description_empty": "此范围内尚无测量数据。"
+    "sites": {
+      "title": "网站",
+      "description": "各网站通过蜂窝链路响应有多快。",
+      "range_aria": "网站时段",
+      "manage": "管理",
+      "check_now": "立即检测",
+      "not_checked": "尚未检测",
+      "off_title": "网站监控已关闭",
+      "off_description": "开启后每 {{interval}} 测量一次各网站。",
+      "turn_on": "开启",
+      "empty_title": "暂无网站",
+      "empty_description": "添加你常用的网站，查看每个网站的响应速度。",
+      "error_title": "无法读取网站",
+      "error_description": "请稍后再试。"
     },
-    "samples": {
-      "title": "样本",
-      "description": "此窗口内显示 {{shown}} / {{total}}。",
-      "description_loading": "正在读取探测历史记录。",
-      "description_unreadable": "历史记录无法读取，暂无样本可供统计。",
-      "col_time": "时间",
-      "col_rtt": "RTT",
-      "col_jitter": "抖动",
-      "col_loss": "丢包",
-      "timeout": "超时",
-      "sort_label": "排序方式",
-      "sort_newest": "最新优先",
-      "sort_oldest": "最早优先",
-      "day_today": "今天",
-      "day_yesterday": "昨天"
+    "manage": {
+      "title": "管理网站",
+      "description": "最多 {{max}} 个网站，通过蜂窝链路测量。",
+      "monitor": "监控",
+      "on": "开",
+      "off": "关",
+      "interval": "检测间隔",
+      "list_aria": "网站",
+      "remove": "移除 {{host}}",
+      "add_placeholder": "添加网站，例如 netflix.com",
+      "add_label": "网站地址",
+      "add": "添加",
+      "error_invalid": "请输入网站名称，例如 netflix.com。",
+      "error_duplicate": "该网站已在列表中。",
+      "error_full": "列表最多容纳 {{max}} 个网站。",
+      "count": "{{n}} / {{max}}",
+      "cancel": "取消",
+      "save": "保存",
+      "empty": "列表中没有网站。"
     },
-    "empty": {
-      "title": "暂无样本",
-      "description": "调制解调器测量链路后，探测历史记录会逐步填充。此范围内尚无记录。"
+    "interval": {
+      "seconds": "{{n}} 秒",
+      "minutes": "{{n}} 分钟",
+      "hours": "{{n}} 小时"
     },
-    "error": {
-      "title": "无法读取探测历史记录",
-      "description": "{{message}}",
-      "retry": "重试"
+    "toast": {
+      "check_ok": "正在检测所有网站。",
+      "check_failed": "无法开始检测。",
+      "save_ok": "网站已保存。",
+      "save_failed": "无法保存网站。",
+      "turn_on_ok": "网站监控已开启。",
+      "turn_on_failed": "无法开启网站监控。"
     },
-    "notice": {
-      "stale": "正在显示我们成功读取到的最后样本。{{message}}"
-    },
+    "notice_stale": "未在更新，显示的是最后一次读数。",
+    "retry": "重试",
     "unit_ms": "ms",
+    "unit_s": "s",
     "unit_pct": "%",
     "unmeasured": "—"
   },

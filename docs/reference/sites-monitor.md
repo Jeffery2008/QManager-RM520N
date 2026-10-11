@@ -3,7 +3,7 @@
 > **Applies to:** RM520N-GL (SDX65) · verified 2026-10-11 (serial `61368cd2`)
 > **RG501Q-EU (SDX55):** unverified — see [`platform-matrix.md`](./platform-matrix.md)
 
-The Sites monitor measures how long it takes to open a TCP connection to each of a list of websites over the cellular link, every few minutes, and keeps a history of up to 90 days — the per-site latency view UniFi and WiFiman show. It exists because the one-host ICMP verdict in [Connection Quality](connection-quality.md) answers "is there internet?", not "is YouTube slow right now?". It is a separate root daemon, `qmanager_sites`, that never touches the modem serial port and does **not** feed the connectivity verdict, events or alerts. As of 2026-10-11 the backend and CGI are shipped; there is no page yet.
+The Sites monitor measures how long it takes to open a TCP connection to each of a list of websites over the cellular link, every few minutes, and keeps a history of up to 90 days — the per-site latency view UniFi and WiFiman show. It exists because the one-host ICMP verdict in [Connection Quality](connection-quality.md) answers "is there internet?", not "is YouTube slow right now?". It is a separate root daemon, `qmanager_sites`, that never touches the modem serial port and does **not** feed the connectivity verdict, events or alerts. Its page is the **Sites** card on `/monitoring/latency`; the frontend's invariants (polling cadence, the range average, brand marks) are in [latency-monitor.md](latency-monitor.md).
 
 ## Quick Reference
 
@@ -164,6 +164,7 @@ Also accepted as `?action=check_now`. Raises the flag → `{ "success": true }`.
 
 ## Related docs
 
+- [latency-monitor.md](latency-monitor.md) — the Sites card, `hooks/use-sites.ts` and the Manage dialog
 - [connection-quality.md](connection-quality.md) — the reachability verdict and DNS lookup time this daemon does not replace
 - [tmp-file-ownership.md](tmp-file-ownership.md) — `fs.protected_regular` and cross-UID `/tmp` files
 - [scheduled-timers.md](scheduled-timers.md) — the 1970 boot window behind the wall-clock gate
