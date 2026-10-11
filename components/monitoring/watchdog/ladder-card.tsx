@@ -269,16 +269,27 @@ export function LadderCardSkeleton() {
   return (
     <Card className={CARD_SHELL} aria-hidden>
       <CardHeader className={CARD_PAD}>
-        <Skeleton className={cn(SKELETON.LINE, "h-5 w-40")} />
-        <Skeleton className={cn(SKELETON.LINE, HEAD_DESC_SPAN, "h-4 w-56")} />
+        <Skeleton className={cn(SKELETON.CARD_TITLE, "w-40")} />
+        <Skeleton className={cn(SKELETON.CARD_DESC, HEAD_DESC_SPAN, "w-56")} />
         <CardAction className={HEAD_ACTION}>
           <Skeleton className={cn(SKELETON.PILL, "w-36")} />
         </CardAction>
       </CardHeader>
       <CardContent className={CARD_PAD}>
         <div className={RUNG.STACK}>
+          {/* The loaded rung's grid, so the phone's second control row is mirrored too. */}
           {TIERS.map((tier) => (
-            <Skeleton key={tier} className={SKELETON.RUNG} />
+            <div key={tier} className={RUNG.ROOT}>
+              <Skeleton className={RUNG.DISC} />
+              <div className={RUNG.TEXT}>
+                <Skeleton className={SKELETON.RUNG_NAME} />
+                <Skeleton className={SKELETON.RUNG_COST} />
+              </div>
+              <div className={tier === 4 ? RUNG.CONTROLS_WIDE : RUNG.CONTROLS}>
+                {tier === 4 ? <Skeleton className={cn(SKELETON.FIELD, "w-20")} /> : null}
+                <Skeleton className={cn(SKELETON.PILL, tier === 3 ? "w-44" : "w-28")} />
+              </div>
+            </div>
           ))}
         </div>
       </CardContent>

@@ -340,7 +340,14 @@ export const SKELETON = {
   FIG_EYEBROW: `${STATUS_LINE.EYEBROW} rounded-inline`,
   FIG_VALUE: `${STATUS_LINE.VALUE} rounded-inline`,
   STRIP: `${STRIP_HEIGHT} rounded-field`,
-  RUNG: `${RUNG_MIN_HEIGHT} rounded-tile`,
+  /** Line boxes (font size × line height) of the text each one stands in for. */
+  CARD_TITLE: "h-[1.40625rem] rounded-inline",
+  CARD_DESC: "h-5 rounded-inline",
+  EYEBROW: "h-[1.03125rem] rounded-inline",
+  TIMELINE_ROW: "h-[1.21875rem] rounded-inline",
+  FOOT_STATUS: "h-5 rounded-inline",
+  RUNG_NAME: "h-5 w-28 rounded-inline",
+  RUNG_COST: "h-[1.1875rem] w-40 rounded-inline",
   ROW: `${ROW_HEIGHT} rounded-tile`,
   FIELD: `${FIELD_HEIGHT} rounded-field`,
   /** A `size="action"` Button or a SegmentedField track. */

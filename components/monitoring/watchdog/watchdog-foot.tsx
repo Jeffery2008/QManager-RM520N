@@ -172,7 +172,7 @@ export function WatchdogFootSkeleton() {
       className={CARD_PAD}
       liveStatus={false}
       aria-hidden="true"
-      status={<Skeleton className={cn(SKELETON.LINE, "h-3.5 w-32")} />}
+      status={<Skeleton className={cn(SKELETON.FOOT_STATUS, "w-32")} />}
       actions={
         <>
           <Skeleton className={cn(SKELETON.PILL, "w-20")} />

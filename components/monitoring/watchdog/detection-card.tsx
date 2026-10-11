@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import {
+  TIERS,
   deriveTimeline,
   timelineDuration,
   type TimelineNote,
@@ -228,8 +229,8 @@ export function DetectionCardSkeleton() {
   return (
     <Card className={CARD_SHELL} aria-hidden>
       <CardHeader className={CARD_PAD}>
-        <Skeleton className={cn(SKELETON.LINE, "h-5 w-32")} />
-        <Skeleton className={cn(SKELETON.LINE, "h-4 w-56")} />
+        <Skeleton className={cn(SKELETON.CARD_TITLE, "w-32")} />
+        <Skeleton className={cn(SKELETON.CARD_DESC, "w-56")} />
       </CardHeader>
       <CardContent className={cn(CARD_PAD, DETECT.BODY)}>
         <div className={DETECT.ROWS}>
@@ -241,10 +242,10 @@ export function DetectionCardSkeleton() {
           ))}
         </div>
         <div className={TIMELINE.ROOT}>
-          <Skeleton className={cn(SKELETON.LINE, "h-3 w-28")} />
+          <Skeleton className={cn(SKELETON.EYEBROW, "w-28")} />
           <div className={TIMELINE.ROWS}>
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className={cn(SKELETON.LINE, "h-4 w-full")} />
+            {TIERS.map((tier) => (
+              <Skeleton key={tier} className={cn(SKELETON.TIMELINE_ROW, "w-full")} />
             ))}
           </div>
         </div>
