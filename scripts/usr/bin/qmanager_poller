@@ -124,7 +124,7 @@ SIGNAL_HISTORY_MAX=180 # 30 min at 10s intervals
 
 # Ping history (NDJSON file for latency chart data)
 PING_HISTORY_FILE="/tmp/qmanager_ping_history.json"
-PING_HISTORY_MAX=8640  # 24h at 10s intervals
+PING_HISTORY_MAX=8640  # ~38h at the measured ~16s row cadence (not 10s)
 
 # --- Persistent Data Used counter (Tier 1) -----------------------------------
 DATA_USED_FILE="/usrdata/qmanager/data_used.json"
@@ -1384,7 +1384,7 @@ append_signal_history() {
 }
 
 # Append current ping/connectivity stats as one NDJSON line to the ping history file.
-# Capped at PING_HISTORY_MAX lines (~24h at 10s intervals).
+# Capped at PING_HISTORY_MAX lines (rows land about every 16s on device, not 10s).
 # Uses conn_ variables already populated by read_ping_data().
 append_ping_history() {
     local ts
@@ -1566,6 +1566,38 @@ PING_HISTORY_RAW="/tmp/qmanager_ping_history"   # flat-file ring buffer from pin
 PING_DAEMON_STALE_EVENT_THRESHOLD=60  # seconds before emitting ping_daemon_stale
 
 # Staleness and the ping.json read live in conn_state.sh (shared with watchcat).
+
+# DNS lookup time from qmanager_ping's detached job. A number only when the last
+# lookup succeeded and the sample is fresh (mono age 0..DNS_MAX_AGE_SEC).
+DNS_CACHE="${DNS_CACHE:-/tmp/qmanager_dns.json}"
+DNS_MAX_AGE_SEC=180
+dns_lookup_ms="null"
+dns_resolver=""
+
+read_dns_data() {
+    dns_lookup_ms="null"
+    dns_resolver=""
+    [ -f "$DNS_CACHE" ] || return 0
+
+    local _row _ok _ms _mono _res _up _idle _age
+    _row=$(jq -r '[(.ok|tostring), (.ms|tostring), (.mono|tostring), (.resolver|tostring)] | @tsv' \
+        "$DNS_CACHE" 2>/dev/null </dev/null)
+    [ -n "$_row" ] || return 0
+    IFS=$'\t' read -r _ok _ms _mono _res <<< "$_row"
+
+    case "$_mono" in ''|*[!0-9]*) return 0 ;; esac
+    { read -r _up _idle < /proc/uptime; } 2>/dev/null
+    _up="${_up%%.*}"
+    case "$_up" in ''|*[!0-9]*) return 0 ;; esac
+    _age=$((_up - _mono))
+    { [ "$_age" -ge 0 ] && [ "$_age" -le "$DNS_MAX_AGE_SEC" ]; } || return 0
+
+    case "$_res" in ''|null) ;; *) dns_resolver="$_res" ;; esac
+    if [ "$_ok" = "true" ]; then
+        case "$_ms" in ''|*[!0-9]*) ;; *) dns_lookup_ms="$_ms" ;; esac
+    fi
+    return 0
+}
 
 read_ping_data() {
     # Pick up a Connection Quality save (or the first load) before the verdict below.
@@ -2109,6 +2141,8 @@ write_cache() {
         --argjson thr_loss "${CQ_LOSS_PCT:-30}" \
         --arg conn_profile "$conn_profile" \
         --arg conn_last_family "$conn_last_family" \
+        --argjson dns_ms "${dns_lookup_ms:-null}" \
+        --arg dns_res "$dns_resolver" \
         --argjson wc_enabled "${wc_enabled:-false}" \
         --arg wc_state "${wc_state:-disabled}" \
         --argjson wc_tier "${wc_current_tier:-0}" \
@@ -2233,6 +2267,8 @@ write_cache() {
                 during_recovery: $during_rec,
                 thresholds: {latency_ms: $thr_lat, loss_pct: $thr_loss},
                 profile: $conn_profile,
+                dns_lookup_ms: $dns_ms,
+                dns_resolver: (if $dns_res == "" then null else $dns_res end),
                 last_family: (if $conn_last_family == "null" then null else $conn_last_family end)
             },
             watchcat: {
@@ -2322,6 +2358,7 @@ poll_cycle() {
     update_proc_metrics
     update_system_health
     read_ping_data
+    read_dns_data
     detect_data_connection_events
     check_alerts
 

@@ -598,6 +598,13 @@ export interface ConnectivityStatus {
   /** Daemon's runtime profile string. A named preset, "custom" (env-var override),
       or "unknown" (daemon dead/stale). Typed as string to admit all three. */
   profile: string;
+  /** Carrier-resolver lookup time in ms (10 ms steps). null when the last lookup
+      failed or the sample is stale — never a stale number. Absent on an older poller. */
+  dns_lookup_ms?: number | null;
+  /** Resolver the lookup was timed against. null when unknown. Absent on an older poller. */
+  dns_resolver?: string | null;
+  /** Alert thresholds the poller applies (Connection Quality settings). Absent on an older poller. */
+  thresholds?: { latency_ms: number; loss_pct: number };
 }
 
 // --- Watchcat State (from /tmp/qmanager_watchcat.json via poller) ------------

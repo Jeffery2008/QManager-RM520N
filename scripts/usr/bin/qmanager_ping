@@ -74,6 +74,8 @@
 # reads them and that contract is unchanged.
 #
 # Output: /tmp/qmanager_ping.json (atomic writes, slim — no stats/history)
+# Also: /tmp/qmanager_dns.json — carrier-resolver lookup time, sampled by a detached
+# background job (never inline in the probe loop; see the DNS section below).
 # History: /tmp/qmanager_ping_history (flat-file ring buffer, read by poller)
 #
 # The history file is TRUNCATED whenever the winning target changes, so a
@@ -477,6 +479,113 @@ write_cache() {
 }
 
 # =============================================================================
+# DNS LOOKUP LATENCY (detached job — the probe loop's 12s budget must not grow)
+# =============================================================================
+DNS_NAME="one.one.one.one"
+DNS_FILE="${DNS_FILE:-/tmp/qmanager_dns.json}"
+RESOLV_CONF="${RESOLV_CONF:-/etc/resolv.conf}"
+DNS_INTERVAL=60          # seconds between scheduled lookups
+DNS_MIN_GAP=10           # floor between lookups when an outage edge forces one
+DNS_LOOKUP_TIMEOUT=5     # hard bound on the nslookup itself
+DNS_JOB_MAX=15           # a job older than this is presumed gone (pid-reuse guard)
+_dns_pid=""
+_dns_started=""          # whole uptime seconds of the last spawn, "" = never
+_dns_force=0             # 1 = lookup on the next free slot, interval or not
+_dns_prev_reach=""
+_dm=0
+
+# Sets _CS to /proc/uptime in centiseconds, no fork (no sub-second clock otherwise).
+_uptime_cs() {
+    _CS=0
+    { read -r _u_up _u_idle < /proc/uptime; } 2>/dev/null
+    case "${_u_up%%.*}" in ''|*[!0-9]*) return 1 ;; esac
+    _u_frac="${_u_up#*.}"
+    _u_frac="${_u_frac#0}"
+    case "$_u_frac" in *[!0-9]*) _u_frac=0 ;; esac
+    _CS=$(( ${_u_up%%.*} * 100 + ${_u_frac:-0} ))
+}
+
+# The detached job: first nameserver in resolv.conf, re-read every run (it changes on reattach).
+dns_job() {
+    trap - EXIT INT TERM
+    _res=$(awk '$1 == "nameserver" { print $2; exit }' "$RESOLV_CONF" 2>/dev/null)
+    case "$_res" in *[!0-9A-Za-z:.%_-]*) _res="" ;; esac
+    _ms="null"
+    _ok="false"
+    if [ -n "$_res" ]; then
+        _out=$(mktemp /tmp/qmanager_dns_out.XXXXXX 2>/dev/null)
+        if [ -n "$_out" ]; then
+            _uptime_cs; _t0="$_CS"
+            qm_timeout "$DNS_LOOKUP_TIMEOUT" nslookup "$DNS_NAME" "$_res" >"$_out" 2>&1 </dev/null
+            _rc=$?
+            _uptime_cs; _t1="$_CS"
+            # Success = exit 0 and an Address line after a Name line (the server header has one too).
+            if [ "$_rc" -eq 0 ] && awk '/^Name:/ { n = 1; next } n && /^Address/ { f = 1 } END { exit !f }' "$_out"; then
+                _ok="true"
+                _ms=$(( (_t1 - _t0) * 10 ))
+                [ "$_ms" -lt 10 ] && _ms=10
+            fi
+            rm -f "$_out"
+        fi
+    fi
+
+    _uptime_cs
+    _tmp=$(mktemp "${DNS_FILE}.XXXXXX" 2>/dev/null) || exit 0
+    if jq -n --argjson ms "$_ms" --argjson ok "$_ok" --arg res "$_res" --arg name "$DNS_NAME" \
+            --argjson mono "$((_CS / 100))" --argjson ts "$(date +%s)" \
+            '{ms: $ms, ok: $ok, resolver: $res, name: $name, mono: $mono, ts: $ts}' > "$_tmp" 2>/dev/null \
+        && chmod 644 "$_tmp" && mv "$_tmp" "$DNS_FILE"; then
+        :
+    else
+        rm -f "$_tmp"
+    fi
+    exit 0
+}
+
+# True while the last spawned job runs. A reaped or zombie pid is free; so is one older than DNS_JOB_MAX.
+_dns_busy() {
+    [ -n "$_dns_pid" ] || return 1
+    _dl=""
+    { read -r _dl < "/proc/$_dns_pid/stat"; } 2>/dev/null
+    case "$_dl" in
+        ''|*") Z "*) _dns_pid=""; return 1 ;;
+    esac
+    if [ $((_dm - _dns_started)) -ge "$DNS_JOB_MAX" ]; then
+        _dns_pid=""
+        return 1
+    fi
+    return 0
+}
+
+# Once per cycle, after the verdict is written: spawns at most one detached job.
+dns_probe_maybe() {
+    _uptime_cs
+    _dm=$((_CS / 100))
+    # A true -> false edge forces a fresh lookup so an outage never shows an old good number.
+    if [ "$_dns_prev_reach" = "true" ] && [ "$reachable" = "false" ]; then
+        _dns_force=1
+    fi
+    _dns_prev_reach="$reachable"
+
+    _due=0
+    if [ -z "$_dns_started" ]; then
+        _due=1
+    elif [ "$_dns_force" -eq 1 ]; then
+        [ $((_dm - _dns_started)) -ge "$DNS_MIN_GAP" ] && _due=1
+    elif [ $((_dm - _dns_started)) -ge "$DNS_INTERVAL" ]; then
+        _due=1
+    fi
+    [ "$_due" -eq 1 ] || return 0
+    _dns_busy && return 0
+
+    _dns_started="$_dm"
+    _dns_force=0
+    dns_job </dev/null >/dev/null 2>&1 &
+    _dns_pid=$!
+    return 0
+}
+
+# =============================================================================
 # MAIN LOOP
 # =============================================================================
 
@@ -517,7 +626,7 @@ main() {
     qlog_info "========================================"
 
     # Clean up stale files from previous run
-    rm -f "$CACHE_TMP"
+    rm -f "$CACHE_TMP" /tmp/qmanager_dns_out.* "${DNS_FILE}".??????
     : > "$HISTORY_FILE"  # Start with empty history
     history_count=0
 
@@ -620,6 +729,8 @@ main() {
 
         # Write slim JSON cache
         write_cache "$rtt"
+
+        dns_probe_maybe
 
         # FIXED-RATE loop: sleep whatever is left of the interval after the
         # chain, floored at 1. A flat `sleep $PING_INTERVAL` here would make
