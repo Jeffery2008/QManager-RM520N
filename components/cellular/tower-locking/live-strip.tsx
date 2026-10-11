@@ -275,7 +275,7 @@ export function TowerLiveStrip({
       <div className={STRIP_PANEL}>
         <div className={STRIP_HEAD}>
           <span className="relative inline-flex size-2" aria-hidden="true">
-            <span className="animate-live-ping bg-success absolute inset-0 rounded-pill motion-reduce:animate-none" />
+            <span className="animate-live-ping bg-success absolute inset-0 rounded-pill" />
             <span className="bg-success relative size-2 rounded-pill" />
           </span>
           <span className={HERO_EYEBROW}>

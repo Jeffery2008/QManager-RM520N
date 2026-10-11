@@ -144,7 +144,7 @@ export function PackRow({
                     language: pack.englishName,
                   })}
                 >
-                                    <motion.div
+                  <motion.div
                     className={METER.FILL}
                     initial={{ scaleX: 0 }}
                     animate={{ scaleX: progress / 100 }}

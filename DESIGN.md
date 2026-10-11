@@ -669,6 +669,8 @@ The sidebar account dropdown carries an **Animations** row cycling System / Full
 
 **The absence of the attribute is load-bearing.** "System" *removes* it rather than writing `data-motion="system"`, and that absence is what lets the bare media query decide. The key, the type and the pre-paint boot script live together in `lib/motion-preference.ts`; `app/layout.tsx` injects the boot script render-blocking, because an attribute landing in a mount effect arrives *after* first paint — a user on Reduced would see one frame of every entrance animation, precisely the frame they asked not to see.
 
+**A motion element reads `reducedMotion` once, when it mounts.** So `MotionProvider` derives it from the pre-paint attribute, not the context, and the first render is already right. A mid-session switch reaches CSS, charts and `useMotionReduced()` at once, and motion components as they next mount; remounting the app to force it would discard unsaved drafts.
+
 **The load-bearing part is the CSS half.** Tailwind's stock `motion-reduce:` compiles to a bare media query with no selector hook, so an attribute on `<html>` *physically cannot* override it. Both variants are therefore redefined as `@custom-variant`s at the top of `globals.css`, each emitting `@slot` twice — once media-gated with the opposing attribute excluded, once attribute-gated.
 
 > ⚠️ **`motion-safe` needs the same treatment, and this is the half that is easy to skip.** Without it, a user on OS-reduce who explicitly picks **Full** gets every `motion-safe:` spinner frozen — the exact inverse of what they asked for. Redefine both or neither.

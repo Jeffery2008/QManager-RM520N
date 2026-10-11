@@ -234,7 +234,7 @@ function TrackBar({
           // express a state change. That makes `linear` correct where the
           // system's curves would read as easing the DATA, and pins the duration
           // to the sample cadence rather than to the duration scale.
-          // `motion-reduce` drops it entirely — a bar that jumps is honest; a
+          // `motion-safe:` gates it — a bar that jumps is honest; a
           // bar that slides is a preference.
           //
           // The duration is an inline style rather than a `duration-*` class
