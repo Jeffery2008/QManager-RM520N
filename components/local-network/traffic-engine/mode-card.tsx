@@ -302,7 +302,7 @@ export function ModeCard({
                     only while it is the pending one. */}
                 {isPending ? (
                   <span className={CHOICE_ROW.RIGHT}>
-                    <Loader2Icon className="size-4 animate-spin" aria-hidden="true" />
+                    <Loader2Icon className="size-4 motion-safe:animate-spin" aria-hidden="true" />
                     {/* The spinner is `aria-hidden`, so without this line the
                         two audiences get different interfaces: a sighted user
                         sees WHICH row is being applied, and a screen-reader

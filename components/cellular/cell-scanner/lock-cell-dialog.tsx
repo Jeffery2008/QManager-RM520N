@@ -202,7 +202,7 @@ export function LockCellDialog({
                 <MaterialSymbol
                   name="progress_activity"
                   size={16}
-                  className="animate-spin motion-reduce:animate-none"
+                  className="motion-safe:animate-spin"
                 />
                 {t("cell_scanner.lock.locking")}
               </>

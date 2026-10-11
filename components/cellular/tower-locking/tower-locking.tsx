@@ -369,7 +369,7 @@ const TowerLockingComponent = () => {
                     size={18}
                     className={
                       tower.isRefreshing
-                        ? "animate-spin motion-reduce:animate-none"
+                        ? "motion-safe:animate-spin"
                         : undefined
                     }
                   />
@@ -456,7 +456,7 @@ const TowerLockingComponent = () => {
                         size={18}
                         className={
                           tower.isRefreshing
-                            ? "animate-spin motion-reduce:animate-none"
+                            ? "motion-safe:animate-spin"
                             : undefined
                         }
                       />

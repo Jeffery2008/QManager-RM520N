@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import { motion, type Variants } from "motion/react";
+import { useMotionReduced } from "@/components/motion-preference";
 import { useTranslation } from "react-i18next";
 
 import { useLogin } from "@/hooks/use-auth";
@@ -450,7 +451,7 @@ export default function LoginComponent() {
               <span className="inline-flex items-center gap-2.5">
                 <span
                   aria-hidden="true"
-                  className="block size-4 animate-spin rounded-full border-[2.5px] border-current border-t-transparent [animation-duration:900ms]"
+                  className="block size-4 motion-safe:animate-spin rounded-full border-[2.5px] border-current border-t-transparent [animation-duration:var(--duration-emphasized)]"
                 />
                 {t("login.signing_in")}
               </span>
@@ -495,7 +496,7 @@ export default function LoginComponent() {
  * This is the only container SIZE change on the surface, which is why it is the
  * one thing here that does not inherit the global `MotionConfig` reduced-motion
  * switch: that switch governs transform and opacity, and `grid-template-rows`
- * is neither. It takes its own `useReducedMotion()` guard, or a user who asked
+ * is neither. It takes its own `useMotionReduced()` guard, or a user who asked
  * for no motion still gets an 800ms height sweep.
  *
  * The 0fr -> 1fr grid row is the height-agnostic collapse: no measured pixel
@@ -504,7 +505,7 @@ export default function LoginComponent() {
  */
 function RecoveryDisclosure() {
   const { t } = useTranslation("common");
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useMotionReduced();
   const [open, setOpen] = useState(false);
   const panelId = "login-recovery";
 

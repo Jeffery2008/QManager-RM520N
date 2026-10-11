@@ -29,7 +29,7 @@ export function InstallLogViewer({ log, isRunning }: InstallLogViewerProps) {
         <span className={LOG_PANEL.TITLE}>{t("tailscale.install.logTitle")}</span>
         {isRunning ? (
           <Loader2Icon
-            className={`${LOG_PANEL.GLYPH} animate-spin motion-reduce:animate-none`}
+            className={`${LOG_PANEL.GLYPH} motion-safe:animate-spin`}
             aria-hidden
           />
         ) : null}

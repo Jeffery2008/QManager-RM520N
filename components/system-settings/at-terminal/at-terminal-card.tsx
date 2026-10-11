@@ -34,6 +34,7 @@ import { Kbd } from "@/components/ui/kbd";
 import { ConditionBlock } from "@/components/system-settings/condition-block";
 import { authFetch } from "@/lib/auth-fetch";
 import { transitionStandard } from "@/lib/motion";
+import { isMotionReduced } from "@/lib/motion-preference";
 import { cn } from "@/lib/utils";
 import CommandsPopover from "@/components/system-settings/at-terminal/commands-popover";
 import SignalStormGame from "@/components/system-settings/at-terminal/signal-storm-game";
@@ -51,7 +52,6 @@ import {
   loadHistory,
   matchBlocked,
   matchWarning,
-  prefersReducedMotion,
   saveHistory,
   type HistoryEntry,
   type PendingGate,
@@ -136,7 +136,7 @@ export default function ATTerminalCard() {
     saveHistory(history);
     if (!followRef.current) return;
     historyEndRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
+      behavior: isMotionReduced() ? "auto" : "smooth",
       block: "end",
     });
   }, [history]);

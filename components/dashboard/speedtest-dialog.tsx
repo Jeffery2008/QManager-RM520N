@@ -227,7 +227,7 @@ function TrackBar({
     >
       <span
         className={cn(
-          "rounded-pill block h-full",
+          "rounded-pill block h-full w-full origin-left",
           // A sanctioned exception to The One-Scale Rule (DESIGN.md > Motion):
           // this bar tracks a real throughput sample arriving on its own clock,
           // so the transition's job is to bridge one sample to the next, not to
@@ -243,11 +243,11 @@ function TrackBar({
           // type and no test could see, so a retune of the poll would leave the
           // fill still travelling when the next sample landed. Now there is one
           // number: change `LIVE_INTERVAL_MS` and the bar follows.
-          "transition-[width] ease-linear motion-reduce:transition-none",
+          "ease-linear motion-safe:transition-transform",
           fillClassName,
         )}
         style={{
-          width: `${pct}%`,
+          transform: `scaleX(${pct / 100})`,
           transitionDuration: `${LIVE_INTERVAL_MS}ms`,
         }}
       />
@@ -343,7 +343,7 @@ function StepMark({
           "size-[7px] flex-none rounded-pill",
           // Ambient, and gated on real state: this breathes only while the
           // measurement it names is actually in flight.
-          "animate-pulse motion-reduce:animate-none",
+          "motion-safe:animate-pulse",
           strong,
         )}
       />
@@ -428,7 +428,7 @@ function IdleBody({
               size={16}
               className={cn(
                 "flex-none",
-                isLoadingServers && "animate-spin motion-reduce:animate-none",
+                isLoadingServers && "motion-safe:animate-spin",
               )}
             />
             {t("speedtest.servers_retry_button")}
@@ -452,7 +452,7 @@ function IdleBody({
               name="refresh"
               size={17}
               className={cn(
-                isLoadingServers && "animate-spin motion-reduce:animate-none",
+                isLoadingServers && "motion-safe:animate-spin",
               )}
             />
           </button>
@@ -589,7 +589,7 @@ function InitializingBody({
       <MaterialSymbol
         name="progress_activity"
         size={38}
-        className="text-primary animate-spin motion-reduce:animate-none"
+        className="text-primary motion-safe:animate-spin"
       />
       <span className="text-base font-semibold">
         {t("speedtest.connecting_message")}
@@ -622,7 +622,7 @@ function PingBody({
           size={26}
           className={cn(
             role.ink,
-            "animate-pulse motion-reduce:animate-none",
+            "motion-safe:animate-pulse",
           )}
         />
         <span
@@ -1144,7 +1144,7 @@ export function SpeedtestDialog({ open, onOpenChange }: SpeedtestDialogProps) {
               <MaterialSymbol
                 name="progress_activity"
                 size={12}
-                className="animate-spin motion-reduce:animate-none"
+                className="motion-safe:animate-spin"
               />
               {t("speedtest.running_badge")}
             </Badge>

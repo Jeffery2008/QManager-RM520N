@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
+import { useMotionReduced } from "@/components/motion-preference";
 
 import { Tag } from "@/components/ui/tag";
 import { cn } from "@/lib/utils";
@@ -136,7 +137,7 @@ function QualityMeter({
   /** Stagger slot for the first-paint fill, or null once the card is painted. */
   entranceIndex: number | null;
 }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionReduced();
   const firstPaint = entranceIndex != null && !reduceMotion;
   const hasReading = percent != null && barClass != null;
 

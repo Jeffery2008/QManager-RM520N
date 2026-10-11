@@ -87,7 +87,7 @@ const SystemSettings = () => {
               size="action"
             >
               <RefreshCcwIcon
-                className={cn(PILL_GLYPH, isLoading && "animate-spin")}
+                className={cn(PILL_GLYPH, isLoading && "motion-safe:animate-spin")}
               />
               {t(`${K}.refresh`)}
             </Button>

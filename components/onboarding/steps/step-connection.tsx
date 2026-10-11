@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
+import { DUR, EASE_QUICK } from "@/lib/motion";
 import { FolderOpenIcon, WrenchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authFetch } from "@/lib/auth-fetch";
@@ -254,7 +255,7 @@ function ChoiceCard({
       aria-pressed={selected}
       onClick={onClick}
       whileTap={{ scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 600, damping: 30 }}
+      transition={{ duration: DUR.quick, ease: EASE_QUICK }}
       className={cn(
         "flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-colors duration-[var(--duration-quick)] ease-out",
         "hover:border-primary/50 hover:bg-primary/5",

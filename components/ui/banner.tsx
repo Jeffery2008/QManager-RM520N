@@ -157,7 +157,7 @@ export const bannerActionVariants = cva(
   // `primary-foreground` (L 0.99) against the `primary-container` the banner
   // sits on (L 0.885), about 1.15:1, i.e. invisible. The ring has to be drawn
   // in the CONTAINER's ink, offset in the CONTAINER's fill.
-  "inline-flex flex-none items-center justify-center gap-2 rounded-full px-[18px] py-[10px] text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 [&_svg]:size-[17px] [&_svg]:shrink-0",
+  "inline-flex flex-none items-center justify-center gap-2 rounded-full px-[18px] py-[10px] text-[13px] font-semibold transition-colors duration-[var(--duration-quick)] ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 [&_svg]:size-[17px] [&_svg]:shrink-0",
   {
     variants: {
       tone: {
@@ -315,7 +315,7 @@ export function Banner({
         {Icon ? (
           <Icon className="size-5" />
         ) : isProgress ? (
-          <span className="block size-[17px] animate-spin rounded-full border-[2.5px] border-current border-t-transparent [animation-duration:900ms]" />
+          <span className="block size-[17px] motion-safe:animate-spin rounded-full border-[2.5px] border-current border-t-transparent [animation-duration:var(--duration-emphasized)]" />
         ) : null}
       </span>
 
@@ -338,7 +338,7 @@ export function Banner({
           aria-label={dismissLabel}
           // 30px visual disc, but a `before:` overlay expands the hit target to
           // the 44px the project requires without disturbing the layout.
-          className="absolute right-3 top-3 grid size-[30px] place-items-center rounded-full bg-transparent text-current opacity-70 transition-opacity before:absolute before:-inset-[7px] before:content-[''] hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
+          className="absolute right-3 top-3 grid size-[30px] place-items-center rounded-full bg-transparent text-current opacity-70 transition-opacity duration-[var(--duration-quick)] ease-out before:absolute before:-inset-[7px] before:content-[''] hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
         >
           <XIcon className="size-[18px]" />
         </button>

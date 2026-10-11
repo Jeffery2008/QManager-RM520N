@@ -309,7 +309,7 @@ export function NavUser() {
                         {initials}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="absolute inset-0 rounded-pill bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-0 rounded-pill bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--duration-quick)] ease-[var(--ease-standard)]">
                       <Camera className="size-3.5 text-white" />
                     </div>
                   </button>
@@ -445,7 +445,7 @@ export function NavUser() {
             >
               {savingName ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 motion-safe:animate-spin" />
                   Saving...
                 </>
               ) : (
@@ -481,7 +481,7 @@ export function NavUser() {
             >
               {reconnecting ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 motion-safe:animate-spin" />
                   Reconnecting...
                 </>
               ) : (
@@ -515,7 +515,7 @@ export function NavUser() {
             >
               {rebooting ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-4 motion-safe:animate-spin" />
                   Rebooting...
                 </>
               ) : (

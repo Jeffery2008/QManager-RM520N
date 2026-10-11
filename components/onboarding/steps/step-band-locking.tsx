@@ -9,7 +9,7 @@ import { parseBandString } from "@/types/band-locking";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { transitionStandard } from "@/lib/motion";
+import { DUR, EASE_QUICK, transitionStandard } from "@/lib/motion";
 import { AlertCircleIcon, Loader2Icon } from "lucide-react";
 
 // =============================================================================
@@ -185,7 +185,7 @@ function BandPresetSection({
             aria-checked={selectedPreset === opt.id}
             onClick={() => onPresetChange(opt.id)}
             whileTap={{ scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 600, damping: 30 }}
+            transition={{ duration: DUR.quick, ease: EASE_QUICK }}
             className={cn(
               "flex items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors duration-[var(--duration-quick)] ease-out",
               "hover:border-primary/50 hover:bg-primary/5",
@@ -196,7 +196,7 @@ function BandPresetSection({
           >
             <span
               className={cn(
-                "mt-0.5 block size-3.5 shrink-0 rounded-full border-2 transition-colors",
+                "mt-0.5 block size-3.5 shrink-0 rounded-full border-2 transition-colors duration-[var(--duration-quick)] ease-out",
                 selectedPreset === opt.id
                   ? "border-primary bg-primary"
                   : "border-muted-foreground/40"
@@ -399,7 +399,7 @@ export function StepBandLocking({
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-12">
-        <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
+        <Loader2Icon className="size-6 motion-safe:animate-spin text-muted-foreground" />
         <p className="text-sm text-muted-foreground">Loading supported bands...</p>
       </div>
     );

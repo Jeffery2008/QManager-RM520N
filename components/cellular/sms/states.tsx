@@ -216,7 +216,7 @@ export function InboxErrorNotice({
           <MaterialSymbol
             name={isRetrying ? "progress_activity" : "refresh"}
             size={18}
-            className={isRetrying ? "animate-spin motion-reduce:animate-none" : undefined}
+            className={isRetrying ? "motion-safe:animate-spin" : undefined}
           />
           {t("actions.retry", { ns: "common" })}
         </Button>

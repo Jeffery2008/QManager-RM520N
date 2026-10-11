@@ -242,7 +242,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
       aria-label={t("radio_info.copy.aria", { label })}
       className={cn(
         "inline-flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-pill",
-        "text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface",
+        "text-on-surface-variant transition-colors duration-[var(--duration-quick)] ease-[var(--ease-standard)] hover:bg-surface-container-high hover:text-on-surface",
         "focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none focus-visible:ring-[3px]",
         copied && "text-success",
       )}

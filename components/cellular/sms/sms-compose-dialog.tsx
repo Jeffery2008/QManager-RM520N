@@ -203,7 +203,7 @@ export default function SmsComposeDialog({
               <MaterialSymbol
                 name="progress_activity"
                 size={18}
-                className="flex-none animate-spin motion-reduce:animate-none"
+                className="flex-none motion-safe:animate-spin"
                 aria-hidden="true"
               />
               <span className="text-sm font-semibold">
@@ -232,7 +232,7 @@ export default function SmsComposeDialog({
                   <MaterialSymbol
                     name="progress_activity"
                     size={18}
-                    className="animate-spin motion-reduce:animate-none"
+                    className="motion-safe:animate-spin"
                   />
                   {t("sms.compose.buttons.sending")}
                 </>

@@ -59,7 +59,7 @@ export function Onboarding({
     return (
       <div className={cn(CONDITION.ROOT, CONDITION.INFO)} role="status">
         <span className={cn(CONDITION.DISC, CONDITION.DISC_INFO)}>
-          <Loader2Icon className={cn(CONDITION.GLYPH, "animate-spin")} aria-hidden="true" />
+          <Loader2Icon className={cn(CONDITION.GLYPH, "motion-safe:animate-spin")} aria-hidden="true" />
         </span>
         <h2 className={CONDITION.TITLE}>
           {t("trafficEngine.onboarding.installing_heading")}

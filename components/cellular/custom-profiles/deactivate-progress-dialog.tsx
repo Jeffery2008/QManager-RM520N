@@ -171,7 +171,7 @@ export function DeactivateProgressDialog({
                 // transition on the 360/600/800 scale.
                 working &&
                   !verifying &&
-                  "animate-spin motion-reduce:animate-none",
+                  "motion-safe:animate-spin",
               )}
             />
           </span>

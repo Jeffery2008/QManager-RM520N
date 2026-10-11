@@ -157,7 +157,7 @@ export function InstallCard({
             disabled={running}
           >
             {running ? (
-              <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
+              <Loader2Icon className="size-4 motion-safe:animate-spin" />
             ) : (
               <PackageIcon className="size-4" />
             )}

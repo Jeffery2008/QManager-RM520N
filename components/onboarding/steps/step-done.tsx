@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isMotionReduced } from "@/lib/motion-preference";
 
 // =============================================================================
 // StepDone — Onboarding step 6: completion screen + confetti
@@ -13,8 +14,7 @@ const CONFETTI_COLORS = ["#4f46e5", "#6366f1", "#818cf8", "#a5b4fc", "#c7d2fe", 
 
 export function StepDone() {
   const prefersReducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    typeof window !== "undefined" && isMotionReduced();
 
   const [show, setShow] = useState(prefersReducedMotion);
   const dashboardBtnRef = useRef<HTMLButtonElement>(null);

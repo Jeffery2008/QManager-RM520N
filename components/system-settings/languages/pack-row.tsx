@@ -144,12 +144,10 @@ export function PackRow({
                     language: pack.englishName,
                   })}
                 >
-                  {/* `initial` is load-bearing: the fill carries no width class,
-                      so an unstyled one resolves to a FULL track. */}
-                  <motion.div
+                                    <motion.div
                     className={METER.FILL}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: progress / 100 }}
                     transition={transitionMeterFill}
                   />
                 </div>

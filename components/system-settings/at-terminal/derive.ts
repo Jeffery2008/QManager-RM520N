@@ -161,13 +161,6 @@ export function isNearBottom(el: HTMLElement | null): boolean {
   return el.scrollHeight - el.scrollTop - el.clientHeight <= FOLLOW_SLACK_PX;
 }
 
-export function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
-
 // -----------------------------------------------------------------------------
 // The commands popover
 // -----------------------------------------------------------------------------

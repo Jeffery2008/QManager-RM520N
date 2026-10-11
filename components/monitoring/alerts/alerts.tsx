@@ -126,7 +126,7 @@ const AlertsComponent = () => {
               className={HEADER_PILL}
             >
               <RefreshCcwIcon
-                className={cn(PILL_GLYPH, isLoading && "animate-spin")}
+                className={cn(PILL_GLYPH, isLoading && "motion-safe:animate-spin")}
               />
               {t("alerts.page.refresh")}
             </Button>

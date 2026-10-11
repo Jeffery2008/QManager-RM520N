@@ -739,7 +739,7 @@ export function LiveBandHero({
                 size={BADGE_GLYPH_SIZE}
                 className={
                   status.spin
-                    ? "animate-spin motion-reduce:animate-none"
+                    ? "motion-safe:animate-spin"
                     : undefined
                 }
               />

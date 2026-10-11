@@ -450,7 +450,7 @@ export function AlertsLogCard({
               )}
             >
               <RefreshCcwIcon
-                className={cn(PILL_GLYPH, isRefreshing && "animate-spin")}
+                className={cn(PILL_GLYPH, isRefreshing && "motion-safe:animate-spin")}
               />
             </Button>
           </div>

@@ -184,7 +184,7 @@ export function SimSwapBanner() {
             >
               {isDismissing ? (
                 <>
-                  <Loader2Icon className="size-4 animate-spin" />
+                  <Loader2Icon className="size-4 motion-safe:animate-spin" />
                   {t("sim_swap.dismiss_dialog.dismissing")}
                 </>
               ) : (

@@ -236,7 +236,7 @@ export function ScheduleTile({ config, onScheduleChange }: ScheduleTileProps) {
           <MaterialSymbol
             name="progress_activity"
             size={16}
-            className="text-on-surface-variant animate-spin motion-reduce:animate-none"
+            className="text-on-surface-variant motion-safe:animate-spin"
           />
         ) : null}
         <Badge variant={status.variant}>

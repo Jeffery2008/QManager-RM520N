@@ -29,13 +29,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { transitionStandard } from "@/lib/motion";
 
-// Classic rising signal bars. The meter sweeps left-to-right as if reaching for
-// a lock, then lets go — the delight moment, drawn straight from the product's
-// own world (a modem's "searching" body language). It is an AMBIENT state motif,
-// not a progress claim: the badge and copy make the terminal "no route" honest.
-// Opacity-only so it stays gentle under reduced motion (transforms would snap;
-// a soft sweep still reads as "listening, no signal").
+// Static rising signal bars: a state motif, not a progress claim.
 const SCAN_BARS = ["h-2.5", "h-4", "h-5", "h-7"] as const;
 
 function SignalScan() {
@@ -45,20 +41,11 @@ function SignalScan() {
       aria-label="No signal — the console can't acquire a route for this address"
       className="bg-muted flex size-16 items-end justify-center gap-1 rounded-xl border p-3"
     >
-      {SCAN_BARS.map((height, i) => (
-        <motion.span
+      {SCAN_BARS.map((height) => (
+        <span
           key={height}
           aria-hidden
-          className={`bg-muted-foreground w-1.5 rounded-full ${height}`}
-          initial={{ opacity: 0.2 }}
-          animate={{ opacity: [0.2, 1, 0.2] }}
-          transition={{
-            duration: 1.4,
-            delay: i * 0.16,
-            repeat: Infinity,
-            repeatDelay: 0.7,
-            ease: "easeOut",
-          }}
+          className={`bg-muted-foreground w-1.5 rounded-full opacity-60 ${height}`}
         />
       ))}
     </div>
@@ -81,7 +68,7 @@ export default function NotFound() {
         className="w-full max-w-md"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
+        transition={transitionStandard}
       >
         <div className="bg-card flex flex-col items-center gap-6 rounded-xl border p-8 text-center shadow-sm">
           <SignalScan />

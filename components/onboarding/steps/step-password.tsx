@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldError } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
-import { DUR, EASE_QUICK } from "@/lib/motion";
+import { DUR, EASE_QUICK, EASE_STANDARD, STAGGER_STEP_ROWS } from "@/lib/motion";
 
 // =============================================================================
 // StepPassword — Onboarding step 2: create password (required)
@@ -186,7 +186,7 @@ export function StepPassword({ onSuccess, onLoadingChange, onSubmitRef }: StepPa
                           animate={{ scaleX: seg <= strength ? 1 : 0 }}
                           initial={{ scaleX: 0 }}
                           style={{ originX: 0 }}
-                          transition={{ type: "spring", stiffness: 400, damping: 30, delay: (seg - 1) * 0.04 }}
+                          transition={{ duration: DUR.standard, ease: EASE_STANDARD, delay: (seg - 1) * STAGGER_STEP_ROWS }}
                         />
                       </div>
                     ))}

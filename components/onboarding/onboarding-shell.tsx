@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
-import { DUR, EASE_STANDARD } from "@/lib/motion";
+import { DUR, EASE_EMPHASIZED, EASE_STANDARD } from "@/lib/motion";
 import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
 
 // =============================================================================
@@ -117,7 +117,7 @@ export function OnboardingShell({
                       "ring-2 ring-primary/30 ring-offset-1 ring-offset-background"
                   )}
                   animate={{ width: isCurrent ? "1.5rem" : "0.5rem" }}
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                  transition={{ duration: DUR.emphasized, ease: EASE_EMPHASIZED }}
                 />
               );
             })}

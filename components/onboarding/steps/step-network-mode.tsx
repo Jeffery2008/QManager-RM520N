@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
+import { DUR, EASE_QUICK } from "@/lib/motion";
 import {
   RefreshCwIcon,
   SignalIcon,
@@ -143,7 +144,7 @@ export function StepNetworkMode({
               aria-checked={isSelected}
               onClick={() => handleModeSelect(option.id)}
               whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 600, damping: 30 }}
+              transition={{ duration: DUR.quick, ease: EASE_QUICK }}
               className={cn(
                 "flex items-center gap-4 rounded-lg border px-4 py-3.5 text-left",
                 "transition-colors duration-[var(--duration-quick)] ease-out",
@@ -204,7 +205,7 @@ export function StepNetworkMode({
                   aria-checked={isSelected}
                   onClick={() => handleArchSelect(arch.id)}
                   whileTap={{ scale: 0.97 }}
-                  transition={{ type: "spring", stiffness: 600, damping: 30 }}
+                  transition={{ duration: DUR.quick, ease: EASE_QUICK }}
                   className={cn(
                     "flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left",
                     "transition-colors duration-[var(--duration-quick)] ease-out",

@@ -89,7 +89,7 @@ export const CARD_SHELL_HERO =
   "@container/card gap-5 rounded-hero border-0 bg-surface py-6 shadow-[var(--shadow-whisper)]!";
 
 /** The one spin class, so a face carrying `spin` has one spelling to reach. */
-export const SPIN = "animate-spin";
+export const SPIN = "motion-safe:animate-spin";
 
 /** The lucide glyph inside a `Badge` — `size-3`, written out for `Tag` too. */
 export const CHIP_GLYPH = "size-3";
@@ -222,7 +222,7 @@ export const METER = {
   STEP: "text-on-surface-variant min-w-0 flex-1 truncate text-xs",
   PCT: "text-on-surface-variant flex-none text-xs tabular-nums",
   TRACK: "h-1.5 w-full overflow-hidden rounded-pill bg-surface-container-high",
-  FILL: "h-full rounded-pill bg-primary",
+  FILL: "h-full w-full origin-left rounded-pill bg-primary",
 } as const;
 
 /**

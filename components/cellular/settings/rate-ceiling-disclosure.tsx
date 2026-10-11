@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useReducedMotion } from "motion/react";
+import { useMotionReduced } from "@/components/motion-preference";
 import { useTranslation } from "react-i18next";
 
 import { MaterialSymbol } from "@/components/ui/material-symbol";
@@ -283,7 +283,7 @@ export function RateCeilingDisclosure({
   networkType,
 }: RateCeilingDisclosureProps) {
   const { t } = useTranslation("cellular");
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionReduced();
   const [open, setOpen] = React.useState(false);
   const panelId = React.useId();
 

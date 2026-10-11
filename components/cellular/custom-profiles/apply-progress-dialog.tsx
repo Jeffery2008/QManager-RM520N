@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
+import { useMotionReduced } from "@/components/motion-preference";
 import {
   Dialog,
   DialogContent,
@@ -157,7 +158,7 @@ export function ApplyProgressDialog({
   onRetry,
 }: ApplyProgressDialogProps) {
   const { t } = useTranslation("cellular");
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionReduced();
 
   // Written out as four explicit keys rather than a template lookup so a plain
   // grep of the codebase finds every one of them. The worker's step names are a
@@ -296,7 +297,7 @@ export function ApplyProgressDialog({
                 // own running row spins its glyph below. `animate-spin` is
                 // the shared rotation clock; there is no ambient-duration
                 // variant of it to retune separately.
-                hero.loop && "animate-spin motion-reduce:animate-none",
+                hero.loop && "motion-safe:animate-spin",
               )}
             />
           </span>
@@ -376,7 +377,7 @@ export function ApplyProgressDialog({
                         LEDGER_SHAPE.GLYPH,
                         // ONE-SCALE exception, as above: a continuous loop with
                         // its own tempo, not a transition on the duration scale.
-                        spin && "animate-spin motion-reduce:animate-none",
+                        spin && "motion-safe:animate-spin",
                       )}
                     />
                     <span className={LEDGER_SHAPE.LABEL}>

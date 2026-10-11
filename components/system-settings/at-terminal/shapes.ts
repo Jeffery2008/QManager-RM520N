@@ -62,7 +62,7 @@ export const FOCUS_RING_ON_POPOVER = `${FOCUS_RING_BASE} focus-visible:ring-offs
 export const FOCUS_RING_ON_WARNING = `${FOCUS_RING_BASE} focus-visible:ring-offset-warning-container`;
 
 /** The spin class, named once so the prompt and any sibling agree. */
-export const SPIN = "animate-spin";
+export const SPIN = "motion-safe:animate-spin";
 
 // -----------------------------------------------------------------------------
 // The card

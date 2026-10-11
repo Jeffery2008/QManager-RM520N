@@ -77,7 +77,7 @@ function DeleteProgress({ steps }: { steps: DeleteStep[] }) {
             <MaterialSymbol
               name="progress_activity"
               size={19}
-              className="flex-none animate-spin motion-reduce:animate-none"
+              className="flex-none motion-safe:animate-spin"
               aria-hidden="true"
             />
           ) : (
@@ -192,7 +192,7 @@ export function SmsDeleteDialogs({
                   <MaterialSymbol
                     name="progress_activity"
                     size={18}
-                    className="animate-spin motion-reduce:animate-none"
+                    className="motion-safe:animate-spin"
                   />
                   {t("sms.inbox.delete_single_confirm.deleting")}
                 </>
@@ -253,7 +253,7 @@ export function SmsDeleteDialogs({
                   <MaterialSymbol
                     name="progress_activity"
                     size={18}
-                    className="animate-spin motion-reduce:animate-none"
+                    className="motion-safe:animate-spin"
                   />
                   {/* Its OWN key. All three dialogs previously reused
                       `delete_single_confirm.deleting`. */}
@@ -314,7 +314,7 @@ export function SmsDeleteDialogs({
                   <MaterialSymbol
                     name="progress_activity"
                     size={18}
-                    className="animate-spin motion-reduce:animate-none"
+                    className="motion-safe:animate-spin"
                   />
                   {t("sms.inbox.delete_selected_confirm.deleting")}
                 </>
