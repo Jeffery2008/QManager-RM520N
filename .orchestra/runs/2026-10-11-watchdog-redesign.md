@@ -1,5 +1,5 @@
 # Run: Watchdog page redesign (frontend)
-status: built — awaiting merge decision
+status: closed
 lane: full
 base: 73e88958   branch: worktree-wt+watchdog-redesign (from development)   opened: 2026-10-11   lead: opus
 
@@ -35,4 +35,4 @@ Source: session scratchpad `watchdog-review.src.html` (wd-css.css / wd-body.html
 Not touched.
 
 ## Handoff — NEXT ACTION
-Committed on worktree branch. Ask the user: merge into development, keep for a PR, or discard. After merge, re-run i18n:check, tsc, build on development.
+Closed 2026-10-11. a11db9d8 fast-forwarded into development (user: "Merge to development also once all done"); post-merge i18n:check, tsc and build green. Not yet run on the device; the user's tarball run is the hardware proof. Worktree .claude/worktrees/wt+watchdog-redesign kept on disk.
