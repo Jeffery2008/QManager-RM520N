@@ -155,14 +155,18 @@ _ev_ca_diff() {
     [ -z "$prev" ] && prev="[]"
     [ -z "$curr" ] && curr="[]"
 
+    # One line, "added|removed": $(...) drops an empty last line, which made a
+    # pure addition read as "(+B7, -B7)".
     local result
     result=$(jq -rn --arg t "$tech" --argjson p "$prev" --argjson c "$curr" '
-        ([$c[] | select(.technology == $t) | .band] - [$p[] | select(.technology == $t) | .band] | join(", ")),
+        ([$c[] | select(.technology == $t) | .band] - [$p[] | select(.technology == $t) | .band] | join(", "))
+        + "|" +
         ([$p[] | select(.technology == $t) | .band] - [$c[] | select(.technology == $t) | .band] | join(", "))
     ' 2>/dev/null)
 
-    _diff_added=$(printf '%s\n' "$result" | head -n 1)
-    _diff_removed=$(printf '%s\n' "$result" | tail -n 1)
+    case "$result" in *"|"*) ;; *) return ;; esac
+    _diff_added="${result%%|*}"
+    _diff_removed="${result#*|}"
 }
 
 # ---------------------------------------------------------------------------
@@ -207,6 +211,8 @@ _ev_ca_diff() {
 #     rc 0 → settled onto a new value; read $_EV_SETTLED_TO / $_EV_SETTLED_FROM
 #     rc 1 → nothing to report (blank, still settling, or unchanged)
 #     rc 2 → churning; read $_EV_FLAP_N for the count in this window
+#   Third arg "sticky": a settle back onto the announced value keeps the churn
+#   window and latch, so one-sample dips add up; _ev_ca_check ends the episode.
 #
 # <channel> must be a bare identifier — it is interpolated into variable names.
 # Per-channel state lives in poller globals, matching the existing latency and
@@ -234,7 +240,7 @@ EV_FLAP_THRESHOLD="${EV_FLAP_THRESHOLD:-6}"
 EV_FLAP_WINDOW="${EV_FLAP_WINDOW:-300}"
 
 _ev_settle() {
-    local _ch="$1" _cur="$2"
+    local _ch="$1" _cur="$2" _sticky="${3:-}"
     local _hold _holdn _last _flapn _flapt _now
     _EV_SETTLED_FROM=""
     _EV_SETTLED_TO=""
@@ -265,6 +271,7 @@ _ev_settle() {
             fi
             eval "_ev_flapn_${_ch}=\$_flapn"
             eval "_ev_flapt_${_ch}=\$_flapt"
+            eval "_ev_chg_${_ch}=\$_now"
         fi
         _hold="$_cur"
         _holdn=1
@@ -274,13 +281,13 @@ _ev_settle() {
     eval "_ev_holdn_${_ch}=\$_holdn"
 
     if [ "$_holdn" -ge "$EV_SETTLE_SAMPLES" ]; then
-        # Settled. Clear the churn window either way: the radio has stopped
-        # moving, so counting toward an instability report would be stale. The
-        # report latch clears too, so a later episode is reported promptly
-        # rather than being muted by the previous one.
+        # Settled: clear the churn window and report latch so a later episode is
+        # reported promptly. A sticky channel clears them only on a real change.
         eval "_ev_last_${_ch}=\$_cur"
-        eval "_ev_flapn_${_ch}=0"
-        eval "_ev_flapr_${_ch}=0"
+        if [ -z "$_sticky" ] || { [ -n "$_last" ] && [ "$_cur" != "$_last" ]; }; then
+            eval "_ev_flapn_${_ch}=0"
+            eval "_ev_flapr_${_ch}=0"
+        fi
         if [ -n "$_last" ] && [ "$_cur" != "$_last" ]; then
             _EV_SETTLED_FROM="$_last"
             _EV_SETTLED_TO="$_cur"
@@ -291,18 +298,15 @@ _ev_settle() {
         return 1
     fi
 
-    # Still unsettled. If it has been churning all window, report that — but at
-    # most once per window. Resetting only the counter is not enough: a radio
-    # oscillating every sample re-reaches the threshold in another six changes,
-    # which would rebuild the very storm this function exists to stop, at
-    # warning severity instead of info. So the last report time is its own
-    # latch, cleared on settle so a genuinely new episode is not muted.
+    # Still unsettled: report churn at most once per window (once per episode
+    # when sticky). The latch is separate from the counter, which refills fast.
     eval "_flapn=\${_ev_flapn_${_ch}:-0}"
     if [ "$_flapn" -ge "$EV_FLAP_THRESHOLD" ]; then
         local _flapr
         eval "_flapr=\${_ev_flapr_${_ch}:-0}"
         _now=$(date +%s)
-        if [ "$_flapr" -eq 0 ] || [ $((_now - _flapr)) -ge "$EV_FLAP_WINDOW" ]; then
+        # A sticky channel reports once per episode; its caller clears the latch.
+        if [ "$_flapr" -eq 0 ] || { [ -z "$_sticky" ] && [ $((_now - _flapr)) -ge "$EV_FLAP_WINDOW" ]; }; then
             _EV_FLAP_N="$_flapn"
             eval "_ev_flapn_${_ch}=0"
             eval "_ev_flapt_${_ch}=\$_now"
@@ -312,6 +316,66 @@ _ev_settle() {
     fi
 
     return 1
+}
+
+# CA state for one tech (channel lte_ca / nr_ca), keyed on the SCC count through a
+# sticky settle. An empty carrier list means QCAINFO gave no reading: no observation.
+_ev_ca_check() {
+    local _ch="$1" _tech="$2" _count="$3"
+    local _obs="" _rc _base _bands _hold _holdn _last _flapr _chg _now
+    if [ -n "$t2_carrier_components" ] && [ "$t2_carrier_components" != "[]" ]; then
+        _obs="${_count:-0}"
+    fi
+
+    _ev_settle "$_ch" "$_obs" sticky; _rc=$?
+    eval "_base=\${_ev_cabase_${_ch}:-}"
+
+    if [ "$_rc" -eq 0 ]; then
+        if [ "$_EV_SETTLED_FROM" = "0" ]; then
+            _bands=$(_ev_bands "$_tech" "$t2_carrier_components")
+            append_event "ca_change" "$_tech CA activated${_bands:+ on $_bands}" "info"
+        elif [ "$_EV_SETTLED_TO" = "0" ]; then
+            append_event "ca_change" "$_tech CA deactivated" "warning"
+        else
+            local _sev="info" _detail="" _parts=""
+            [ "$_EV_SETTLED_TO" -lt "$_EV_SETTLED_FROM" ] && _sev="warning"
+            # Diff against the carriers last announced, not the previous sample.
+            _ev_ca_diff "$_tech" "$_base" "$t2_carrier_components"
+            if [ -n "$_diff_added" ] || [ -n "$_diff_removed" ]; then
+                [ -n "$_diff_added" ] && _parts="+${_diff_added}"
+                if [ -n "$_diff_removed" ]; then
+                    [ -n "$_parts" ] && _parts="$_parts, "
+                    _parts="${_parts}-${_diff_removed}"
+                fi
+                _detail=" ($_parts)"
+            else
+                _bands=$(_ev_bands "$_tech" "$t2_carrier_components")
+                [ -n "$_bands" ] && _detail=" (now $_bands)"
+            fi
+            append_event "ca_change" "$_tech carriers changed${_detail}" "$_sev"
+        fi
+    elif [ "$_rc" -eq 2 ]; then
+        append_event "ca_change" "$_tech CA churn detected" "warning"
+    fi
+
+    # Below runs only while settled on the announced value.
+    [ -z "$_obs" ] && return 0
+    eval "_hold=\${_ev_hold_${_ch}:-}; _holdn=\${_ev_holdn_${_ch}:-0}; _last=\${_ev_last_${_ch}:-}"
+    { [ "$_hold" = "$_last" ] && [ "$_holdn" -ge "$EV_SETTLE_SAMPLES" ]; } || return 0
+    eval "_ev_cabase_${_ch}=\$t2_carrier_components"
+
+    # A churn episode ends after a full window with no candidate change.
+    eval "_flapr=\${_ev_flapr_${_ch}:-0}; _chg=\${_ev_chg_${_ch}:-0}"
+    [ "$_flapr" -eq 0 ] && return 0
+    _now=$(date +%s)
+    [ $((_now - _chg)) -ge "$EV_FLAP_WINDOW" ] || return 0
+    eval "_ev_flapr_${_ch}=0; _ev_flapn_${_ch}=0"
+    if [ "$_last" = "0" ]; then
+        append_event "ca_change" "$_tech CA settled inactive" "warning"
+    else
+        _bands=$(_ev_bands "$_tech" "$t2_carrier_components")
+        append_event "ca_change" "$_tech CA settled${_bands:+ on $_bands}" "info"
+    fi
 }
 
 # Snapshot current state into prev_ev_* variables (called once after first parse)
@@ -756,87 +820,9 @@ detect_events() {
             "NR cell churn detected" "warning"
     fi
 
-    # --- LTE CA changes ---
-    if [ "$t2_ca_active" != "$prev_ev_ca_active" ]; then
-        if [ "$t2_ca_active" = "true" ]; then
-            local lte_ca_summary
-            lte_ca_summary=$(_ev_bands "LTE" "$t2_carrier_components")
-            if [ -n "$lte_ca_summary" ]; then
-                append_event "ca_change" \
-                    "LTE CA activated on $lte_ca_summary" "info"
-            else
-                append_event "ca_change" \
-                    "LTE CA activated" "info"
-            fi
-        elif [ "$prev_ev_ca_active" = "true" ]; then
-            append_event "ca_change" "LTE CA deactivated" "warning"
-        fi
-    elif [ "$t2_ca_active" = "true" ] && [ "$t2_ca_count" != "$prev_ev_ca_count" ]; then
-        local prev_total=$((prev_ev_ca_count + 1))
-        local new_total=$((t2_ca_count + 1))
-        local ca_sev="info"
-        [ "$new_total" -lt "$prev_total" ] && ca_sev="warning"
-
-        # Compute which bands were added/removed
-        _ev_ca_diff "LTE" "$prev_ev_carrier_components" "$t2_carrier_components"
-        local ca_diff_detail=""
-        if [ -n "$_diff_added" ] || [ -n "$_diff_removed" ]; then
-            local parts=""
-            [ -n "$_diff_added" ] && parts="+${_diff_added}"
-            if [ -n "$_diff_removed" ]; then
-                [ -n "$parts" ] && parts="$parts, "
-                parts="${parts}-${_diff_removed}"
-            fi
-            ca_diff_detail=" ($parts)"
-        else
-            local lte_bands
-            lte_bands=$(_ev_bands "LTE" "$t2_carrier_components")
-            [ -n "$lte_bands" ] && ca_diff_detail=" (now $lte_bands)"
-        fi
-        append_event "ca_change" \
-            "LTE carriers changed${ca_diff_detail}" "$ca_sev"
-    fi
-
-    # --- NR CA changes ---
-    if [ "$t2_nr_ca_active" != "$prev_ev_nr_ca_active" ]; then
-        if [ "$t2_nr_ca_active" = "true" ]; then
-            local nr_ca_summary
-            nr_ca_summary=$(_ev_bands "NR" "$t2_carrier_components")
-            if [ -n "$nr_ca_summary" ]; then
-                append_event "ca_change" \
-                    "NR CA activated on $nr_ca_summary" "info"
-            else
-                append_event "ca_change" \
-                    "NR CA activated" "info"
-            fi
-        elif [ "$prev_ev_nr_ca_active" = "true" ]; then
-            append_event "ca_change" "NR CA deactivated" "warning"
-        fi
-    elif [ "$t2_nr_ca_active" = "true" ] && [ "$t2_nr_ca_count" != "$prev_ev_nr_ca_count" ]; then
-        local prev_total=$((prev_ev_nr_ca_count + 1))
-        local new_total=$((t2_nr_ca_count + 1))
-        local nr_ca_sev="info"
-        [ "$new_total" -lt "$prev_total" ] && nr_ca_sev="warning"
-
-        # Compute which NR bands were added/removed
-        _ev_ca_diff "NR" "$prev_ev_carrier_components" "$t2_carrier_components"
-        local nr_diff_detail=""
-        if [ -n "$_diff_added" ] || [ -n "$_diff_removed" ]; then
-            local parts=""
-            [ -n "$_diff_added" ] && parts="+${_diff_added}"
-            if [ -n "$_diff_removed" ]; then
-                [ -n "$parts" ] && parts="$parts, "
-                parts="${parts}-${_diff_removed}"
-            fi
-            nr_diff_detail=" ($parts)"
-        else
-            local nr_bands
-            nr_bands=$(_ev_bands "NR" "$t2_carrier_components")
-            [ -n "$nr_bands" ] && nr_diff_detail=" (now $nr_bands)"
-        fi
-        append_event "ca_change" \
-            "NR carriers changed${nr_diff_detail}" "$nr_ca_sev"
-    fi
+    # --- CA changes (sticky settle, see _ev_ca_check) ---
+    _ev_ca_check lte_ca LTE "$t2_ca_count"
+    _ev_ca_check nr_ca NR "$t2_nr_ca_count"
 
     # --- SCC PCI changes (detected on Tier 2 refresh) ---
     if [ "$t2_carrier_components" != "$prev_ev_carrier_components" ]; then

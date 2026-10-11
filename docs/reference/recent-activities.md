@@ -104,7 +104,7 @@ _ev_settle <channel> <current-value>; rc=$?
 #   rc 2 → churning; read $_EV_FLAP_N for the count in this window
 ```
 
-Four channels use it, one per undebounced site: `lte_band`, `lte_pci`, `nr_band`, `nr_pci`. `<channel>` must be a bare identifier because it is interpolated into variable names — per-channel state lives in poller globals built with `eval`:
+Six channels use it: `lte_band`, `lte_pci`, `nr_band`, `nr_pci`, and the two carrier-aggregation channels `lte_ca` / `nr_ca` (sticky, see [Carrier aggregation](#carrier-aggregation-the-sticky-channels)). `<channel>` must be a bare identifier because it is interpolated into variable names — per-channel state lives in poller globals built with `eval`:
 
 | Variable | Holds |
 | -------- | ----- |
@@ -114,6 +114,8 @@ Four channels use it, one per undebounced site: `lte_band`, `lte_pci`, `nr_band`
 | `_ev_flapn_<ch>` | candidate changes counted in the current churn window |
 | `_ev_flapt_<ch>` | when that window opened |
 | `_ev_flapr_<ch>` | when an instability event was last emitted (the rate-limit latch) |
+| `_ev_chg_<ch>` | when the last counted candidate change happened (read by the CA episode end) |
+| `_ev_cabase_<ch>` | CA channels only: the carrier list at the last announced value, the baseline for "carriers changed (+X, -Y)" |
 
 > ℹ️ NOTE: these counters are **not persisted**, matching the latency and loss streak counters (`qmanager_poller:190-195`). That is deliberate: it means the positional `cut -f` decode in `restore_event_state` is untouched, so adding the debounce could not corrupt state restore. The cost is one settle window of silence after a poller restart.
 
@@ -172,15 +174,43 @@ A hold-only rule has a nasty failure mode: a radio oscillating *faster* than the
 So churn is counted. `_ev_settle` returns rc 2 when `EV_FLAP_THRESHOLD` (6) candidate changes occur inside `EV_FLAP_WINDOW` (300s), and the caller emits one row at **`warning`** severity:
 
 ```
-LTE band unstable — 14 changes in the last 5 min
-LTE cell unstable — 9 handoffs in the last 5 min
+LTE band churn detected
+LTE cell churn detected
+NR band churn detected
+NR cell churn detected
+LTE CA churn detected
+NR CA churn detected
 ```
+
+The wording carries no count and no em dash since the 2026-09-04 Network Events refit (`3c7fa3fa`); the earlier form was `LTE band unstable — 14 changes in the last 5 min`.
 
 Six changes in five minutes is well clear of a normal handoff rate and well under the ~44-per-12-minutes the live storm produced. A value returning to the one already announced is counted as a settle, not a flap.
 
 **This is the first time `band_change` and `pci_change` have ever carried `warning` severity.** The presentation layer needed no change to absorb it: `glyphOf` (`lib/event-presentation.ts:306-311`) is tone-first, so a `warning`-severity `band_change` automatically gets the amber `warning-container` and the `warning` glyph rather than the routine `swap_horiz` handoff glyph — satisfying `DESIGN.md`'s rule that two states occupying the same slot never share a glyph. Both remain **one-shot** types in `computeUnresolved`; an instability report describes a window that has closed.
 
 > ⚠️ WARNING: the rate limit is its own latch (`_ev_flapr_<ch>`), separate from the counter. Resetting only the counter was tried and is broken: a radio oscillating every sample re-reaches 6 changes in about 18 seconds, rebuilding the exact storm the debounce exists to stop — at `warning` severity instead of `info`, which is strictly worse. The latch clears on settle, so a genuinely new episode is still reported promptly. The new test fixtures caught this before it shipped.
+
+### Carrier aggregation: the sticky channels
+
+`ca_change` goes through `_ev_ca_check <channel> <tech> <scc-count>`, which feeds the SCC count (`t2_ca_count` / `t2_nr_ca_count`, `0` = no CA) to `_ev_settle` with a third argument, `sticky`. Fixed 2026-10-11; before that the CA blocks called `append_event` on every raw flip.
+
+**Why sticky.** On the RM520N-GL the flap is a **one-sample dip**: `AT+QCAINFO` returns no LTE SCC for one poll (~3s) every 30-80s, then the SCC is back. Live capture before the fix: 281 of 300 ring slots were `ca_change`, each a "deactivated" / "activated" pair 3s apart. The reads succeeded (no `qcmd_exec failed` in `/tmp/qmanager.log`), so the dips are real modem answers. Plain `_ev_settle` would absorb each dip, but it also clears the churn counter on every settle back to the announced value, so the threshold could never be reached and the most unstable carrier would log nothing. Sticky changes two things, for CA channels only:
+
+1. Settling back onto the announced value keeps the churn window and the report latch. Dips add up.
+2. The latch never expires on time, and only a real announced change clears it — not the silent first settle after a cold start. A sticky channel reports **once per episode**. (The first live run cleared it on the cold-start settle and reported one episode twice.)
+
+**Episode end** is decided by `_ev_ca_check`: settled on the announced value, latch set, and no candidate change for `EV_FLAP_WINDOW` (300s, read from `_ev_chg_<ch>`). It clears the latch and writes the resolution row:
+
+| Settled value | Row | Severity |
+| --- | --- | --- |
+| CA up | `LTE CA settled on B3 + B28` | `info` — resolves the churn row in `computeUnresolved` |
+| CA off | `LTE CA settled inactive` | `warning` — supersedes the churn row; CA really is off |
+
+A real change held for the settle window (~11s) logs with the existing wording and also ends the episode: `LTE CA activated on B3 + B28` (info), `LTE CA deactivated` (warning), `LTE carriers changed (+B7)` (info) or `(-B7)` (warning on a shrink). The `+/-` diff is against `_ev_cabase_<ch>`, the carriers at the last announced value, not the previous sample. `_ev_ca_diff` returns one `added|removed` line; it used to return two lines, and `$(...)` dropped the empty second one, so a pure addition read `(+B7, -B7)`.
+
+**An empty carrier list is no reading.** `parse_ca_info` and the poller's `qcmd_exec` failure path both leave `t2_carrier_components="[]"`; a reading with any carrier (PCC included) is never `[]`. `_ev_ca_check` feeds `_ev_settle` a blank then, so a failed read freezes the counters instead of logging a deactivation.
+
+> ℹ️ NOTE: the `prev_ev_ca_*` fields are still written to the event state file so `restore_event_state`'s positional decode is unchanged, but CA detection no longer reads them. After a poller restart the first settled CA value is adopted silently, the same as band and PCI.
 
 ### Why the constants are hard-coded
 
@@ -260,7 +290,7 @@ This is also why the earlier resolution-only model was replaced rather than exte
 | `success` | info **and** in `RECOVERY_TYPES` **or** `SELF_RESOLVING` | `bg-success-container text-on-success-container` | `bg-success text-success-foreground` |
 | `routine` | everything else | `bg-surface-container-high` (**achromatic**, no `on-` pair) | see `routineDisc` below |
 
-The `SELF_RESOLVING` half of the success rule is what makes a **gained carrier green**. `ca_change` is one type carrying both directions, and the two severity guards above it have already run, so an info-severity self-resolver can only be the recovery half — the set needs no severity check of its own. Concretely: "LTE CA activated: B1+B3" (`events.sh:721`) and "LTE carriers changed from 2 to 3 (+B3)" (`:754`) are green, while "LTE CA deactivated" (`:730`) and any count *shrink* (`:736` downgrades itself to `warning`) are amber. The other two members green on the same reading — "5G NR anchor acquired" (`:674`) and airplane mode disabled: a radio capability that was gone came back.
+The `SELF_RESOLVING` half of the success rule is what makes a **gained carrier green**. `ca_change` is one type carrying both directions, and the two severity guards above it have already run, so an info-severity self-resolver can only be the recovery half — the set needs no severity check of its own. Concretely: "LTE CA activated on B1 + B3", "LTE carriers changed (+B3)" and "LTE CA settled on B1 + B3" (all from `_ev_ca_check` in `events.sh`) are green, while "LTE CA deactivated", "LTE CA churn detected", "LTE CA settled inactive" and any count *shrink* (downgraded to `warning`) are amber. The other two members green on the same reading — "NR5G anchor acquired" and airplane mode disabled: a radio capability that was gone came back.
 
 Reusing `SELF_RESOLVING` rather than adding `ca_change` to `RECOVERY_TYPES` is deliberate. That set is *already defined* as "types whose info half is the recovery", so tone and the unresolved pairing read one fact instead of two lists that can drift. Note the consequence in the glyph table below: a green `ca_change` takes the `success` glyph (`check_circle`), not its `FAMILY_GLYPHS` radio tower — tone outranks family, and green always means a check across the whole card.
 
@@ -573,7 +603,7 @@ Adding a new `NetworkEventType` therefore means: extend the union in `types/mode
 - **`watchcat_recovery` is in `RECOVERY_TYPES` but is never emitted at `info`.** All five call sites in `qmanager_watchcat` pass `warning` or `error`, and severity wins in `presentEvent`, so its green-check branch is currently unreachable. Intended, not a bug: the entry is there so a future "recovery succeeded" line reads correctly. `profile_applied` is the same shape in reverse, emitted at `info` for a complete apply and `warning` for a partial one.
 - **The NDJSON file lives in `/tmp` and does not survive a reboot.** An empty card after a restart is correct, not a fault.
 - **300 on disk, 50 served, 20 kept, 5 drawn.** The resolution pass sees 20. A degradation whose recovery is more than 20 events old will still be flagged unresolved; in practice a recovery follows its degradation closely enough that this has not been observed, but it is the model's outer limit. Raising `MAX_EVENTS` does not widen that window — the hook's `maxEvents` does.
-- **Known issue: `ca_change` is not debounced.** The LTE and NR carrier-aggregation blocks in `events.sh` (`# --- LTE CA changes ---`, `# --- NR CA changes ---`) compare against the previous sample and call `append_event` directly, with no `_ev_settle` and no flap counter. A flapping carrier writes one row per flip the poller samples and can fill the 300-slot ring. On `/monitoring` repeat-run grouping hides the noise but cannot recover evicted history. Fix belongs in `events.sh`, routed through `_ev_settle` like band and PCI.
+- **`ca_change` is debounced (fixed 2026-10-11).** It goes through `_ev_ca_check` and a sticky `_ev_settle`; see [Carrier aggregation](#carrier-aggregation-the-sticky-channels). Don't drop the `sticky` argument: without it one-sample SCC dips never reach the churn threshold and a flapping carrier logs nothing.
 - **The debounce costs latency, on purpose.** A genuine band change is announced about 9 seconds after it happens, not immediately. Anything that needs the current band in real time must read `status.json`, which is undebounced; the event feed is a history, not a live readout.
 
 ## Tests
