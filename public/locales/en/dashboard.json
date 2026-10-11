@@ -47,7 +47,7 @@
     "no_carrier": "No Carrier",
     "internet_tooltip": {
       "no_reply": "No reply to the connectivity ping. Some carriers block these probes, so the connection may still be working.",
-      "degraded": "Pings are getting through, but at least one in ten is being lost. The connection is up and unreliable.",
+      "degraded": "Pings are getting through, but packet loss has reached the loss threshold set in Connection Quality.",
       "recovery": "The connection watchdog is restoring the link. Readings stay unreliable until it finishes.",
       "unknown": "The connectivity probe is not reporting, so nothing is known about internet reachability right now."
     }
@@ -146,16 +146,6 @@
     "trend_heading": "{{metric}} trend over recent history, in {{unit}}",
     "error_title": "Signal history unavailable",
     "error_description": "Couldn't load signal history: {{message}}"
-  },
-  "latency": {
-    "description": "Round-trip latency and packet loss over the last ten probes, plus the most recent speed test.",
-    "title": "Live Latency",
-    "chart_latency": "Latency",
-    "chart_packetloss": "Packetloss",
-    "current_label": "Current latency",
-    "unit_ms": "ms",
-    "no_reading": "No reading",
-    "empty_description": "Waiting for the first latency samples."
   },
   "latencyMonitor": {
     "page": {
@@ -373,5 +363,38 @@
       "profile_deactivated": "Profile Deactivated",
       "tower_failover": "Tower Lock Failover"
     }
+  },
+  "connection_quality": {
+    "title": "Connection Quality",
+    "description": "How steady the link has been over the last half hour, plus the latest speed test.",
+    "internet": "Internet",
+    "dns": "DNS lookup",
+    "unit_ms": "ms",
+    "unit_pct": "%",
+    "probing": "Probing",
+    "reach_label": "Reachability",
+    "reach_responsive": "Responsive",
+    "reach_degraded": "Degraded",
+    "reach_unreachable": "Unreachable",
+    "reach_no_ping_reply": "No ping reply",
+    "reach_unknown": "Not measured",
+    "reach_aria": "Reachability, {{minutes}} minutes, oldest first",
+    "jitter_label": "Jitter",
+    "jitter_now": "{{value}} ms now",
+    "jitter_no_reading": "No reading",
+    "jitter_aria": "Jitter, {{minutes}} minutes, oldest first",
+    "axis_now": "Now",
+    "axis_reach_one": "{{count}} min ago",
+    "axis_reach_other": "{{count}} min ago",
+    "axis_reach_none": "No history yet",
+    "axis_reach_sub_minute": "< 1 min",
+    "footer_typical": "Typical",
+    "footer_worst": "Worst",
+    "footer_loss": "Loss",
+    "empty_title": "Nothing is probing",
+    "empty_description": "Connection probing isn't running, so there is no latency, jitter or loss to report.",
+    "empty_action": "Open Connection Quality",
+    "error_title": "Can't reach the modem",
+    "error_description": "The modem's status couldn't be read, so there is no quality reading to show."
   }
 }

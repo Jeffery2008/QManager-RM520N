@@ -708,8 +708,7 @@ function TransferBody({
           `downlink` fill at L 0.66 — four hundredths apart, so the bar could
           not be read at all. `surface-container-high` (0.938 light / 0.235
           dark) clears both direction containers in both themes: lighter than
-          them in light, darker in dark, so it reads as a recessed groove.
-          `live-latency.tsx` made the same substitution for the same reason. */}
+          them in light, darker in dark, so it reads as a recessed groove. */}
       <TrackBar
         value={progress}
         trackClassName="bg-surface-container-high"

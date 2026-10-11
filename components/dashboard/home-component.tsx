@@ -19,7 +19,7 @@ import CarrierAggregationComponent from "./carrier-aggregation";
 import { SignalHistoryComponent } from "./signal-history";
 import RecentActivitiesComponent from "./recent-activities";
 import DeviceMetricsComponent from "./device-metrics";
-import LiveLatencyComponent from "./live-latency";
+import ConnectionQualityComponent from "./connection-quality";
 
 const DEFAULT_POLL_MS = 2000;
 const POLL_BUFFER_MS = 250; // Small lag past each daemon write to avoid catching a half-written cache
@@ -190,9 +190,10 @@ const HomeComponent = () => {
           />
         </motion.div>
         <motion.div variants={staggerItem} className={BAND.STRETCH}>
-          <LiveLatencyComponent
+          <ConnectionQualityComponent
             connectivity={data?.connectivity ?? null}
             isLoading={isLoading}
+            modemReachable={data?.modem_reachable ?? false}
           />
         </motion.div>
         <motion.div variants={staggerItem} className={BAND.STRETCH}>

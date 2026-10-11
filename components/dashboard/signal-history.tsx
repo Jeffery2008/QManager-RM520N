@@ -241,8 +241,7 @@ export function SignalHistoryComponent() {
   // bare data minimum. Recharts' own default for an *unset* `baseValue` (see
   // `Area.getBaseValue` in recharts source) derives it FROM the resolved axis
   // domain, so an Area with no baseValue prop always paints down to the true
-  // plot floor — that's why Live Latency's identical gradient reads as a filled
-  // area. Here we pass an explicit NUMBER, which recharts uses verbatim with no
+  // plot floor, which reads as a filled area. Here we pass an explicit NUMBER, which recharts uses verbatim with no
   // reference to the axis domain at all. Passing the bare min (dataMin) left the
   // fill's bottom edge sitting `Y_AXIS_PAD` units ABOVE the actual axis floor —
   // a permanent blank band under the fill on narrow-banded metrics (RSRP/RSRQ/
@@ -471,8 +470,7 @@ export function SignalHistoryComponent() {
               plot: arrow keys walk the samples and the tooltip is announced.
               Without it this chart is inert to anyone not using a mouse, which
               on the one card whose entire content IS the chart means the card
-              has nothing to offer them. Live Latency already sets it; this was
-              the only chart in the product still missing it. */}
+              has nothing to offer them. */}
           <AreaChart accessibilityLayer data={chartData}>
             <defs>
               {/* Mock gradient: 0.32 at the top, 0.10 at 55%, transparent at

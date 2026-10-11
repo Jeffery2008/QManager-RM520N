@@ -47,7 +47,7 @@
     "no_carrier": "Tidak Ada Operator",
     "internet_tooltip": {
       "no_reply": "Tidak ada balasan untuk ping konektivitas. Sebagian operator memblokir probe semacam ini, sehingga koneksi mungkin masih berfungsi.",
-      "degraded": "Ping tetap sampai, tetapi setidaknya satu dari sepuluh hilang. Koneksi aktif namun tidak dapat diandalkan.",
+      "degraded": "Ping tetap sampai, tetapi packet loss sudah mencapai ambang yang diatur di Kualitas Koneksi.",
       "recovery": "Watchdog koneksi sedang memulihkan tautan. Pembacaan tetap tidak dapat diandalkan sampai proses selesai.",
       "unknown": "Probe konektivitas tidak melaporkan data, sehingga saat ini keterjangkauan internet tidak diketahui."
     }
@@ -146,16 +146,6 @@
     "trend_heading": "Tren {{metric}} pada riwayat terkini, dalam {{unit}}",
     "error_title": "Riwayat sinyal tidak tersedia",
     "error_description": "Tidak dapat memuat riwayat sinyal: {{message}}"
-  },
-  "latency": {
-    "description": "Latensi bolak-balik dan kehilangan paket pada sepuluh probe terakhir, plus hasil uji kecepatan terbaru.",
-    "title": "Latensi Langsung",
-    "chart_latency": "Latensi",
-    "chart_packetloss": "Packet Loss",
-    "current_label": "Latensi saat ini",
-    "unit_ms": "ms",
-    "no_reading": "Tidak ada pembacaan",
-    "empty_description": "Menunggu sampel latensi pertama."
   },
   "latencyMonitor": {
     "page": {
@@ -373,5 +363,38 @@
       "profile_deactivated": "Profil Dinonaktifkan",
       "tower_failover": "Failover Penguncian Tower"
     }
+  },
+  "connection_quality": {
+    "title": "Kualitas Koneksi",
+    "description": "Seberapa stabil koneksi selama setengah jam terakhir, beserta hasil uji kecepatan terbaru.",
+    "internet": "Internet",
+    "dns": "Pencarian DNS",
+    "unit_ms": "ms",
+    "unit_pct": "%",
+    "probing": "Memeriksa",
+    "reach_label": "Keterjangkauan",
+    "reach_responsive": "Responsif",
+    "reach_degraded": "Tidak Stabil",
+    "reach_unreachable": "Tidak terjangkau",
+    "reach_no_ping_reply": "Ping tidak dibalas",
+    "reach_unknown": "Tidak diukur",
+    "reach_aria": "Keterjangkauan, {{minutes}} menit, dari yang terlama",
+    "jitter_label": "Jitter",
+    "jitter_now": "{{value}} ms sekarang",
+    "jitter_no_reading": "Tidak ada data",
+    "jitter_aria": "Jitter, {{minutes}} menit, dari yang terlama",
+    "axis_now": "Sekarang",
+    "axis_reach_one": "{{count}} menit lalu",
+    "axis_reach_other": "{{count}} menit lalu",
+    "axis_reach_none": "Belum ada riwayat",
+    "axis_reach_sub_minute": "< 1 menit",
+    "footer_typical": "Umumnya",
+    "footer_worst": "Terburuk",
+    "footer_loss": "Loss",
+    "empty_title": "Tidak ada pemeriksaan",
+    "empty_description": "Pemeriksaan koneksi tidak berjalan, jadi tidak ada latensi, jitter, atau loss yang bisa ditampilkan.",
+    "empty_action": "Buka Kualitas Koneksi",
+    "error_title": "Modem tidak dapat dijangkau",
+    "error_description": "Status modem tidak dapat dibaca, jadi belum ada data kualitas yang bisa ditampilkan."
   }
 }

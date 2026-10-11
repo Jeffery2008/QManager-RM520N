@@ -47,7 +47,7 @@
     "no_carrier": "Nessun corriere",
     "internet_tooltip": {
       "no_reply": "Nessuna risposta al ping di connettività. Alcuni operatori bloccano queste sonde, quindi la connessione potrebbe essere comunque attiva.",
-      "degraded": "I ping arrivano a destinazione, ma almeno uno su dieci viene perso. La connessione è attiva e inaffidabile.",
+      "degraded": "I ping arrivano a destinazione, ma la perdita di pacchetti ha raggiunto la soglia impostata in Qualità della connessione.",
       "recovery": "Il watchdog di connessione sta ripristinando il collegamento. Le letture restano inaffidabili finché non termina.",
       "unknown": "La sonda di connettività non sta riportando dati, quindi al momento non si sa nulla sulla raggiungibilità di Internet."
     }
@@ -146,16 +146,6 @@
     "trend_heading": "Andamento {{metric}} nella cronologia recente, in {{unit}}",
     "error_title": "Cronologia del segnale non disponibile",
     "error_description": "Impossibile caricare la cronologia del segnale: {{message}}"
-  },
-  "latency": {
-    "description": "Latenza di andata e ritorno e perdita di pacchetti sulle ultime dieci sonde, più l'ultimo test di velocità.",
-    "title": "Latenza in tempo reale",
-    "chart_latency": "Latenza",
-    "chart_packetloss": "Perdita di pacchetti",
-    "current_label": "Latenza attuale",
-    "unit_ms": "ms",
-    "no_reading": "Nessuna lettura",
-    "empty_description": "In attesa dei primi campioni di latenza."
   },
   "latencyMonitor": {
     "page": {
@@ -373,5 +363,38 @@
       "profile_deactivated": "Profilo disattivato",
       "tower_failover": "Failover blocco BTS"
     }
+  },
+  "connection_quality": {
+    "title": "Qualità della connessione",
+    "description": "Quanto è stato stabile il collegamento nell'ultima mezz'ora, più l'ultimo speed test.",
+    "internet": "Internet",
+    "dns": "Risoluzione DNS",
+    "unit_ms": "ms",
+    "unit_pct": "%",
+    "probing": "Sonda",
+    "reach_label": "Raggiungibilità",
+    "reach_responsive": "Reattivo",
+    "reach_degraded": "Instabile",
+    "reach_unreachable": "Irraggiungibile",
+    "reach_no_ping_reply": "Nessuna risposta al ping",
+    "reach_unknown": "Non misurato",
+    "reach_aria": "Raggiungibilità, {{minutes}} minuti, dal più vecchio",
+    "jitter_label": "Jitter",
+    "jitter_now": "{{value}} ms ora",
+    "jitter_no_reading": "Nessuna lettura",
+    "jitter_aria": "Jitter, {{minutes}} minuti, dal più vecchio",
+    "axis_now": "Ora",
+    "axis_reach_one": "{{count}} min fa",
+    "axis_reach_other": "{{count}} min fa",
+    "axis_reach_none": "Nessuno storico",
+    "axis_reach_sub_minute": "< 1 min",
+    "footer_typical": "Tipica",
+    "footer_worst": "Peggiore",
+    "footer_loss": "Perdita",
+    "empty_title": "Nessuna sonda attiva",
+    "empty_description": "Il controllo della connessione non è attivo, quindi non ci sono latenza, jitter o perdita da mostrare.",
+    "empty_action": "Apri Qualità della connessione",
+    "error_title": "Modem non raggiungibile",
+    "error_description": "Non è stato possibile leggere lo stato del modem, quindi non c'è alcuna lettura di qualità da mostrare."
   }
 }

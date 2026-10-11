@@ -530,8 +530,8 @@ export interface QualityThresholdsSettings {
 
 /** The poller's derived connectivity verdict, computed in qmanager_poller from the
     ICMP daemon's reachability plus the rolling packet-loss window. This is the only
-    connectivity verdict the UI reads: "degraded" means the probes answer but at least
-    a tenth of them are lost, "recovery" means the watchdog is mid-restore, and
+    connectivity verdict the UI reads: "degraded" means the probes answer but loss has
+    reached the configured threshold (`thresholds.loss_pct`), "recovery" means the watchdog is mid-restore, and
     "unknown" means the probe itself is not reporting — which is not an outage. */
 export type ConnectivityState =
   | "connected"

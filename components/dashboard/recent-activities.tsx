@@ -113,8 +113,8 @@ const ROW_ADVANCE = ROW_H + ROW_GAP; // 68
  *  row height is whichever card is tallest -- Device Metrics, whose four meter
  *  rows and three pill rows come to 340px against this list's 332px. Every
  *  pixel of the difference is dead space at the bottom of THIS card, because it
- *  is the only one of the three with nothing to absorb slack: Live Latency has
- *  `CHART_BOX`'s `flex-1`, and Device Metrics is the driver.
+ *  is the only one of the three with nothing to absorb slack: Connection Quality
+ *  pins its Speedtest row to the bottom, and Device Metrics is the driver.
  *
  *  A sixth row does not fix that. Measured across the 3-column layout (the only
  *  one where the three share a row) the gap runs 30.8-76.3px depending on where

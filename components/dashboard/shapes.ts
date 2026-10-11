@@ -420,6 +420,31 @@ export const TILE = {
 export const LANE = "w-14 shrink-0";
 
 /**
+ * Connection Quality geometry, shared by the card and its skeleton. BUCKETS is
+ * both the cell count and the bucketing divisor; the heights are px for inline styles.
+ */
+export const QUALITY = {
+  BUCKETS: 28,
+  /** The window both strips cover, in seconds. */
+  WINDOW_S: 1800,
+  TRACK_H: 26,
+  /** An unmeasured jitter bucket's stub; kept well below MEASURED_MIN_H. */
+  STUB_H: 3,
+  MEASURED_MIN_H: 7,
+  GAP: "gap-[3px]",
+  CELL: "min-w-0 flex-1 rounded-[3px]",
+  BAR: "min-w-0 flex-1 rounded-[2px]",
+  ROW: "flex items-end",
+  LABEL_ROW: "flex h-4 items-center justify-between gap-2",
+  /** Narrower than LANE: this lane sits inline between a label and a value column. */
+  LANE: "w-11 shrink-0",
+  /** Fixed so both latency rows share a right edge whatever their digit counts. */
+  VALUE_COL: "w-16 shrink-0 text-right whitespace-nowrap",
+  /** The latency tile, shared by the card and its skeleton. */
+  TILE: "flex flex-col gap-2 rounded-tile bg-surface-container p-3.5",
+} as const;
+
+/**
  * A tile disc’s two tones.
  *
  * SOLID role colour, not a container. A disc is an accent MARK — the glyph

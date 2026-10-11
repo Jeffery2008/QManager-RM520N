@@ -47,7 +47,7 @@
     "no_carrier": "无运营商",
     "internet_tooltip": {
       "no_reply": "连通性 ping 未收到响应。部分运营商会屏蔽此类探测，因此连接可能仍然正常。",
-      "degraded": "Ping 能够送达，但至少十分之一的探测丢失。连接处于在线但不可靠的状态。",
+      "degraded": "Ping 能够送达，但丢包率已达到连接质量中设置的丢包阈值。",
       "recovery": "连接看门狗正在恢复链路。在其完成之前，读数仍不可靠。",
       "unknown": "连通性探测未上报数据，因此目前无法得知互联网的可达性。"
     }
@@ -146,16 +146,6 @@
     "trend_heading": "近期 {{metric}} 趋势（单位：{{unit}}）",
     "error_title": "无法获取信号历史",
     "error_description": "无法加载信号历史：{{message}}"
-  },
-  "latency": {
-    "description": "最近十次探测的往返延迟与丢包率，以及最近一次测速结果。",
-    "title": "实时延迟",
-    "chart_latency": "延迟",
-    "chart_packetloss": "丢包率",
-    "current_label": "当前延迟",
-    "unit_ms": "毫秒",
-    "no_reading": "无读数",
-    "empty_description": "正在等待首批延迟采样。"
   },
   "latencyMonitor": {
     "page": {
@@ -373,5 +363,38 @@
       "profile_deactivated": "配置文件已停用",
       "tower_failover": "基站锁定故障切换"
     }
+  },
+  "connection_quality": {
+    "title": "连接质量",
+    "description": "过去半小时内链路的稳定程度，以及最近一次测速结果。",
+    "internet": "互联网",
+    "dns": "DNS 查询",
+    "unit_ms": "ms",
+    "unit_pct": "%",
+    "probing": "探测目标",
+    "reach_label": "可达性",
+    "reach_responsive": "响应正常",
+    "reach_degraded": "不稳定",
+    "reach_unreachable": "无法访问",
+    "reach_no_ping_reply": "Ping 无响应",
+    "reach_unknown": "未测量",
+    "reach_aria": "可达性，{{minutes}} 分钟，从最早开始",
+    "jitter_label": "抖动",
+    "jitter_now": "当前 {{value}} ms",
+    "jitter_no_reading": "无读数",
+    "jitter_aria": "抖动，{{minutes}} 分钟，从最早开始",
+    "axis_now": "现在",
+    "axis_reach_one": "{{count}} 分钟前",
+    "axis_reach_other": "{{count}} 分钟前",
+    "axis_reach_none": "暂无历史记录",
+    "axis_reach_sub_minute": "< 1 分钟",
+    "footer_typical": "典型",
+    "footer_worst": "最差",
+    "footer_loss": "丢包",
+    "empty_title": "未在探测",
+    "empty_description": "连接探测未运行，因此没有延迟、抖动或丢包数据可显示。",
+    "empty_action": "打开连接质量",
+    "error_title": "无法连接调制解调器",
+    "error_description": "无法读取调制解调器状态，因此没有质量读数可显示。"
   }
 }
