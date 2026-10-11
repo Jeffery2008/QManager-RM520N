@@ -1,5 +1,4 @@
 import type { BadgeVariant } from "@/components/ui/badge";
-import type { EventTone } from "@/lib/event-presentation";
 
 // Network Events — the /monitoring family's geometry and tone contract.
 // Skeletons import the same constants the loaded views do (Skeleton-Mirror).
@@ -76,41 +75,24 @@ export const NOW = {
 // -----------------------------------------------------------------------------
 
 export const ACTIVITY = {
-  BODY: "flex flex-1 flex-col gap-2.5",
-  /** The card's slack region; 112px floor. */
-  CHART:
-    "grid min-h-28 flex-1 grid-flow-col auto-cols-[minmax(0,1fr)] items-end gap-1",
-  COLUMN: "flex h-full flex-col-reverse gap-0.5",
-  SEGMENT: "block w-full rounded-inline",
-  /** An empty bucket: a 2px tick on the baseline. */
-  BASELINE: "block h-0.5 w-full rounded-pill bg-border",
-  AXIS_LINE: "h-[0.6875rem]",
-  AXIS: "text-on-surface-variant flex h-[0.6875rem] justify-between text-[0.6875rem] leading-none tabular-nums",
-  LEGEND_LINE: "h-5",
-  LEGEND: "flex flex-wrap gap-x-5 gap-y-2",
-  LEGEND_ITEM:
-    "text-on-surface-variant inline-flex h-5 items-center gap-1.5 text-[0.8125rem]",
-  LEGEND_VALUE: "text-on-surface font-semibold tabular-nums",
-  LEGEND_GLYPH: "size-3.5",
-  LEGEND_PROBLEM: "text-warning-on-surface",
-  LEGEND_RECOVERY: "text-success-on-surface",
+  BODY: "flex flex-1 flex-col",
+  /** The card's slack region; the chart and its skeleton share this box. */
+  CHART: "relative min-h-48 w-full flex-1",
+  /** Pinned to the slot: a percent height inside a flex item resolves to zero. */
+  PLOT: "absolute inset-0 aspect-auto",
+  /** Axis and gridline ink, so ticks read on the card surface. */
+  TICK_INK:
+    "[&_.recharts-cartesian-axis-tick_text]:fill-on-surface-variant [&_.recharts-cartesian-axis-tick_text]:text-[0.6875rem] [&_.recharts-cartesian-axis-tick_text]:tabular-nums",
+  AXIS_W: 28,
+  LEGEND_LINE: "mt-3 h-5",
 } as const;
 
-/** Bar fill per tone. Routine is neutral: a count is not a verdict. */
-export const ACTIVITY_SEGMENT_TONE: Record<EventTone, string> = {
-  error: "bg-destructive",
-  warning: "bg-warning",
-  success: "bg-success",
-  routine: "bg-tag-neutral-border",
-};
-
-/** Bottom-up stacking order inside a column. */
-export const ACTIVITY_STACK_ORDER: readonly EventTone[] = [
-  "error",
-  "warning",
-  "success",
-  "routine",
-];
+/** Series fill, bottom-up in the stack. Routine is neutral: a count is not a verdict. */
+export const ACTIVITY_SERIES_COLOR = {
+  problems: "var(--warning)",
+  recoveries: "var(--success)",
+  routine: "var(--tag-neutral-border)",
+} as const;
 
 // -----------------------------------------------------------------------------
 // The log card

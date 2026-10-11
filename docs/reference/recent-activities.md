@@ -518,7 +518,7 @@ The full log reads the same hook with `maxEvents: SERVED_EVENTS` (50, from `deri
 | ----- | ---- | ------------- |
 | Page shell | `components/monitoring/network-events.tsx` | Header with a **Live / Paused** `SegmentedField` (drives the hook's `enabled`) and Refresh |
 | Right now | `network-events/now-card.tsx` | Ongoing problems (the `unresolved` set), then runs whose newest member is under `FRESH_WINDOW_SEC` old, under "Repeating". Selecting a run calls `EventLogHandle.revealRun` |
-| Activity | `network-events/activity-card.tsx` | Stacked bars from `bucketEvents`, the window description from `describeWindow`, and a Problems / Recoveries / Routine legend |
+| Activity | `network-events/activity-card.tsx` | A shadcn stacked `BarChart` (Problems / Recoveries / Routine, `ChartLegend`) fed by `bucketEvents`, and the window description from `describeWindow` |
 | Log | `network-events/event-log-card.tsx` | Filter rail, sort, day groups, runs. Scrolls inside the card (`LOG_SCROLL`: `max-h-[min(36rem,70svh)]`) |
 | Rows | `network-events/event-row.tsx` | `EventRow`, `RunRow`, `MemberRow`, `JumpRow`. Time is the leading column (relative over clock time) |
 | Pure logic | `network-events/derive.ts` | `groupRuns`, `runProbe`, `runMemberKeys`, `describeWindow`, `bucketEvents` |

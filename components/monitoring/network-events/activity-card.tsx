@@ -1,11 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  ArrowRightLeftIcon,
-  CheckCircle2Icon,
-  TriangleAlertIcon,
-} from "lucide-react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import {
   Card,
@@ -14,7 +10,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useChartSeriesMotion } from "@/hooks/use-chart-motion";
 import { cn } from "@/lib/utils";
 import type { NetworkEvent } from "@/types/modem-status";
 
@@ -22,8 +27,7 @@ import { useEventsCopy, useEventsPlural, useSpanText } from "./copy";
 import { bucketEvents, describeWindow } from "./derive";
 import {
   ACTIVITY,
-  ACTIVITY_SEGMENT_TONE,
-  ACTIVITY_STACK_ORDER,
+  ACTIVITY_SERIES_COLOR,
   CARD_DESC,
   CARD_DESC_LINE,
   CARD_FILL,
@@ -49,10 +53,43 @@ export function ActivityCard({
   const c = useEventsCopy();
   const p = useEventsPlural();
   const spanText = useSpanText();
+  const seriesMotion = useChartSeriesMotion();
 
   const buckets = React.useMemo(
     () => bucketEvents(events, nowSec),
     [events, nowSec],
+  );
+
+  const chartConfig = React.useMemo(
+    () =>
+      ({
+        problems: {
+          label: c("networkEvents.activity.problems"),
+          color: ACTIVITY_SERIES_COLOR.problems,
+        },
+        recoveries: {
+          label: c("networkEvents.activity.recoveries"),
+          color: ACTIVITY_SERIES_COLOR.recoveries,
+        },
+        routine: {
+          label: c("networkEvents.activity.routine"),
+          color: ACTIVITY_SERIES_COLOR.routine,
+        },
+      }) satisfies ChartConfig,
+    [c],
+  );
+
+  const chartData = React.useMemo(
+    () =>
+      buckets.columns.map((column) => ({
+        endSec: column.endSec,
+        startSec: column.startSec,
+        total: column.total,
+        problems: column.counts.error + column.counts.warning,
+        recoveries: column.counts.success,
+        routine: column.counts.routine,
+      })),
+    [buckets],
   );
 
   const title = (
@@ -69,8 +106,7 @@ export function ActivityCard({
         <CardContent className={cn(CARD_PAD, CARD_FILL)}>
           <div className={ACTIVITY.BODY} aria-hidden>
             <Skeleton className={cn(ACTIVITY.CHART, "rounded-inline")} />
-            <Skeleton className={cn(ACTIVITY.AXIS_LINE, "w-full")} />
-            <Skeleton className={cn(ACTIVITY.LEGEND_LINE, "w-64")} />
+            <Skeleton className={cn(ACTIVITY.LEGEND_LINE, "mx-auto w-64")} />
           </div>
         </CardContent>
       </Card>
@@ -86,7 +122,6 @@ export function ActivityCard({
         : p("networkEvents.activity.window_last", served.count, {
             span: spanText(served.spanSec),
           });
-  const empty = events.length === 0;
 
   return (
     <Card className={CARD_SHELL}>
@@ -96,79 +131,80 @@ export function ActivityCard({
       </CardHeader>
       <CardContent className={cn(CARD_PAD, CARD_FILL)}>
         <div className={ACTIVITY.BODY}>
-          <div
-            className={ACTIVITY.CHART}
-            role="group"
-            aria-label={c("networkEvents.activity.chart_aria")}
-          >
-            {buckets.columns.map((column) => {
-              const tip = p("networkEvents.activity.column", column.total, {
-                from: clockTime(column.startSec),
-                to: clockTime(column.endSec),
-              });
-              return (
-                <span
-                  key={column.endSec}
-                  role="img"
-                  aria-label={tip}
-                  title={tip}
-                  className={ACTIVITY.COLUMN}
-                >
-                  {column.total === 0 ? (
-                    <i className={ACTIVITY.BASELINE} />
-                  ) : (
-                    ACTIVITY_STACK_ORDER.map((tone) =>
-                      column.counts[tone] > 0 ? (
-                        <i
-                          key={tone}
-                          className={cn(
-                            ACTIVITY.SEGMENT,
-                            ACTIVITY_SEGMENT_TONE[tone],
-                          )}
-                          style={{
-                            height: `${(column.counts[tone] / buckets.max) * 100}%`,
-                          }}
-                        />
-                      ) : null,
-                    )
-                  )}
-                </span>
-              );
-            })}
-          </div>
-
-          <div className={ACTIVITY.AXIS}>
-            <span>{empty ? "" : clockTime(buckets.startSec)}</span>
-            <span>{c("networkEvents.activity.now")}</span>
-          </div>
-
-          {empty ? null : (
-            <div className={ACTIVITY.LEGEND}>
-              <span className={ACTIVITY.LEGEND_ITEM}>
-                <TriangleAlertIcon
-                  aria-hidden
-                  className={cn(ACTIVITY.LEGEND_GLYPH, ACTIVITY.LEGEND_PROBLEM)}
+          <div className={ACTIVITY.CHART}>
+            <ChartContainer
+              config={chartConfig}
+              aria-label={c("networkEvents.activity.chart_aria")}
+              className={cn(ACTIVITY.PLOT, ACTIVITY.TICK_INK)}
+            >
+              <BarChart
+                accessibilityLayer
+                data={chartData}
+                margin={{ top: 4 }}
+              >
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="endSec"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  minTickGap={28}
+                  interval="preserveStartEnd"
+                  tickFormatter={(value: number) =>
+                    value === nowSec
+                      ? c("networkEvents.activity.now")
+                      : clockTime(value)
+                  }
                 />
-                {c("networkEvents.activity.problems")}
-                <span className={ACTIVITY.LEGEND_VALUE}>{buckets.problems}</span>
-              </span>
-              <span className={ACTIVITY.LEGEND_ITEM}>
-                <CheckCircle2Icon
-                  aria-hidden
-                  className={cn(ACTIVITY.LEGEND_GLYPH, ACTIVITY.LEGEND_RECOVERY)}
+                <YAxis
+                  width={ACTIVITY.AXIS_W}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={4}
+                  allowDecimals={false}
                 />
-                {c("networkEvents.activity.recoveries")}
-                <span className={ACTIVITY.LEGEND_VALUE}>
-                  {buckets.recoveries}
-                </span>
-              </span>
-              <span className={ACTIVITY.LEGEND_ITEM}>
-                <ArrowRightLeftIcon aria-hidden className={ACTIVITY.LEGEND_GLYPH} />
-                {c("networkEvents.activity.routine")}
-                <span className={ACTIVITY.LEGEND_VALUE}>{buckets.routine}</span>
-              </span>
-            </div>
-          )}
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent
+                      labelFormatter={(_label, items) => {
+                        const row = items?.[0]?.payload as
+                          | (typeof chartData)[number]
+                          | undefined;
+                        return row
+                          ? p("networkEvents.activity.column", row.total, {
+                              from: clockTime(row.startSec),
+                              to: clockTime(row.endSec),
+                            })
+                          : null;
+                      }}
+                    />
+                  }
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar
+                  dataKey="problems"
+                  stackId="events"
+                  fill="var(--color-problems)"
+                  radius={[0, 0, 4, 4]}
+                  {...seriesMotion}
+                />
+                <Bar
+                  dataKey="recoveries"
+                  stackId="events"
+                  fill="var(--color-recoveries)"
+                  {...seriesMotion}
+                />
+                <Bar
+                  dataKey="routine"
+                  stackId="events"
+                  fill="var(--color-routine)"
+                  radius={[4, 4, 0, 0]}
+                  {...seriesMotion}
+                />
+              </BarChart>
+            </ChartContainer>
+          </div>
         </div>
       </CardContent>
     </Card>
