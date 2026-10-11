@@ -1,5 +1,5 @@
 # Run: Network Events redesign (/monitoring)
-status: active
+status: closed
 lane: full
 base: 62af4a03ff5efd8588543734e19639744c24dea7   branch: worktree-wt+network-events-redesign (.claude/worktrees/wt+network-events-redesign)   opened: 2026-10-11   lead: opus
 
@@ -34,8 +34,10 @@ base: 62af4a03ff5efd8588543734e19639744c24dea7   branch: worktree-wt+network-eve
 - Known, not fixed: unused exports (RUN_MIN, RUN_GAP_SEC, EVENT_LABELS...), stale comment components/dashboard/recent-activities.tsx:70-75, 1970-clock window text.
 - Out of scope: scripts/usr/lib/qmanager/events.sh:745-752 ca_change bypasses _ev_settle flap counter.
 
+- Merge: user chose "Merge into development". development was rewritten mid-run; replayed with rebase --onto, gates re-run green post-rebase.
+
 ## Device state
 Not touched.
 
 ## Handoff — NEXT ACTION
-Committed on worktree branch. Ask user: merge into development / keep branch / discard. Then separate backend run for ca_change debounce.
+Closed 2026-10-11. Merged to development as 982b0e5c (rebased onto 700bb603 after development was rewritten under BASE 62af4a03; docs conflicts integrated). Not pushed. Next: separate backend run for the ca_change flap debounce (events.sh LTE/NR CA blocks).
