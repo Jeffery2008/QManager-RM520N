@@ -31,8 +31,6 @@ import {
   PILL_QUIET,
   SCAN_RESULTS_CARD,
   SECTION_HEAD,
-  VERDICT,
-  VERDICT_TONE,
   runPosture,
 } from "../shapes";
 import { summariseNeighbours } from "../summaries";
@@ -129,7 +127,7 @@ export function NeighbourScanner() {
         id: group.type,
         name: t(CELL_TYPE_KEY[group.type]),
         cells: group.count,
-        cellsUnit: t("cell_scanner.neighbour.run.ledger.bands_unit", {
+        cellsUnit: t("cell_scanner.run.ledger.cells_unit", {
           count: group.count,
         }),
         bands: [],
@@ -152,29 +150,11 @@ export function NeighbourScanner() {
         emptyText={t("cell_scanner.neighbour.run.summary_empty")}
         head={{
           carrier: t("cell_scanner.neighbour.columns.cell_type"),
-          cells: t("cell_scanner.run.ledger.col_bands"),
+          cells: t("cell_scanner.run.ledger.col_cells"),
           best: t("cell_scanner.run.ledger.col_best"),
         }}
         dbmUnit={t("cell_scanner.run.ledger.dbm_unit")}
       />
-    ) : null;
-
-  // The one verdict: rows the serving cell named but did not measure.
-  const verdictNode =
-    posture === "complete" && summary.channelOnly > 0 ? (
-      <p className={cn(VERDICT.ROOT, VERDICT_TONE.muted)}>
-        <MaterialSymbol
-          name="visibility_off"
-          size={18}
-          filled
-          className="flex-none"
-        />
-        <span className={VERDICT.TEXT}>
-          {t("cell_scanner.neighbour.run.verdict_channel_only", {
-            count: summary.channelOnly,
-          })}
-        </span>
-      </p>
     ) : null;
 
   return (
@@ -206,7 +186,6 @@ export function NeighbourScanner() {
               : null
           }
           rows={ledgerRowsNode}
-          verdict={verdictNode}
           idleCollapsed
           actions={
             // None on failed: the results card carries the retry.

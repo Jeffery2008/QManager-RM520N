@@ -429,10 +429,8 @@
       "run": {
         "title": "邻区扫描",
         "ledger": {
-          "figure_unit_one": "个可用频段",
-          "figure_unit_other": "个可用频段",
-          "bands_unit_one": "个频段",
-          "bands_unit_other": "个频段"
+          "figure_unit_one": "个邻区",
+          "figure_unit_other": "个邻区"
         },
         "description": "请求服务小区已经跟踪的邻区，无需扫描额外的频段。",
         "start": "读取邻区",
@@ -441,8 +439,6 @@
         "link_sweep": "小区扫描",
         "link_blocked": "本次读取结束后可用。",
         "summary_empty": "本次读取结束时未列出任何邻区，因此没有可分析的内容。",
-        "verdict_channel_only_one": "1 个邻区仅返回了信道：服务小区知道它存在，但没有对它的当前测量值，因此它不带质量信息，也无法锁定。",
-        "verdict_channel_only_other": "{{count}} 个邻区仅返回了信道：服务小区知道它们存在，但没有对它们的当前测量值，因此它们不带质量信息，也无法锁定。",
         "idle_title": "尚未读取",
         "idle_body": "本页加载后尚未读取。读取会列出服务小区正在测量的邻区。",
         "scanning_title": "正在询问服务小区",

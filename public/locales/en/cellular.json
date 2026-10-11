@@ -429,10 +429,8 @@
       "run": {
         "title": "Neighbourcell scan",
         "ledger": {
-          "figure_unit_one": "available band",
-          "figure_unit_other": "available bands",
-          "bands_unit_one": "band",
-          "bands_unit_other": "bands"
+          "figure_unit_one": "neighbour",
+          "figure_unit_other": "neighbours"
         },
         "description": "Requests the neighbour cells the serving tower already tracks, without sweeping additional bands.",
         "start": "Read neighbours",
@@ -441,8 +439,6 @@
         "link_sweep": "Cell Scanner",
         "link_blocked": "Available once this read finishes.",
         "summary_empty": "The read finished without naming a single neighbour, so there is nothing to break down.",
-        "verdict_channel_only_one": "1 neighbour came back as a channel only: the serving cell knows it is there but has no current measurement for it, so it carries no quality and cannot be locked.",
-        "verdict_channel_only_other": "{{count}} neighbours came back as a channel only: the serving cell knows they are there but has no current measurements for them, so they carry no quality and cannot be locked.",
         "idle_title": "No read yet",
         "idle_body": "Nothing has been read since this page loaded. A read lists the neighbours the serving cell is already measuring.",
         "scanning_title": "Asking the serving cell",

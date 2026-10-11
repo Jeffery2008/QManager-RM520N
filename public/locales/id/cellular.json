@@ -429,10 +429,8 @@
       "run": {
         "title": "Pemindaian sel tetangga",
         "ledger": {
-          "figure_unit_one": "band tersedia",
-          "figure_unit_other": "band tersedia",
-          "bands_unit_one": "band",
-          "bands_unit_other": "band"
+          "figure_unit_one": "sel tetangga",
+          "figure_unit_other": "sel tetangga"
         },
         "description": "Meminta sel tetangga yang sudah dilacak sel pelayan, tanpa memindai band tambahan.",
         "start": "Baca sel tetangga",
@@ -441,8 +439,6 @@
         "link_sweep": "Pemindai Sel",
         "link_blocked": "Tersedia setelah pembacaan ini selesai.",
         "summary_empty": "Pembacaan selesai tanpa menyebut satu sel tetangga pun, jadi tidak ada yang bisa diuraikan.",
-        "verdict_channel_only_one": "1 sel tetangga dikembalikan hanya sebagai kanal: sel pelayan tahu sel itu ada tetapi tidak punya pengukuran terkini untuknya, jadi ia tidak membawa kualitas dan tidak bisa dikunci.",
-        "verdict_channel_only_other": "{{count}} sel tetangga dikembalikan hanya sebagai kanal: sel pelayan tahu sel-sel itu ada tetapi tidak punya pengukuran terkini untuknya, jadi mereka tidak membawa kualitas dan tidak bisa dikunci.",
         "idle_title": "Belum ada pembacaan",
         "idle_body": "Belum ada pembacaan sejak halaman ini dimuat. Pembacaan menampilkan sel tetangga yang sedang diukur oleh sel pelayan.",
         "scanning_title": "Menanyai sel pelayan",

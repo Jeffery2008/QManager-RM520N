@@ -22,6 +22,7 @@ Every settings card in the app now saves from the same place — a row along the
 
 - **TTL & MTU Apply buttons match their Discard buttons.** On **Local Network → TTL & MTU Settings**, the Apply buttons were smaller and squarer than the Discard pill beside them; they are now the same 42px pill.
 - **Neighboring Cells "Read failed" card gives the right advice.** It used to tell you to run the sweep again; it now says to read again.
+- **Neighboring Cells counts cells, not bands.** After a read, the summary on **Cell Scanner → Neighboring Cells** now shows a check and "9 neighbours" instead of "9 available bands", and the per-type rows count cells; Cell Scanner's summary gets the same check-and-total layout.
 
 ## 📥 Installation
 

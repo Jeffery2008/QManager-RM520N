@@ -129,61 +129,82 @@ export function RunHero({
                 </div>
               ) : (
                 <div className={cn(LEDGER.ROOT, hasRows && LEDGER.ROOT_SPLIT)}>
-                  <div
-                    className={cn(
-                      LEDGER.STATUS_ROOT,
-                      hasRows && LEDGER.STATUS_DIVIDER,
-                    )}
-                  >
-                    <span
-                      className={cn(LEDGER.STATUS_DISC, POSTURE_DISC[posture])}
+                  {showFig ? (
+                    <div
+                      className={cn(
+                        LEDGER.SUMMARY_ROOT,
+                        hasRows && LEDGER.STATUS_DIVIDER,
+                      )}
                     >
-                      <MaterialSymbol
-                        name={mark.glyph}
-                        size={20}
-                        filled={mark.filled}
-                        className={spin}
-                      />
-                    </span>
-
-                    <div className={LEDGER.STATUS_TEXT}>
+                      {/* The check and the figure say it finished; the title stays for assistive tech. */}
+                      <span className="sr-only">{postureTitle}</span>
                       <span
-                        className={
-                          postureTitleIsMachine
-                            ? LEDGER.STATUS_TITLE_MACHINE
-                            : LEDGER.STATUS_TITLE
-                        }
+                        className={cn(LEDGER.STATUS_DISC, POSTURE_DISC[posture])}
+                        aria-hidden="true"
                       >
-                        {postureTitle}
+                        <MaterialSymbol
+                          name={mark.glyph}
+                          size={20}
+                          filled={mark.filled}
+                        />
                       </span>
-
-                      {postureBody ? (
-                        <span className={LEDGER.STATUS_BODY}>
-                          {postureBody}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {showFig ? (
-                      <div className={LEDGER.STATUS_FIG}>
-                        <span className={LEDGER.STATUS_FIG_NUM}>{metric}</span>
+                      <div className={LEDGER.SUMMARY_FIG}>
+                        <span className={LEDGER.SUMMARY_FIG_NUM}>{metric}</span>
                         {metricUnit ? (
-                          <span className={LEDGER.STATUS_FIG_UNIT}>
+                          <span className={LEDGER.SUMMARY_FIG_UNIT}>
                             {metricUnit}
                           </span>
                         ) : null}
                       </div>
-                    ) : showBar ? (
-                      <Progress
-                        value={progress ?? 0}
-                        aria-label={progressLabel}
-                        className={cn(
-                          LEDGER.STATUS_BAR,
-                          "h-1.5 bg-surface-container-high",
-                        )}
-                      />
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        LEDGER.STATUS_ROOT,
+                        hasRows && LEDGER.STATUS_DIVIDER,
+                      )}
+                    >
+                      <span
+                        className={cn(LEDGER.STATUS_DISC, POSTURE_DISC[posture])}
+                      >
+                        <MaterialSymbol
+                          name={mark.glyph}
+                          size={20}
+                          filled={mark.filled}
+                          className={spin}
+                        />
+                      </span>
+
+                      <div className={LEDGER.STATUS_TEXT}>
+                        <span
+                          className={
+                            postureTitleIsMachine
+                              ? LEDGER.STATUS_TITLE_MACHINE
+                              : LEDGER.STATUS_TITLE
+                          }
+                        >
+                          {postureTitle}
+                        </span>
+
+                        {postureBody ? (
+                          <span className={LEDGER.STATUS_BODY}>
+                            {postureBody}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {showBar ? (
+                        <Progress
+                          value={progress ?? 0}
+                          aria-label={progressLabel}
+                          className={cn(
+                            LEDGER.STATUS_BAR,
+                            "h-1.5 bg-surface-container-high",
+                          )}
+                        />
+                      ) : null}
+                    </div>
+                  )}
 
                   {hasRows ? rows : null}
                 </div>

@@ -418,7 +418,7 @@ Two smaller rules the coordinator holds:
 
 ## Machine voice on this surface
 
-Since 2026-10-06 the scan tables follow the amended Machine-Voice Rule (DESIGN.md > Typography): mono is for a string compared character by character, not for any value that happens to be numeric. Module-level `IDENT` in `shapes.ts` is `text-[13px] tabular-nums` with **no** `font-mono`, and `TABLE.IDENT` aliases it for band, EARFCN, PCI, Cell ID, TAC, the neighbour channel, the MCC/MNC tooltip and the lock dialog's identifier line. `FIGURE` (`tabular-nums`) carries the readings — RSRP, RSRQ, SINR, RSSI, bandwidth. Counts (`TOOLBAR.COUNT`, `TABLE_NOTE.TALLY`, `LEDGER.STATUS_FIG_NUM`, `LEDGER.CELLS`, `LEDGER.DBM_VALUE`) are interface-font `tabular-nums` too.
+Since 2026-10-06 the scan tables follow the amended Machine-Voice Rule (DESIGN.md > Typography): mono is for a string compared character by character, not for any value that happens to be numeric. Module-level `IDENT` in `shapes.ts` is `text-[13px] tabular-nums` with **no** `font-mono`, and `TABLE.IDENT` aliases it for band, EARFCN, PCI, Cell ID, TAC, the neighbour channel, the MCC/MNC tooltip and the lock dialog's identifier line. `FIGURE` (`tabular-nums`) carries the readings — RSRP, RSRQ, SINR, RSSI, bandwidth. Counts (`TOOLBAR.COUNT`, `TABLE_NOTE.TALLY`, `LEDGER.SUMMARY_FIG_NUM`, `LEDGER.CELLS`, `LEDGER.DBM_VALUE`) are interface-font `tabular-nums` too.
 
 Mono survives in exactly two places on the scanning routes, both opaque strings:
 
@@ -448,7 +448,7 @@ Removed on both routes and all four postures (user decision, 2026-08-12). What f
 | ------- | ---------------- | ------------ |
 | `idle` | A compact **launch bar**: title, description, sibling link and the start action. The body is collapsed (`idleCollapsed`, passed by both routes) | **Not mounted** |
 | `scanning` | The ledger: a status cell (spinning `progress_activity` disc, title, body; on the sweep an estimated progress bar) beside `SKELETON_SHAPE.LEDGER_ROWS` (2) skeleton rows. The start button stays, disabled, with a spinner | `ScannerSkeleton` |
-| `complete` | The status cell carries the run's total with its unit; the ledger rows sit beside it; an optional verdict strip sits below | The table, or the dashed zero-results panel |
+| `complete` | The status cell becomes a summary: the success check beside the run's total and its unit, top-aligned, with the title kept only as `sr-only` (`LEDGER.SUMMARY_*`). The ledger rows sit beside it; the sweep's optional verdict strip sits below | The table, or the dashed zero-results panel |
 | `failed` | The status cell only, no rows, titled with the modem's own error in machine voice — **and no action in the header** | `ScanErrorState`, which carries the single retry |
 
 ### The ledger
@@ -456,7 +456,7 @@ Removed on both routes and all four postures (user decision, 2026-08-12). What f
 `LEDGER` (`shapes.ts`) is one `rounded-tile` fill holding a status cell and, in `scanning` and `complete` only, a rows region. `ROOT_SPLIT` puts the two side by side from `@2xl/section`; on a phone the status cell is a strip above the rows. `LedgerRows` (`run-summary.tsx`) is **copy-blind and SIM-blind**: every string arrives as a prop, and "Your SIM" is a boolean on the row.
 
 - **Sweep:** one row per carrier from `summariseSweep`, capped at `MAX_PROVIDER_TILES` (5). The SIM's group sorts first and carries the "Your SIM" tag, then the strongest best reading, then the most cells. Groups past the fifth fold into one "N more providers" row (`cell_scanner.run.summary_others`) carrying their cell count and their best reading. Because the SIM's group sorts first, it is never folded.
-- **Neighbour:** one row per relation that appeared, in `intra`, `inter`, `nr5g` order, with no band column. The count is worded as bands (`neighbour.run.ledger.bands_unit`) and the total as "available bands" (`neighbour.run.ledger.figure_unit`).
+- **Neighbour:** one row per relation that appeared, in `intra`, `inter`, `nr5g` order, with no band column. Every count is one row per neighbour cell, so the rows use the sweep's `run.ledger.cells_unit` / `col_cells` and the total reads "neighbours" (`neighbour.run.ledger.figure_unit`). Until 2026-10-11 both were worded as bands, which misreported the read.
 - **Each row's chip is `SignalBadge` on the group's best reading** — the same chip, and the same `signalTier`, as a table row. An unmeasured group shows the muted "No data" chip and `—` in place of a dBm figure.
 - **The status figure is `summary.total`**, the run's total rows, never a count of rendered ledger rows.
 - **Rows render in `scanning` and `complete` only; the verdict in `complete` only.** On `failed`, and while a new run is scanning, `results` can still hold the *previous* run, and drawing it under the current status would report an old run as this one.
@@ -518,7 +518,7 @@ All three are derived from rows the surface already has — no new endpoint, no 
 | Object | Where | Sweep | Neighbour |
 | ------ | ----- | ----- | --------- |
 | **Ledger rows** | hero, beside the status cell | one row per carrier, SIM's first, capped at 5 plus an overflow row — see [The ledger](#the-ledger) | one row per relation that appeared |
-| **Verdict strip** | under the ledger, `complete` only, only when true | every *measured* cell shares one tier (`success` / `warning` / `destructive`, each with its own bar-count glyph), or nothing was measured at all (`muted`, `signal_cellular_off`). A mixed spread gets none | some rows came back channel-only (`muted`, `visibility_off`, `neighbour.run.verdict_channel_only`) |
+| **Verdict strip** | under the ledger, `complete` only, only when true | every *measured* cell shares one tier (`success` / `warning` / `destructive`, each with its own bar-count glyph), or nothing was measured at all (`muted`, `signal_cellular_off`). A mixed spread gets none | none: the channel-only explanation lives once, in the table note (`neighbour.results.note_channel_only`) |
 | **Tally** | `ScanTableNote` under the table, beside the lock note | rows plus per-tier counts, tiers with 0 omitted, over the whole sweep rather than the filtered view | rows, measured, channel only |
 | **Count** | the pager row, rendered only when the set pages (more than TanStack's default 10 rows) | `countLabel` | none — `countLabel` is omitted because the tally already counts the read |
 
@@ -526,7 +526,7 @@ Rules that hold this together:
 
 - **All arithmetic lives in `summaries.ts`, and it contains no copy.** `Math.max()` of an empty list is `-Infinity`, a mean over zero rows is `NaN`, and both render as confident text beside real numbers. One pure, total function per route means "survives an empty array, a single row and all-sentinel data" is a property of one file rather than of a rendering path nobody re-reads. And a pure function that returns English is an i18n hole the checker cannot see — the frequency calculator on this same prefix shipped exactly that bug once.
 - **A mixed spread gets NO verdict.** "The readings vary" is not an explanation, and a strip that is always present stops being read. Each verdict carries a distinct glyph because `success-container` and `warning-container` measure 1.03:1 apart.
-- **`VERDICT_TONE.muted` is `bg-surface-container-high`, one step off the ledger's `bg-surface-container`.** `muted` is the neighbour route's only verdict tone, so this is its normal look: on the ledger's own fill it would read as one more, wider ledger row.
+- **`VERDICT_TONE.muted` is `bg-surface-container-high`, one step off the ledger's `bg-surface-container`.** On the ledger's own fill a `muted` strip (the sweep's "nothing was measured") would read as one more, wider ledger row.
 
 > ℹ️ **The lock note says what a lock does.** `cell_scanner.results.note_lock` and `neighbour.results.note_channel_only` used to say a lock "copies" the cell into Tower Locking. `LockCellDialog` posts straight to `tower/lock.sh`, so the modem is locked at once and stays locked until the lock is cleared on Tower Locking; the copy now says that.
 

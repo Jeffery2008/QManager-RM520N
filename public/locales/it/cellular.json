@@ -429,10 +429,8 @@
       "run": {
         "title": "Scansione celle vicine",
         "ledger": {
-          "figure_unit_one": "banda disponibile",
-          "figure_unit_other": "bande disponibili",
-          "bands_unit_one": "banda",
-          "bands_unit_other": "bande"
+          "figure_unit_one": "cella vicina",
+          "figure_unit_other": "celle vicine"
         },
         "description": "Richiede le celle vicine che la cella di servizio già monitora, senza scansionare bande aggiuntive.",
         "start": "Leggi le celle vicine",
@@ -441,8 +439,6 @@
         "link_sweep": "Scanner celle",
         "link_blocked": "Disponibile al termine di questa lettura.",
         "summary_empty": "La lettura è terminata senza indicare nemmeno una cella vicina, quindi non c'è nulla da analizzare.",
-        "verdict_channel_only_one": "1 cella vicina è stata restituita con il solo canale: la cella di servizio sa che è lì ma non ne ha una misurazione attuale, quindi non porta alcuna qualità e non può essere bloccata.",
-        "verdict_channel_only_other": "{{count}} celle vicine sono state restituite con il solo canale: la cella di servizio sa che sono lì ma non ne ha misurazioni attuali, quindi non portano alcuna qualità e non possono essere bloccate.",
         "idle_title": "Nessuna lettura",
         "idle_body": "Nessuna lettura da quando la pagina è stata caricata. Una lettura elenca le celle vicine che la cella di servizio sta già misurando.",
         "scanning_title": "Interrogazione della cella di servizio",

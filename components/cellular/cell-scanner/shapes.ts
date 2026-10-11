@@ -107,12 +107,14 @@ export const LEDGER = {
   /** The modem's own error string, in machine voice. */
   STATUS_TITLE_MACHINE: "font-mono text-[13px] font-semibold text-pretty",
   STATUS_BODY: "text-xs text-on-surface-variant text-pretty",
-  /** The complete posture's figure: the run's total, never a count of rendered rows. */
-  STATUS_FIG:
-    "flex items-baseline gap-1.5 justify-self-end @2xl/section:col-span-2 @2xl/section:justify-self-start @2xl/section:self-end",
-  STATUS_FIG_NUM:
+  /** The complete posture: the check beside the figure, held at the top of the cell. */
+  SUMMARY_ROOT:
+    "grid grid-cols-[auto_minmax(0,1fr)] content-start items-center gap-x-3 px-4 py-3.5 @2xl/section:px-5 @2xl/section:py-[18px]",
+  /** The run's total, never a count of rendered rows. */
+  SUMMARY_FIG: "flex min-w-0 items-baseline gap-1.5",
+  SUMMARY_FIG_NUM:
     "tabular-nums text-[28px] font-semibold leading-none tracking-tight @2xl/section:text-[40px]",
-  STATUS_FIG_UNIT: "text-sm font-semibold text-on-surface-variant",
+  SUMMARY_FIG_UNIT: "text-sm font-semibold text-on-surface-variant",
   /** The sweep's estimated-progress bar. */
   STATUS_BAR:
     "col-span-3 mt-3 @2xl/section:col-span-2 @2xl/section:mt-0 @2xl/section:self-end",
