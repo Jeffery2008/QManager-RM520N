@@ -1,5 +1,7 @@
 #!/bin/sh
-. /usr/lib/qmanager/cgi_base.sh
+LIB_DIR="${QM_LIB_DIR:-/usr/lib/qmanager}"
+. "$LIB_DIR/cgi_base.sh"
+. "$LIB_DIR/conn_state.sh"
 # =============================================================================
 # alerts.sh — CGI Endpoint: Centralized Alerts (GET + POST)
 # =============================================================================
@@ -29,6 +31,8 @@
 #   /etc/qmanager/email_alerts.json
 #   /etc/qmanager/discord_bot.json
 #   /etc/qmanager/alert_routing.json
+#   /etc/qmanager/quality_thresholds.json (alert_after_min — the single wait; a
+#                                      posted per-channel threshold_minutes writes it)
 #   /etc/qmanager/reboot_history.json (read-only here — written by
 #                                      alert_engine.sh)
 #
@@ -58,9 +62,9 @@ qlog_init "cgi_alerts"
 cgi_headers
 cgi_handle_options
 
-SMS_CONFIG="/etc/qmanager/sms_alerts.json"
-EMAIL_CONFIG="/etc/qmanager/email_alerts.json"
-DISCORD_CONFIG="/etc/qmanager/discord_bot.json"
+SMS_CONFIG="$CQ_SMS_CONFIG"
+EMAIL_CONFIG="$CQ_EMAIL_CONFIG"
+DISCORD_CONFIG="$CQ_DISCORD_CONFIG"
 ROUTING_CONFIG="/etc/qmanager/alert_routing.json"
 REBOOT_HISTORY="/etc/qmanager/reboot_history.json"
 # NOTE: there is deliberately no MSMTP_CONFIG constant. www-data cannot read or
@@ -157,19 +161,21 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
     qlog_info "Fetching centralized alert settings"
 
     # --- SMS ---
-    sms_enabled="false"; sms_phone=""; sms_threshold=5
+    # One wait (owned by Connection Quality) is reported as every channel's threshold_minutes.
+    cq_alert_after_min
+    sms_threshold="$CQ_ALERT_AFTER_MIN"; email_threshold="$CQ_ALERT_AFTER_MIN"; discord_threshold="$CQ_ALERT_AFTER_MIN"
+
+    sms_enabled="false"; sms_phone=""
     if [ -f "$SMS_CONFIG" ]; then
         sms_enabled=$(jq -r '(.enabled) | if . == null then "false" else tostring end' "$SMS_CONFIG" 2>/dev/null)
         sms_phone=$(jq -r '.recipient_phone // ""' "$SMS_CONFIG" 2>/dev/null)
-        sms_threshold=$(jq -r '.threshold_minutes // 5' "$SMS_CONFIG" 2>/dev/null)
     fi
     case "$sms_enabled" in true|false) ;; *) sms_enabled="false" ;; esac
-    case "$sms_threshold" in ''|*[!0-9]*) sms_threshold=5 ;; esac
     sms_configured="false"
     [ -n "$sms_phone" ] && sms_configured="true"
 
     # --- Email ---
-    email_enabled="false"; email_sender=""; email_recipient=""; email_pw_set="false"; email_threshold=5
+    email_enabled="false"; email_sender=""; email_recipient=""; email_pw_set="false"
     if [ -f "$EMAIL_CONFIG" ]; then
         email_enabled=$(jq -r '(.enabled) | if . == null then "false" else tostring end' "$EMAIL_CONFIG" 2>/dev/null)
         email_sender=$(jq -r '.sender_email // ""' "$EMAIL_CONFIG" 2>/dev/null)
@@ -177,27 +183,23 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         # Marker boolean only — the password itself is unreadable from here.
         _pw_set=$(jq -r '(.app_password_set) | if . == true then "true" else "false" end' "$EMAIL_CONFIG" 2>/dev/null)
         [ "$_pw_set" = "true" ] && email_pw_set="true"
-        email_threshold=$(jq -r '.threshold_minutes // 5' "$EMAIL_CONFIG" 2>/dev/null)
     fi
     case "$email_enabled" in true|false) ;; *) email_enabled="false" ;; esac
-    case "$email_threshold" in ''|*[!0-9]*) email_threshold=5 ;; esac
     email_configured="false"
     [ -n "$email_sender" ] && [ -n "$email_recipient" ] && [ "$email_pw_set" = "true" ] && email_configured="true"
     msmtp_installed="false"
     command -v msmtp >/dev/null 2>&1 && msmtp_installed="true"
 
     # --- Discord ---
-    discord_enabled="false"; discord_owner=""; discord_token_set="false"; discord_threshold=5
+    discord_enabled="false"; discord_owner=""; discord_token_set="false"
     if [ -f "$DISCORD_CONFIG" ]; then
         discord_enabled=$(jq -r '(.enabled) | if . == null then "false" else tostring end' "$DISCORD_CONFIG" 2>/dev/null)
         discord_owner=$(jq -r '.owner_discord_id // ""' "$DISCORD_CONFIG" 2>/dev/null)
         # Marker boolean only — the token itself is unreadable from here.
         _tok_set=$(jq -r '(.token_set) | if . == true then "true" else "false" end' "$DISCORD_CONFIG" 2>/dev/null)
         [ "$_tok_set" = "true" ] && discord_token_set="true"
-        discord_threshold=$(jq -r '.threshold_minutes // 5' "$DISCORD_CONFIG" 2>/dev/null)
     fi
     case "$discord_enabled" in true|false) ;; *) discord_enabled="false" ;; esac
-    case "$discord_threshold" in ''|*[!0-9]*) discord_threshold=5 ;; esac
     discord_configured="false"
     [ -n "$discord_owner" ] && [ "$discord_token_set" = "true" ] && discord_configured="true"
     discord_connected="false"
@@ -304,19 +306,23 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
     if [ "$ACTION" = "save_settings" ]; then
         qlog_info "Saving centralized alert settings"
 
+        # A channel that omits threshold_minutes keeps the current single wait.
+        cq_alert_after_min
+        cur_wait="$CQ_ALERT_AFTER_MIN"
+
         sms_enabled_in=$(printf '%s' "$POST_DATA" | jq -r '.sms.enabled // false' 2>/dev/null)
         sms_phone_in=$(printf '%s' "$POST_DATA" | jq -r '.sms.recipient_phone // ""' 2>/dev/null)
-        sms_threshold_in=$(printf '%s' "$POST_DATA" | jq -r '.sms.threshold_minutes // 5' 2>/dev/null)
+        sms_threshold_in=$(printf '%s' "$POST_DATA" | jq -r --arg d "$cur_wait" '.sms.threshold_minutes // $d' 2>/dev/null)
 
         email_enabled_in=$(printf '%s' "$POST_DATA" | jq -r '.email.enabled // false' 2>/dev/null)
         email_sender_in=$(printf '%s' "$POST_DATA" | jq -r '.email.sender_email // ""' 2>/dev/null)
         email_recipient_in=$(printf '%s' "$POST_DATA" | jq -r '.email.recipient_email // ""' 2>/dev/null)
         email_password_in=$(printf '%s' "$POST_DATA" | jq -r '.email.app_password // empty' 2>/dev/null)
-        email_threshold_in=$(printf '%s' "$POST_DATA" | jq -r '.email.threshold_minutes // 5' 2>/dev/null)
+        email_threshold_in=$(printf '%s' "$POST_DATA" | jq -r --arg d "$cur_wait" '.email.threshold_minutes // $d' 2>/dev/null)
 
         discord_enabled_in=$(printf '%s' "$POST_DATA" | jq -r '.discord.enabled // false' 2>/dev/null)
         discord_owner_in=$(printf '%s' "$POST_DATA" | jq -r '.discord.owner_discord_id // ""' 2>/dev/null)
-        discord_threshold_in=$(printf '%s' "$POST_DATA" | jq -r '.discord.threshold_minutes // 5' 2>/dev/null)
+        discord_threshold_in=$(printf '%s' "$POST_DATA" | jq -r --arg d "$cur_wait" '.discord.threshold_minutes // $d' 2>/dev/null)
         discord_token_in=$(printf '%s' "$POST_DATA" | jq -r '.discord.bot_token // empty' 2>/dev/null)
 
         routing_in=$(printf '%s' "$POST_DATA" | jq -c '.routing.events // empty' 2>/dev/null)
@@ -326,20 +332,27 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         case "$email_enabled_in" in true|false) ;; *) cgi_error "invalid_enabled" "email.enabled must be a boolean"; exit 0 ;; esac
         case "$discord_enabled_in" in true|false) ;; *) cgi_error "invalid_enabled" "discord.enabled must be a boolean"; exit 0 ;; esac
 
-        # --- Validate thresholds (1-60) ---------------------------------------
+        # --- Validate thresholds (1-1440) -------------------------------------
         for _pair in "sms:$sms_threshold_in" "email:$email_threshold_in" "discord:$discord_threshold_in"; do
             _name="${_pair%%:*}"
             _val="${_pair#*:}"
             case "$_val" in
                 ''|*[!0-9]*)
-                    cgi_error "invalid_threshold" "${_name}.threshold_minutes must be a number between 1 and 60"
+                    cgi_error "invalid_threshold" "${_name}.threshold_minutes must be a number between 1 and 1440"
                     exit 0
                     ;;
             esac
-            if [ "$_val" -lt 1 ] || [ "$_val" -gt 60 ]; then
-                cgi_error "invalid_threshold" "${_name}.threshold_minutes must be between 1 and 60"
+            if [ "$_val" -lt 1 ] || [ "$_val" -gt 1440 ]; then
+                cgi_error "invalid_threshold" "${_name}.threshold_minutes must be between 1 and 1440"
                 exit 0
             fi
+        done
+
+        # The per-channel fields now set the ONE wait: the last one that differs from the
+        # current value wins (an unchanged field never overwrites an edited one).
+        new_wait="$cur_wait"
+        for _val in "$sms_threshold_in" "$email_threshold_in" "$discord_threshold_in"; do
+            [ "$_val" != "$cur_wait" ] && new_wait="$_val"
         done
 
         # --- SMS: phone required + validated only when enabled ----------------
@@ -463,11 +476,17 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
         mkdir -p /etc/qmanager
 
+        # --- Write the single wait into the Connection Quality config (merge) ---
+        if ! cq_quality_merge '.alert_after_min = $wait' --argjson wait "$new_wait"; then
+            cgi_error "write_failed" "Failed to write alert wait"
+            exit 0
+        fi
+
         # --- Write SMS config (atomic) ------------------------------------------
         if ! jq -n \
             --argjson enabled "$sms_enabled_in" \
             --arg recipient_phone "$sms_phone_in" \
-            --argjson threshold_minutes "$sms_threshold_in" \
+            --argjson threshold_minutes "$new_wait" \
             '{enabled:$enabled, recipient_phone:$recipient_phone, threshold_minutes:$threshold_minutes}' \
             > "${SMS_CONFIG}.tmp"; then
             rm -f "${SMS_CONFIG}.tmp"
@@ -486,7 +505,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             --arg sender_email "$email_sender_in" \
             --arg recipient_email "$email_recipient_in" \
             --argjson app_password_set "$_existing_email_pw_set" \
-            --argjson threshold_minutes "$email_threshold_in" \
+            --argjson threshold_minutes "$new_wait" \
             '{enabled:$enabled, sender_email:$sender_email, recipient_email:$recipient_email, app_password_set:$app_password_set, threshold_minutes:$threshold_minutes}' \
             > "${EMAIL_CONFIG}.tmp"; then
             rm -f "${EMAIL_CONFIG}.tmp"
@@ -515,7 +534,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         if ! jq -n \
             --argjson enabled "$discord_enabled_in" \
             --arg owner_discord_id "$discord_owner_in" \
-            --argjson threshold_minutes "$discord_threshold_in" \
+            --argjson threshold_minutes "$new_wait" \
             --argjson token_set "$_existing_discord_token_set" \
             '{enabled:$enabled, owner_discord_id:$owner_discord_id, threshold_minutes:$threshold_minutes, token_set:$token_set}' \
             > "${DISCORD_CONFIG}.tmp"; then
@@ -561,7 +580,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         mv "${ROUTING_CONFIG}.tmp" "$ROUTING_CONFIG"
 
         # --- Signal alert_engine.sh (and channel libs) to reload ---------------
-        touch "$SMS_RELOAD" "$EMAIL_RELOAD" "$DISCORD_RELOAD" "$ROUTING_RELOAD" 2>/dev/null
+        touch "$SMS_RELOAD" "$EMAIL_RELOAD" "$DISCORD_RELOAD" "$ROUTING_RELOAD" "$QUALITY_RELOAD_FLAG" 2>/dev/null
 
         qlog_info "Centralized alert settings saved: sms=$sms_enabled_in email=$email_enabled_in discord=$discord_enabled_in"
         if [ -n "$_discord_svc_err" ]; then

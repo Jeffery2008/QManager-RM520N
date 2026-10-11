@@ -9,12 +9,13 @@
 # channel(s) fire for each of 3 events: connection_lost, connection_restored,
 # reboot.
 #
-# events.sh (Recent Activities) is NOT touched by this engine — it has its
-# own independent internet_lost/internet_restored detection. This engine
-# only decides alert DISPATCH (SMS/email/Discord), not event logging.
+# The link verdict comes from events.sh (ev_link_state, set by
+# detect_data_connection_events earlier in the same poll cycle): this engine
+# has no edge detector of its own and only decides alert DISPATCH. Degraded
+# (loss/latency) never reaches a channel.
 #
-# Signal source for downtime: conn_internet_available ONLY (never latency
-# or packet loss — those are quality signals, not connectivity signals).
+# One wait (alert_after_min, owned by Connection Quality, via conn_state.sh):
+# an outage sends nothing on any channel unless it lasted at least that long.
 # Timer source: /proc/uptime (monotonic) — NEVER date +%s for durations,
 # since NTP/NITZ can step the wall clock backward/forward mid-outage.
 #
@@ -52,13 +53,15 @@
 # Consumes from other libs (best-effort — degrades gracefully if any of
 # these are missing, since a broken alert channel must never crash the
 # poller):
-#   _ea_read_config, _ea_enabled, _ea_recipient, _ea_threshold_minutes,
+#   _ea_read_config, _ea_enabled, _ea_recipient,
 #     _ea_log_event, email_alert_send      (email_alerts.sh)
-#   _sa_read_config, _sa_enabled, _sa_recipient, _sa_threshold_minutes,
+#   _sa_read_config, _sa_enabled, _sa_recipient,
 #     _sa_log_event, sms_alert_send        (sms_alerts.sh)
+#   cq_alert_after_min, CQ_ALERT_AFTER_MIN (conn_state.sh)
 #   discord_dispatch_message, _DA_LOG      (discord_alerts.sh)
 #
-# Poller globals read: conn_internet_available, conn_during_recovery
+# Poller globals read: ev_link_state, conn_internet_available (reboot delivery
+# only), conn_during_recovery, CQ_ALERT_AFTER_MIN
 #
 # Install location: /usr/lib/qmanager/alert_engine.sh
 # =============================================================================
@@ -92,7 +95,6 @@ _ae_reboot_pending=0  # a reboot was detected this boot and not yet alerted
 # Discord config mirror (no _read_config equivalent exists in discord_alerts.sh)
 _ae_discord_enabled="false"
 _ae_discord_owner_id=""
-_ae_discord_threshold_minutes=5
 
 # --- Discord library (optional — poller does not source this on its own) ----
 . /usr/lib/qmanager/discord_alerts.sh 2>/dev/null || {
@@ -154,8 +156,20 @@ _ae_read_discord_config() {
     _ae_discord_enabled=$(jq -r '(.enabled) | if . == null then "false" else tostring end' "$_AE_DISCORD_CONFIG" 2>/dev/null)
     case "$_ae_discord_enabled" in true) ;; *) _ae_discord_enabled="false" ;; esac
     _ae_discord_owner_id=$(jq -r '.owner_discord_id // ""' "$_AE_DISCORD_CONFIG" 2>/dev/null)
-    _ae_discord_threshold_minutes=$(jq -r '.threshold_minutes // 5' "$_AE_DISCORD_CONFIG" 2>/dev/null)
-    case "$_ae_discord_threshold_minutes" in ''|*[!0-9]*) _ae_discord_threshold_minutes=5 ;; esac
+}
+
+# _ae_resolve_wait re-reads the single outage wait (CQ_ALERT_AFTER_MIN); called at outage
+# start, on restore and on any config reload. _ae_wait_secs prints it in seconds (default 300).
+_ae_resolve_wait() {
+    command -v cq_alert_after_min >/dev/null 2>&1 && cq_alert_after_min
+    return 0
+}
+
+_ae_wait_secs() {
+    case "${CQ_ALERT_AFTER_MIN:-}" in
+        ''|*[!0-9]*|0) printf '%s' 300 ;;
+        *) printf '%s' $((CQ_ALERT_AFTER_MIN * 60)) ;;
+    esac
 }
 
 # =============================================================================
@@ -404,13 +418,11 @@ _ae_deliver_reboot() {
 # the single source of truth (adding a capable channel here is a one-line
 # change to _ae_capable, not a rewrite of this logic).
 _ae_check_connection_lost() {
-    local now_up="$1" elapsed thr_min thr_sec dur_text msg
+    local now_up="$1" elapsed thr_sec dur_text msg
 
     [ "$_ae_lost_sent_sms" = "1" ] && return 0
 
-    thr_min="$_sa_threshold_minutes"
-    case "$thr_min" in ''|*[!0-9]*) return 0 ;; esac
-    thr_sec=$((thr_min * 60))
+    thr_sec=$(_ae_wait_secs)
 
     elapsed=$((now_up - _ae_down_start))
     [ "$elapsed" -lt 0 ] && elapsed=0
@@ -424,21 +436,13 @@ _ae_check_connection_lost() {
     _ae_lost_sent_sms=1
 }
 
-# connection_restored: evaluated independently per channel — a channel fires
-# iff the TOTAL outage duration crossed *that channel's own* threshold, same
-# semantics as the three timers this engine replaces (each channel used to
-# track downtime and threshold independently).
+# connection_restored: a channel fires iff the TOTAL outage crossed the single
+# wait (same gate as connection_lost) and the channel is enabled + routed.
 _ae_maybe_restore() {
-    local channel="$1" elapsed="$2" thr_min thr_sec dur_text msg
+    local channel="$1" elapsed="$2" thr_sec dur_text msg
 
-    case "$channel" in
-        sms)     thr_min="$_sa_threshold_minutes" ;;
-        email)   thr_min="$_ea_threshold_minutes" ;;
-        discord) thr_min="$_ae_discord_threshold_minutes" ;;
-        *)       return 1 ;;
-    esac
-    case "$thr_min" in ''|*[!0-9]*) thr_min=5 ;; esac
-    thr_sec=$((thr_min * 60))
+    case "$channel" in sms|email|discord) ;; *) return 1 ;; esac
+    thr_sec=$(_ae_wait_secs)
 
     [ "$elapsed" -ge "$thr_sec" ] || return 0
     _ae_effective_send connection_restored "$channel" || return 0
@@ -454,7 +458,8 @@ _ae_handle_restore() {
     [ "$elapsed" -lt 0 ] && elapsed=0
     qlog_info "alert_engine: recovery detected — downtime=${elapsed}s"
 
-    _ae_maybe_restore sms     "$elapsed"
+    _ae_resolve_wait
+    _ae_maybe_restore sms    "$elapsed"
     _ae_maybe_restore email   "$elapsed"
     _ae_maybe_restore discord "$elapsed"
 
@@ -472,14 +477,6 @@ check_alerts() {
     # No alerts during scheduled low power mode
     [ -f "/tmp/qmanager_low_power_active" ] && return 0
 
-    # Guardrail: freeze entirely during watchdog recovery — mirrors
-    # events.sh:339's detect_data_connection_events guard. Do not reset the
-    # timer, do not dispatch, do not even pick up config reloads, so a
-    # recovery action never gets misread as a real downtime edge.
-    if [ "$conn_during_recovery" = "true" ]; then
-        return 0
-    fi
-
     # --- Reload flags (touched by the CGI on save) ---
     if [ -f "$_AE_ROUTING_RELOAD_FLAG" ]; then
         rm -f "$_AE_ROUTING_RELOAD_FLAG"
@@ -489,16 +486,19 @@ check_alerts() {
     if [ -f "$_EA_RELOAD_FLAG" ]; then
         rm -f "$_EA_RELOAD_FLAG"
         _ae_refresh_email
+        _ae_resolve_wait
         qlog_info "alert_engine: email config reloaded"
     fi
     if [ -f "$_SA_RELOAD_FLAG" ]; then
         rm -f "$_SA_RELOAD_FLAG"
         _ae_refresh_sms
+        _ae_resolve_wait
         qlog_info "alert_engine: sms config reloaded"
     fi
     if [ -f "$_DA_RELOAD_FLAG" ]; then
         rm -f "$_DA_RELOAD_FLAG"
         _ae_read_discord_config
+        _ae_resolve_wait
         qlog_info "alert_engine: discord config reloaded"
     fi
 
@@ -513,19 +513,17 @@ check_alerts() {
 
     local did_restore=0
 
-    if [ "$conn_internet_available" = "null" ] || [ -z "$conn_internet_available" ]; then
-        # Stale/null ping data: if we're not already tracking an outage, do
-        # nothing (don't guess). If we ARE tracking one, leave the timer
-        # running untouched — the poller may just be stuck on AT I/O.
-        :
-    elif [ "$conn_internet_available" = "false" ]; then
+    # Follow the detector's link state (events.sh). "" = stale/unknown: a running
+    # timer is left untouched, nothing new starts.
+    if [ "$ev_link_state" = "down" ]; then
         if [ "$_ae_down" != "1" ]; then
             _ae_down=1
             _ae_down_start="$now_up"
             _ae_lost_sent_sms=0
+            _ae_resolve_wait
             qlog_debug "alert_engine: downtime tracking started at uptime=${now_up}s"
         fi
-    elif [ "$conn_internet_available" = "true" ] && [ "$_ae_down" = "1" ]; then
+    elif [ "$ev_link_state" = "up" ] && [ "$_ae_down" = "1" ]; then
         _ae_handle_restore "$now_up"
         _ae_down=0
         _ae_down_start=0
@@ -533,9 +531,9 @@ check_alerts() {
         did_restore=1
     fi
 
-    # While an outage is ongoing, see if the SMS connection_lost threshold
-    # has now been crossed.
-    if [ "$_ae_down" = "1" ]; then
+    # While an outage is ongoing, send connection_lost once it passes the wait. Not mid
+    # watchdog recovery: the radio may be mid-cycle and a failed send would still latch.
+    if [ "$_ae_down" = "1" ] && [ "$conn_during_recovery" != "true" ]; then
         _ae_check_connection_lost "$now_up"
     fi
 
@@ -565,6 +563,7 @@ alert_engine_init() {
     _ae_refresh_email
     _ae_refresh_sms
     _ae_read_discord_config
+    _ae_resolve_wait
 
-    qlog_info "alert_engine: initialized (reboot_pending=$_ae_reboot_pending)"
+    qlog_info "alert_engine: initialized (reboot_pending=$_ae_reboot_pending wait=${CQ_ALERT_AFTER_MIN:-5}m)"
 }

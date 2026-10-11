@@ -10,12 +10,13 @@
 #
 # Global variables used (defined in poller):
 #   Read:  network_type, lte_band, lte_pci, nr_band, nr_pci, nr_state,
-#          modem_reachable, conn_internet_available, conn_latency,
-#          conn_avg_latency, conn_packet_loss, t2_ca_active, t2_ca_count,
-#          t2_nr_ca_active, t2_nr_ca_count, t2_carrier_components,
-#          service_status
+#          modem_reachable, conn_internet_available, conn_during_recovery,
+#          conn_latency, conn_avg_latency, conn_packet_loss, t2_ca_active,
+#          t2_ca_count, t2_nr_ca_active, t2_nr_ca_count,
+#          t2_carrier_components, service_status
 #   Write: prev_ev_*, ev_high_lat_streak, ev_high_loss_streak,
-#          ev_lat_alerted, ev_loss_alerted, events_initialized
+#          ev_lat_clear_streak, ev_loss_clear_streak, ev_lat_alerted,
+#          ev_loss_alerted, ev_link_state, events_initialized
 # =============================================================================
 
 [ -n "$_EVENTS_LOADED" ] && return 0
@@ -24,56 +25,13 @@ _EVENTS_LOADED=1
 PCI_STATE_FILE="/tmp/qmanager_pci_state.json"
 EVENT_STATE_FILE="${EVENT_STATE_FILE:-/tmp/qmanager_event_state.json}"
 
-# ---------------------------------------------------------------------------
-# Quality threshold config — drives high_latency / high_packet_loss events
-# ---------------------------------------------------------------------------
-QUALITY_CONFIG="${QUALITY_CONFIG:-/etc/qmanager/quality_thresholds.json}"
-QUALITY_RELOAD_FLAG="${QUALITY_RELOAD_FLAG:-/tmp/qmanager_events_reload}"
-
-# Defaults match the "tolerant" preset; survive a missing or malformed JSON.
-_qt_lat_thresh=250
-_qt_lat_debounce=3
-_qt_loss_thresh=30
-_qt_loss_debounce=3
-
-_qt_apply_lat() {
-    case "$1" in
-        standard)      _qt_lat_thresh=150; _qt_lat_debounce=3 ;;
-        tolerant)      _qt_lat_thresh=250; _qt_lat_debounce=3 ;;
-        very-tolerant) _qt_lat_thresh=500; _qt_lat_debounce=2 ;;
-    esac
-}
-
-_qt_apply_loss() {
-    case "$1" in
-        standard)      _qt_loss_thresh=15; _qt_loss_debounce=3 ;;
-        tolerant)      _qt_loss_thresh=30; _qt_loss_debounce=3 ;;
-        very-tolerant) _qt_loss_thresh=50; _qt_loss_debounce=2 ;;
-    esac
-}
-
-_qt_load() {
-    [ -f "$QUALITY_CONFIG" ] || return 0
-    local lat loss
-    lat=$(jq -r '.latency.preset // "tolerant"' "$QUALITY_CONFIG" 2>/dev/null)
-    loss=$(jq -r '.loss.preset // "tolerant"' "$QUALITY_CONFIG" 2>/dev/null)
-    if [ -z "$lat" ] || [ -z "$loss" ]; then
-        qlog_warn "quality_thresholds.json parse failed, keeping current thresholds"
-        return 0
-    fi
-    case "$lat"  in standard|tolerant|very-tolerant) _qt_apply_lat  "$lat"  ;; esac
-    case "$loss" in standard|tolerant|very-tolerant) _qt_apply_loss "$loss" ;; esac
-}
-
-_qt_check_reload() {
-    [ -f "$QUALITY_RELOAD_FLAG" ] || return 0
-    _qt_load
-    rm -f "$QUALITY_RELOAD_FLAG"
-    qlog_info "Quality thresholds reloaded: lat=${_qt_lat_thresh}ms/${_qt_lat_debounce} loss=${_qt_loss_thresh}%/${_qt_loss_debounce}"
-}
-
-# Initial load on first source. After this, only the reload flag triggers re-reads.
-_qt_load
+# Quality thresholds (preset table, loader, reload flag) live in conn_state.sh, shared
+# with the poller verdict; read_ping_data reloads them each cycle.
+if [ -f "${QM_LIB_DIR:-/usr/lib/qmanager}/conn_state.sh" ]; then
+    . "${QM_LIB_DIR:-/usr/lib/qmanager}/conn_state.sh"
+else
+    CQ_LAT_MS=250; CQ_LAT_DEBOUNCE=3; CQ_LOSS_PCT=30; CQ_LOSS_DEBOUNCE=3
+fi
 
 # ---------------------------------------------------------------------------
 # CROSS-UID WRITE RULES FOR $EVENTS_FILE (/tmp/qmanager_events.json)
@@ -376,20 +334,7 @@ snapshot_event_state() {
     prev_ev_nr_pci="${nr_pci:-$prev_ev_nr_pci}"
     prev_ev_nr_state="$nr_state"
     prev_ev_modem_reachable="$modem_reachable"
-    # The internet verdict keeps its last known good value across a blank or
-    # null reading, for exactly the reason the band/PCI lines above do. A dead
-    # or stale ping cache makes read_ping_data() reset conn_internet_available
-    # to "null", while the emit guard in detect_data_connection_events()
-    # requires prev == "true" before it will fire internet_lost. Copying that
-    # null in unconditionally rewrote the baseline mid-outage, so the following
-    # "false" compared against "null" and the alert was swallowed outright — no
-    # event, and with it no SMS, no email and no Discord. `${x:-$prev}` alone is
-    # not enough here: the reading is the four-character string "null", not an
-    # empty one.
-    case "$conn_internet_available" in
-        ''|null) ;;
-        *) prev_ev_internet="$conn_internet_available" ;;
-    esac
+    # prev_ev_internet is owned by detect_data_connection_events (persisted here only).
     prev_ev_ca_active="$t2_ca_active"
     prev_ev_ca_count="$t2_ca_count"
     prev_ev_nr_ca_active="$t2_nr_ca_active"
@@ -529,71 +474,141 @@ detect_scc_pci_changes() {
 }
 
 # ---------------------------------------------------------------------------
-# Data connection quality checks (debounced — 3 consecutive readings)
+# Link and quality transitions: the one place they are decided
 # ---------------------------------------------------------------------------
+# Called once per cycle by the poller after read_ping_data and before check_alerts.
+# ev_link_state ("down" | "up" | "") is what alert_engine.sh reads.
+ev_link_state=""
+
+_ev_set_link_state() {
+    case "$prev_ev_internet" in
+        false) ev_link_state="down" ;;
+        true)  ev_link_state="up" ;;
+        *)     ev_link_state="" ;;
+    esac
+}
+
+# True when latency $1 is strictly above the configured cut (decimal compare).
+_ev_lat_above() {
+    awk -v v="$1" -v t="$CQ_LAT_MS" 'BEGIN { exit !(v + 0 > t + 0) }'
+}
+
+ev_hold_until=""
+
+# Monotonic seconds into _EV_UP ("" if unreadable).
+_ev_uptime() {
+    _EV_UP=""
+    { read -r _EV_UP _ev_idle < /proc/uptime; } 2>/dev/null
+    _EV_UP="${_EV_UP%%.*}"
+    case "$_EV_UP" in ''|*[!0-9]*) _EV_UP="" ;; esac
+}
+
+# After a restore, hold quality ENTRY for one history window (outage nulls still in it).
+_ev_arm_hold() {
+    local _w=300
+    case "${CONN_HISTORY_SIZE:-}${conn_history_interval:-}" in
+        ''|*[!0-9]*) ;;
+        *) _w=$(( ${CONN_HISTORY_SIZE:-0} * ${conn_history_interval:-0} )) ;;
+    esac
+    [ "$_w" -gt 0 ] || _w=300
+    _ev_uptime
+    if [ -n "$_EV_UP" ]; then ev_hold_until=$((_EV_UP + _w)); else ev_hold_until=""; fi
+}
+
+# True while entry is held: inside the post-restore window, or the producer is counting
+# failures (run-up to a down declaration). Exits are never held.
+_ev_entry_held() {
+    [ "${CQ_STREAK_FAIL:-0}" -gt 0 ] 2>/dev/null && return 0
+    [ -n "$ev_hold_until" ] || return 1
+    _ev_uptime
+    [ -n "$_EV_UP" ] && [ "$_EV_UP" -lt "$ev_hold_until" ]
+}
+
 detect_data_connection_events() {
-    # Suppress internet events during active watchcat recovery.
-    # Prevents spurious internet_lost/restored events from recovery actions
-    # (Tier 1 ifup/ifdown, Tier 2 CFUN toggle, Tier 3 SIM switch).
-    # Also prevents email alerts from firing during recovery.
-    if [ "$conn_during_recovery" = "true" ]; then
-        prev_ev_internet="$conn_internet_available"   # keep state in sync
-        return
-    fi
+    case "$prev_ev_internet" in true|false) ;; *) prev_ev_internet="" ;; esac
+    _ev_set_link_state
 
-    # Pick up any pending threshold reload from the CGI before evaluating quality.
-    _qt_check_reload
+    # Stale or unknown ping data is no transition: all state stays frozen.
+    case "$conn_internet_available" in true|false) ;; *) return 0 ;; esac
 
-    # --- Internet connectivity ---
+    # First reading after a cold start is adopted silently.
+    [ -z "$prev_ev_internet" ] && prev_ev_internet="$conn_internet_available"
+
+    # Follows the producer's reachable verdict, not the status string ("recovery" masks it).
     if [ "$conn_internet_available" != "$prev_ev_internet" ]; then
-        if [ "$conn_internet_available" = "true" ] && [ "$prev_ev_internet" = "false" ]; then
+        if [ "$conn_internet_available" = "true" ]; then
             append_event "internet_restored" "Internet restored" "info"
-        elif [ "$conn_internet_available" = "false" ] && [ "$prev_ev_internet" = "true" ]; then
+            prev_ev_internet="true"
+            _ev_arm_hold
+        elif [ "$conn_during_recovery" != "true" ]; then
+            # A dip inside a watchdog recovery window is the same outage, not a new one.
             append_event "internet_lost" "Internet unreachable" "warning"
+            prev_ev_internet="false"
         fi
     fi
+    _ev_set_link_state
 
-    # --- High latency detection (threshold + debounce from quality_thresholds.json) ---
-    # Skip when ping daemon is stale (conn_latency="null") — don't touch streaks
-    if [ "$conn_latency" != "null" ] && [ -n "$conn_latency" ]; then
-        # Use awk for decimal comparison (POSIX shell has no float math)
-        if echo "$conn_latency" | awk -v t="$_qt_lat_thresh" '{exit !($1 > t)}'; then
-            ev_high_lat_streak=$((ev_high_lat_streak + 1))
-            if [ "$ev_high_lat_streak" -ge "$_qt_lat_debounce" ] && [ "$ev_lat_alerted" = "false" ]; then
-                append_event "high_latency" \
-                    "Latency above threshold" "warning"
-                ev_lat_alerted=true
+    # While the link is down the outage is the record: quality state is frozen, not toggled.
+    [ "$conn_internet_available" = "true" ] || return 0
+
+    local _held=0
+    _ev_entry_held && _held=1
+
+    # --- Latency: configured cut, preset debounce on entry and on exit ---
+    if [ -n "$conn_latency" ] && [ "$conn_latency" != "null" ]; then
+        if _ev_lat_above "$conn_latency"; then
+            ev_lat_clear_streak=0
+            if [ "$_held" = "1" ]; then
+                ev_high_lat_streak=0
+            elif [ "$ev_lat_alerted" != "true" ]; then
+                ev_high_lat_streak=$((ev_high_lat_streak + 1))
+                if [ "$ev_high_lat_streak" -ge "$CQ_LAT_DEBOUNCE" ]; then
+                    append_event "high_latency" "Latency above threshold" "warning"
+                    ev_lat_alerted=true
+                    ev_high_lat_streak=0
+                fi
             fi
         else
-            # Latency below threshold — recover if previously alerted
-            if [ "$ev_lat_alerted" = "true" ]; then
-                append_event "latency_recovered" \
-                    "Latency recovered" "info"
-            fi
             ev_high_lat_streak=0
-            ev_lat_alerted=false
+            if [ "$ev_lat_alerted" = "true" ]; then
+                ev_lat_clear_streak=$((ev_lat_clear_streak + 1))
+                if [ "$ev_lat_clear_streak" -ge "$CQ_LAT_DEBOUNCE" ]; then
+                    append_event "latency_recovered" "Latency recovered" "info"
+                    ev_lat_alerted=false
+                    ev_lat_clear_streak=0
+                fi
+            fi
         fi
     fi
 
-    # --- High packet loss detection (threshold + debounce from quality_thresholds.json) ---
-    if [ "$conn_packet_loss" != "null" ] && [ -n "$conn_packet_loss" ]; then
-        if [ "$conn_packet_loss" -ge "$_qt_loss_thresh" ] 2>/dev/null; then
-            ev_high_loss_streak=$((ev_high_loss_streak + 1))
-            if [ "$ev_high_loss_streak" -ge "$_qt_loss_debounce" ] && [ "$ev_loss_alerted" = "false" ]; then
-                append_event "high_packet_loss" \
-                    "Packet loss above threshold" "warning"
-                ev_loss_alerted=true
-            fi
-        else
-            # Packet loss below threshold — recover if previously alerted
-            if [ "$ev_loss_alerted" = "true" ]; then
-                append_event "packet_loss_recovered" \
-                    "Packet loss recovered" "info"
-            fi
-            ev_high_loss_streak=0
-            ev_loss_alerted=false
-        fi
-    fi
+    # --- Packet loss: same shape; null (window too short) is no reading ---
+    case "$conn_packet_loss" in
+        ''|null|*[!0-9]*) ;;
+        *)
+            if [ "$conn_packet_loss" -ge "$CQ_LOSS_PCT" ]; then
+                ev_loss_clear_streak=0
+                if [ "$_held" = "1" ]; then
+                    ev_high_loss_streak=0
+                elif [ "$ev_loss_alerted" != "true" ]; then
+                    ev_high_loss_streak=$((ev_high_loss_streak + 1))
+                    if [ "$ev_high_loss_streak" -ge "$CQ_LOSS_DEBOUNCE" ]; then
+                        append_event "high_packet_loss" "Packet loss above threshold" "warning"
+                        ev_loss_alerted=true
+                        ev_high_loss_streak=0
+                    fi
+                fi
+            else
+                ev_high_loss_streak=0
+                if [ "$ev_loss_alerted" = "true" ]; then
+                    ev_loss_clear_streak=$((ev_loss_clear_streak + 1))
+                    if [ "$ev_loss_clear_streak" -ge "$CQ_LOSS_DEBOUNCE" ]; then
+                        append_event "packet_loss_recovered" "Packet loss recovered" "info"
+                        ev_loss_alerted=false
+                        ev_loss_clear_streak=0
+                    fi
+                fi
+            fi ;;
+    esac
 }
 
 # Compare current state vs previous and emit events for any changes
@@ -823,10 +838,8 @@ detect_events() {
         detect_scc_pci_changes
     fi
 
-    # =====================================================================
-    # Section 3: Data Connection events
-    # =====================================================================
-    detect_data_connection_events
+    # Data connection events run from the poller right after read_ping_data
+    # (they need no modem), not from here.
 
     # Update snapshot
     snapshot_event_state

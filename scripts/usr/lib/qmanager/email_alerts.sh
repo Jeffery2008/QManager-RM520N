@@ -24,6 +24,9 @@
 [ -n "$_EMAIL_ALERTS_LOADED" ] && return 0
 _EMAIL_ALERTS_LOADED=1
 
+# Single alert wait resolver (cq_alert_after_min); optional, falls back to the channel key.
+[ -f "${QM_LIB_DIR:-/usr/lib/qmanager}/conn_state.sh" ] && . "${QM_LIB_DIR:-/usr/lib/qmanager}/conn_state.sh"
+
 # --- Constants ---------------------------------------------------------------
 _EA_CONFIG="/etc/qmanager/email_alerts.json"
 _EA_MSMTP_CONFIG="/etc/qmanager-secrets/msmtprc"
@@ -66,6 +69,11 @@ _ea_read_config() {
     _ea_recipient=$(jq -r '.recipient_email // ""' "$_EA_CONFIG" 2>/dev/null)
     _ea_app_password_set=$(jq -r '(.app_password_set) | if . == true then "true" else "false" end' "$_EA_CONFIG" 2>/dev/null)
     _ea_threshold_minutes=$(jq -r '.threshold_minutes // 5' "$_EA_CONFIG" 2>/dev/null)
+    # The wait is one value owned by Connection Quality; the per-channel key is a fallback.
+    if command -v cq_alert_after_min >/dev/null 2>&1; then
+        cq_alert_after_min
+        _ea_threshold_minutes="$CQ_ALERT_AFTER_MIN"
+    fi
 
     # Validate
     if [ "$_ea_enabled" != "true" ]; then

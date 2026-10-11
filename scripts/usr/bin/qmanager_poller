@@ -189,6 +189,8 @@ prev_ev_cfun=""
 # Data connection quality event debounce state
 ev_high_lat_streak=0
 ev_high_loss_streak=0
+ev_lat_clear_streak=0
+ev_loss_clear_streak=0
 ev_lat_alerted=false
 ev_loss_alerted=false
 
@@ -468,6 +470,8 @@ fi
     qlog_warn "conn_state.sh not found, connectivity reads as unknown"
     conn_state_read() { CQ_STALE=1; CQ_STALE_REASON="conn_state.sh missing"; return 1; }
     conn_state_why() { printf '%s' "$CQ_STALE_REASON"; }
+    cq_thresholds_refresh() { :; }
+    CQ_LAT_MS=250; CQ_LOSS_PCT=30
 }
 
 # Profile manager (for boot-time profile auto-apply)
@@ -1564,6 +1568,9 @@ PING_DAEMON_STALE_EVENT_THRESHOLD=60  # seconds before emitting ping_daemon_stal
 # Staleness and the ping.json read live in conn_state.sh (shared with watchcat).
 
 read_ping_data() {
+    # Pick up a Connection Quality save (or the first load) before the verdict below.
+    cq_thresholds_refresh
+
     # Reset to defaults if ping file missing or stale
     if [ ! -f "$PING_CACHE" ]; then
         conn_internet_available="null"
@@ -1707,12 +1714,9 @@ read_ping_data() {
     if [ "$conn_during_recovery" = "true" ]; then
         conn_status="recovery"
     elif [ "$conn_internet_available" = "true" ]; then
-        # Loss is null until the window can express a 10% reading. UNKNOWN
-        # loss is not evidence of degradation, so the reachable verdict --
-        # which is binary and is the whole product question -- stands on its
-        # own: connected. The null case is spelled out rather than left to
-        # `[ null -ge 10 ]` failing quietly into the same branch by accident.
-        if [ "$conn_packet_loss" != "null" ] && [ "$conn_packet_loss" -ge 10 ] 2>/dev/null; then
+        # Degraded = loss at or above the configured Connection Quality cut. Null loss
+        # (window too short) is unknown, not evidence of degradation: connected.
+        if [ "$conn_packet_loss" != "null" ] && [ "$conn_packet_loss" -ge "$CQ_LOSS_PCT" ] 2>/dev/null; then
             conn_status="degraded"
         else
             conn_status="connected"
@@ -2101,6 +2105,8 @@ write_cache() {
         --argjson hist_int "${conn_history_interval:-2}" \
         --argjson hist_size "${CONN_HISTORY_SIZE:-60}" \
         --argjson during_rec "${conn_during_recovery:-false}" \
+        --argjson thr_lat "${CQ_LAT_MS:-250}" \
+        --argjson thr_loss "${CQ_LOSS_PCT:-30}" \
         --arg conn_profile "$conn_profile" \
         --arg conn_last_family "$conn_last_family" \
         --argjson wc_enabled "${wc_enabled:-false}" \
@@ -2225,6 +2231,7 @@ write_cache() {
                 ping_target: $ping_tgt, latency_history: $lat_hist,
                 history_interval_sec: $hist_int, history_size: $hist_size,
                 during_recovery: $during_rec,
+                thresholds: {latency_ms: $thr_lat, loss_pct: $thr_loss},
                 profile: $conn_profile,
                 last_family: (if $conn_last_family == "null" then null else $conn_last_family end)
             },
@@ -2315,6 +2322,7 @@ poll_cycle() {
     update_proc_metrics
     update_system_health
     read_ping_data
+    detect_data_connection_events
     check_alerts
 
     if [ -f "$LONG_FLAG" ]; then
@@ -2432,6 +2440,7 @@ main() {
     collect_boot_data
     update_proc_metrics
     update_system_health
+    cq_thresholds_refresh
     alert_engine_init
     restore_event_state
     crash_watcher_init
