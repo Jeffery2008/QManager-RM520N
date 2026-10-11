@@ -53,8 +53,8 @@ import { cn } from "@/lib/utils";
 //                           stays on lucide-react everywhere. That is the rule
 //                           working, not an exception to it.
 //
-// Motion: `.animate-banner-in` (400ms emphasized, 6px rise + fade) already
-// ships in globals.css together with its prefers-reduced-motion guard. There is
+// Motion: `.animate-banner-in` (emphasized, 6px rise + fade) already
+// ships in globals.css together with its motion-reduce guard. There is
 // deliberately NO exit animation — a banner leaving means the condition
 // cleared, and that should feel immediate.
 // =============================================================================

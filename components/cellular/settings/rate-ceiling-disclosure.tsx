@@ -60,12 +60,8 @@ import {
 // -----------------------------------------------------------------------------
 // THE PANEL ANIMATES `grid-template-rows`, WHICH MotionConfig CANNOT SEE
 // -----------------------------------------------------------------------------
-// `<MotionConfig reducedMotion="user">` collapses transform movement for
-// motion/react components. A CSS grid-track transition is neither transform nor
-// opacity and is not a motion/react component, so the global switch does not
-// reach it and this component has to consult `useReducedMotion()` itself and
-// drop the transition class. Exactly the mechanism and the reason recorded in
-// 4b4d688 for the frequency-locking skeleton.
+// A CSS grid-track transition is out of `MotionConfig`'s reach, so this reads
+// `useMotionReduced()` (preference first, then the OS query) and drops the class.
 //
 // DOWNLOAD IS ROSE, UPLOAD IS CYAN. The rate chips are coloured by DIRECTION,
 // not by which radio block they sit in — see `RATE_CHIP` in shapes.ts. The arrow

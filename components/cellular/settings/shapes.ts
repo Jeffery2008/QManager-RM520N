@@ -285,11 +285,8 @@ export const STRIP = {
  * described a different data source entirely; here the provenance line sits
  * under the numbers it is about, and no chip on this band claims liveness.
  *
- * THE PANEL ANIMATES `grid-template-rows`, WHICH IS NEITHER TRANSFORM NOR
- * OPACITY. `<MotionConfig reducedMotion="user">` collapses transform movement
- * for motion/react components and cannot see a CSS grid transition, so the
- * consumer must call `useReducedMotion()` and drop `PANEL_MOTION` itself. Same
- * mechanism and same reason as the frequency-locking skeleton (4b4d688).
+ * THE PANEL ANIMATES `grid-template-rows`, which `MotionConfig` cannot see, so
+ * the consumer reads `useMotionReduced()` and drops `PANEL_MOTION` itself.
  */
 export const RATE_CEILING = {
   ROOT: "overflow-hidden rounded-tile bg-surface-container",
@@ -919,15 +916,8 @@ export const SECTION_LABEL = "text-[0.9375rem] font-semibold";
  * `emphasized` is correct here rather than `standard` — this is a container
  * changing size, which is the step's own definition.
  *
- * REDUCED MOTION IS CARRIED BY THE SHAPE, NOT BY THE CALL SITE. A CSS grid
- * transition is neither transform nor opacity, so `<MotionConfig
- * reducedMotion="user">` cannot see it — the same hole `RATE_CEILING` above
- * documents, which it plugs by making every consumer call `useReducedMotion()`
- * and drop `PANEL_MOTION` itself. That works and is one `cn()` away from being
- * forgotten. The project's own `motion-safe` is a `@custom-variant` redefined in
- * globals.css so it honours the sidebar's Animations preference in BOTH
- * directions, not just the bare media query, which makes it the stronger guard
- * AND the one a consumer cannot omit. Anything new here takes this form.
+ * REDUCED MOTION IS CARRIED BY THE SHAPE: the project's `motion-safe` variant
+ * honours the Animations preference, so no consumer can forget the guard.
  *
  * The row VALUE belongs at the call site: it is state, not geometry.
  */

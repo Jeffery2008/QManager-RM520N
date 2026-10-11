@@ -92,7 +92,7 @@ import {
 //     is deliberately absent: that primitive is a 700ms dip staggered at 100ms,
 //     tuned for the ~3s dashboard poll, and at 500ms it would strobe.
 //
-//  3. THE PROGRESS BAR IS DATA, NOT DECORATION. It transitions `width`
+//  3. THE PROGRESS BAR IS DATA, NOT DECORATION. It transitions `scaleX`
 //     LINEARLY at the poll cadence — see `TrackBar`, which is local rather than
 //     `components/ui/progress.tsx` precisely so retiming it cannot retime every
 //     other consumer of the shared primitive.

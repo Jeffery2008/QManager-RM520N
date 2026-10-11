@@ -127,7 +127,7 @@ import {
 // row step — NOT the 120ms card step), nested under this card's own
 // `staggerItem` in the page-level cascade: variants only, no local
 // `initial`/`animate`, so the sequence inherits the parent clock. Reduced
-// motion is handled globally by `<MotionConfig reducedMotion="user">`.
+// motion is handled globally by the switch in `components/motion-provider.tsx`.
 
 /**
  * How many band tags a row shows before collapsing the tail into a `+N`.

@@ -200,7 +200,7 @@ interface InternetChip {
    * Non-connected states carry a glyph instead of the heartbeat dot, and no two
    * of them may share one. `success-container` (L 0.89) and `warning-container`
    * (L 0.905) measure 1.03:1 apart and are the same surface under deuteranopia,
-   * so with `prefers-reduced-motion` stripping the pulse the leading mark is
+   * so with reduced motion stripping the pulse the leading mark is
    * the only channel left. Colour must never be the sole carrier of meaning.
    */
   icon: React.ReactNode | null;
