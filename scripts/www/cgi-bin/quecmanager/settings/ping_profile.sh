@@ -4,9 +4,11 @@
 # =============================================================================
 # GET:  Returns the current ping profile selection + the FOUR ICMP probe slots.
 # POST: Saves the four probe slots plus an OPTIONAL profile label (one of
-#       sensitive/regular/relaxed/quiet; preserved from the file when omitted),
-#       merging them into /etc/qmanager/ping_profile.json, then pokes the
-#       daemon's reload flag at /tmp/qmanager_ping_reload.
+#       sensitive/regular/relaxed/quiet; preserved from the file when omitted)
+#       and an OPTIONAL interval_sec (1-60), merging them into
+#       /etc/qmanager/ping_profile.json, then pokes the daemon's reload flag at
+#       /tmp/qmanager_ping_reload. A changed profile with no interval_sec drops
+#       the stored interval_sec override so the new profile's cadence applies.
 #
 # --- The four slots, and why they validate differently -----------------------
 # The probe chain walks four legs in a fixed order and short-circuits on the
@@ -257,6 +259,23 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         esac
     fi
 
+    # Optional interval_sec override: a JSON integer 1-60 when the key is present.
+    new_interval=$(printf '%s' "$POST_DATA" | jq -r \
+        'if has("interval_sec") then (.interval_sec | if type == "number" and . == floor then tostring else "invalid" end) else empty end' 2>/dev/null)
+    case "$new_interval" in
+        '') ;;
+        *[!0-9]*)
+            cgi_error "invalid_interval" "interval_sec must be an integer between 1 and 60"
+            exit 0
+            ;;
+        *)
+            if [ "$new_interval" -lt 1 ] || [ "$new_interval" -gt 60 ]; then
+                cgi_error "invalid_interval" "interval_sec must be an integer between 1 and 60"
+                exit 0
+            fi
+            ;;
+    esac
+
     new_h1_raw=$(printf '%s' "$POST_DATA" | jq -r '.target_host_1 // empty' 2>/dev/null)
     new_h2_raw=$(printf '%s' "$POST_DATA" | jq -r '.target_host_2 // empty' 2>/dev/null)
     new_i1_raw=$(printf '%s' "$POST_DATA" | jq -r '.target_ip_1 // empty' 2>/dev/null)
@@ -282,8 +301,8 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
     mkdir -p "$(dirname "$CONFIG")"
 
-    # Atomic key-merge: set only the label + targets; cadence keys
-    # (interval_sec / fail_secs / recover_secs / history_secs) pass through.
+    # Atomic key-merge: set the label + targets; cadence keys pass through unless the
+    # interval_sec is posted or the profile changed (which drops the stale interval_sec).
     existing_json='{}'
     if [ -f "$CONFIG" ]; then
         existing_json=$(cat "$CONFIG" 2>/dev/null)
@@ -301,7 +320,17 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         fi
     fi
 
+    stored_profile=$(printf '%s' "$existing_json" | jq -r '.profile // "relaxed"' 2>/dev/null)
+    case "$stored_profile" in
+        sensitive|regular|relaxed|quiet) ;;
+        *) stored_profile="relaxed" ;;
+    esac
+    drop_interval=false
+    [ "$new_profile" != "$stored_profile" ] && drop_interval=true
+
     if ! printf '%s' "$existing_json" | jq \
+        --argjson interval "${new_interval:-null}" \
+        --argjson drop_interval "$drop_interval" \
         --arg profile "$new_profile" \
         --arg host_1 "$new_h1" \
         --arg host_2 "$new_h2" \
@@ -311,7 +340,10 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
          | .target_host_1 = $host_1
          | .target_host_2 = $host_2
          | .target_ip_1 = $ip_1
-         | .target_ip_2 = $ip_2' \
+         | .target_ip_2 = $ip_2
+         | if $interval != null then .interval_sec = $interval
+           elif $drop_interval then del(.interval_sec)
+           else . end' \
         > "${CONFIG}.tmp" 2>/dev/null || [ ! -s "${CONFIG}.tmp" ]; then
         # -s guards the promote: never `mv` a zero-byte temp over a live
         # config. jq can exit 0 having written nothing if the redirect itself
@@ -327,7 +359,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         exit 0
     fi
 
-    qlog_info "Ping profile saved: profile=$new_profile chain=$new_h1,$new_h2,$new_i1,$new_i2"
+    qlog_info "Ping profile saved: profile=$new_profile interval=${new_interval:-unchanged} chain=$new_h1,$new_h2,$new_i1,$new_i2"
 
     # Poke daemon to reload at the start of its next cycle.
     # Failure is non-fatal — daemon still has the old config; user can retry.

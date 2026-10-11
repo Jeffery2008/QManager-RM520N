@@ -19,9 +19,8 @@ _cq_reset() {
 }
 _cq_reset
 
-# conn_state_read: one jq read into CQ_* vars. Returns 0 fresh, 1 stale/missing/unreadable
-# (verdict vars are then neutral). Stale = age > max(3*interval_sec, 15), interval outside
-# 1-300 clamped to 5; age is cache `mono` vs /proc/uptime, wall clock only if mono is absent.
+# conn_state_read: one jq read into CQ_* vars; rc 0 fresh, 1 stale/missing (verdict vars neutral).
+# Stale = age > max(3*interval_sec, 15); age is cache `mono` vs /proc/uptime (wall clock if absent).
 conn_state_read() {
     _cq_reset
     if [ ! -f "$CQ_PING_CACHE" ]; then
@@ -111,9 +110,8 @@ conn_state_is_up() {
     [ "$CQ_STALE" = "0" ] && [ "$CQ_REACHABLE" = "true" ]
 }
 
-# conn_state_cadence [config]: effective probe cadence the daemon runs, from
-# ping_profile.json. Mirrors resolve_profile() in qmanager_ping (profile table, then
-# numeric per-field overrides). Sets CQ_CFG_PROFILE/INTERVAL_SEC/FAIL_SECS/RECOVER_SECS.
+# conn_state_cadence [config]: effective probe cadence (profile table, then numeric overrides,
+# as resolve_profile() in qmanager_ping) into CQ_CFG_PROFILE/INTERVAL_SEC/FAIL_SECS/RECOVER_SECS.
 conn_state_cadence() {
     _cq_cfg="${1:-$CQ_PING_CONFIG}"
     CQ_CFG_PROFILE="relaxed"; _cq_pi=""; _cq_pf=""; _cq_pr=""
@@ -192,9 +190,8 @@ _cq_try_wait() {
     CQ_ALERT_AFTER_MIN="$_cq_w"
 }
 
-# cq_alert_after_min: the single alert wait (minutes) into CQ_ALERT_AFTER_MIN. Order: the
-# quality config key, else the first present per-channel threshold_minutes (SMS, email,
-# Discord) from before the wait moved here, else 5. rc 1 only when jq is unavailable.
+# cq_alert_after_min: the alert wait (minutes) into CQ_ALERT_AFTER_MIN: the quality config key,
+# else the first per-channel threshold_minutes (SMS, email, Discord), else 5. rc 1 only without jq.
 cq_alert_after_min() {
     CQ_ALERT_AFTER_MIN=5
     command -v jq >/dev/null 2>&1 || return 1

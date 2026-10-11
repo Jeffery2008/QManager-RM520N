@@ -85,10 +85,8 @@ daynum() {
 NUM='([0-9.]+|null)'
 ROW_RE="^\{\"ts\":[0-9]+,\"host\":\"[A-Za-z0-9.-]+\",\"ms\":$NUM,\"ok\":(true|false)\}\$|^\{\"ts_hour\":[0-9]+,\"host\":\"[A-Za-z0-9.-]+\",\"n\":[0-9]+,\"ok\":[0-9]+,\"min\":$NUM,\"avg\":$NUM,\"max\":$NUM\}\$"
 
-# awk does the per-row work (jq is ~40x too slow on 28k rows here): selects rows,
-# buckets them, and emits one TSV line per host+bucket. Raw file comes first in
-# the stream so rawfirst is known before any rollup row.
-# FS splits both row shapes into key/value pairs.
+# awk does the per-row work (jq is far too slow on 28k rows): selects, buckets, one TSV line per
+# host+bucket. The raw file streams first so rawfirst is known; FS splits both row shapes.
 AWK_AGG='
 function keep(raw, t) {
     if (raw) return rawmode ? (t >= start) : (t > flushed && t >= start)

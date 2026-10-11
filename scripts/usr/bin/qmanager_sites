@@ -79,6 +79,13 @@ atomic_put() {
     return 1
 }
 
+# Drop a fixed /tmp file we do not own: root's O_CREAT append hits EACCES on a
+# www-data pre-created file under protected_regular=1. Our own files are kept.
+own_or_rm() {
+    [ -e "$1" ] || [ -L "$1" ] || return 0
+    [ -O "$1" ] && [ ! -L "$1" ] || rm -f "$1"
+}
+
 # Conservative hostname / IPv4 check, no regex engine (device jq has none).
 valid_host() {
     local h="$1"
@@ -213,7 +220,7 @@ sweep() {
         ts_json="$ts"; next_json=$((ts + cfg_interval))
     fi
 
-    : > "$CHECKING_FILE" 2>/dev/null
+    atomic_put "$CHECKING_FILE" </dev/null
     TMPD=$(mktemp -d "$TMP_DIR/qmanager_sites.XXXXXX") || { qlog_error "mktemp failed"; return 1; }
 
     printf -v f '%s/r%02d' "$TMPD" "$i"
@@ -253,6 +260,7 @@ EOF
     qlog_info "sweep: ${nrows:-0} answered in $(( $(mono_now) - start_mono ))s"
 
     if [ "$ts" -ge "$SANE_EPOCH" ]; then
+        own_or_rm "$RAW_FILE"
         printf '%s' "$results" | jq -c --argjson ts "$ts" \
             '.[] | {ts: $ts, host, ms, ok}' >> "$RAW_FILE"
         trim_raw "$ts"
@@ -373,11 +381,12 @@ main() {
             fi
             rm -f "$PID_FILE"
         fi
-        echo $$ > "$PID_FILE"
+        echo $$ | atomic_put "$PID_FILE"
     fi
     trap cleanup EXIT
     trap on_term INT TERM
     rm -f "$CHECKING_FILE"
+    own_or_rm "$RAW_FILE"; own_or_rm "$FLUSHED_FILE"; own_or_rm "$LATEST_FILE"
     load_flushed
 
     qlog_info "QManager Sites daemon starting (PID $$)"

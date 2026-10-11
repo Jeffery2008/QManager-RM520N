@@ -20,6 +20,7 @@ Mid-run addition (user, verbatim): "I also want to apply this one so make our ba
 - DNS lookup runs as a background job with its own /tmp file, never inside the serial ping loop (advocate C3).
 - GATE (user, 2026-10-11): Alert = "Down + restored only" (degraded is Activity + dashboard only). Degraded = "Loss only, configured" (replaces hard-coded 10%). Sites = "Build the backend now". Site probe = "TCP connect time" (curl %{time_connect} to :443).
 - DEVICE APPROVAL (user, 2026-10-11): "Yes, deploy + restart (Recommended)" and "2-min simulated outage (Recommended)" — iptables drop of ICMP+DNS egress on rmnet ~2 min, watchdog stays disabled, no SMS expected.
+- REDEPLOY APPROVAL (user, 2026-10-11, after a v0.1.17-draft install from development replaced the first deploy at 16:38): "Yes, redeploy (Recommended)" — includes a short outage re-check and a Watchdog probe-interval save test.
 - Watchcat trigger = producer's fail_elapsed_sec (already-approved follow-up, connection-watchdog.md:446); propagate_probe_interval retired.
 
 ## Plan
@@ -43,7 +44,11 @@ Mid-run addition (user, verbatim): "I also want to apply this one so make our ba
 | B4 | 1 | cgi-endpoint-builder | r1 | DONE_WITH_CONCERNS -> accepted 3af1cc15 | crlf, device sweep + CGI as www-data | commit body |
 | B2 | 1 | cgi-endpoint-builder | r1 | DONE_WITH_CONCERNS -> fix wave 1 (post-outage loss tail logs extra pair) | device CGI + faked-clock driver | — |
 | B2 | 2 | cgi-endpoint-builder | fix1 | DONE -> accepted 30426c55 | crlf, device driver re-run | commit body |
-| B3 | 1 | cgi-endpoint-builder | r1 | DISPATCHED | — | — |
+| B3 | 1 | cgi-endpoint-builder | r1 | DONE -> accepted aec8a1ad | crlf, tsc, isolated DNS job on device | commit body |
+| W1 | 1 | conductor | direct | watchdog.sh probe_interval proxy for redesigned form -> 3fb535ba | device save test | commit body |
+| V1 | 1 | qm-verifier | r1 | FAIL (F1 outage-hidden race in events.sh; F2-F6 low) | gates, device md5 3-way | — |
+| G2 | 1 | installer-safety-auditor | post | CLEAR (F7 tmp pre-create note) | device read-only | — |
+| FX1 | 1 | cgi-endpoint-builder | fix-wave-1 | DISPATCHED (F1-F7) | — | — |
 
 ## Findings that survive
 - Only one prober exists (qmanager_ping); watchcat + poller only read /tmp/qmanager_ping.json. Duplication is in config, verdict, alerts.

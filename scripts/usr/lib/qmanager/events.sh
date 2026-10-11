@@ -494,6 +494,7 @@ _ev_lat_above() {
 }
 
 ev_hold_until=""
+ev_recov_restored=""   # "true": link restored inside the current recovery window
 
 # Monotonic seconds into _EV_UP ("" if unreadable).
 _ev_uptime() {
@@ -534,14 +535,18 @@ detect_data_connection_events() {
     # First reading after a cold start is adopted silently.
     [ -z "$prev_ev_internet" ] && prev_ev_internet="$conn_internet_available"
 
+    # The recovery window ends with the producer's flag; its restore marker goes with it.
+    [ "$conn_during_recovery" = "true" ] || ev_recov_restored=""
+
     # Follows the producer's reachable verdict, not the status string ("recovery" masks it).
     if [ "$conn_internet_available" != "$prev_ev_internet" ]; then
         if [ "$conn_internet_available" = "true" ]; then
             append_event "internet_restored" "Internet restored" "info"
             prev_ev_internet="true"
+            [ "$conn_during_recovery" = "true" ] && ev_recov_restored="true"
             _ev_arm_hold
-        elif [ "$conn_during_recovery" != "true" ]; then
-            # A dip inside a watchdog recovery window is the same outage, not a new one.
+        elif [ "$ev_recov_restored" != "true" ]; then
+            # Only a repeat drop after a restore in the same recovery window is held (tier flap).
             append_event "internet_lost" "Internet unreachable" "warning"
             prev_ev_internet="false"
         fi

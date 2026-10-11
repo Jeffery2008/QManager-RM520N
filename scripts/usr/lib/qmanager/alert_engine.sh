@@ -61,7 +61,7 @@
 #   discord_dispatch_message, _DA_LOG      (discord_alerts.sh)
 #
 # Poller globals read: ev_link_state, conn_internet_available (reboot delivery
-# only), conn_during_recovery, CQ_ALERT_AFTER_MIN
+# only), CQ_ALERT_AFTER_MIN
 #
 # Install location: /usr/lib/qmanager/alert_engine.sh
 # =============================================================================
@@ -531,9 +531,8 @@ check_alerts() {
         did_restore=1
     fi
 
-    # While an outage is ongoing, send connection_lost once it passes the wait. Not mid
-    # watchdog recovery: the radio may be mid-cycle and a failed send would still latch.
-    if [ "$_ae_down" = "1" ] && [ "$conn_during_recovery" != "true" ]; then
+    # While an outage is ongoing, send connection_lost once it passes the configured wait.
+    if [ "$_ae_down" = "1" ]; then
         _ae_check_connection_lost "$now_up"
     fi
 

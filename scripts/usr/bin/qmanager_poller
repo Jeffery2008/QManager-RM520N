@@ -466,13 +466,16 @@ fi
 }
 
 # Shared ping.json reader + staleness rule. Fail-closed stub: no lib = always stale.
-. /usr/lib/qmanager/conn_state.sh 2>/dev/null || {
+# Guarded with -f: BusyBox ash exits when `.` cannot find its file.
+if [ -f /usr/lib/qmanager/conn_state.sh ]; then
+    . /usr/lib/qmanager/conn_state.sh
+else
     qlog_warn "conn_state.sh not found, connectivity reads as unknown"
     conn_state_read() { CQ_STALE=1; CQ_STALE_REASON="conn_state.sh missing"; return 1; }
     conn_state_why() { printf '%s' "$CQ_STALE_REASON"; }
     cq_thresholds_refresh() { :; }
     CQ_LAT_MS=250; CQ_LOSS_PCT=30
-}
+fi
 
 # Profile manager (for boot-time profile auto-apply)
 . /usr/lib/qmanager/profile_mgr.sh 2>/dev/null || {
@@ -1383,9 +1386,8 @@ append_signal_history() {
     fi
 }
 
-# Append current ping/connectivity stats as one NDJSON line to the ping history file.
-# Capped at PING_HISTORY_MAX lines (rows land about every 16s on device, not 10s).
-# Uses conn_ variables already populated by read_ping_data().
+# Append the conn_ stats from read_ping_data() as one NDJSON line to the ping history file,
+# capped at PING_HISTORY_MAX lines (rows land about every 16s on device, not 10s).
 append_ping_history() {
     local ts
     ts=$(date +%s)

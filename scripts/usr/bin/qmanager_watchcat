@@ -47,13 +47,16 @@ MAX_EVENTS=300
 [ -f /usr/lib/qmanager/profile_mgr.sh ] && . /usr/lib/qmanager/profile_mgr.sh
 
 # --- Shared ping.json reader + staleness rule (fail-closed stub: no lib = never acts)
-. /usr/lib/qmanager/conn_state.sh 2>/dev/null || {
+# Guarded with -f: BusyBox ash exits when `.` cannot find its file.
+if [ -f /usr/lib/qmanager/conn_state.sh ]; then
+    . /usr/lib/qmanager/conn_state.sh
+else
     qlog_error "conn_state.sh missing, watchdog cannot read the ping cache"
     conn_state_read() { CQ_STALE=1; CQ_STALE_REASON="conn_state.sh missing"; return 1; }
     conn_state_why() { printf '%s' "$CQ_STALE_REASON"; }
     conn_state_down_for() { return 1; }
     conn_state_is_up() { return 1; }
-}
+fi
 
 # --- Known-SIMs set (persists landed ICCID across SIM swaps/reverts so the
 # poller's boot-time swap detector treats it as expected, not a physical
@@ -70,7 +73,6 @@ MAX_EVENTS=300
 }
 
 # --- File Paths --------------------------------------------------------------
-PING_CACHE="/tmp/qmanager_ping.json"
 STATE_FILE="/tmp/qmanager_watchcat.json"
 STATE_TMP="/tmp/qmanager_watchcat.json.tmp"
 PID_FILE="/tmp/qmanager_watchcat.pid"
@@ -656,9 +658,8 @@ finish_cooldown() {
     local _cooldown_success="false"
 
     if ! conn_state_read; then
-        # (a) Stale/missing ping data: retry, or give up after 3 tries. The recovery
-        # flag stays up across the retry (no remove/recreate gap); the PID write
-        # re-stamps its mtime for profile_apply's staleness ceiling.
+        # (a) Stale/missing ping data: retry up to 3 times with the recovery flag held;
+        # the PID write re-stamps its mtime for profile_apply's staleness ceiling.
         if [ "$cooldown_stale_retries" -lt 3 ]; then
             cooldown_stale_retries=$((cooldown_stale_retries + 1))
             qlog_warn "COOLDOWN: ping data stale ($(conn_state_why)), retry $cooldown_stale_retries/3, extending by ${CFG_CHECK_INTERVAL}s"
@@ -666,8 +667,12 @@ finish_cooldown() {
             printf '%s\n' "$$" > "$RECOVERY_FLAG" 2>/dev/null || touch "$RECOVERY_FLAG"
             return
         fi
-        qlog_error "COOLDOWN: ping data still stale after 3 retries, treating as recovery failure"
+        # Stale after 3 retries is inconclusive: no escalation on data we cannot trust.
+        qlog_warn "COOLDOWN: ping data still stale after 3 retries, result inconclusive, returning to monitor"
         cooldown_stale_retries=0
+        rm -f "$RECOVERY_FLAG"
+        state="monitor"; current_tier=0; failure_counter=0
+        return
     elif conn_state_is_up; then
         # (b) Fresh read, reachable=true: success, whatever during_recovery says.
         cooldown_stale_retries=0
