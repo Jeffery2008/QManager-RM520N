@@ -117,9 +117,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* Owns the System/Full/Reduced choice. Must sit OUTSIDE
-              MotionProvider, which reads it to pick MotionConfig's
-              `reducedMotion` value. */}
+          {/* Owns the System/Full/Reduced choice; MotionProvider re-renders on it. */}
           <MotionPreferenceProvider>
             <MotionProvider>
               {/* Client-only i18next provider — wraps BOTH the pre-auth (login /
