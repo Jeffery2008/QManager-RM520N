@@ -48,7 +48,7 @@ import { DUR, EASE_QUICK, STAGGER_STEP } from "@/lib/motion";
  * That matches `useValueTick`, which seeds its previous value for the same
  * reason.
  *
- * Reduced motion needs no branch here. `MotionConfig reducedMotion="user"`
+ * Reduced motion needs no branch here. The `MotionConfig` switch
  * (components/motion-provider.tsx) drops the transform and keeps the opacity, so
  * the gesture degrades to a plain crossfade — movement goes, opacity stays,
  * and a crossfade still carries the information that the state changed.

@@ -141,7 +141,7 @@ export const ActiveConfigCard = ({
                 name={badge.glyph}
                 size={BADGE_GLYPH_SIZE}
                 className={
-                  badge.spin ? "animate-spin motion-reduce:animate-none" : undefined
+                  badge.spin ? "motion-safe:animate-spin" : undefined
                 }
               />
               {statusLabel}

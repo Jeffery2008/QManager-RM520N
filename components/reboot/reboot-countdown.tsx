@@ -223,7 +223,7 @@ export function RebootCountdown() {
             <div
               key={seg}
               className={cn(
-                "h-[3px] flex-1 rounded-full transition-colors duration-[var(--duration-standard)] ease-standard",
+                "h-[3px] flex-1 rounded-full transition-colors duration-[var(--duration-standard)] ease-[var(--ease-standard)]",
                 seg < phase.segment
                   ? "bg-primary"
                   : seg === phase.segment
@@ -242,7 +242,7 @@ export function RebootCountdown() {
       {showEscape && (
         <a
           href="/login/"
-          className="mt-3 text-xs text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+          className="mt-3 text-xs text-muted-foreground underline underline-offset-4 transition-colors duration-[var(--duration-quick)] ease-[var(--ease-standard)] hover:text-foreground"
         >
           Device may need manual attention — go to login
         </a>

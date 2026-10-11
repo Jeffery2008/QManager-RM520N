@@ -301,7 +301,7 @@ export function FreqLockHero({
             <MaterialSymbol
               name={isRefreshing ? "progress_activity" : "refresh"}
               size={16}
-              className={isRefreshing ? "animate-spin" : undefined}
+              className={isRefreshing ? "motion-safe:animate-spin" : undefined}
             />
           </Button>
         </div>

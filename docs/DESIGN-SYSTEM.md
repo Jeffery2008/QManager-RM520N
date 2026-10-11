@@ -83,7 +83,6 @@ These are not vanilla shadcn primitives; they are QManager additions a developer
 | `metric-bar.tsx` | Quality-tinted linear signal/metric fill bar (data-viz fill, per the Loader-and-Dots Rule). |
 | `meta-panel.tsx` | Grid-laid attribute readouts (`MetaPair`) for device/detail panels. |
 | `spinner.tsx` | Shared spinner primitive. |
-| `animated-beam.tsx`, `animated-list.tsx` | MagicUI-derived motion helpers for signal-beam / list transitions. |
 | `card-foot.tsx` | The apply footer an editable card ends in (**Card-Foot Apply Rule**): a borderless persistent row, `status` on the left edge, `actions` on the right with `SaveButton` last. Layout only, no copy and no icons, so it works on both icon sets. Use it, not shadcn `CardFooter`. Pattern in [FRONTEND.md](FRONTEND.md) > Card Pattern. |
 | `segmented-field.tsx` | The pill group for a boolean preference or a short mutually-exclusive choice (primary thumb plus a check glyph in a rounded track), in place of a bare `Switch`. It imports neither icon set: the caller passes the check glyph through the required `glyph` prop. Falls back to a `Select` below a card breakpoint; `breakpoint="never"` keeps the pills at every width. New and reworked surfaces only; the existing `Switch` sites are tracked in `DESIGN.md` > Migration Deltas. |
 | `tag.tsx` | Outline identity and metadata tag (`nr`, `lte`, `spatial`, `neutral`). Never a status chip: status is a filled `Badge` variant with an icon, and the split is compiler-enforced through `BadgeVariant`. |

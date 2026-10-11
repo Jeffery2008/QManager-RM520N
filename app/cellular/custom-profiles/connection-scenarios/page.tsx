@@ -57,7 +57,7 @@ function ConnectionScenariosRedirect() {
       <MaterialSymbol
         name="progress_activity"
         size={24}
-        className="text-on-surface-variant animate-spin motion-reduce:animate-none"
+        className="text-on-surface-variant motion-safe:animate-spin"
       />
       <p className="text-on-surface-variant text-sm">
         {t("scenarios.redirect.label")}

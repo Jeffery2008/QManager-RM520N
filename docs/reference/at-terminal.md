@@ -178,9 +178,9 @@ watching the bottom keeps riding it down. `isNearBottom` treats anything within
 `FOLLOW_SLACK_PX` (56px) of the true bottom as "at the foot", so a reader does not
 have to be pixel-perfect to keep following.
 
-`prefersReducedMotion()` gates the scroll behaviour between `"smooth"` and
-`"auto"` — a `matchMedia` read at call time, not a stored preference, so it tracks
-a live OS-level toggle.
+`isMotionReduced()` gates the scroll behaviour between `"smooth"` and
+`"auto"` — read at call time, so it tracks the Animations preference and a live
+OS-level toggle.
 
 ---
 

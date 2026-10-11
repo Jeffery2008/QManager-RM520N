@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { isMotionReduced } from "@/lib/motion-preference";
 import { useSaveFlash } from "@/components/ui/save-button";
 import type {
   WatchdogSettings,
@@ -315,9 +316,7 @@ export function useWatchdogForm({
     const el = fieldRefs.current[FIELD_ID[first]];
     if (!el) return;
     el.focus({ preventScroll: true });
-    const reduce =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const reduce = isMotionReduced();
     el.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
   }, [blockedFields]);
 

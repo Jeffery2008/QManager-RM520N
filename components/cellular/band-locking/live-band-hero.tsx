@@ -353,7 +353,7 @@ export function LiveBandHero({
         <div className={HERO_ONAIR_PANEL}>
           <div className="flex items-center gap-2.5">
             <span className="relative inline-flex size-2" aria-hidden="true">
-              <span className="animate-live-ping absolute inset-0 rounded-pill bg-success motion-reduce:animate-none" />
+              <span className="animate-live-ping absolute inset-0 rounded-pill bg-success" />
               <span className="relative size-2 rounded-pill bg-success" />
             </span>
             <span className={HERO_EYEBROW}>
@@ -739,7 +739,7 @@ export function LiveBandHero({
                 size={BADGE_GLYPH_SIZE}
                 className={
                   status.spin
-                    ? "animate-spin motion-reduce:animate-none"
+                    ? "motion-safe:animate-spin"
                     : undefined
                 }
               />

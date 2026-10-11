@@ -271,7 +271,7 @@ const TailscaleComponent = () => {
                 <RefreshCcwIcon
                   className={cn(
                     PILL_GLYPH,
-                    isLoading && "animate-spin motion-reduce:animate-none",
+                    isLoading && "motion-safe:animate-spin",
                   )}
                 />
                 {t("tailscale.page.refresh")}

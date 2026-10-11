@@ -20,7 +20,7 @@ export function CopyableCommand({ command }: CopyableCommandProps) {
   return (
     <button
       type="button"
-      className="bg-muted px-4 py-2.5 rounded-md text-xs font-mono text-muted-foreground select-all max-w-full overflow-x-auto text-left cursor-pointer hover:bg-muted/80 transition-colors"
+      className="bg-muted px-4 py-2.5 rounded-md text-xs font-mono text-muted-foreground select-all max-w-full overflow-x-auto text-left cursor-pointer hover:bg-muted/80 transition-colors duration-[var(--duration-quick)] ease-out"
       onClick={handleCopy}
       title="Click to copy"
       aria-label="Copy install command to clipboard"

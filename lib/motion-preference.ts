@@ -1,33 +1,15 @@
-// =============================================================================
-// motion-preference — the storage/DOM contract for the animations preference
-// =============================================================================
-// QManager already honours the OS-level `prefers-reduced-motion` media query in
-// four hand-written blocks in globals.css and in ~64 `motion-reduce:` /
-// `motion-safe:` utilities. What this module adds is a USER-level choice that
-// can outrank the OS one in either direction.
-//
-// The whole contract is one attribute on <html>:
-//
-//   (no attribute)          → "system": the media query decides. Default.
-//   data-motion="full"      → animate, whatever the OS says.
-//   data-motion="reduced"   → suppress, whatever the OS says.
-//
-// The absence of the attribute is LOAD-BEARING — globals.css's redefined
-// `motion-reduce` / `motion-safe` variants key off `[data-motion="full"]` and
-// `[data-motion="reduced"]` and fall through to the bare media query when
-// neither is present. Never write `data-motion="system"`.
-//
-// This module is deliberately NOT "use client": app/layout.tsx is a server
-// component and imports BOOT_SCRIPT from here to stamp the attribute before
-// first paint. Keeping the key, the type, and the boot script in one non-client
-// module means the string "qmanager_motion" is written exactly once.
-// =============================================================================
+// The animations preference (System / Full / Reduced) as one attribute on <html>:
+// absent = "system" (the OS media query decides), or data-motion="full" | "reduced".
+// Never write data-motion="system". Not "use client": app/layout.tsx imports the boot script.
 
 /** localStorage key. Mirrors LANG_STORAGE_KEY's `qmanager_*` convention. */
 export const MOTION_STORAGE_KEY = "qmanager_motion";
 
 /** The attribute stamped on <html>. Absent means "system". */
 export const MOTION_ATTRIBUTE = "data-motion";
+
+/** The OS query. Read only through isMotionReduced() / useMotionReduced(). */
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 export type MotionPreference = "system" | "full" | "reduced";
 
@@ -55,6 +37,26 @@ export function readMotionPreference(): MotionPreference {
     // Private-mode / disabled storage. The OS default is a fine fallback.
     return "system";
   }
+}
+
+/**
+ * True when motion should be reduced right now. The attribute outranks the OS query;
+ * safe during prerender (false). Components use `useMotionReduced()`, which re-renders.
+ */
+export function isMotionReduced(): boolean {
+  if (typeof window === "undefined") return false;
+  const attr = document.documentElement.getAttribute(MOTION_ATTRIBUTE);
+  if (attr === "reduced") return true;
+  if (attr === "full") return false;
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+/** Calls `onChange` when the OS reduced-motion setting flips. Returns the unsubscribe. */
+export function subscribeToOsMotion(onChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
 }
 
 /** Stamp (or clear) the attribute. The clear branch is the "system" contract. */

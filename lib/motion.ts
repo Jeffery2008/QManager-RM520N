@@ -21,12 +21,9 @@ import type { Variants, Transition } from "motion/react";
 // retune one layer, retune the other in the same change, or the product drifts
 // apart curve by curve.
 //
-// Reduced motion is handled globally by `<MotionConfig reducedMotion="user">`
-// in `components/motion-provider.tsx`, so every motion/react component below
-// automatically collapses transform movement (keeping opacity) for users who
-// ask for it. Keep variants here pure transform + opacity so that one switch
-// stays sufficient. Raw CSS keyframes carry their own
-// `@media (prefers-reduced-motion: reduce)` block beside them in globals.css.
+// Reduced motion is one `MotionConfig` switch in `components/motion-provider.tsx`
+// (Animations preference first, then the OS query), so keep variants pure
+// transform + opacity. Raw CSS keyframes carry a `motion-reduce` guard in globals.css.
 // =============================================================================
 
 // -----------------------------------------------------------------------------

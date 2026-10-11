@@ -177,7 +177,7 @@ const NetworkEventsComponent = () => {
                 className={FILTER_PILL_REST}
               >
                 <RefreshCwIcon
-                  className={cn(PILL_GLYPH, isRefreshing && "animate-spin")}
+                  className={cn(PILL_GLYPH, isRefreshing && "motion-safe:animate-spin")}
                 />
                 {c("networkEvents.actions.refresh")}
               </Button>

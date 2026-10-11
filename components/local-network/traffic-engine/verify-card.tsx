@@ -413,7 +413,7 @@ export function VerifyCard({ binaryInstalled }: VerifyCardProps) {
               aria-hidden="true"
             >
               {isRunning ? (
-                <Loader2Icon className={cn(RESTING.GLYPH, "animate-spin")} />
+                <Loader2Icon className={cn(RESTING.GLYPH, "motion-safe:animate-spin")} />
               ) : binaryInstalled ? (
                 <GaugeIcon className={RESTING.GLYPH} />
               ) : (

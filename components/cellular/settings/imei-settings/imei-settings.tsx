@@ -11,6 +11,7 @@ import { staggerContainer, staggerItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 import { CARD_CELL, PAGE_ROOT, WORKBENCH_SPLIT } from "../shapes";
+import { isMotionReduced } from "@/lib/motion-preference";
 import BackupIMEICard from "./backup-imei-card";
 import IMEISettingsCard from "./imei-settings-card";
 import IMEIToolsCard from "./imei-tools-card";
@@ -120,9 +121,7 @@ const IMEISettings = () => {
   const handleReview = React.useCallback(() => {
     const card = document.getElementById(DEVICE_CARD_ID);
     if (!card) return;
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
+    const reduced = isMotionReduced();
     card.scrollIntoView({
       behavior: reduced ? "auto" : "smooth",
       block: "start",

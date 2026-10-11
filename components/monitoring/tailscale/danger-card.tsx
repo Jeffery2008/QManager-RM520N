@@ -60,7 +60,7 @@ export function DangerRow({
             size="action"
           >
             {isUninstalling ? (
-              <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
+              <Loader2Icon className="size-4 motion-safe:animate-spin" />
             ) : (
               <Trash2Icon className="size-4" />
             )}
@@ -143,7 +143,7 @@ export function RebootDialog({
           </AlertDialogCancel>
           <AlertDialogAction disabled={isRebooting} onClick={reboot}>
             {isRebooting ? (
-              <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
+              <Loader2Icon className="size-4 motion-safe:animate-spin" />
             ) : null}
             {isRebooting
               ? t("tailscale.danger.rebooting")

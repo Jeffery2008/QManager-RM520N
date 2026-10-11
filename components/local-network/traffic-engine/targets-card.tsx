@@ -457,7 +457,7 @@ export function TargetsCard({ hostlist, mode }: TargetsCardProps) {
               onClick={() => importInputRef.current?.click()}
             >
               {busy === "import" ? (
-                <Loader2Icon className="animate-spin" />
+                <Loader2Icon className="motion-safe:animate-spin" />
               ) : (
                 <UploadIcon />
               )}
@@ -489,7 +489,7 @@ export function TargetsCard({ hostlist, mode }: TargetsCardProps) {
                   title={t("trafficEngine.hostlist.restore_action")}
                 >
                   {busy === "restore" ? (
-                    <Loader2Icon className="animate-spin" />
+                    <Loader2Icon className="motion-safe:animate-spin" />
                   ) : (
                     <RotateCcwIcon />
                   )}
@@ -618,7 +618,7 @@ export function TargetsCard({ hostlist, mode }: TargetsCardProps) {
             size="action"
           >
             {hostlist.isSaving ? (
-              <Loader2Icon className="size-4 animate-spin" />
+              <Loader2Icon className="size-4 motion-safe:animate-spin" />
             ) : (
               <PlusIcon className="size-4" />
             )}

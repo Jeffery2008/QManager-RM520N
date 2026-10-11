@@ -323,7 +323,7 @@ const TrafficEngine = () => {
                     size="action"
                   >
                     {videoOptimizer.isUninstalling ? (
-                      <Loader2Icon className="size-4 animate-spin" />
+                      <Loader2Icon className="size-4 motion-safe:animate-spin" />
                     ) : (
                       <Trash2Icon className="size-4" />
                     )}

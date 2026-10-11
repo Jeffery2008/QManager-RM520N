@@ -132,7 +132,7 @@ const AXIS_TICKS = ["00", "03", "06", "09", "12", "15", "18", "21", "24"];
  * these are rows sharing one card, not cards on a page — and `emphasized` is
  * the duration because a band growing to full width is the longest journey
  * anything on this card makes. Transform + opacity only, so the global
- * `reducedMotion="user"` switch collapses it without a second definition here.
+ * motion-provider switch collapses it without a second definition here.
  */
 const segmentVariants: Variants = {
   hidden: { opacity: 0, scaleX: 0 },

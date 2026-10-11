@@ -76,7 +76,7 @@ export function SystemLogs(): React.JSX.Element {
               size="action"
             >
               <RefreshCcwIcon
-                className={cn(PILL_GLYPH, isRefreshing && "animate-spin")}
+                className={cn(PILL_GLYPH, isRefreshing && "motion-safe:animate-spin")}
               />
               {t(`${K}.page.refresh`)}
             </Button>
@@ -124,7 +124,7 @@ export function SystemLogs(): React.JSX.Element {
               }}
             >
               {isClearing ? (
-                <Loader2Icon className={cn(PILL_GLYPH, "animate-spin")} />
+                <Loader2Icon className={cn(PILL_GLYPH, "motion-safe:animate-spin")} />
               ) : null}
               {isClearing
                 ? t(`${K}.clear_dialog.clearing`)

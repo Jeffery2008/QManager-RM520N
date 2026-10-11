@@ -607,7 +607,7 @@ AMBR is demoted from headline to a **governing summary line** plus a disclosure 
 - **`GOVERNING_MARK` uses a glyph plus a word, never a hue.** Which radio is in force is not a health claim.
 - **Rate chips are coloured by DIRECTION, not by the block they sit in** — download rose, upload cyan, each carrying its arrow glyph as a second channel. See `RATE_CHIP` and [cellular-settings-family.md](cellular-settings-family.md).
 
-> ⚠️ WARNING: The disclosure panel animates `grid-template-rows`. `<MotionConfig reducedMotion="user">` collapses transform movement for motion/react components, and a CSS grid-track transition is neither a transform nor a motion/react component — so the global switch cannot reach it. This component calls `useReducedMotion()` itself and drops the transition class. Same mechanism and same reason as the frequency-locking skeleton (`4b4d688`).
+> ⚠️ WARNING: The disclosure panel animates `grid-template-rows`. `<MotionConfig reducedMotion="user">` collapses transform movement for motion/react components, and a CSS grid-track transition is neither a transform nor a motion/react component — so the global switch cannot reach it. This component calls `useMotionReduced()` itself and drops the transition class. Same mechanism and same reason as the frequency-locking skeleton (`4b4d688`).
 
 ### Two data sources, deliberately separate
 

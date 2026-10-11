@@ -9,7 +9,8 @@ import React, {
 } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { useMotionReduced } from "@/components/motion-preference";
 import { toast } from "sonner";
 
 import CustomProfileViewComponent from "@/components/cellular/custom-profiles/custom-profile-view";
@@ -936,7 +937,7 @@ const CustomProfilePageBody = () => {
   // `scrollIntoView` above already positioned the card; letting focus scroll
   // too would double-jump past the `scroll-mt` offset.
   const savedProfilesRef = useRef<HTMLDivElement>(null);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionReduced();
   const handleJumpToSavedProfiles = useCallback(() => {
     const el = savedProfilesRef.current;
     if (!el) return;

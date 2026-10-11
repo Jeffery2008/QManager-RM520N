@@ -156,7 +156,7 @@ export function SpeedLimitCard({
                       <Loader2Icon
                         className={cn(
                           FIELD_GLYPH,
-                          "animate-spin motion-reduce:animate-none",
+                          "motion-safe:animate-spin",
                         )}
                       />
                       {t(`${K}.settings.applying`)}

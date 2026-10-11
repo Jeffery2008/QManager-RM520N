@@ -201,7 +201,7 @@ function SimRegistryRow({
             {isPending ? (
               <>
                 <Loader2Icon
-                  className="size-4 animate-spin"
+                  className="size-4 motion-safe:animate-spin"
                   aria-hidden="true"
                 />
                 {t("sim_registry.restoring")}
@@ -320,7 +320,7 @@ function ClearKnownSimsFooter({
               {isClearing ? (
                 <>
                   <Loader2Icon
-                    className="size-4 animate-spin"
+                    className="size-4 motion-safe:animate-spin"
                     aria-hidden="true"
                   />
                   {t("known_sims.clear_dialog_clearing")}

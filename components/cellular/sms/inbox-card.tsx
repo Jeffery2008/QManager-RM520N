@@ -413,7 +413,7 @@ export default function SmsInboxCard({
                       size={18}
                       className={
                         isFetching
-                          ? "animate-spin motion-reduce:animate-none"
+                          ? "motion-safe:animate-spin"
                           : undefined
                       }
                     />

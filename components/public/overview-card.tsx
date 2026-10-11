@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
+import { useMotionReduced } from "@/components/motion-preference";
 
 import { MaterialSymbol } from "@/components/ui/material-symbol";
 import { TonalBanner } from "@/components/ui/tonal-banner";
@@ -136,7 +137,7 @@ export default function OverviewCard() {
   const { data, isLoading, isStale, error, refresh, consecutiveFailures } =
     usePublicOverview();
   const unitPrefs = usePublicUnitPreferences();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionReduced();
   const nowSec = useNowSec();
 
   // Verdict announcer: a single sr-only aria-live region that fires only when a

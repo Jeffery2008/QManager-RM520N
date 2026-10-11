@@ -114,7 +114,7 @@ export const CONSOLE = {
 export const CHIP_GLYPH = "size-3";
 
 /** The spin class, named once so the chip and the pane agree. */
-export const SPIN = "animate-spin";
+export const SPIN = "motion-safe:animate-spin";
 
 // -----------------------------------------------------------------------------
 // Tone maps

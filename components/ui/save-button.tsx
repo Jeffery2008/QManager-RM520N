@@ -183,7 +183,7 @@ export function SaveButton({
         animate={{ opacity: isSaving ? 1 : 0 }}
         transition={layerTransition}
       >
-        <Loader2Icon className="size-3.5 animate-spin motion-reduce:animate-none" />
+        <Loader2Icon className="size-3.5 motion-safe:animate-spin" />
         {t("actions.saving")}
       </motion.span>
 

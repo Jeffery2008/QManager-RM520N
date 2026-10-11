@@ -83,7 +83,7 @@ export function RunHero({
   // The one ambient motion: a run publishes nothing until it ends.
   const spin =
     posture === "scanning"
-      ? "animate-spin motion-reduce:animate-none"
+      ? "motion-safe:animate-spin"
       : undefined;
 
   const hasRows = rows !== null && rows !== undefined;

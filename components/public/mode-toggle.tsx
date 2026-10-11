@@ -78,12 +78,12 @@ export function ModeToggle({
           <MaterialSymbol
             name="light_mode"
             size={glyphSize}
-            className="scale-100 rotate-0 transition-transform dark:scale-0 dark:-rotate-90"
+            className="scale-100 rotate-0 transition-transform duration-[var(--duration-quick)] ease-out dark:scale-0 dark:-rotate-90"
           />
           <MaterialSymbol
             name="dark_mode"
             size={glyphSize}
-            className="absolute scale-0 rotate-90 transition-transform dark:scale-100 dark:rotate-0"
+            className="absolute scale-0 rotate-90 transition-transform duration-[var(--duration-quick)] ease-out dark:scale-100 dark:rotate-0"
           />
           <span className="sr-only">
             {t("overview.actions.theme_toggle_aria")}

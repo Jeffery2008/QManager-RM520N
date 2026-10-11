@@ -252,7 +252,7 @@ export function ConnectionCard({
   );
 
   const busyGlyph = (
-    <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
+    <Loader2Icon className="size-4 motion-safe:animate-spin" />
   );
 
   let rail: React.ReactNode = null;

@@ -269,7 +269,7 @@ The disclosure's `option_reset` embeds a copyable command. It reaches the compon
 
 **Two motion repairs.** The submit's locked/unlocked role morph and the field-group dim were the surface's only untokenized state changes — both snapped instantly while the banner announcing the *same condition* eased in over 800 ms, so the card reported one event at two speeds. Both now carry `transition-* duration-[var(--duration-standard)] ease-[var(--ease-standard)]`.
 
-**The recovery disclosure needs its own reduced-motion guard.** It animates `grid-template-rows` 0fr → 1fr, which is neither transform nor opacity, so the global `MotionConfig` switch does not cover it; it reads `useReducedMotion()` directly. The 0fr → 1fr collapse is height-agnostic on purpose — no measured pixel height, so a locale whose copy wraps to four lines animates correctly with no JS and no `ResizeObserver`.
+**The recovery disclosure needs its own reduced-motion guard.** It animates `grid-template-rows` 0fr → 1fr, which is neither transform nor opacity, so the global `MotionConfig` switch does not cover it; it reads `useMotionReduced()` directly. The 0fr → 1fr collapse is height-agnostic on purpose — no measured pixel height, so a locale whose copy wraps to four lines animates correctly with no JS and no `ResizeObserver`.
 
 ### `TonalBanner` — the card-scoped notice
 

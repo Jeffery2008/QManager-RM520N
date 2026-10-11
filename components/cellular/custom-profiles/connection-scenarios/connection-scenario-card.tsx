@@ -593,7 +593,7 @@ const ConnectionScenariosCard = ({
               <MaterialSymbol
                 name={isLoading ? "progress_activity" : "refresh"}
                 size={18}
-                className={isLoading ? "animate-spin motion-reduce:animate-none" : undefined}
+                className={isLoading ? "motion-safe:animate-spin" : undefined}
               />
               {t("actions.retry", { ns: "common" })}
             </Button>
@@ -883,7 +883,7 @@ const ConnectionScenariosCard = ({
                   <MaterialSymbol
                     name="progress_activity"
                     size={18}
-                    className="animate-spin motion-reduce:animate-none"
+                    className="motion-safe:animate-spin"
                   />
                   {t("scenarios.dialog.buttons.creating")}
                 </>
@@ -1080,7 +1080,7 @@ const ConnectionScenariosCard = ({
                   <MaterialSymbol
                     name="progress_activity"
                     size={18}
-                    className="animate-spin motion-reduce:animate-none"
+                    className="motion-safe:animate-spin"
                   />
                   {t("scenarios.dialog.buttons.saving")}
                 </>

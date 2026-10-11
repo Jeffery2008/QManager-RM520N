@@ -54,8 +54,8 @@ import { cn } from "@/lib/utils";
 //                         on this repo's shape scale (8/10/12/16/20) — see the
 //                         `size` prop.
 //
-// Motion: `.animate-banner-in` (400ms emphasized, 6px rise + fade) already
-// ships in globals.css with its prefers-reduced-motion guard. Enter only — a
+// Motion: `.animate-banner-in` (emphasized, 6px rise + fade) already
+// ships in globals.css with its motion-reduce guard. Enter only — a
 // banner leaving means the condition cleared, and that should feel immediate.
 // =============================================================================
 

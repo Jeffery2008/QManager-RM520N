@@ -1,6 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { useMotionReduced } from "@/components/motion-preference";
 import { useTranslation } from "react-i18next";
 
 import { BODY, CARD_TITLE, EYEBROW } from "@/components/pre-auth-type";
@@ -79,7 +80,7 @@ export function LoginDeviceName({
 }: LoginDeviceNameProps = {}) {
   const { t } = useTranslation("common");
   const { hostname, isLoading } = useDeviceHostname();
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useMotionReduced();
 
   const isTitle = variant === "title";
 

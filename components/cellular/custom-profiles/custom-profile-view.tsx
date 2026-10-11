@@ -127,7 +127,7 @@ import {
 // row step — NOT the 120ms card step), nested under this card's own
 // `staggerItem` in the page-level cascade: variants only, no local
 // `initial`/`animate`, so the sequence inherits the parent clock. Reduced
-// motion is handled globally by `<MotionConfig reducedMotion="user">`.
+// motion is handled globally by the switch in `components/motion-provider.tsx`.
 
 /**
  * How many band tags a row shows before collapsing the tail into a `+N`.
@@ -918,7 +918,7 @@ const ProfileRow = ({
                   name={busy ? "progress_activity" : "play_arrow"}
                   size={16}
                   aria-hidden
-                  className={cn(busy && "animate-spin motion-reduce:animate-none")}
+                  className={cn(busy && "motion-safe:animate-spin")}
                 />
                 {busy
                   ? t("custom_profiles.view.activating")
@@ -1090,7 +1090,7 @@ const StatusBadge = ({ status }: { status: RowBadgeStatus }) => {
           name={meta.glyph}
           size={BADGE_GLYPH_SIZE}
           aria-hidden
-          className={cn(meta.spin && "animate-spin motion-reduce:animate-none")}
+          className={cn(meta.spin && "motion-safe:animate-spin")}
         />
         {t(STATUS_LABEL_KEY[status])}
       </Badge>
@@ -1218,7 +1218,7 @@ const SuggestionRow = ({
             name={isCreating ? "progress_activity" : "add"}
             size={16}
             aria-hidden
-            className={cn(isCreating && "animate-spin motion-reduce:animate-none")}
+            className={cn(isCreating && "motion-safe:animate-spin")}
           />
           {isCreating
             ? t("custom_profiles.suggestions.creating")

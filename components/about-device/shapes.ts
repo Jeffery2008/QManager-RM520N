@@ -47,7 +47,7 @@ export const PAGE_HEAD = {
 export const PILL_GLYPH = "size-4";
 
 /** The one spin class, so a refreshing pill has a single spelling to reach. */
-export const SPIN = "animate-spin";
+export const SPIN = "motion-safe:animate-spin";
 
 /**
  * The peer-card grid. `items-stretch` plus the two height locks are what let

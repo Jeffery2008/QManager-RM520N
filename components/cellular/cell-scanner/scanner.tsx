@@ -332,7 +332,7 @@ export function FullScanner() {
                   size={18}
                   className={
                     isScanning
-                      ? "animate-spin motion-reduce:animate-none"
+                      ? "motion-safe:animate-spin"
                       : undefined
                   }
                 />

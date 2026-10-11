@@ -53,9 +53,9 @@ export function Group({
   return (
     <motion.div className={GROUP} variants={staggerRows}>
       {label ? (
-        <motion.span className={GROUP_LABEL} variants={staggerRowItem}>
+        <motion.div className={GROUP_LABEL} variants={staggerRowItem}>
           {label}
-        </motion.span>
+        </motion.div>
       ) : null}
       <div className={ROW_LIST}>{children}</div>
     </motion.div>

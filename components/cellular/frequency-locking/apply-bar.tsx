@@ -136,7 +136,7 @@ export function FreqApplyBar({
         <MaterialSymbol
           name="progress_activity"
           size={20}
-          className="text-primary animate-spin"
+          className="text-primary motion-safe:animate-spin"
         />
         <div className={APPLY_BAR.COPY}>
           <span className={APPLY_BAR.TITLE}>

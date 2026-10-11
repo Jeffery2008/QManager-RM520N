@@ -62,7 +62,7 @@ export const PILL_GLYPH = "size-4";
 export const CHIP_GLYPH = "size-3";
 
 /** The one spin class, so a `Face` carrying `spin` has one spelling to reach. */
-export const SPIN = "animate-spin";
+export const SPIN = "motion-safe:animate-spin";
 
 // -----------------------------------------------------------------------------
 // Focus

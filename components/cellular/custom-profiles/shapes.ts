@@ -262,7 +262,7 @@ export const SUGGESTION_DISC =
 export const LIVE_DOT = {
   ROOT: "relative inline-flex size-[0.4375rem] flex-none",
   CORE: "relative size-[0.4375rem] rounded-pill bg-current",
-  RING: "absolute inset-0 rounded-pill bg-current motion-safe:animate-live-ping",
+  RING: "absolute inset-0 rounded-pill bg-current animate-live-ping",
 } as const;
 
 // -----------------------------------------------------------------------------

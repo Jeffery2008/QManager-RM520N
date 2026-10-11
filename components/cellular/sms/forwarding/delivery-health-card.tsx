@@ -352,7 +352,7 @@ const DeliveryHealthCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
                   <MaterialSymbol
                     name="progress_activity"
                     size={16}
-                    className="animate-spin motion-reduce:animate-none"
+                    className="motion-safe:animate-spin"
                   />
                   {t("sms.forwarding.buttons.sending")}
                 </>
@@ -461,7 +461,7 @@ const DeliveryHealthCard = ({ fwd }: { fwd: UseSmsForwardingReturn }) => {
                       <MaterialSymbol
                         name="progress_activity"
                         size={16}
-                        className="animate-spin motion-reduce:animate-none"
+                        className="motion-safe:animate-spin"
                       />
                       {t("sms.forwarding.buttons.clearing")}
                     </>

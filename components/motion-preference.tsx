@@ -4,31 +4,15 @@ import * as React from "react";
 
 import {
   applyMotionPreference,
+  isMotionReduced,
   persistMotionPreference,
   readMotionPreference,
+  subscribeToOsMotion,
   type MotionPreference,
 } from "@/lib/motion-preference";
 
-// =============================================================================
-// MotionPreferenceProvider — the user-level animations choice
-// =============================================================================
-// Structural twin of components/theme-provider.tsx: a thin client provider that
-// owns one persisted preference and mirrors it onto <html>. It is mounted
-// OUTSIDE MotionProvider in app/layout.tsx so MotionProvider can read it and
-// translate it into MotionConfig's `reducedMotion` prop, while globals.css
-// reads the same choice off the DOM attribute.
-//
-// Two consumers, one source of truth:
-//   - CSS   → the `data-motion` attribute (stamped pre-paint by MOTION_BOOT_SCRIPT)
-//   - JS    → this context, consumed by MotionProvider and the sidebar row
-//
-// The state is hydrated in an effect rather than a lazy initializer on purpose.
-// next.config.ts is `output: "export"`, so every page is prerendered in Node at
-// build time with no localStorage; reading it during the first client render
-// would produce markup that disagrees with the prerendered HTML wherever the
-// label is displayed. The attribute is already correct before paint, so the one
-// extra render costs nothing visually.
-// =============================================================================
+// The persisted animations choice, mirrored onto <html> as data-motion (what CSS and MotionProvider read).
+// Hydrates in an effect (no localStorage at prerender), so its first render says "system".
 
 interface MotionPreferenceContextValue {
   preference: MotionPreference;
@@ -89,3 +73,23 @@ const FALLBACK: MotionPreferenceContextValue = {
   preference: "system",
   setPreference: () => {},
 };
+
+const serverSnapshot = () => false;
+
+/**
+ * Live "should motion be reduced?" for components: Reduced → true, Full → false,
+ * System → the OS query, re-rendering when either changes. Prerender reads false.
+ */
+export function useMotionReduced(): boolean {
+  const { preference } = useMotionPreference();
+  // isMotionReduced reads the pre-paint attribute, which covers the render before
+  // the provider's hydrate effect has run.
+  const resolved = React.useSyncExternalStore(
+    subscribeToOsMotion,
+    isMotionReduced,
+    serverSnapshot
+  );
+  if (preference === "reduced") return true;
+  if (preference === "full") return false;
+  return resolved;
+}

@@ -654,7 +654,7 @@ function TestAction({
         >
           {isSending ? (
             <>
-              <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
+              <Loader2Icon className="size-4 motion-safe:animate-spin" />
               {sendingLabel}
             </>
           ) : (
@@ -709,7 +709,7 @@ function MailerInstall({ hook }: { hook: UseAlertsReturn }) {
         >
           {running ? (
             <>
-              <Loader2Icon className="size-4 animate-spin motion-reduce:animate-none" />
+              <Loader2Icon className="size-4 motion-safe:animate-spin" />
               {t("alerts.channels.email.mailer_installing")}
             </>
           ) : (

@@ -326,8 +326,8 @@ tone can move independently, encode **both**, as all three fixed sites now do.
 **A reduced-motion kill switch for `badge.tsx`'s colour transition.** The project rule is "movement
 goes, opacity stays". A colour morph is neither movement nor a repeating flash, and suppressing it
 would make state changes *less* perceptible — the opposite of what the colour-blindness contract asks
-for. `SwapLabel`'s own 7px travel needs no branch either: `<MotionConfig reducedMotion="user">`
-(`components/motion-provider.tsx`) drops the transform and keeps the opacity, so the gesture degrades
+for. `SwapLabel`'s own 7px travel needs no branch either: `<MotionConfig>` (`components/motion-provider.tsx`,
+driven by the Animations preference) drops the transform and keeps the opacity, so the gesture degrades
 to a plain crossfade, which still carries the information that the state changed.
 
 ---
@@ -406,9 +406,9 @@ change across states, so a state change never re-announces the control.
   activation, **including native form submission** — 11 of the 18 call sites are `type="submit"` inside
   a `<form>` with no `onClick` of their own, so returning early from a handler they do not use would
   have stopped nothing.
-- **The spinner gained `motion-reduce:animate-none`.** It was the only spinner in the product missing
-  it; 82 siblings had it. It stays `animate-spin` at 1s: the guide's "ambient 2s" token is for genuine
-  loops like the service ring, and `lib/motion.ts:76` forbids JS-driven continuous animation.
+- **The spinner is `motion-safe:animate-spin`**, the one loading-loop spelling `DESIGN.md` > Motion
+  allows. It stays at Tailwind's 1s spin: the guide's "ambient 2s" token is for genuine loops like the
+  service ring, and `lib/motion.ts` forbids JS-driven continuous animation.
 - **`useSaveFlash`'s `setTimeout` is now cleaned up** — on unmount *and* on re-trigger. Several callers
   (tower-settings among them) unmount the button while the flash is still live, and a caller that saves
   twice inside the window would otherwise have the first timeout cut the second flash short.

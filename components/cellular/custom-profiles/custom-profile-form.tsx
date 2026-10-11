@@ -2,7 +2,8 @@
 
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
+import { useMotionReduced } from "@/components/motion-preference";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -126,7 +127,7 @@ const WizardPanel = ({
   dir: number;
   children: React.ReactNode;
 }) => {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionReduced();
   return (
     <motion.div
       initial={reduceMotion ? false : { opacity: 0, x: dir * 12 }}
