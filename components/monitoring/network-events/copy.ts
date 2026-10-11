@@ -3,40 +3,70 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 
-// =============================================================================
-// Network Events — the surface's string contract.
-// =============================================================================
-// Every key this surface renders, with its English value, keyed under
-// `networkEvents.*` in the `common` namespace. The values ride as i18next
-// `defaultValue`s so the page renders real English before the locale files
-// carry them, and never a raw key. Adding them to `public/locales/**` later
-// changes nothing here.
-// =============================================================================
+// Network Events — the surface's string contract, keyed under `networkEvents.*`
+// in `common`. The English values ride as `defaultValue`s so a missing key never
+// renders as its dotted path.
 
 export const NETWORK_EVENTS_EN = {
   "networkEvents.page.title": "Network Events",
   "networkEvents.page.description":
-    "Everything the poller noticed about the radio and the link, newest first.",
+    "Changes to the radio and the connection, newest first.",
 
-  "networkEvents.actions.auto_refresh_on": "Auto refresh on",
-  "networkEvents.actions.auto_refresh_off": "Auto refresh off",
+  "networkEvents.actions.updates_aria": "Updates",
+  "networkEvents.actions.live": "Live",
+  "networkEvents.actions.paused": "Paused",
   "networkEvents.actions.refresh": "Refresh",
 
-  "networkEvents.band.ongoing.eyebrow": "Ongoing",
-  "networkEvents.band.ongoing.caption_clear": "Nothing is still standing",
-  "networkEvents.band.ongoing.caption_oldest": "Oldest {{label}}, {{age}}",
-  "networkEvents.band.last24.eyebrow": "Last 24 h",
-  "networkEvents.band.last24.caption": "{{loud}} needed attention",
-  "networkEvents.band.retained.eyebrow": "Retained",
-  "networkEvents.band.retained.caption": "Oldest {{age}}, device keeps {{cap}}",
-  "networkEvents.band.retained.caption_empty": "Device keeps up to {{cap}}",
+  "networkEvents.now.title": "Right now",
+  "networkEvents.now.description":
+    "What is still standing, and what keeps repeating.",
+  "networkEvents.now.ongoing_one": "{{count}} problem ongoing",
+  "networkEvents.now.ongoing_other": "{{count}} problems ongoing",
+  "networkEvents.now.oldest_started": "The oldest started {{age}}",
+  "networkEvents.now.clear": "Nothing ongoing",
+  "networkEvents.now.last_problem": "Last problem {{age}}",
+  "networkEvents.now.no_problems": "No problems recorded",
+  "networkEvents.now.no_events": "No events recorded yet",
+  "networkEvents.now.repeating": "Repeating",
+  "networkEvents.now.repeat_meta_one": "{{count}} change in {{span}}",
+  "networkEvents.now.repeat_meta_other": "{{count}} changes in {{span}}",
+  "networkEvents.now.nothing_repeating": "Nothing is repeating.",
+
+  "networkEvents.activity.title": "Activity",
+  "networkEvents.activity.window_last_one": "Last {{count}} event, over {{span}}.",
+  "networkEvents.activity.window_last_other":
+    "Last {{count}} events, over {{span}}.",
+  "networkEvents.activity.window_all_one":
+    "{{count}} event since the modem started.",
+  "networkEvents.activity.window_all_other":
+    "All {{count}} events since the modem started.",
+  "networkEvents.activity.window_empty": "No events since the modem started.",
+  "networkEvents.activity.chart_aria": "Events over time",
+  "networkEvents.activity.column_one": "{{from}} to {{to}}: {{count}} event",
+  "networkEvents.activity.column_other": "{{from}} to {{to}}: {{count}} events",
+  "networkEvents.activity.now": "Now",
+  "networkEvents.activity.problems": "Problems",
+  "networkEvents.activity.recoveries": "Recoveries",
+  "networkEvents.activity.routine": "Routine",
+
+  "networkEvents.span.minutes_one": "{{count}} min",
+  "networkEvents.span.minutes_other": "{{count}} min",
+  "networkEvents.span.hours_one": "{{count}} hour",
+  "networkEvents.span.hours_other": "{{count}} hours",
 
   "networkEvents.log.title": "Event log",
-  "networkEvents.log.description_loading": "Reading the modem's event ring.",
+  "networkEvents.log.description_loading": "Loading events.",
   "networkEvents.log.description_unreadable":
     "No counts to show while the log cannot be read.",
   "networkEvents.log.description":
-    "Showing {{shown}} of the {{held}} events served, out of the {{cap}} the modem holds in memory.",
+    "Repeats are grouped; open one to see each event.",
+  "networkEvents.log.scroll_aria": "Events",
+
+  "networkEvents.run.title": "{{label}} kept changing",
+  "networkEvents.run.meta_one": "{{count}} event in {{span}}",
+  "networkEvents.run.meta_other": "{{count}} events in {{span}}",
+  "networkEvents.run.show": "Show {{count}}",
+  "networkEvents.run.hide": "Hide",
 
   "networkEvents.filters.all": "All",
   "networkEvents.filters.radio": "Radio",
@@ -53,10 +83,10 @@ export const NETWORK_EVENTS_EN = {
 
   "networkEvents.empty.title": "No events yet",
   "networkEvents.empty.description":
-    "The log lives in memory and starts over when the modem reboots. Entries appear here as the poller notices them.",
+    "The log starts over when the modem restarts. Events appear here as they happen.",
   "networkEvents.empty.filtered_title": "Nothing in this view",
   "networkEvents.empty.filtered_description":
-    "No events of this kind are in the log right now. Pick All to see everything the poller recorded.",
+    "No events of this kind are in the log right now.",
 
   "networkEvents.error.title": "Could not load events",
   "networkEvents.error.description": "{{message}}",
@@ -67,6 +97,11 @@ export const NETWORK_EVENTS_EN = {
 
 export type NetworkEventsKey = keyof typeof NETWORK_EVENTS_EN;
 
+/** A key that exists as a `_one` / `_other` pair, named without its suffix. */
+export type NetworkEventsPluralKey = {
+  [K in NetworkEventsKey]: K extends `${infer B}_other` ? B : never;
+}[NetworkEventsKey];
+
 /** Translate a `networkEvents.*` key, falling back to its English value. */
 export function useEventsCopy() {
   const { t } = useTranslation("common");
@@ -74,5 +109,38 @@ export function useEventsCopy() {
     (key: NetworkEventsKey, vars?: Record<string, unknown>): string =>
       t(key, { defaultValue: NETWORK_EVENTS_EN[key], ...vars }),
     [t],
+  );
+}
+
+/** Translate a plural pair by `count`, falling back to the English pair. */
+export function useEventsPlural() {
+  const { t } = useTranslation("common");
+  return React.useCallback(
+    (
+      base: NetworkEventsPluralKey,
+      count: number,
+      vars?: Record<string, unknown>,
+    ): string => {
+      const one = NETWORK_EVENTS_EN[`${base}_one` as NetworkEventsKey];
+      const other = NETWORK_EVENTS_EN[`${base}_other` as NetworkEventsKey];
+      return t(base, {
+        count,
+        defaultValue: count === 1 ? one : other,
+        ...vars,
+      });
+    },
+    [t],
+  );
+}
+
+/** "16 min" under an hour, else whole hours. */
+export function useSpanText() {
+  const p = useEventsPlural();
+  return React.useCallback(
+    (spanSec: number): string =>
+      spanSec < 3600
+        ? p("networkEvents.span.minutes", Math.max(1, Math.round(spanSec / 60)))
+        : p("networkEvents.span.hours", Math.round(spanSec / 3600)),
+    [p],
   );
 }

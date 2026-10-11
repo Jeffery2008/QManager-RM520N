@@ -773,34 +773,63 @@
   "networkEvents": {
     "page": {
       "title": "Network Events",
-      "description": "Everything the poller noticed about the radio and the link, newest first."
+      "description": "Changes to the radio and the connection, newest first."
     },
     "actions": {
-      "auto_refresh_on": "Auto refresh on",
-      "auto_refresh_off": "Auto refresh off",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "updates_aria": "Updates",
+      "live": "Live",
+      "paused": "Paused"
     },
-    "band": {
-      "ongoing": {
-        "eyebrow": "Ongoing",
-        "caption_clear": "Nothing is still standing",
-        "caption_oldest": "Oldest {{label}}, {{age}}"
-      },
-      "last24": {
-        "eyebrow": "Last 24 h",
-        "caption": "{{loud}} needed attention"
-      },
-      "retained": {
-        "eyebrow": "Retained",
-        "caption": "Oldest {{age}}, device keeps {{cap}}",
-        "caption_empty": "Device keeps up to {{cap}}"
-      }
+    "now": {
+      "title": "Right now",
+      "description": "What is still standing, and what keeps repeating.",
+      "ongoing_one": "{{count}} problem ongoing",
+      "ongoing_other": "{{count}} problems ongoing",
+      "oldest_started": "The oldest started {{age}}",
+      "clear": "Nothing ongoing",
+      "last_problem": "Last problem {{age}}",
+      "no_problems": "No problems recorded",
+      "no_events": "No events recorded yet",
+      "repeating": "Repeating",
+      "repeat_meta_one": "{{count}} change in {{span}}",
+      "repeat_meta_other": "{{count}} changes in {{span}}",
+      "nothing_repeating": "Nothing is repeating."
+    },
+    "activity": {
+      "title": "Activity",
+      "window_last_one": "Last {{count}} event, over {{span}}.",
+      "window_last_other": "Last {{count}} events, over {{span}}.",
+      "window_all_one": "{{count}} event since the modem started.",
+      "window_all_other": "All {{count}} events since the modem started.",
+      "window_empty": "No events since the modem started.",
+      "chart_aria": "Events over time",
+      "column_one": "{{from}} to {{to}}: {{count}} event",
+      "column_other": "{{from}} to {{to}}: {{count}} events",
+      "now": "Now",
+      "problems": "Problems",
+      "recoveries": "Recoveries",
+      "routine": "Routine"
+    },
+    "span": {
+      "minutes_one": "{{count}} min",
+      "minutes_other": "{{count}} min",
+      "hours_one": "{{count}} hour",
+      "hours_other": "{{count}} hours"
     },
     "log": {
       "title": "Event log",
-      "description_loading": "Reading the modem's event ring.",
+      "description_loading": "Loading events.",
       "description_unreadable": "No counts to show while the log cannot be read.",
-      "description": "Showing {{shown}} of the {{held}} events served, out of the {{cap}} the modem holds in memory."
+      "description": "Repeats are grouped; open one to see each event.",
+      "scroll_aria": "Events"
+    },
+    "run": {
+      "title": "{{label}} kept changing",
+      "meta_one": "{{count}} event in {{span}}",
+      "meta_other": "{{count}} events in {{span}}",
+      "show": "Show {{count}}",
+      "hide": "Hide"
     },
     "filters": {
       "all": "All",
@@ -822,9 +851,9 @@
     },
     "empty": {
       "title": "No events yet",
-      "description": "The log lives in memory and starts over when the modem reboots. Entries appear here as the poller notices them.",
+      "description": "The log starts over when the modem restarts. Events appear here as they happen.",
       "filtered_title": "Nothing in this view",
-      "filtered_description": "No events of this kind are in the log right now. Pick All to see everything the poller recorded."
+      "filtered_description": "No events of this kind are in the log right now."
     },
     "error": {
       "title": "Could not load events",

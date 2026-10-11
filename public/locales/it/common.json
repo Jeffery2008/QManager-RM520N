@@ -773,34 +773,63 @@
   "networkEvents": {
     "page": {
       "title": "Eventi di rete",
-      "description": "Tutto ciò che il poller ha rilevato su radio e connessione, dal più recente."
+      "description": "Modifiche alla radio e alla connessione, dalle più recenti."
     },
     "actions": {
-      "auto_refresh_on": "Aggiornamento automatico attivo",
-      "auto_refresh_off": "Aggiornamento automatico disattivo",
-      "refresh": "Aggiorna"
+      "refresh": "Aggiorna",
+      "updates_aria": "Aggiornamenti",
+      "live": "In diretta",
+      "paused": "In pausa"
     },
-    "band": {
-      "ongoing": {
-        "eyebrow": "In corso",
-        "caption_clear": "Nulla in sospeso",
-        "caption_oldest": "Meno recente: {{label}}, {{age}}"
-      },
-      "last24": {
-        "eyebrow": "Ultime 24 h",
-        "caption": "{{loud}} da controllare"
-      },
-      "retained": {
-        "eyebrow": "Conservati",
-        "caption": "Meno recente {{age}}, il dispositivo ne conserva {{cap}}",
-        "caption_empty": "Il dispositivo ne conserva fino a {{cap}}"
-      }
+    "now": {
+      "title": "Adesso",
+      "description": "Cosa è ancora in corso e cosa continua a ripetersi.",
+      "ongoing_one": "{{count}} problema in corso",
+      "ongoing_other": "{{count}} problemi in corso",
+      "oldest_started": "Il più vecchio è iniziato {{age}}",
+      "clear": "Nessun problema in corso",
+      "last_problem": "Ultimo problema {{age}}",
+      "no_problems": "Nessun problema registrato",
+      "no_events": "Nessun evento ancora registrato",
+      "repeating": "Ripetuti",
+      "repeat_meta_one": "{{count}} cambio in {{span}}",
+      "repeat_meta_other": "{{count}} cambi in {{span}}",
+      "nothing_repeating": "Nulla si sta ripetendo."
+    },
+    "activity": {
+      "title": "Attività",
+      "window_last_one": "Ultimo {{count}} evento, in {{span}}.",
+      "window_last_other": "Ultimi {{count}} eventi, in {{span}}.",
+      "window_all_one": "{{count}} evento dall'avvio del modem.",
+      "window_all_other": "Tutti i {{count}} eventi dall'avvio del modem.",
+      "window_empty": "Nessun evento dall'avvio del modem.",
+      "chart_aria": "Eventi nel tempo",
+      "column_one": "Da {{from}} a {{to}}: {{count}} evento",
+      "column_other": "Da {{from}} a {{to}}: {{count}} eventi",
+      "now": "Ora",
+      "problems": "Problemi",
+      "recoveries": "Ripristini",
+      "routine": "Ordinari"
+    },
+    "span": {
+      "minutes_one": "{{count}} minuto",
+      "minutes_other": "{{count}} minuti",
+      "hours_one": "{{count}} ora",
+      "hours_other": "{{count}} ore"
     },
     "log": {
       "title": "Registro eventi",
-      "description_loading": "Lettura del buffer eventi del modem.",
+      "description_loading": "Caricamento degli eventi.",
       "description_unreadable": "Nessun conteggio da mostrare finché il registro non è leggibile.",
-      "description": "Mostrati {{shown}} dei {{held}} eventi forniti, sui {{cap}} che il modem tiene in memoria."
+      "description": "Le ripetizioni sono raggruppate; aprine una per vedere ogni evento.",
+      "scroll_aria": "Eventi"
+    },
+    "run": {
+      "title": "{{label}} continuava a cambiare",
+      "meta_one": "{{count}} evento in {{span}}",
+      "meta_other": "{{count}} eventi in {{span}}",
+      "show": "Mostra {{count}}",
+      "hide": "Nascondi"
     },
     "filters": {
       "all": "Tutti",
@@ -822,9 +851,9 @@
     },
     "empty": {
       "title": "Nessun evento",
-      "description": "Il registro vive in memoria e riparte da zero al riavvio del modem. Le voci compaiono qui man mano che il poller le rileva.",
+      "description": "Il registro ricomincia quando il modem si riavvia. Gli eventi compaiono qui man mano che accadono.",
       "filtered_title": "Nulla in questa vista",
-      "filtered_description": "Al momento nel registro non ci sono eventi di questo tipo. Scegli Tutti per vedere tutto ciò che il poller ha registrato."
+      "filtered_description": "Al momento nel registro non ci sono eventi di questo tipo."
     },
     "error": {
       "title": "Impossibile caricare gli eventi",

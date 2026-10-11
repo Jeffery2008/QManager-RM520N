@@ -773,34 +773,63 @@
   "networkEvents": {
     "page": {
       "title": "网络事件",
-      "description": "轮询服务观察到的所有无线电与链路变化，最新优先。"
+      "description": "无线电与连接的变化，最新的在前。"
     },
     "actions": {
-      "auto_refresh_on": "自动刷新已开",
-      "auto_refresh_off": "自动刷新已关",
-      "refresh": "刷新"
+      "refresh": "刷新",
+      "updates_aria": "更新",
+      "live": "实时",
+      "paused": "已暂停"
     },
-    "band": {
-      "ongoing": {
-        "eyebrow": "进行中",
-        "caption_clear": "没有仍未解决的事件",
-        "caption_oldest": "最早：{{label}}，{{age}}"
-      },
-      "last24": {
-        "eyebrow": "近 24 小时",
-        "caption": "{{loud}} 项需要关注"
-      },
-      "retained": {
-        "eyebrow": "已保留",
-        "caption": "最早 {{age}}，设备保留 {{cap}} 条",
-        "caption_empty": "设备最多保留 {{cap}} 条"
-      }
+    "now": {
+      "title": "当前状况",
+      "description": "仍在持续的问题，以及反复出现的变化。",
+      "ongoing_one": "{{count}} 个问题持续中",
+      "ongoing_other": "{{count}} 个问题持续中",
+      "oldest_started": "最早的开始于 {{age}}",
+      "clear": "没有持续中的问题",
+      "last_problem": "上次问题：{{age}}",
+      "no_problems": "没有记录到问题",
+      "no_events": "尚无事件记录",
+      "repeating": "反复出现",
+      "repeat_meta_one": "{{span}}内变化 {{count}} 次",
+      "repeat_meta_other": "{{span}}内变化 {{count}} 次",
+      "nothing_repeating": "没有反复出现的变化。"
+    },
+    "activity": {
+      "title": "活动",
+      "window_last_one": "最近 {{count}} 个事件，跨越 {{span}}。",
+      "window_last_other": "最近 {{count}} 个事件，跨越 {{span}}。",
+      "window_all_one": "调制解调器启动以来的 {{count}} 个事件。",
+      "window_all_other": "调制解调器启动以来的全部 {{count}} 个事件。",
+      "window_empty": "调制解调器启动以来没有事件。",
+      "chart_aria": "事件时间分布",
+      "column_one": "{{from}} 至 {{to}}：{{count}} 个事件",
+      "column_other": "{{from}} 至 {{to}}：{{count}} 个事件",
+      "now": "现在",
+      "problems": "问题",
+      "recoveries": "恢复",
+      "routine": "常规"
+    },
+    "span": {
+      "minutes_one": "{{count}} 分钟",
+      "minutes_other": "{{count}} 分钟",
+      "hours_one": "{{count}} 小时",
+      "hours_other": "{{count}} 小时"
     },
     "log": {
       "title": "事件日志",
-      "description_loading": "正在读取调制解调器的事件环形缓冲区。",
+      "description_loading": "正在加载事件。",
       "description_unreadable": "日志无法读取时不显示计数。",
-      "description": "显示 {{shown}} 条，共提供 {{held}} 条，调制解调器内存中最多保留 {{cap}} 条。"
+      "description": "重复的事件已合并；展开即可查看每一条。",
+      "scroll_aria": "事件"
+    },
+    "run": {
+      "title": "{{label}}反复变化",
+      "meta_one": "{{span}}内 {{count}} 个事件",
+      "meta_other": "{{span}}内 {{count}} 个事件",
+      "show": "显示 {{count}} 条",
+      "hide": "收起"
     },
     "filters": {
       "all": "全部",
@@ -822,9 +851,9 @@
     },
     "empty": {
       "title": "暂无事件",
-      "description": "日志保存在内存中，调制解调器重启后重新开始。轮询服务发现事件后会显示在这里。",
+      "description": "调制解调器重启后日志会重新开始。事件发生时会显示在这里。",
       "filtered_title": "此视图中没有内容",
-      "filtered_description": "当前日志中没有此类事件。选择“全部”可查看轮询服务记录的所有内容。"
+      "filtered_description": "当前日志中没有此类事件。"
     },
     "error": {
       "title": "无法加载事件",

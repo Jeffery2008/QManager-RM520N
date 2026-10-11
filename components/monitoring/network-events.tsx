@@ -3,43 +3,45 @@
 import * as React from "react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
-import {
-  ArchiveIcon,
-  CheckCircle2Icon,
-  HistoryIcon,
-  RefreshCwIcon,
-  TriangleAlertIcon,
-  ZapIcon,
-  ZapOffIcon,
-} from "lucide-react";
+import { CheckIcon, RefreshCwIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  SEGMENTED,
+  SegmentedField,
+  type SegmentedOption,
+} from "@/components/ui/segmented-field";
 import { MonitoringPageHeader } from "@/components/monitoring/page-header";
 import { useRecentActivities } from "@/hooks/use-recent-activities";
 import { computeUnresolved } from "@/lib/event-presentation";
 import { staggerContainer, staggerItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
+import { ActivityCard } from "./network-events/activity-card";
 import { useEventsCopy } from "./network-events/copy";
-import { EventLogCard } from "./network-events/event-log-card";
+import { SERVED_EVENTS, type EventRun } from "./network-events/derive";
 import {
-  StatusBand,
-  StatusBandSkeleton,
-  type StatusTileProps,
-} from "./network-events/status-band";
+  EventLogCard,
+  type EventLogHandle,
+} from "./network-events/event-log-card";
+import { NowCard } from "./network-events/now-card";
 import {
-  FILTER_PILL_ACTIVE,
   FILTER_PILL_REST,
   PAGE_ROOT,
   PILL_GLYPH,
-  RING_CAP,
+  TOP_GRID,
 } from "./network-events/shapes";
 
-/** The CGI serves the newest 50 of the device's ring; the cap is in `shapes`. */
-const SERVED_EVENTS = 50;
 const DAY_SEC = 86400;
 /** The clock that ages rows and the freshness gate. One reading per render. */
 const CLOCK_TICK_MS = 30_000;
+
+type UpdateMode = "live" | "paused";
+
+/** The lucide check that SegmentedField reserves on every segment. */
+const renderCheckGlyph = (className: string) => (
+  <CheckIcon size={SEGMENTED.GLYPH} className={className} aria-hidden="true" />
+);
 
 function useNowSec(): number {
   const [now, setNow] = React.useState(() => Math.floor(Date.now() / 1000));
@@ -53,8 +55,7 @@ function useNowSec(): number {
   return now;
 }
 
-/** Locale-aware relative time. Thresholds mirror the dashboard's exactly, and
- *  the keys are the shipped `dashboard` ones, already translated in all packs. */
+/** Locale-aware relative time, on the dashboard's thresholds and shipped keys. */
 function useTimeAgo() {
   const { t } = useTranslation("dashboard");
   return React.useCallback(
@@ -71,12 +72,18 @@ function useTimeAgo() {
   );
 }
 
+const clockTime = (timestamp: number): string =>
+  new Date(timestamp * 1000).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
 const NetworkEventsComponent = () => {
-  const { t } = useTranslation("dashboard");
   const c = useEventsCopy();
   const [autoRefresh, setAutoRefresh] = React.useState(true);
   const nowSec = useNowSec();
   const timeAgo = useTimeAgo();
+  const logRef = React.useRef<EventLogHandle>(null);
 
   const { events, isLoading, isRefreshing, error, refresh } =
     useRecentActivities({ maxEvents: SERVED_EVENTS, enabled: autoRefresh });
@@ -84,56 +91,14 @@ const NetworkEventsComponent = () => {
   // Computed over the FULL newest-first array; the set keys into it by index.
   const unresolved = React.useMemo(() => computeUnresolved(events), [events]);
 
-  const tiles = React.useMemo<StatusTileProps[]>(() => {
-    const ongoing = unresolved.size;
-    let oldestUnresolvedIndex = -1;
-    for (const i of unresolved) {
-      if (i > oldestUnresolvedIndex) oldestUnresolvedIndex = i;
-    }
-    const oldestUnresolved =
-      oldestUnresolvedIndex >= 0 ? events[oldestUnresolvedIndex] : undefined;
+  const updateOptions: readonly SegmentedOption<UpdateMode>[] = [
+    { value: "live", label: c("networkEvents.actions.live") },
+    { value: "paused", label: c("networkEvents.actions.paused") },
+  ];
 
-    const recent = events.filter((e) => nowSec - e.timestamp <= DAY_SEC);
-    const recentLoud = recent.filter(
-      (e) => e.severity === "warning" || e.severity === "error",
-    ).length;
-
-    const oldestHeld = events[events.length - 1];
-
-    return [
-      {
-        icon: ongoing > 0 ? TriangleAlertIcon : CheckCircle2Icon,
-        eyebrow: c("networkEvents.band.ongoing.eyebrow"),
-        value: String(ongoing),
-        caption: oldestUnresolved
-          ? c("networkEvents.band.ongoing.caption_oldest", {
-              label: t(`activities.events.${oldestUnresolved.type}`, {
-                defaultValue: oldestUnresolved.type,
-              }),
-              age: timeAgo(oldestUnresolved.timestamp, nowSec),
-            })
-          : c("networkEvents.band.ongoing.caption_clear"),
-        alert: ongoing > 0,
-      },
-      {
-        icon: HistoryIcon,
-        eyebrow: c("networkEvents.band.last24.eyebrow"),
-        value: String(recent.length),
-        caption: c("networkEvents.band.last24.caption", { loud: recentLoud }),
-      },
-      {
-        icon: ArchiveIcon,
-        eyebrow: c("networkEvents.band.retained.eyebrow"),
-        value: String(events.length),
-        caption: oldestHeld
-          ? c("networkEvents.band.retained.caption", {
-              age: timeAgo(oldestHeld.timestamp, nowSec),
-              cap: RING_CAP,
-            })
-          : c("networkEvents.band.retained.caption_empty", { cap: RING_CAP }),
-      },
-    ];
-  }, [events, unresolved, nowSec, c, t, timeAgo]);
+  const revealRun = React.useCallback((run: EventRun) => {
+    logRef.current?.revealRun(run);
+  }, []);
 
   return (
     <motion.div
@@ -148,25 +113,14 @@ const NetworkEventsComponent = () => {
           description={c("networkEvents.page.description")}
           actions={
             <>
-              <Button
-                type="button"
-                variant="ghost"
-                aria-pressed={autoRefresh}
-                onClick={() => setAutoRefresh((on) => !on)}
-                size="action"
-                className={
-                  autoRefresh ? FILTER_PILL_ACTIVE : FILTER_PILL_REST
-                }
-              >
-                {autoRefresh ? (
-                  <ZapIcon className={PILL_GLYPH} />
-                ) : (
-                  <ZapOffIcon className={PILL_GLYPH} />
-                )}
-                {autoRefresh
-                  ? c("networkEvents.actions.auto_refresh_on")
-                  : c("networkEvents.actions.auto_refresh_off")}
-              </Button>
+              <SegmentedField
+                value={autoRefresh ? "live" : "paused"}
+                onValueChange={(next) => setAutoRefresh(next === "live")}
+                options={updateOptions}
+                ariaLabel={c("networkEvents.actions.updates_aria")}
+                breakpoint="never"
+                glyph={renderCheckGlyph}
+              />
 
               <Button
                 type="button"
@@ -186,19 +140,32 @@ const NetworkEventsComponent = () => {
         />
       </motion.div>
 
-      {/* The band reports counts, so it may only appear once a read has come
-          back. Drawing "Ongoing 0" off a failed fetch is the surface claiming
-          all clear on the strength of an empty array. */}
+      {/* These cards report counts, so they appear only once a read has come back. */}
       <motion.div variants={staggerItem}>
-        {isLoading ? (
-          <StatusBandSkeleton />
-        ) : error !== null && events.length === 0 ? null : (
-          <StatusBand tiles={tiles} />
+        {error !== null && events.length === 0 ? null : (
+          <div className={TOP_GRID}>
+            <NowCard
+              events={events}
+              unresolved={unresolved}
+              nowSec={nowSec}
+              isLoading={isLoading}
+              timeAgo={timeAgo}
+              clockTime={clockTime}
+              onRevealRun={revealRun}
+            />
+            <ActivityCard
+              events={events}
+              nowSec={nowSec}
+              isLoading={isLoading}
+              clockTime={clockTime}
+            />
+          </div>
         )}
       </motion.div>
 
       <motion.div variants={staggerItem}>
         <EventLogCard
+          ref={logRef}
           events={events}
           unresolved={unresolved}
           nowSec={nowSec}
@@ -206,6 +173,7 @@ const NetworkEventsComponent = () => {
           error={error}
           onRetry={refresh}
           timeAgo={timeAgo}
+          clockTime={clockTime}
         />
       </motion.div>
     </motion.div>

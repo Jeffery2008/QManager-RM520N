@@ -1,4 +1,5 @@
 import type { BadgeVariant } from "@/components/ui/badge";
+import type { EventTone } from "@/lib/event-presentation";
 
 // Network Events — the /monitoring family's geometry and tone contract.
 // Skeletons import the same constants the loaded views do (Skeleton-Mirror).
@@ -11,52 +12,15 @@ import type { BadgeVariant } from "@/components/ui/badge";
 export const PAGE_ROOT =
   "@container/main flex flex-col gap-5 px-4 pb-6 lg:px-6";
 
-/** The device's event ring holds 300; the CGI serves the newest 50 of them. */
-export const RING_CAP = 300;
-
 /** The pill's lucide glyph. */
 export const PILL_GLYPH = "size-4";
 
-// -----------------------------------------------------------------------------
-// The status band
-// -----------------------------------------------------------------------------
-
-/**
- * Three tiles that reflow by their own minimum rather than by a breakpoint
- * ladder, so the band is correct at every sidebar state without a query.
- */
-export const TILE = {
-  GRID: "grid gap-3.5 grid-cols-[repeat(auto-fit,minmax(190px,1fr))]",
-  /** 104px PINNED, never floored: a floor cannot mirror a skeleton. */
-  ROOT: "flex h-[6.5rem] items-center gap-3.5 rounded-tile bg-card px-5 py-4",
-  HEIGHT: "h-[6.5rem]",
-  DISC: "grid size-[3.25rem] flex-none place-items-center rounded-pill",
-  GLYPH: "size-[1.625rem]",
-  TEXT: "flex min-w-0 flex-1 flex-col gap-[3px]",
-} as const;
-
-/** The band's disc fills. Only the Ongoing tile picks between them at runtime. */
-export const DISC_NEUTRAL = "bg-surface-container-high text-on-surface-variant";
-export const DISC_ALERT = "bg-warning text-warning-foreground";
-
-/** Scoped to two properties, and every custom property takes `var()`. */
-export const DISC_TRANSITION =
-  "transition-[background-color,color] duration-[var(--duration-standard)] ease-[var(--ease-standard)]";
-
-export const EYEBROW =
-  "text-on-surface-variant truncate text-[0.6875rem] font-semibold tracking-[0.02em] uppercase";
-
-/** The figure. `tabular-nums` in the UI face, never mono: it is a live count. */
-export const TILE_VALUE =
-  "truncate text-[1.375rem] leading-[1.1] font-bold tracking-[-0.015em] tabular-nums";
-
-/** Ink for a figure that is reporting something standing. */
-export const TILE_VALUE_ALERT = "text-warning-on-surface";
-
-export const TILE_CAPTION = "text-on-surface-variant truncate text-xs";
+/** Right now + Activity: stacked, then one 5fr / 7fr row of equal height (Symmetric-Pair). */
+export const TOP_GRID =
+  "grid grid-cols-1 gap-5 @[58rem]/main:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] @[58rem]/main:items-stretch";
 
 // -----------------------------------------------------------------------------
-// The log card
+// Cards
 // -----------------------------------------------------------------------------
 
 export const CARD_SHELL =
@@ -64,10 +28,93 @@ export const CARD_SHELL =
 
 export const CARD_PAD = "px-6";
 
+/** A card body that owns the card's slack region. */
+export const CARD_FILL = "flex flex-1 flex-col";
+
 export const CARD_TITLE = "min-w-0 text-lg leading-tight";
 
 /** `CardDescription` hardcodes a retired ink token, so every call site re-inks it. */
 export const CARD_DESC = "text-on-surface-variant text-sm";
+
+/** One description line's box, for its skeleton. */
+export const CARD_DESC_LINE = "h-5";
+
+/** A section label inside a card. Same voice as the day divider. */
+export const SECTION_LABEL =
+  "text-on-surface-variant px-1 pt-1.5 text-[0.6875rem] font-semibold tracking-[0.08em] uppercase";
+
+// -----------------------------------------------------------------------------
+// Right now
+// -----------------------------------------------------------------------------
+
+const NOW_TITLE_LINE = "h-[1.3125rem]";
+const NOW_CAPTION_LINE = "h-[1.125rem]";
+
+export const NOW = {
+  BODY: "flex flex-1 flex-col gap-4",
+  /** A 44px disc beside a two-line stack (Stack-Height). */
+  VERDICT: "flex min-w-0 items-center gap-3.5",
+  DISC: "grid size-11 flex-none place-items-center rounded-pill",
+  DISC_GLYPH: "size-[1.375rem]",
+  DISC_WARN: "bg-warning text-warning-foreground",
+  DISC_OK: "bg-success text-success-foreground",
+  STACK: "flex min-w-0 flex-col gap-0.5",
+  TITLE_LINE: NOW_TITLE_LINE,
+  TITLE: `${NOW_TITLE_LINE} truncate text-base leading-[1.3125rem] font-semibold`,
+  CAPTION_LINE: NOW_CAPTION_LINE,
+  CAPTION: `${NOW_CAPTION_LINE} text-on-surface-variant truncate text-[0.8125rem] leading-[1.125rem]`,
+  /** The card's slack region. */
+  LIST: "flex flex-1 flex-col gap-1.5",
+  QUIET: "text-on-surface-variant px-1 text-[0.8125rem]",
+  /** A repeating run is a whole-row button into the log. */
+  JUMP:
+    "w-full cursor-pointer text-left outline-none hover:bg-surface-container focus-visible:ring-[3px] focus-visible:ring-ring",
+} as const;
+
+// -----------------------------------------------------------------------------
+// Activity
+// -----------------------------------------------------------------------------
+
+export const ACTIVITY = {
+  BODY: "flex flex-1 flex-col gap-2.5",
+  /** The card's slack region; 112px floor. */
+  CHART:
+    "grid min-h-28 flex-1 grid-flow-col auto-cols-[minmax(0,1fr)] items-end gap-1",
+  COLUMN: "flex h-full flex-col-reverse gap-0.5",
+  SEGMENT: "block w-full rounded-inline",
+  /** An empty bucket: a 2px tick on the baseline. */
+  BASELINE: "block h-0.5 w-full rounded-pill bg-border",
+  AXIS_LINE: "h-[0.6875rem]",
+  AXIS: "text-on-surface-variant flex h-[0.6875rem] justify-between text-[0.6875rem] leading-none tabular-nums",
+  LEGEND_LINE: "h-5",
+  LEGEND: "flex flex-wrap gap-x-5 gap-y-2",
+  LEGEND_ITEM:
+    "text-on-surface-variant inline-flex h-5 items-center gap-1.5 text-[0.8125rem]",
+  LEGEND_VALUE: "text-on-surface font-semibold tabular-nums",
+  LEGEND_GLYPH: "size-3.5",
+  LEGEND_PROBLEM: "text-warning-on-surface",
+  LEGEND_RECOVERY: "text-success-on-surface",
+} as const;
+
+/** Bar fill per tone. Routine is neutral: a count is not a verdict. */
+export const ACTIVITY_SEGMENT_TONE: Record<EventTone, string> = {
+  error: "bg-destructive",
+  warning: "bg-warning",
+  success: "bg-success",
+  routine: "bg-tag-neutral-border",
+};
+
+/** Bottom-up stacking order inside a column. */
+export const ACTIVITY_STACK_ORDER: readonly EventTone[] = [
+  "error",
+  "warning",
+  "success",
+  "routine",
+];
+
+// -----------------------------------------------------------------------------
+// The log card
+// -----------------------------------------------------------------------------
 
 /** The filter and sort rail. Wraps rather than scrolling. */
 export const RAIL = "flex flex-wrap items-center gap-2";
@@ -81,6 +128,10 @@ export const FILTER_PILL_ACTIVE =
 /** The live count riding inside a chip. */
 export const FILTER_COUNT = "text-[0.6875rem] font-semibold tabular-nums opacity-70";
 
+/** The list scrolls inside the card past about ten rows; rail and header stay put. */
+export const LOG_SCROLL =
+  "max-h-[min(36rem,70svh)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-tile outline-none [scrollbar-width:thin] focus-visible:ring-[3px] focus-visible:ring-ring";
+
 // -----------------------------------------------------------------------------
 // The log
 // -----------------------------------------------------------------------------
@@ -91,46 +142,59 @@ export const LOG = "flex flex-col gap-1.5";
 /** The stack of day blocks. */
 export const LOG_STACK = "flex flex-col gap-3";
 
-/** Skeleton and content share ONE grid cell, so the box is sized by the taller
- *  of the two and the swap between them contributes zero layout shift. */
+/** Skeleton and content share ONE grid cell, so the swap shifts nothing. */
 export const CROSSFADE_STACK =
   "grid grid-cols-1 grid-rows-1 *:col-start-1 *:row-start-1";
 
-/**
- * PINNED at 52px, which is what lets the skeleton mirror it exactly: 8px of
- * padding over an 18.9px message line, a 2px gap and a 16px meta line.
- */
+/** PINNED at 52px so the skeleton mirrors it exactly. */
 const ROW_HEIGHT = "h-[3.25rem]";
+
+/** Time leads, then disc, body and a right-edge slot (Row-Span). */
+const ROW_GRID =
+  "grid grid-cols-[4.25rem_2rem_minmax(0,1fr)_auto] items-center gap-x-2.5 px-3 @[30rem]/card:grid-cols-[4.5rem_2rem_minmax(0,1fr)_auto] @[30rem]/card:gap-x-3 @[30rem]/card:px-4";
 
 export const ROW = {
   HEIGHT: ROW_HEIGHT,
-  ROOT: `flex ${ROW_HEIGHT} items-center gap-3 rounded-tile px-4 py-2`,
+  ROOT: `${ROW_GRID} ${ROW_HEIGHT} rounded-tile py-2`,
   /** The settle from weighted to quiet. It must read as a row going quiet. */
   TRANSITION: "transition-colors duration-(--duration-standard) ease-standard",
   DISC: "grid size-8 flex-none place-items-center rounded-pill",
   GLYPH: "size-4",
-  BODY: "flex min-w-0 flex-1 flex-col gap-[2px]",
+  BODY: "flex min-w-0 flex-col gap-[2px]",
   MESSAGE: "truncate text-sm leading-[1.35] font-medium",
-  META: "flex h-4 min-w-0 items-center gap-1.5",
+  META: "flex h-4 min-w-0 items-center gap-1.5 overflow-hidden",
   /** Size overrides only; the role stays the `Tag` variant's job. */
   META_CHIP: "h-4 shrink-0 px-1.5 py-0 text-[0.6875rem] leading-none",
-  /** On a tinted row the chip takes the container's OWN ink; a neutral-ramp
-   *  stroke on a chromatic surface is a crossed pair. 65% is the floor that
-   *  holds it at 3:1 on all three tonal rows; 45% measured 2.13:1 on
-   *  `warning-container` in light. */
+  /** On a tinted row the chip takes the container's own ink; 65% holds 3:1. */
   META_CHIP_ON_TONAL: "border-current/65 text-current",
-  /** "Ongoing" is a plain marker, not a status chip: the row's tonal container
-   *  already reports the state and the disc already carries the glyph. */
+  /** "Ongoing" is a plain marker: the container and disc already report the state. */
   META_MARKER: "flex shrink-0 items-center gap-1 text-[0.6875rem] leading-none font-semibold",
   META_MARKER_DOT: "size-1.5 flex-none rounded-pill bg-current",
-  /** Machine voice: an identifier the device emitted verbatim. */
+  /** A PCI or "was B28" is a quantity: UI face, tabular figures (Machine-Voice). */
   META_ID:
-    "text-on-surface-variant truncate font-mono text-[0.6875rem] leading-none",
+    "text-on-surface-variant truncate text-[0.6875rem] leading-none tabular-nums",
   /** Inherit the container's `on-` ink on a chromatic row. */
-  META_ID_ON_TONAL: "truncate font-mono text-[0.6875rem] leading-none opacity-90",
-  WHEN: "flex flex-none flex-col items-end pl-2",
-  RELATIVE: "text-[0.8125rem] leading-none font-semibold tabular-nums",
-  ABSOLUTE: "text-[0.6875rem] leading-none tabular-nums pt-[4px]",
+  META_ID_ON_TONAL: "truncate text-[0.6875rem] leading-none tabular-nums opacity-90",
+  WHEN: "flex min-w-0 flex-col",
+  RELATIVE: "truncate text-[0.8125rem] leading-none font-semibold tabular-nums",
+  ABSOLUTE: "truncate text-[0.6875rem] leading-none tabular-nums pt-[4px]",
+  /** The run's Show / Hide pill, drawn from the row's own ink; chevron-only on a phone-width card. */
+  GROUP_TOGGLE:
+    "h-8 w-8 gap-1 px-0 text-xs font-semibold text-current bg-current/10 hover:bg-current/15 hover:text-current dark:hover:bg-current/15 @[30rem]/card:w-auto @[30rem]/card:px-3",
+  GROUP_TOGGLE_LABEL: "hidden @[30rem]/card:inline",
+  GROUP_CHEVRON:
+    "size-3.5 transition-transform duration-(--duration-quick) ease-standard",
+  GROUP_CHEVRON_OPEN: "rotate-180",
+  /** Expanded members: quiet, 40px, no meta line, clock time only. */
+  MEMBERS: "flex flex-col gap-0.5",
+  MEMBER_ROOT: `${ROW_GRID} h-10 rounded-tile`,
+  MEMBER_DISC:
+    "grid size-6 flex-none place-items-center justify-self-center rounded-pill",
+  MEMBER_GLYPH: "size-3",
+  MEMBER_BODY: "flex min-w-0 items-center gap-1.5 overflow-hidden",
+  MEMBER_MESSAGE: "text-on-surface truncate text-[0.8125rem] leading-[1.35]",
+  MEMBER_WHEN:
+    "text-on-surface-variant truncate text-xs leading-none tabular-nums",
 } as const;
 
 /** Ink for the absolute time on a row that has no chromatic container. */
@@ -148,10 +212,7 @@ export const DAY = {
 // Conditions
 // -----------------------------------------------------------------------------
 
-/**
- * The two condition tones this surface can reach. Keyed onto `BadgeVariant` so
- * a tone with no matching role fails the build.
- */
+/** The two condition tones this surface can reach, keyed onto `BadgeVariant`. */
 export type ConditionTone = Extract<BadgeVariant, "muted" | "destructive">;
 
 export const CONDITION = {
@@ -163,10 +224,7 @@ export const CONDITION = {
   ACTION: "mt-1 px-4",
 } as const;
 
-/**
- * A condition block is one of the three sanctioned container uses: the block IS
- * the state. The retry pill is drawn from the container's own ink, never a wash.
- */
+/** A condition block IS the state; the retry pill is drawn from its own ink. */
 export const CONDITION_TONE = {
   muted: {
     ROOT: "bg-surface-container text-on-surface",

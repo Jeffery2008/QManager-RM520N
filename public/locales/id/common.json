@@ -773,34 +773,63 @@
   "networkEvents": {
     "page": {
       "title": "Peristiwa Jaringan",
-      "description": "Semua yang dicatat poller tentang radio dan koneksi, terbaru dulu."
+      "description": "Perubahan pada radio dan koneksi, terbaru di atas."
     },
     "actions": {
-      "auto_refresh_on": "Segarkan otomatis aktif",
-      "auto_refresh_off": "Segarkan otomatis nonaktif",
-      "refresh": "Segarkan"
+      "refresh": "Segarkan",
+      "updates_aria": "Pembaruan",
+      "live": "Langsung",
+      "paused": "Dijeda"
     },
-    "band": {
-      "ongoing": {
-        "eyebrow": "Berlangsung",
-        "caption_clear": "Tidak ada yang belum tuntas",
-        "caption_oldest": "Terlama: {{label}}, {{age}}"
-      },
-      "last24": {
-        "eyebrow": "24 jam terakhir",
-        "caption": "{{loud}} perlu perhatian"
-      },
-      "retained": {
-        "eyebrow": "Tersimpan",
-        "caption": "Terlama {{age}}, perangkat menyimpan {{cap}}",
-        "caption_empty": "Perangkat menyimpan hingga {{cap}}"
-      }
+    "now": {
+      "title": "Saat ini",
+      "description": "Yang masih berlangsung, dan yang terus berulang.",
+      "ongoing_one": "{{count}} masalah berlangsung",
+      "ongoing_other": "{{count}} masalah berlangsung",
+      "oldest_started": "Yang tertua dimulai {{age}}",
+      "clear": "Tidak ada yang berlangsung",
+      "last_problem": "Masalah terakhir {{age}}",
+      "no_problems": "Tidak ada masalah tercatat",
+      "no_events": "Belum ada peristiwa tercatat",
+      "repeating": "Berulang",
+      "repeat_meta_one": "{{count}} perubahan dalam {{span}}",
+      "repeat_meta_other": "{{count}} perubahan dalam {{span}}",
+      "nothing_repeating": "Tidak ada yang berulang."
+    },
+    "activity": {
+      "title": "Aktivitas",
+      "window_last_one": "{{count}} peristiwa terakhir, selama {{span}}.",
+      "window_last_other": "{{count}} peristiwa terakhir, selama {{span}}.",
+      "window_all_one": "{{count}} peristiwa sejak modem dinyalakan.",
+      "window_all_other": "Semua {{count}} peristiwa sejak modem dinyalakan.",
+      "window_empty": "Tidak ada peristiwa sejak modem dinyalakan.",
+      "chart_aria": "Peristiwa dari waktu ke waktu",
+      "column_one": "{{from}} hingga {{to}}: {{count}} peristiwa",
+      "column_other": "{{from}} hingga {{to}}: {{count}} peristiwa",
+      "now": "Sekarang",
+      "problems": "Masalah",
+      "recoveries": "Pemulihan",
+      "routine": "Rutin"
+    },
+    "span": {
+      "minutes_one": "{{count}} menit",
+      "minutes_other": "{{count}} menit",
+      "hours_one": "{{count}} jam",
+      "hours_other": "{{count}} jam"
     },
     "log": {
       "title": "Log peristiwa",
-      "description_loading": "Membaca buffer peristiwa modem.",
+      "description_loading": "Memuat peristiwa.",
       "description_unreadable": "Tidak ada hitungan yang ditampilkan selama log tidak terbaca.",
-      "description": "Menampilkan {{shown}} dari {{held}} peristiwa yang disajikan, dari {{cap}} yang disimpan modem di memori."
+      "description": "Pengulangan dikelompokkan; buka salah satu untuk melihat tiap peristiwa.",
+      "scroll_aria": "Peristiwa"
+    },
+    "run": {
+      "title": "{{label}} terus berubah",
+      "meta_one": "{{count}} peristiwa dalam {{span}}",
+      "meta_other": "{{count}} peristiwa dalam {{span}}",
+      "show": "Tampilkan {{count}}",
+      "hide": "Sembunyikan"
     },
     "filters": {
       "all": "Semua",
@@ -822,9 +851,9 @@
     },
     "empty": {
       "title": "Belum ada peristiwa",
-      "description": "Log tersimpan di memori dan dimulai ulang saat modem reboot. Entri muncul di sini saat poller mendeteksinya.",
+      "description": "Log dimulai ulang saat modem dinyalakan ulang. Peristiwa muncul di sini saat terjadi.",
       "filtered_title": "Tidak ada apa pun di tampilan ini",
-      "filtered_description": "Saat ini tidak ada peristiwa jenis ini di log. Pilih Semua untuk melihat semua yang dicatat poller."
+      "filtered_description": "Saat ini tidak ada peristiwa jenis ini di log."
     },
     "error": {
       "title": "Tidak dapat memuat peristiwa",

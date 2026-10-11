@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { flushSync } from "react-dom";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import { useTranslation } from "react-i18next";
 import {
@@ -34,11 +35,7 @@ import {
   EVENT_TAB_CATEGORIES,
   type EventFilter,
 } from "@/constants/network-events";
-import {
-  eventKey,
-  isFresh,
-  presentEvent,
-} from "@/lib/event-presentation";
+import { eventKey, isFresh, presentEvent } from "@/lib/event-presentation";
 import {
   DUR,
   EASE_QUICK,
@@ -46,35 +43,48 @@ import {
   transitionEmphasized,
   transitionStandard,
 } from "@/lib/motion";
+import { isMotionReduced } from "@/lib/motion-preference";
 import type { NetworkEvent } from "@/types/modem-status";
 
 import { ConditionBlock } from "./condition-block";
-import { useEventsCopy, type NetworkEventsKey } from "./copy";
-import { EventRow } from "./event-row";
+import {
+  useEventsCopy,
+  useEventsPlural,
+  useSpanText,
+  type NetworkEventsKey,
+} from "./copy";
+import {
+  groupRuns,
+  runMemberKeys,
+  runProbe,
+  type EventRun,
+  type IndexedEvent,
+  type LogItem,
+} from "./derive";
+import { EventRow, MemberRow, RunRow } from "./event-row";
 import {
   CARD_DESC,
   CARD_PAD,
   CARD_SHELL,
   CARD_TITLE,
+  CROSSFADE_STACK,
   DAY,
   FILTER_COUNT,
   FILTER_PILL,
   FILTER_PILL_ACTIVE,
   FILTER_PILL_REST,
-  CROSSFADE_STACK,
   LOG,
+  LOG_SCROLL,
   LOG_STACK,
   NOTICE,
   NOTICE_GLYPH,
   RAIL,
-  RING_CAP,
   ROW,
 } from "./shapes";
 
 type SortOrder = "newest" | "oldest";
 
-/** The row cascade, capped at ten so a fifty-row log does not choreograph for
- *  four seconds. Both the curve and the cap come from `lib/motion`. */
+/** The row cascade, capped at ten; curve and cap come from `lib/motion`. */
 const logRowItem: Variants = {
   hidden: { opacity: 0, y: 5 },
   visible: (index: number) => ({
@@ -96,10 +106,23 @@ function dayKey(timestamp: number): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
+/** The DOM id of a run row; scoped by filter so an exiting view never answers. */
+function runDomId(filter: EventFilter, key: string): string {
+  return `ne-run-${filter}-${key}`;
+}
+
+const itemTimestamp = (item: LogItem): number =>
+  item.kind === "run" ? item.newest.event.timestamp : item.row.event.timestamp;
+
 interface DayGroup {
   key: string;
   label: string;
-  rows: { event: NetworkEvent; index: number }[];
+  items: LogItem[];
+}
+
+export interface EventLogHandle {
+  /** Switch to All, open the run and scroll it into view. */
+  revealRun: (run: EventRun) => void;
 }
 
 export interface EventLogCardProps {
@@ -111,6 +134,8 @@ export interface EventLogCardProps {
   onRetry: () => void;
   /** Translated relative time, e.g. "12m ago". */
   timeAgo: (timestamp: number, nowSec: number) => string;
+  clockTime: (timestamp: number) => string;
+  ref?: React.Ref<EventLogHandle>;
 }
 
 export function EventLogCard({
@@ -121,11 +146,19 @@ export function EventLogCard({
   error,
   onRetry,
   timeAgo,
+  clockTime,
+  ref,
 }: EventLogCardProps) {
   const { t } = useTranslation("dashboard");
   const c = useEventsCopy();
+  const p = useEventsPlural();
+  const spanText = useSpanText();
   const [filter, setFilter] = React.useState<EventFilter>("all");
   const [sortOrder, setSortOrder] = React.useState<SortOrder>("newest");
+  // Member eventKeys of opened runs, so a run stays open while it grows or loses its tail.
+  const [openKeys, setOpenKeys] = React.useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
 
   const counts = React.useMemo(() => {
     const tally: Record<EventFilter, number> = {
@@ -141,16 +174,15 @@ export function EventLogCard({
     return tally;
   }, [events]);
 
-  // Indices are carried through filtering and sorting because `unresolved` is
-  // computed over the FULL newest-first array and keys into it.
-  const rows = React.useMemo(() => {
-    const kept = events
+  // Indices ride along because `unresolved` keys into the full newest-first array.
+  const items = React.useMemo<LogItem[]>(() => {
+    const kept: IndexedEvent[] = events
       .map((event, index) => ({ event, index }))
       .filter(
         ({ event }) =>
           filter === "all" || EVENT_TAB_CATEGORIES[event.type] === filter,
       );
-    return sortOrder === "oldest" ? kept.reverse() : kept;
+    return groupRuns(sortOrder === "oldest" ? kept.reverse() : kept);
   }, [events, filter, sortOrder]);
 
   const dayLabel = React.useCallback(
@@ -169,27 +201,45 @@ export function EventLogCard({
     [c],
   );
 
+  // A run's React identity outlives its key, which moves when the served 50 evicts its oldest member.
+  const [runIds, setRunIds] = React.useState<{
+    items: LogItem[];
+    ids: ReadonlyMap<string, string>;
+  }>({ items: [], ids: new Map() });
+  if (runIds.items !== items) {
+    // Keyed by run key and by member eventKey; a surviving member carries the id forward.
+    const ids = new Map<string, string>();
+    for (const item of items) {
+      if (item.kind !== "run") continue;
+      const prior = item.members
+        .map((m) => runIds.ids.get(eventKey(m.event)))
+        .find((id) => id !== undefined);
+      const id = prior ?? item.key;
+      ids.set(item.key, id);
+      for (const m of item.members) ids.set(eventKey(m.event), id);
+    }
+    setRunIds({ items, ids });
+  }
+  const runReactKey = (run: EventRun) => runIds.ids.get(run.key) ?? run.key;
+
   const groups = React.useMemo<DayGroup[]>(() => {
     const out: DayGroup[] = [];
-    for (const row of rows) {
-      const key = dayKey(row.event.timestamp);
+    for (const item of items) {
+      const ts = itemTimestamp(item);
+      const key = dayKey(ts);
       const last = out[out.length - 1];
-      if (last && last.key === key) last.rows.push(row);
-      else out.push({ key, label: dayLabel(row.event.timestamp), rows: [row] });
+      if (last && last.key === key) last.items.push(item);
+      else out.push({ key, label: dayLabel(ts), items: [item] });
     }
     return out;
-  }, [rows, dayLabel]);
+  }, [items, dayLabel]);
 
-  // A head that post-dates the mount is one that arrived while the user was
-  // looking, which is the whole condition the slide is for. Same two-clock
-  // subtraction the freshness gate already makes, so they can only be wrong
-  // together.
+  // A head newer than the mount arrived while the user was looking: that is what the slide is for.
   const [mountedAtSec] = React.useState(() => Math.floor(Date.now() / 1000));
   const head = events[0];
   const hasArrival = head !== undefined && head.timestamp > mountedAtSec;
 
-  // The cascade is a mount event, not a filter event, so touching the rail
-  // retires it for good rather than re-choreographing fifty rows per press.
+  // The cascade is a mount event; touching the rail retires it for good.
   const [cascade, setCascade] = React.useState(true);
   const chooseFilter = (next: EventFilter) => {
     setCascade(false);
@@ -200,28 +250,59 @@ export function EventLogCard({
     setSortOrder(next);
   };
 
-  // A confident "0 of 0" is a claim the device never made. Counts appear only
-  // once a read has actually come back.
+  const isOpen = React.useCallback(
+    (run: EventRun) =>
+      run.members.some((m) => openKeys.has(eventKey(m.event))),
+    [openKeys],
+  );
+
+  const toggleRun = (run: EventRun) => {
+    const memberKeys = runMemberKeys(run);
+    const live = new Set(events.map(eventKey));
+    setOpenKeys((prev) => {
+      const wasOpen = memberKeys.some((k) => prev.has(k));
+      const next = new Set([...prev].filter((k) => live.has(k)));
+      for (const k of memberKeys) {
+        if (wasOpen) next.delete(k);
+        else next.add(k);
+      }
+      return next;
+    });
+  };
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      revealRun: (run: EventRun) => {
+        // Commit synchronously so the row exists before it is scrolled to.
+        flushSync(() => {
+          setCascade(false);
+          setFilter("all");
+          setOpenKeys((prev) => new Set([...prev, ...runMemberKeys(run)]));
+        });
+        document.getElementById(runDomId("all", run.key))?.scrollIntoView({
+          block: "center",
+          behavior: isMotionReduced() ? "auto" : "smooth",
+        });
+      },
+    }),
+    [],
+  );
+
+  // A confident count is a claim the device never made; counts wait for a real read.
   const unreadable = error !== null && events.length === 0;
   const countsReadable = !isLoading && !unreadable;
   const description = isLoading
     ? c("networkEvents.log.description_loading")
     : unreadable
       ? c("networkEvents.log.description_unreadable")
-      : c("networkEvents.log.description", {
-          shown: rows.length,
-          held: events.length,
-          cap: RING_CAP,
-        });
+      : c("networkEvents.log.description");
 
-  const clockTime = (timestamp: number) =>
-    new Date(timestamp * 1000).toLocaleTimeString(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const typeLabel = (event: NetworkEvent) =>
+    t(`activities.events.${event.type}`, { defaultValue: event.type });
 
-  const renderRow = (event: NetworkEvent, absoluteIndex: number) => {
-    const isUnresolved = unresolved.has(absoluteIndex);
+  const renderEvent = ({ event, index }: IndexedEvent) => {
+    const isUnresolved = unresolved.has(index);
     const presentation = presentEvent(
       event,
       isUnresolved,
@@ -232,15 +313,73 @@ export function EventLogCard({
       <EventRow
         event={event}
         presentation={presentation}
-        typeLabel={t(`activities.events.${event.type}`, {
-          defaultValue: event.type,
-        })}
+        typeLabel={typeLabel(event)}
         severityWord={t(presentation.srSeverityKey)}
         ongoingLabel={c("networkEvents.row.ongoing")}
         unresolved={isUnresolved}
         timeAgo={timeAgo(event.timestamp, nowSec)}
         clockTime={clockTime(event.timestamp)}
       />
+    );
+  };
+
+  const renderRun = (run: EventRun) => {
+    const anyUnresolved = run.members.some((m) => unresolved.has(m.index));
+    const presentation = presentEvent(
+      runProbe(run),
+      anyUnresolved,
+      isFresh(run.newest.event, nowSec),
+      "card",
+    );
+    const open = isOpen(run);
+    const id = runDomId(filter, run.key);
+    const count = run.members.length;
+    return (
+      <>
+        <RunRow
+          id={id}
+          membersId={`${id}-members`}
+          presentation={presentation}
+          severityWord={t(presentation.srSeverityKey)}
+          title={c("networkEvents.run.title", {
+            label: typeLabel(run.newest.event),
+          })}
+          meta={p("networkEvents.run.meta", count, {
+            span: spanText(run.spanSec),
+          })}
+          timeAgo={timeAgo(run.newest.event.timestamp, nowSec)}
+          clockTime={clockTime(run.newest.event.timestamp)}
+          open={open}
+          toggleLabel={
+            open
+              ? c("networkEvents.run.hide")
+              : c("networkEvents.run.show", { count })
+          }
+          onToggle={() => toggleRun(run)}
+        />
+        {open ? (
+          <motion.div
+            id={`${id}-members`}
+            className={cn(ROW.MEMBERS, "mt-0.5")}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={transitionStandard}
+          >
+            {run.members.map(({ event }) => {
+              const member = presentEvent(event, false, false, "card");
+              return (
+                <MemberRow
+                  key={eventKey(event)}
+                  event={event}
+                  presentation={member}
+                  severityWord={t(member.srSeverityKey)}
+                  clockTime={clockTime(event.timestamp)}
+                />
+              );
+            })}
+          </motion.div>
+        ) : null}
+      </>
     );
   };
 
@@ -257,7 +396,7 @@ export function EventLogCard({
         onAction={onRetry}
       />
     );
-  } else if (!isLoading && rows.length === 0) {
+  } else if (!isLoading && items.length === 0) {
     body = (
       <ConditionBlock
         tone="muted"
@@ -277,7 +416,7 @@ export function EventLogCard({
   } else {
     let rendered = -1;
     body = (
-      <div className={cn(LOG_STACK, "overflow-hidden")}>
+      <div className={LOG_STACK}>
         {groups.map((group, groupIndex) => (
           <div key={group.key} className={LOG}>
             <div className={DAY.ROOT}>
@@ -286,14 +425,18 @@ export function EventLogCard({
                 <span aria-hidden className={DAY.RULE} />
               ) : null}
             </div>
-            {group.rows.map(({ event, index }) => {
+            {group.items.map((item) => {
               rendered += 1;
               const position = rendered;
               const isHead =
                 position === 0 && sortOrder === "newest" && hasArrival;
               return (
                 <motion.div
-                  key={eventKey(event)}
+                  key={
+                    item.kind === "run"
+                      ? `run-${runReactKey(item)}`
+                      : eventKey(item.row.event)
+                  }
                   custom={position}
                   variants={isHead ? undefined : logRowItem}
                   initial={
@@ -306,7 +449,9 @@ export function EventLogCard({
                   animate={isHead ? { opacity: 1, x: 0 } : "visible"}
                   transition={isHead ? transitionEmphasized : undefined}
                 >
-                  {renderRow(event, index)}
+                  {item.kind === "run"
+                    ? renderRun(item)
+                    : renderEvent(item.row)}
                 </motion.div>
               );
             })}
@@ -383,8 +528,7 @@ export function EventLogCard({
           </DropdownMenu>
         </div>
 
-        {/* A stale list beats a blank card: with data in hand the error is a
-            notice above the transcript, never a replacement for it. */}
+        {/* With data in hand the error is a notice above the list, never a replacement. */}
         {error && events.length > 0 ? (
           <div role="alert" className={NOTICE}>
             <TriangleAlertIcon className={NOTICE_GLYPH} />
@@ -392,26 +536,30 @@ export function EventLogCard({
           </div>
         ) : null}
 
-        {/* Skeleton and content share one grid cell, so the swap costs no layout
-            shift. The ternary unmounts the skeleton outright; only the filter
-            swap below animates, and it is sync rather than `wait`, so nothing
-            here is gated on an exit completing in a throttled background tab. */}
-        <div className={CROSSFADE_STACK}>
-          {isLoading ? (
-            <LogSkeleton />
-          ) : (
-            <AnimatePresence>
-              <motion.div
-                key={`${filter}-${sortOrder}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: DUR.quick, ease: EASE_QUICK }}
-              >
-                {body}
-              </motion.div>
-            </AnimatePresence>
-          )}
+        <div
+          className={LOG_SCROLL}
+          tabIndex={0}
+          role="region"
+          aria-label={c("networkEvents.log.scroll_aria")}
+        >
+          {/* Skeleton and content share one grid cell; the filter swap is sync, not `wait`. */}
+          <div className={CROSSFADE_STACK}>
+            {isLoading ? (
+              <LogSkeleton />
+            ) : (
+              <AnimatePresence>
+                <motion.div
+                  key={`${filter}-${sortOrder}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: DUR.quick, ease: EASE_QUICK }}
+                >
+                  {body}
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

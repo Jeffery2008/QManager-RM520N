@@ -19,7 +19,8 @@ The Recent Activities card is the dashboard's window onto the poller's network e
 | Hook | `hooks/use-recent-activities.ts` (10s poll, reverses to newest-first, keeps 20 by default; `/monitoring` passes `maxEvents: 50`) |
 | Presentation model | `lib/event-presentation.ts` (pure, no React) |
 | Dashboard card | `components/dashboard/recent-activities.tsx` (5 rows, glance) |
-| Monitoring surface | `components/monitoring/network-events/` (the full log, `/monitoring`) |
+| Monitoring surface | `components/monitoring/network-events.tsx` + `components/monitoring/network-events/` (Right now, Activity, the full log; `/monitoring`) — see [Network Events Page](#network-events-page-monitoring) |
+| Repeat runs | `RUN_MIN = 4`, `RUN_GAP_SEC = 600` (`components/monitoring/network-events/derive.ts`) |
 | Identifier contract | `splitEventMessage` / `TRAILING_IDS` in `lib/event-presentation.ts`, fed by `_ev_ids()` in `events.sh` |
 | Event types / severities | `types/modem-status.ts` (`NetworkEventType`, `EventSeverity`, `NetworkEvent`) |
 | English label fallback | `constants/network-events.ts` (`EVENT_LABELS`) |
@@ -44,9 +45,9 @@ presentEvent(ev, unres, fr) -> glyph + tone + 4 class slots + sr-only key
 
 Both the append and the trim are **checked**, and a failure logs `EVENT DROPPED [...]` rather than the usual success line — see below for why that matters.
 
-Note the funnel: **300 on disk, 50 served, 20 kept, 5 drawn.** Each step exists for a different reason and they are not interchangeable — see [Ring depth vs. served slice](#ring-depth-vs-served-slice).
+Note the funnel: **300 on disk, 50 served, 20 kept, 5 drawn** on the dashboard; `/monitoring` keeps all 50. Each step exists for a different reason and they are not interchangeable — see [Ring depth vs. served slice](#ring-depth-vs-served-slice).
 
-> ℹ️ NOTE: the same event log feeds `/monitoring` via `components/monitoring/network-events-card.tsx`. The link transition is decided once, here in `events.sh`, and the Centralized Alerts engine follows it (`ev_link_state`). A device can still log a "connection lost" activity without dispatching any alert — any outage shorter than the alert wait. See [alerts.md](alerts.md).
+> ℹ️ NOTE: the same event log feeds `/monitoring` via `components/monitoring/network-events.tsx`. The link transition is decided once, here in `events.sh`, and the Centralized Alerts engine follows it (`ev_link_state`). A device can still log a "connection lost" activity without dispatching any alert — any outage shorter than the alert wait. See [alerts.md](alerts.md).
 
 ## Link and Quality Events
 
@@ -435,7 +436,7 @@ The row is the Motion Guide's **recipe 04 (Alert arrival)**, not the `Recommende
 | Message | `truncate text-sm leading-5 font-medium` + `messageClass` | The primary line. `truncate` is what makes `ROW_H` strictly true; without it a long message wraps and breaks the clip arithmetic |
 | Caption | `font-mono text-xs leading-4 tabular-nums` + `metaClass` | Timestamp only |
 
-**The event-type label is gone by decision.** The message already names what happened and the disc already names its kind, so "Carrier Aggregation" above "NR-CA active: n78 + n41" was the row saying the same thing twice at two type sizes. The `activities.events.*` keys stay in the locale files: they are parity-clean, unreferenced by this card, and the natural home for them is the Monitoring events page, which still renders the untranslated `EVENT_LABELS` map.
+**The event-type label is gone by decision.** The message already names what happened and the disc already names its kind, so "Carrier Aggregation" above "NR-CA active: n78 + n41" was the row saying the same thing twice at two type sizes. The `activities.events.*` keys stay in the locale files: they are parity-clean, unreferenced by this card, and the Monitoring events page renders them as its row labels.
 
 > ℹ️ NOTE: the reference draws 12px over 10px. Those are **tile-scale figures, not a spec** — the Motion Guide's demo tiles run a smaller scale than the dashboard mock throughout (26px card radius against the dashboard mock's 36px, both measured before the 2026-09-13 retune). Taking them literally would put a 10px size into the product, two steps below the sidebar's already-scoped 11px exception, to render the one line a user squints at. The ramp keeps the reference's *hierarchy* — message dominant, caption subordinate and in the machine voice — at sizes the product already owns.
 
@@ -479,6 +480,44 @@ Type sizes stay on the documented ramp (`text-xs` / `text-sm`) rather than the 1
 
 > ℹ️ NOTE: **60px survived the recipe-04 retarget unchanged**, which is deliberate rather than lucky. The two lines swapped roles but kept their sizes, so `LIST_MAX_H`, `ROW_ADVANCE`, the clip edge and the skeleton all stayed valid and the card did not change height against its two grid siblings. Verified at 60.00px on all ten rendered tone × age combinations.
 
+## Network Events Page (`/monitoring`)
+
+The full log reads the same hook with `maxEvents: SERVED_EVENTS` (50, from `derive.ts`), so it sees the whole served slice. `computeUnresolved` runs once in `network-events.tsx` over that full newest-first array and is passed down; every card keys into it by index, which is why `derive.ts` carries `IndexedEvent { event, index }` through filtering and grouping.
+
+| Piece | File | What it shows |
+| ----- | ---- | ------------- |
+| Page shell | `components/monitoring/network-events.tsx` | Header with a **Live / Paused** `SegmentedField` (drives the hook's `enabled`) and Refresh |
+| Right now | `network-events/now-card.tsx` | Ongoing problems (the `unresolved` set), then runs whose newest member is under `FRESH_WINDOW_SEC` old, under "Repeating". Selecting a run calls `EventLogHandle.revealRun` |
+| Activity | `network-events/activity-card.tsx` | Stacked bars from `bucketEvents`, the window description from `describeWindow`, and a Problems / Recoveries / Routine legend |
+| Log | `network-events/event-log-card.tsx` | Filter rail, sort, day groups, runs. Scrolls inside the card (`LOG_SCROLL`: `max-h-[min(36rem,70svh)]`) |
+| Rows | `network-events/event-row.tsx` | `EventRow`, `RunRow`, `MemberRow`, `JumpRow`. Time is the leading column (relative over clock time) |
+| Pure logic | `network-events/derive.ts` | `groupRuns`, `runProbe`, `runMemberKeys`, `describeWindow`, `bucketEvents` |
+| Copy | `network-events/copy.ts` | `networkEvents.*` keys in the `common` namespace, English carried as `defaultValue` |
+
+Right now and Activity show skeletons while loading and are dropped on the no-data error path, rather than show counts the device never reported. The one-hour tonal fill rule applies unchanged to every row here.
+
+**Identifiers.** `EventIdentifiers` splits `splitEventMessage` output: a band group (`B3 + n78`) becomes one `Tag` per band, `variant="nr"` for `n…` and `"lte"` otherwise; anything else (PCI, "was B28") is a quantity in the UI face with `tabular-nums`, never mono. Row labels come from `t("activities.events.<type>", { defaultValue: event.type })` in the `dashboard` namespace.
+
+### Repeat runs
+
+`groupRuns` collapses **`RUN_MIN` (4) or more consecutive same-type events, each at most `RUN_GAP_SEC` (600s) from the next**, into one `RunRow` with Show / Hide. Fewer than four stay single rows.
+
+- **Grouping runs after the filter and sort.** A run on the Radio filter can be split by a connectivity row on All. `revealRun` therefore switches to All before opening the run, inside `flushSync`, so the row exists before `scrollIntoView`.
+- **Open state is held per member `eventKey`, not per run.** A run's `key` is type + oldest member timestamp, which changes when the ring evicts the tail. Keying by members keeps a run open while it grows at the head or loses its tail across polls; `toggleRun` prunes keys no longer in `events`.
+- **Run tone comes from a probe.** `runProbe` presents the run as a `band_change` at `warning` if any member is above `info`, else `info`, so the run reads routine or warning and never borrows a member type's recovery glyph. The log row is unresolved if any member is; Right now forces `warning`, because there the repetition is the problem. Member rows are always drawn quiet.
+
+### Activity window honesty
+
+The CGI serves the newest 50 of a 300-slot ring, so 50 events may cover four minutes or three days. **The Activity card must never label that slice as a day or any fixed period.** `describeWindow` returns:
+
+| Served | Description |
+| ------ | ----------- |
+| 0 | "No events since the modem started." |
+| fewer than 50 | "All N events since the modem started." True because the ring lives in `/tmp` and resets at boot, and a short slice means the ring holds fewer than 50 |
+| exactly 50 | "Last 50 events, over {span}", span measured from the oldest served event to now (floor 60s) |
+
+`bucketEvents` spans the same window: it picks the smallest step in `[60, 120, 300, 600, 900, 1800, 3600, 7200]` seconds that fits in 24 columns (whole hours past that), with at least 8 columns. Problems are `warning` + `error` tones, Recoveries `success`, Routine the rest.
+
 ## Motion
 
 Two animations total, against a per-surface budget of three, on an ARM32 SoC rendering its own UI.
@@ -519,7 +558,7 @@ All card copy is keyed under the `dashboard` namespace, `activities.*`, at 100% 
 
 Two deliberate non-changes:
 
-- **`constants/network-events.ts` was not modified.** `EVENT_LABELS` is retained as the `defaultValue` passed to `t()`, so an untranslated or newly added type degrades to its English label rather than rendering a raw key, and `components/monitoring/network-events-card.tsx` plus `components/monitoring/watchdog/watchdog-recovery-activity-card.tsx` keep working untouched.
+- **`constants/network-events.ts` was not modified.** `EVENT_LABELS` is still exported but no component reads it. `/monitoring` passes the raw type as the `defaultValue` (`t("activities.events.<type>", { defaultValue: event.type })`), so a type with no locale key renders as e.g. `ca_change`, not a dotted key path.
 - **`formatTimeAgo` in `types/modem-status.ts` was not modified.** It has three live call sites in `watchdog-status-card.tsx` and returns a hard-coded English string by design. The card carries a local `useTimeAgo()` hook whose thresholds (60s, 3600s, 86400s) mirror it exactly, so the two can never disagree about when "1h ago" starts.
 
 Adding a new `NetworkEventType` therefore means: extend the union in `types/modem-status.ts`, add the English label to `EVENT_LABELS`, and add `activities.events.<type>` to all five locale files. Classify it in `lib/event-presentation.ts` only if it is a condition rather than a one-shot.
@@ -534,6 +573,7 @@ Adding a new `NetworkEventType` therefore means: extend the union in `types/mode
 - **`watchcat_recovery` is in `RECOVERY_TYPES` but is never emitted at `info`.** All five call sites in `qmanager_watchcat` pass `warning` or `error`, and severity wins in `presentEvent`, so its green-check branch is currently unreachable. Intended, not a bug: the entry is there so a future "recovery succeeded" line reads correctly. `profile_applied` is the same shape in reverse, emitted at `info` for a complete apply and `warning` for a partial one.
 - **The NDJSON file lives in `/tmp` and does not survive a reboot.** An empty card after a restart is correct, not a fault.
 - **300 on disk, 50 served, 20 kept, 5 drawn.** The resolution pass sees 20. A degradation whose recovery is more than 20 events old will still be flagged unresolved; in practice a recovery follows its degradation closely enough that this has not been observed, but it is the model's outer limit. Raising `MAX_EVENTS` does not widen that window — the hook's `maxEvents` does.
+- **Known issue: `ca_change` is not debounced.** The LTE and NR carrier-aggregation blocks in `events.sh` (`# --- LTE CA changes ---`, `# --- NR CA changes ---`) compare against the previous sample and call `append_event` directly, with no `_ev_settle` and no flap counter. A flapping carrier writes one row per flip the poller samples and can fill the 300-slot ring. On `/monitoring` repeat-run grouping hides the noise but cannot recover evicted history. Fix belongs in `events.sh`, routed through `_ev_settle` like band and PCI.
 - **The debounce costs latency, on purpose.** A genuine band change is announced about 9 seconds after it happens, not immediately. Anything that needs the current band in real time must read `status.json`, which is undebounced; the event feed is a history, not a live readout.
 
 ## Tests
