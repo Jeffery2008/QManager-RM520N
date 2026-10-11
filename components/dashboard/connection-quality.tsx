@@ -114,7 +114,8 @@ function bucketHistory(
   const startTs = anchorTs - QUALITY.WINDOW_S;
   const step = QUALITY.WINDOW_S / QUALITY.BUCKETS;
 
-  const sawLoss = Array.from({ length: QUALITY.BUCKETS }, () => false);
+  const rows = Array<number>(QUALITY.BUCKETS).fill(0);
+  const failed = Array<number>(QUALITY.BUCKETS).fill(0);
   const touched = Array.from({ length: QUALITY.BUCKETS }, () => false);
   const worstLat: (number | null)[] = Array(QUALITY.BUCKETS).fill(null);
   const worstJit: (number | null)[] = Array(QUALITY.BUCKETS).fill(null);
@@ -132,11 +133,12 @@ function bucketHistory(
     );
 
     touched[idx] = true;
+    rows[idx] += 1;
     if (oldestVisibleTs === null || e.ts < oldestVisibleTs) oldestVisibleTs = e.ts;
 
     const answered = typeof e.lat === "number" && Number.isFinite(e.lat);
     if (e.lat === null || e.lat === undefined) {
-      sawLoss[idx] = true;
+      failed[idx] += 1;
     } else if (answered) {
       const cur = worstLat[idx];
       if (cur === null || e.lat > cur) worstLat[idx] = e.lat;
@@ -158,10 +160,13 @@ function bucketHistory(
     if (!touched[i]) return { measured: false, tone: "none", jitter: null };
     const lat = worstLat[i];
     const loss = worstLoss[i];
+    // Red only once the cell's failed share (or the poller's rolling loss) reaches
+    // the configured loss cut; a lone drop below it reads amber, not an outage.
+    const failedPct = (failed[i] / rows[i]) * 100;
     const tone: BucketTone =
-      sawLoss[i] || (loss !== null && loss >= limits.lossPct)
+      failedPct >= limits.lossPct || (loss !== null && loss >= limits.lossPct)
         ? "destructive"
-        : lat !== null && lat > limits.latencyMs
+        : failed[i] > 0 || (lat !== null && lat > limits.latencyMs)
           ? "warning"
           : "success";
     return { measured: true, tone, jitter: worstJit[i] };

@@ -399,7 +399,7 @@ What to take from it when editing this pipeline:
 
 Both latency displays treat a `null` RTT sample as an **absent** reading rather than a fast one. Previously a total blackout drew a live-updating flat line pinned to the floor of the plot, which reads as a perfectly healthy 0 ms link:
 
-- `components/dashboard/connection-quality.tsx` passes a `null` `latency_ms` or `dns_lookup_ms` to `MetricBar` untouched, so the row shows an empty track and `—`. In the history strip a `null` `lat` counts as a lost probe and turns that cell (one 28th of 30 minutes, about 64 s) red; it never contributes a latency or a jitter reading.
+- `components/dashboard/connection-quality.tsx` passes a `null` `latency_ms` or `dns_lookup_ms` to `MetricBar` untouched, so the row shows an empty track and `—`. In the history strip a `null` `lat` counts as a lost probe in that cell (one 28th of 30 minutes, about 64 s): amber below the loss cut, red once the cell's failed share or the row's rolling `loss` reaches it; it never contributes a latency or a jitter reading.
 - `components/monitoring/latency-monitoring/latency-monitoring-card.tsx` does the same for realtime samples and for aggregate buckets in which every ping was lost. Its rolling latency average **excludes** gaps rather than averaging in zeros — a window half of which timed out averages the readings it has, and the packet-loss figure beside it reports the other half.
 
 > ℹ️ NOTE — `ok` on a ping row is still wired: `PingEntriesCard` reads it to print "Timeout" in the latency cell, which is why an aggregate row can carry a printable `0` there without the table ever showing "null ms". Do not delete it as dead.
