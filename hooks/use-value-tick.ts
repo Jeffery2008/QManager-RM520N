@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { EASE_STANDARD_CSS, TICK } from "@/lib/motion";
+import { isMotionReduced } from "@/lib/motion-preference";
 import { TickGroupContext } from "@/components/ui/tick-group";
 
 /**
@@ -85,7 +86,7 @@ export function useValueTick<T>(value: T): React.RefObject<HTMLSpanElement | nul
   const start = React.useCallback((delayMs: number) => {
     const el = ref.current;
     if (!el || typeof el.animate !== "function") return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (isMotionReduced()) return;
 
     // Read before cancelling: cancel() reverts the node to its resting opacity,
     // so asking afterwards always answers 1 and the retarget is lost.

@@ -698,6 +698,27 @@
   }
 }
 
+/* tw-animate-css entrances and exits under Reduced: movement goes, opacity stays.
+   Unlayered, so it outranks tw-animate's layered slide and zoom utilities without !important. */
+:root {
+  @variant motion-reduce {
+    & *,
+    & *::before,
+    & *::after {
+      --tw-enter-translate-x: 0;
+      --tw-enter-translate-y: 0;
+      --tw-exit-translate-x: 0;
+      --tw-exit-translate-y: 0;
+      --tw-enter-scale: 1;
+      --tw-exit-scale: 1;
+      --tw-enter-rotate: 0;
+      --tw-exit-rotate: 0;
+      --tw-enter-blur: 0;
+      --tw-exit-blur: 0;
+    }
+  }
+}
+
 /* ---------------------------------------------------------------------------
    Sidebar nav indicator (Motion Study spec 3 — "the single most Material-
    feeling change in the sidebar"). The active pill slides between rows rather
@@ -887,7 +908,8 @@
 /* Skeleton handoff (Motion Guide recipe 03): a pure crossfade on `quick`, with
    no movement. The outgoing skeleton is an overlay ON TOP of the real content
    rather than a sibling beside it, so the card is sized by its content from the
-   first frame and the crossfade itself contributes zero layout shift. */
+   first frame and the crossfade itself contributes zero layout shift. Opacity-only,
+   so it runs unchanged under Reduced: movement goes, opacity stays. */
 .ca-skeleton-out {
   animation: ca-skeleton-out var(--duration-quick) ease-out forwards;
 }

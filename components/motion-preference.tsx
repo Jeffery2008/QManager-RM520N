@@ -4,8 +4,10 @@ import * as React from "react";
 
 import {
   applyMotionPreference,
+  isMotionReduced,
   persistMotionPreference,
   readMotionPreference,
+  subscribeToOsMotion,
   type MotionPreference,
 } from "@/lib/motion-preference";
 
@@ -89,3 +91,23 @@ const FALLBACK: MotionPreferenceContextValue = {
   preference: "system",
   setPreference: () => {},
 };
+
+const serverSnapshot = () => false;
+
+/**
+ * Live "should motion be reduced?" for components: Reduced → true, Full → false,
+ * System → the OS query, re-rendering when either changes. Prerender reads false.
+ */
+export function useMotionReduced(): boolean {
+  const { preference } = useMotionPreference();
+  // isMotionReduced reads the pre-paint attribute, which covers the render before
+  // the provider's hydrate effect has run.
+  const resolved = React.useSyncExternalStore(
+    subscribeToOsMotion,
+    isMotionReduced,
+    serverSnapshot
+  );
+  if (preference === "reduced") return true;
+  if (preference === "full") return false;
+  return resolved;
+}
