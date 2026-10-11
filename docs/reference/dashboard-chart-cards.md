@@ -218,7 +218,7 @@ which are the backend's `tolerant` defaults.
 | Mark | Green | Amber | Red |
 |------|-------|-------|-----|
 | Internet / DNS bar (track = 2 × cut) | below the cut | `>=` latency cut | `>=` 2 × latency cut |
-| Reachability cell | answered, worst RTT within the cut, worst loss under the loss cut | worst RTT `>` latency cut, or a lost probe below the loss cut | two or more failed rows whose share of the span's rows is `>=` loss cut, or worst `loss >=` loss cut |
+| Reachability cell | answered, worst RTT within the cut, worst loss under the loss cut | worst RTT `>` latency cut, or a lone failed row | two or more failed rows whose share of the span's rows is `>=` loss cut, or worst `loss >=` loss cut |
 | Jitter bar (height = jitter / 80 ms, floor 7 px) | `< 15` ms | `15`–`39` ms | `>= 40` ms |
 
 > ⚠️ WARNING: Do not reintroduce fixed latency cuts on the rows. The port first kept the101's 60 /
