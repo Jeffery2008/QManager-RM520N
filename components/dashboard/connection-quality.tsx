@@ -33,7 +33,6 @@ import { TickingValue } from "@/components/ui/ticking-value";
 import { useLatencyHistory } from "@/hooks/use-latency-history";
 import { useSpeedtest, type SpeedtestPhase } from "@/hooks/use-speedtest";
 import {
-  LATENCY_THRESHOLDS,
   type ConnectivityStatus,
   type PingHistoryEntry,
 } from "@/types/modem-status";
@@ -61,9 +60,6 @@ import { SpeedtestDialog } from "./speedtest-dialog";
 // are the backend's `tolerant` defaults, used only when an older poller omits them.
 const FALLBACK_DEGRADED_MS = 250;
 const FALLBACK_DEGRADED_LOSS_PCT = 30;
-
-/** The latency lane's full-scale value, in ms. A scale, not a capacity. */
-const LATENCY_TRACK_MAX_MS = 300;
 
 /** Jitter grading in ms, tuned for cellular scheduling variance. */
 const JITTER_STEADY_MS = 15;
@@ -270,17 +266,20 @@ function liveReading(
 
 // --- Latency row -------------------------------------------------------------
 
-/** A null value reaches MetricBar untouched, so "no reading" is an empty track. */
+/** A null value reaches MetricBar untouched, so "no reading" is an empty track.
+ *  Amber from the configured latency cut (as on the strip), red from twice it. */
 function LatencyRow({
   icon,
   label,
   value,
   unit,
+  cutMs,
 }: {
   icon: MaterialSymbolName;
   label: string;
   value: number | null;
   unit: string;
+  cutMs: number;
 }) {
   return (
     <div className="flex h-5 items-center gap-2">
@@ -295,9 +294,9 @@ function LatencyRow({
       <span className={QUALITY.LANE}>
         <MetricBar
           value={value}
-          max={LATENCY_TRACK_MAX_MS}
-          warnAt={LATENCY_THRESHOLDS.good}
-          dangerAt={LATENCY_THRESHOLDS.fair}
+          max={cutMs * 2}
+          warnAt={cutMs}
+          dangerAt={cutMs * 2}
           baseTone="success"
           track="surface-container-high"
         />
@@ -604,6 +603,7 @@ const ConnectionQualityComponent = ({
         label={t("connection_quality.internet")}
         value={latencyMs}
         unit={t("connection_quality.unit_ms")}
+        cutMs={latencyCut ?? FALLBACK_DEGRADED_MS}
       />
       {hasDnsField ? (
         <LatencyRow
@@ -611,6 +611,7 @@ const ConnectionQualityComponent = ({
           label={t("connection_quality.dns")}
           value={dnsMs}
           unit={t("connection_quality.unit_ms")}
+          cutMs={latencyCut ?? FALLBACK_DEGRADED_MS}
         />
       ) : null}
       {probeTarget ? (

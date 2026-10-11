@@ -241,8 +241,8 @@ export function SignalHistoryComponent() {
   // bare data minimum. Recharts' own default for an *unset* `baseValue` (see
   // `Area.getBaseValue` in recharts source) derives it FROM the resolved axis
   // domain, so an Area with no baseValue prop always paints down to the true
-  // plot floor, which reads as a filled area. Here we pass an explicit NUMBER, which recharts uses verbatim with no
-  // reference to the axis domain at all. Passing the bare min (dataMin) left the
+  // plot floor, which reads as a filled area. Here we pass an explicit NUMBER,
+  // which recharts uses verbatim with no reference to the axis domain at all. Passing the bare min (dataMin) left the
   // fill's bottom edge sitting `Y_AXIS_PAD` units ABOVE the actual axis floor —
   // a permanent blank band under the fill on narrow-banded metrics (RSRP/RSRQ/
   // SINR barely move), which is what made a real area chart read as a thin line
