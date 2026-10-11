@@ -353,7 +353,9 @@ Network event detection library. Sourced by `qmanager_poller` and `qmanager_watc
 
 **Band / PCI debounce:** the four discrete radio identifiers (`lte_band`, `lte_pci`, `nr_band`, `nr_pci`) are routed through `_ev_settle` rather than compared with a raw `!=`. A value must hold for `EV_SETTLE_SAMPLES` (3, ~9s at the measured ~3s cadence) consecutive non-blank observations before it is announced as `<X> settled on <new> (was <old>)`; a value changing more than `EV_FLAP_THRESHOLD` (6) times inside `EV_FLAP_WINDOW` (300s) instead emits one `warning`-severity "unstable" event per window. Per-channel counters live in poller globals (`_ev_hold_<ch>`, `_ev_holdn_<ch>`, `_ev_last_<ch>`, `_ev_flapn_<ch>`, `_ev_flapt_<ch>`, `_ev_flapr_<ch>`) and are **not** persisted, so `restore_event_state`'s positional `cut -f` decode is unaffected.
 
-> ⚠️ WARNING: the three constants are hard-coded in `events.sh`, not config keys. `settings/quality_thresholds.sh` rebuilds `quality_thresholds.json` from scratch with exactly two keys, and `install_backend` only deploys config files that do not already exist — a new key would be erased on the next preset save and would never reach an upgraded device.
+> ⚠️ WARNING: the three constants are hard-coded in `events.sh`, not config keys. No UI would set a new key, and `install_backend` only deploys config files that do not already exist, so it would never reach an upgraded device. (`quality_thresholds.json` is merge-written since 2026-10-11, so it no longer erases unknown keys.)
+
+**Link and quality events:** `detect_data_connection_events` is the only detector for `internet_lost` / `internet_restored` and the latency/loss pairs. The poller calls it every cycle after `read_ping_data`, outside `detect_events`, and `alert_engine.sh` follows its `ev_link_state`. Rules: `docs/reference/connection-quality.md` (One detector, one alert).
 
 > ⚠️ WARNING: `MAX_EVENTS` is defined independently by **five** producers that all append to and trim the same file (`qmanager_poller`, `qmanager_watchcat`, `qmanager_profile_apply`, `profile_mgr.sh`, `profiles/deactivate.sh`). They must agree, or the smallest value wins.
 
@@ -644,30 +646,21 @@ The CGI reader (`/cgi-bin/quecmanager/system/modem-subsys.sh`) is now a thin `jq
 #### `qmanager_ping`
 
 **Location:** `/usr/bin/qmanager_ping`
-**State files:** `/tmp/qmanager_ping.json` (current state), `/tmp/qmanager_ping_history` (flat ring buffer)
+**State files:** `/tmp/qmanager_ping.json` (current verdict), `/tmp/qmanager_ping_history` (flat ring buffer), `/tmp/qmanager_dns.json` (DNS lookup time)
 
-The single source of internet reachability data. Probes two configurable HTTP/HTTPS targets on a 5-second interval using a primary-then-fallback strategy. Writes atomic JSON with `available`, `latency_ms`, `streak_ok`, and `streak_fail` fields. Does not touch the modem or AT device. Stats (avg/min/max/jitter/loss) are computed by the poller from the history file.
+The single source of internet reachability data: a `#!/bin/sh` ICMP daemon walking a four-leg chain (`cloudflare.com` → `google.com` → `1.1.1.1` → `8.8.8.8`) and writing a fixed thirteen-key verdict. A detached background job also times a DNS lookup against the carrier resolver. Does not touch the modem or AT device. Stats (avg/min/max/jitter/loss) are computed by the poller from the history file.
 
-**Config:** `/etc/qmanager/ping_profile.json` — `profile` (sensitivity preset), `target_1` (primary), `target_2` (secondary).
+**Config:** `/etc/qmanager/ping_profile.json` — `profile`, the four target slots, optional `interval_sec` (and readable `fail_secs` / `recover_secs` / `history_secs` overrides).
 
-Consumers: poller (reads `ping.json` and history), watchcat (reads `streak_fail` to drive recovery), frontend (reads via `status.json` merged by poller).
+Consumers: poller and watchcat, both through `/usr/lib/qmanager/conn_state.sh` (the one reader); the frontend reads via `status.json`. Key contract, cadence, DNS job and the HTTP-era history: `docs/reference/connection-quality.md`.
 
-### Probe Targets
+#### `qmanager_sites`
 
-The ping daemon checks two targets in a primary-then-fallback strategy. Primary is probed every interval; secondary is only probed when primary returns `Disconnected`.
+**Location:** `/usr/bin/qmanager_sites` (`qmanager-sites.service`, always on)
+**State files:** `/tmp/qmanager_sites.json`, `/tmp/qmanager_sites_raw.ndjson`, `/tmp/qmanager_sites_flushed`, `/tmp/qmanager_sites_checking`, `/tmp/qmanager_sites.pid`; history in `/usrdata/qmanager/sites/YYYY-MM-DD.jsonl`
+**Config:** `/etc/qmanager/sites.json` (CGI-written, untrusted)
 
-Both targets accept:
-- Full URL: `https://example.com/path` or `http://example.com/path`
-- Bare hostname: `youtube.com` (auto-prefixed to `https://youtube.com/`)
-- Hostname with path: `example.com/health` → `https://example.com/health`
-
-**Response interpretation:**
-- For canonical captive-portal endpoints (`/generate_204`, `/hotspot-detect.html`): 204 = Connected, anything else = Limited (probable captive portal intercept).
-- For custom URLs: any HTTP response (2xx–5xx) = Connected — the network path worked end-to-end. Limited state only triggers from canonical endpoints.
-
-**Defaults:** `http://cp.cloudflare.com/` (primary), `http://www.gstatic.com/generate_204` (secondary).
-
-**Why these defaults:** Cloudflare's captive portal endpoint is reachable from most regions including networks that filter Google services (e.g. mainland China). Google's `gstatic` is the established fallback for everywhere else.
+Times a TCP connect (`curl -I`, `time_connect − time_namelookup`) to each configured site every `interval_sec` (default 300), keeps 24 h raw and 90 days of hourly rollups. Never touches the modem. Full reference: `docs/reference/sites-monitor.md`.
 
 #### `qmanager_watchcat`
 
@@ -924,6 +917,7 @@ OTA update worker. See §12 for full pipeline description. Called via `sudo -n` 
 | `qmanager-ping.service` | simple | `/usr/bin/qmanager_ping` | Ping daemon; required by poller |
 | `qmanager-poller.service` | simple | `/usr/bin/qmanager_poller` | Main data poller; guards `/dev/smd11` in `ExecStartPre`; sources Data Used (schema v5, with a static SoC-derived orientation map resolved once at startup) from `/proc/net/dev` at the 2 s Tier 1 cadence |
 | `qmanager-setup.service` | oneshot (RemainAfterExit) | `/usr/bin/qmanager_setup` | Permission setup; before ping and poller |
+| `qmanager-sites.service` | simple | `/usr/bin/qmanager_sites` | Sites monitor; `After=network.target qmanager-setup.service`, `Restart=on-failure`; idles while `sites.json` has `"enabled": false` |
 | `qmanager-tower-failover.service` | simple | `/usr/bin/qmanager_tower_failover` | Tower lock failover; guarded by config check in `ExecStartPre` |
 | `qmanager-ttl.service` | oneshot (RemainAfterExit) | inline sh | TTL/HL rule persistence; `ConditionPathExists=/etc/qmanager/ttl_state` |
 | `qmanager-watchcat.service` | simple | `/usr/bin/qmanager_watchcat` | Connection watchdog; guarded by `qm_config_get watchcat enabled` |
@@ -1242,6 +1236,13 @@ Cleared on every reboot (tmpfs). Files pre-created by `qmanager_setup` are marke
 | `/tmp/qmanager_status.json` | root | qmanager_poller | Main modem status cache; polled by frontend |
 | `/tmp/qmanager_ping.json` | root | qmanager_ping | Current ping state (available, latency, streaks) |
 | `/tmp/qmanager_ping_history` | root | qmanager_ping | Raw latency history (flat ring buffer) |
+| `/tmp/qmanager_dns.json` | root | qmanager_ping (detached DNS job) | Carrier-resolver lookup time `{ms, ok, resolver, name, mono, ts}`, every 60 s and on a down edge; atomic `mv`. The poller nulls it when failed or older than 180 s. See [reference/connection-quality.md](reference/connection-quality.md) |
+| `/tmp/qmanager_sites.json` | root | qmanager_sites | Latest Sites sweep; atomic `mv` |
+| `/tmp/qmanager_sites_raw.ndjson` | root | qmanager_sites | Raw Sites samples, trimmed to 24 h |
+| `/tmp/qmanager_sites_flushed` | root | qmanager_sites | Rollup cursor (newest raw `ts` already rolled up); atomic `mv` |
+| `/tmp/qmanager_sites_checking` | root | qmanager_sites | Exists while a sweep runs |
+| `/tmp/qmanager_sites.pid` | root | qmanager_sites | Singleton PID; a copy not owned by root is deleted before the check |
+| `/tmp/qmanager_sites_now` | www-data | monitoring/sites.sh | Check-now flag. Root only tests and removes it, never writes it. The daemon deletes any other fixed `qmanager_sites*` name it does not own before use (`fs.protected_regular`). See [reference/sites-monitor.md](reference/sites-monitor.md) |
 | `/tmp/qmanager_signal_history.json` | root | qmanager_poller | Signal history NDJSON for chart |
 | `/tmp/qmanager_events.json` (S) | root | qmanager_setup | Recent activity events NDJSON. Appended by root daemons **and** every CGI that sources `events.sh` — must stay `root:root 0666`, and the ring trim must never use `mv` |
 | `/tmp/qmanager_pci_state.json` | root | qmanager_poller | SCC PCI state for handoff detection |
@@ -1355,6 +1356,7 @@ Cleared on every reboot (tmpfs). Files pre-created by `qmanager_setup` are marke
 | `/usrdata/qmanager/certs/` | TLS certificate and key |
 | `/usrdata/qmanager/console/ttyd` | Web terminal binary |
 | `/usrdata/qmanager/console/console.sh` | Shell startup script (sets PATH for Entware tools) |
+| `/usrdata/qmanager/sites/` | Sites monitor hourly rollups, `YYYY-MM-DD.jsonl` per UTC day (`root:root 0755`; 90 days, 4 MB cap; removed by `--purge`) |
 | `/usrdata/tailscale/` | Tailscale binaries and state (on-demand install) |
 | `/usrdata/root/bin/tailscale` | Tailscale CLI symlink (rgmii-toolkit convention) |
 | `/usr/bin/tailscale` | Tailscale CLI symlink (QManager root shell convention) |

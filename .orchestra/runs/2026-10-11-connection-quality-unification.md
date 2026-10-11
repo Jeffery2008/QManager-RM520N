@@ -1,5 +1,5 @@
 # Run: Connection Quality unification (backend)
-status: active
+status: closed
 lane: full
 base: 73e88958   branch: worktree-wt+cq-unify (.claude/worktrees/wt+cq-unify)   opened: 2026-10-11   lead: opus
 
@@ -33,9 +33,9 @@ Mid-run addition (user, verbatim): "I also want to apply this one so make our ba
 | B1 | conn_state lib + staleness dedupe + watchcat fail_elapsed trigger + config ownership | build | cgi-endpoint-builder | lib/conn_state.sh, qmanager_poller, qmanager_watchcat, monitoring/watchdog.sh, settings/ping_profile.sh | ACCEPTED e61cfeb4 (verifier batched at end) |
 | G1 | Installer pre-gate for Sites daemon/unit | judgment | installer-safety-auditor | none | ACCEPTED (CLEAR, 8 must-fix -> B4 ticket) |
 | B2 | One detector: events.sh + alert_engine single wait + configured-loss degraded + publish thresholds | build | cgi-endpoint-builder | events.sh, alert_engine.sh, monitoring/alerts.sh, settings/quality_thresholds.sh, qmanager_poller | ACCEPTED 30426c55 |
-| B3 | DNS lookup background job + dns_lookup_ms + types | build | cgi-endpoint-builder | qmanager_ping, qmanager_poller, types/modem-status.ts | DISPATCHED |
+| B3 | DNS lookup background job + dns_lookup_ms + types | build | cgi-endpoint-builder | qmanager_ping, qmanager_poller, types/modem-status.ts | ACCEPTED aec8a1ad |
 | B4 | Sites backend: daemon, config, CGI, rollups, installer lockstep | build | cgi-endpoint-builder | new files + install/uninstall per G1 | ACCEPTED 3af1cc15 (post-verify by installer auditor at end) |
-| D1 | Docs + router + release notes | docs | docs-writer | docs/reference/**, RELEASE_NOTES.md | PENDING |
+| D1 | Docs + router + release notes | docs | docs-writer | docs/reference/**, RELEASE_NOTES.md | ACCEPTED (docs commit) |
 
 ## Attempts   (append-only)
 | task | # | seat | ticket rev | outcome | checks run | evidence path |
@@ -48,7 +48,11 @@ Mid-run addition (user, verbatim): "I also want to apply this one so make our ba
 | W1 | 1 | conductor | direct | watchdog.sh probe_interval proxy for redesigned form -> 3fb535ba | device save test | commit body |
 | V1 | 1 | qm-verifier | r1 | FAIL (F1 outage-hidden race in events.sh; F2-F6 low) | gates, device md5 3-way | — |
 | G2 | 1 | installer-safety-auditor | post | CLEAR (F7 tmp pre-create note) | device read-only | — |
-| FX1 | 1 | cgi-endpoint-builder | fix-wave-1 | DISPATCHED (F1-F7) | — | — |
+| FX1 | 1 | cgi-endpoint-builder | fix-wave-1 | DONE -> accepted 193e221c (F1-F7) | crlf, device outage re-run | commit body |
+| V2 | 1 | qm-verifier | focused | FAIL (D1 Tier 3 not reverted on stale cooldown; D2 untrusted sites pid file) | device md5, read | — |
+| FX2 | 1 | conductor | inline | D1/D2 fixed -> 27336a7b | device sh -n + www-data pid test | commit body |
+| V3 | 1 | qm-verifier | focused | PASS_WITH_NOTES (2 low notes, see Handoff) | device md5, read | — |
+| D1 | 1 | docs-writer | r1 | DONE_WITH_CONCERNS -> accepted (blank-line fix by conductor) | symbol grep, link check, CRLF | — |
 
 ## Findings that survive
 - Only one prober exists (qmanager_ping); watchcat + poller only read /tmp/qmanager_ping.json. Duplication is in config, verdict, alerts.
@@ -61,10 +65,10 @@ Mid-run addition (user, verbatim): "I also want to apply this one so make our ba
 - Advocate full report: .orchestra/scratch/2026-10-11-cq-unify-advocate.md (scratch — key items copied here).
 
 ## Device state
-RM520N-GL 61368cd2 reachable, read-only probes only; nothing deployed; R3 session files removed. RG501Q-EU unreachable (port 22 timeout). Watchdog disabled on device ([watchcat].enabled=0).
+RM520N-GL 61368cd2: all 15 run files deployed, md5 = HEAD 27336a7b (close-out check). qmanager-sites active, NRestarts=0. /tmp/cq_backup holds the pre-run originals of 11 files (remove at close). Watchdog disabled ([watchcat].enabled=0), as found. RG501Q-EU unreachable all run — untested.
 
 ## Handoff — NEXT ACTION
-Commits on worktree-wt+cq-unify: e61cfeb4 (B1), 3af1cc15 (B4 Sites), 30426c55 (B2). B3 (DNS lookup + types) in flight, write set qmanager_ping/qmanager_poller/types/modem-status.ts.
-Next: commit B3 -> live verify on RM520N-GL (needs user yes: deploy live + restart qmanager-ping/poller/sites; simulated outage) -> qm-verifier (blind, whole diff 73e88958..HEAD) + installer-safety-auditor post-verify -> D1 docs-writer (connection-quality.md, connection-watchdog.md, alerts.md, recent-activities.md, new sites doc, router rows, docs/BACKEND.md tmp-file row, RELEASE_NOTES) -> close-out merge question.
-Open follow-ups (frontend run): dashboard.json:50 "one in ten" tooltip now false; samples-card.tsx:70 hard-coded 20 % loss; alerts UI caps threshold at 60 (backend allows 1440); watchdog form still shows probe_interval (now read-only mirror of CQ); quality_thresholds GET new fields unused; Connection Quality widget port; Sites page UI. Sites 30d/90d reads ~3.3 s (cache later if needed).
-Untested live: alerts.sh save_settings write path (calls qmanager_secret_set + systemctl stop discord) — exercise during live verify.
+Run complete on worktree-wt+cq-unify (base 73e88958; development merged in at ac0e750a). Next: user decides merge into development / keep / discard; after a merge rerun `bunx tsc --noEmit`.
+Open (low, from V3): (1) Tier 3 aborting after CFUN=0 fails leaves current_sim_slot "null", so the fallback runs a needless radio cycle — the failure path already had this, the stale path now shares it. (2) qmanager_sites pid-file check has a narrow TOCTOU window (~2/200 under an adversarial loop).
+Frontend follow-ups: Connection Quality dashboard widget port; Sites page UI; dashboard.json:50 "one in ten" tooltip now false; samples-card.tsx:70 hard-coded 20 % loss; alerts UI caps wait at 60 (backend 1440); Watchdog probe control now mirrors Connection Quality; quality_thresholds GET new fields unused; Watchdog "Failed checks n / fail_threshold" now approximate (down decision is time-based); shapes.ts:224-225 comment names retired _qt_apply_* functions.
+Backend follow-ups: Sites 30d/90d reads ~3.3 s (cache if needed); alerts.sh save_settings write path (secret set / discord stop) never run live; [watchcat].probe_interval is an inert seeded key; cq_deploy.ps1 only `start`s qmanager-sites, so a redeploy needs a manual restart.

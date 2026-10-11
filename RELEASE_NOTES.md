@@ -4,8 +4,16 @@ Every settings card in the app now saves from the same place — a row along the
 
 > One-click OTA from **System Settings → Software Update** if you're on v0.1.5 or newer.
 
+## ✨ New Features
+
+- **Sites monitor (backend only, page coming).** QManager now checks how quickly 13 popular sites (Google, YouTube, Discord and others) answer over your cellular link every 5 minutes and keeps up to 90 days of history; there is no page to show it yet. (New `qmanager_sites` service; the number is the TCP connect time, so DNS is not counted.)
+- **DNS lookup time is measured (no display yet).** QManager now times a name lookup against your carrier's DNS server once a minute and right after a drop; nothing on the page shows it yet. (`connectivity.dns_lookup_ms` in the status data; empty while lookups fail.)
+
 ## 🛠️ Improvements
 
+- **One outage, one alert.** An internet drop now appears in **Monitoring → Network Events** as one "Internet Lost" / "Internet Restored" pair, without extra high packet loss rows, and SMS, email and Discord only hear about drops that last longer than your alert wait (5 minutes by default). (The wait you set on **Monitoring → Alerts** now applies to every channel; the down SMS is no longer held back while the Watchdog is mid-recovery.)
+- **Watchdog and Connection Quality share one probe setting.** **Probe every** on **Monitoring → Watchdog** now shows and changes the same probe interval Connection Quality uses, and the Watchdog decides a link is down by how long it has been failing rather than by counting probes.
+- **"Unstable" follows your loss threshold.** The dashboard's Internet chip now reads Unstable only when packet loss reaches the threshold you chose in **System Settings → Connection Quality** (30% by default), instead of a fixed 10%.
 - **Settings cards save from a bottom row on the card itself.** Band, frequency and tower locking, IMEI, APN, MBN, Network Priority, SMS Forwarding, TTL, MTU, Custom DNS, IP Passthrough, System Settings, SSH password, Connection Quality and Alerts now show status on the left and **Discard** then **Save** on the right, instead of a button mid-card or a bar under the cards. (21 `SaveButton` sites moved to `CardFoot`; Discard is always shown and greyed out until you change something.)
 - **A compact, easier-to-scan Watchdog page.** **Monitoring → Watchdog** now opens with one status card (current state, the key counts and a strip of recent probes), with the Recovery ladder and Detection side by side below it, each with its own Save, so saving one card never commits the other's edits. (Recovery steps are On/Off pills, the backup SIM is one Slot 1 / Slot 2 / Off choice, Detection shows roughly when each step would run, and Recovery activity lists the newest five events with a link to the full log.)
 - **Cellular Settings saves from the Network card.** On **Cellular → Settings**, the SIM and Network cards still share one Save, now in the Network card's footer, and **Re-read from modem** moved into that footer too.
@@ -21,6 +29,7 @@ Every settings card in the app now saves from the same place — a row along the
 
 ## 🐛 Fixes
 
+- **Watchdog no longer escalates on missing data.** If probe results go missing after a recovery step, the Watchdog now goes back to monitoring instead of trying the next step, and switches back to your main SIM if it was trying the backup. (Before, missing data counted as a failed step and could walk the ladder toward a reboot.)
 - **TTL & MTU Apply buttons match their Discard buttons.** On **Local Network → TTL & MTU Settings**, the Apply buttons were smaller and squarer than the Discard pill beside them; they are now the same 42px pill.
 - **Neighboring Cells "Read failed" card gives the right advice.** It used to tell you to run the sweep again; it now says to read again.
 - **Neighboring Cells counts cells, not bands.** After a read, the summary on **Cell Scanner → Neighboring Cells** now shows a check and "9 neighbours" instead of "9 available bands", and the per-type rows count cells; Cell Scanner's summary gets the same check-and-total layout.

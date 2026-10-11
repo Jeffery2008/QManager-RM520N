@@ -12,7 +12,8 @@ The Recent Activities card is the dashboard's window onto the poller's network e
 | Producer | `scripts/usr/lib/qmanager/events.sh` (sourced by `qmanager_poller`) |
 | Backing file | `/tmp/qmanager_events.json` (NDJSON, one object per line, oldest first) — seeded `root:root 0666` by `qmanager_setup`; see [Why the file must be seeded](#why-the-file-must-be-seeded) |
 | Ring-buffer cap | `MAX_EVENTS=300` (`scripts/usr/bin/qmanager_poller:119`, and four other producers — see below) |
-| Settle debounce | `EV_SETTLE_SAMPLES=3`, `EV_FLAP_THRESHOLD=6`, `EV_FLAP_WINDOW=300` (`events.sh:242-249`, hard-coded) |
+| Settle debounce | `EV_SETTLE_SAMPLES=3`, `EV_FLAP_THRESHOLD=6`, `EV_FLAP_WINDOW=300` (`events.sh`, hard-coded) |
+| Link / quality detector | `detect_data_connection_events` (`events.sh`), called from `poll_cycle` in `qmanager_poller` — see [Link and Quality Events](#link-and-quality-events) |
 | CGI endpoint | `GET /cgi-bin/quecmanager/at_cmd/fetch_events.sh` (zero modem contact, RAM read only) |
 | Served slice | `EVENTS_SERVE_LIMIT=50` (newest 50 lines of the 300-slot ring) |
 | Hook | `hooks/use-recent-activities.ts` (10s poll, reverses to newest-first, keeps 20 by default; `/monitoring` passes `maxEvents: 50`) |
@@ -45,7 +46,19 @@ Both the append and the trim are **checked**, and a failure logs `EVENT DROPPED 
 
 Note the funnel: **300 on disk, 50 served, 20 kept, 5 drawn.** Each step exists for a different reason and they are not interchangeable — see [Ring depth vs. served slice](#ring-depth-vs-served-slice).
 
-> ℹ️ NOTE: the same event log feeds `/monitoring` via `components/monitoring/network-events-card.tsx`. It has its own independent internet-lost detection and is not coupled to the Centralized Alerts engine, so a device can log a "connection lost" activity without dispatching any alert. See [alerts.md](alerts.md).
+> ℹ️ NOTE: the same event log feeds `/monitoring` via `components/monitoring/network-events-card.tsx`. The link transition is decided once, here in `events.sh`, and the Centralized Alerts engine follows it (`ev_link_state`). A device can still log a "connection lost" activity without dispatching any alert — any outage shorter than the alert wait. See [alerts.md](alerts.md).
+
+## Link and Quality Events
+
+`detect_data_connection_events` is the **only** place `internet_lost` / `internet_restored`, `high_latency` / `latency_recovered` and `high_packet_loss` / `packet_loss_recovered` are decided. The poller calls it every cycle after `read_ping_data` and `read_dns_data`, not from `detect_events`, because it needs no modem. Its rules, in short:
+
+- It follows the producer's `reachable`, not `connectivity.status`, so an outage the watchdog fixes still logs `internet_restored`. Stale or unknown ping data is no transition.
+- The first true → false edge always logs `internet_lost`; only a repeat drop after a restore inside the same watchdog recovery window is held.
+- Latency and loss are frozen while the link is down, so an outage is one `internet_lost` + `internet_restored` pair and nothing else.
+- Quality **entry** is held for one history window after a restore and while the producer's `streak_fail > 0`; exits are never held.
+- Entry and exit are both debounced by the preset count (2 or 3 polls), with the cuts from `conn_state.sh`.
+
+Full rules, the alert flow and the on-device proof: [connection-quality.md → One detector, one alert](connection-quality.md#one-detector-one-alert).
 
 ## The Producer-Side Debounce
 
@@ -101,7 +114,7 @@ Four channels use it, one per undebounced site: `lte_band`, `lte_pci`, `nr_band`
 | `_ev_flapt_<ch>` | when that window opened |
 | `_ev_flapr_<ch>` | when an instability event was last emitted (the rate-limit latch) |
 
-> ℹ️ NOTE: these counters are **not persisted**, matching the existing latency and loss streak counters (`qmanager_poller:131-135`). That is deliberate: it means the positional `cut -f` decode in `restore_event_state` is untouched, so adding the debounce could not corrupt state restore. The cost is one settle window of silence after a poller restart.
+> ℹ️ NOTE: these counters are **not persisted**, matching the latency and loss streak counters (`qmanager_poller:190-195`). That is deliberate: it means the positional `cut -f` decode in `restore_event_state` is untouched, so adding the debounce could not corrupt state restore. The cost is one settle window of silence after a poller restart.
 
 `EV_SETTLE_SAMPLES` is **3**, which is roughly **9 seconds** — not 6. The measured poll cadence is ~3s, because `POLL_INTERVAL=2` is a `sleep 2` placed *after* the cycle body, not a period. In the live capture every intermediate rung was held for 1-2 samples and the steady-state band held for 45 consecutive samples, so 3 separates them with a wide margin.
 
@@ -170,12 +183,12 @@ Six changes in five minutes is well clear of a normal handoff rate and well unde
 
 ### Why the constants are hard-coded
 
-`EV_SETTLE_SAMPLES`, `EV_FLAP_THRESHOLD` and `EV_FLAP_WINDOW` are shell constants in `events.sh`, **not** config keys, and this is deliberate. Two independent mechanisms would each silently eat a new key:
+`EV_SETTLE_SAMPLES`, `EV_FLAP_THRESHOLD` and `EV_FLAP_WINDOW` are shell constants in `events.sh`, **not** config keys, and this is deliberate. Two mechanisms would each leave a new key unset in practice:
 
-1. **The CGI rebuilds the file.** `scripts/www/cgi-bin/quecmanager/settings/quality_thresholds.sh:103-114` writes `quality_thresholds.json` from scratch with exactly two keys. A third would be erased the next time the user saved a preset.
+1. **No UI writes them.** `quality_thresholds.json` is now merge-written (`cq_quality_merge`), so an extra key would survive a save — but nothing on the page would ever set it, and the config would ship only as a hand edit.
 2. **The installer will not overwrite.** `install_backend` (`scripts/install_rm520n.sh:1287-1298`) only deploys config files that do **not** already exist, so an upgraded device would never receive the new seed — it would silently fall back to whatever the shell default is, on exactly the devices most likely to hit the bug.
 
-Either mechanism alone is enough to make the setting a lie. `config.sh` has no key-migration primitive to route around them.
+Either one leaves a deployed device on the shell default while the setting appears to exist. `config.sh` has no key-migration primitive to route around them.
 
 They are still written as `${EV_SETTLE_SAMPLES:-3}` so the test harness can override them from the environment. That is a testing seam, not a user-facing knob.
 
@@ -534,8 +547,8 @@ No test harness — `scripts/test/` was deleted 2026-09-03. It used to hold the 
 
 ## See Also
 
-- [alerts.md](alerts.md): the Centralized Alerts engine, which dispatches independently of this feed
-- [connection-quality.md](connection-quality.md): the producer of `high_latency` / `high_packet_loss` and their thresholds
+- [alerts.md](alerts.md): the Centralized Alerts engine, which follows this feed's link verdict and adds the one alert wait
+- [connection-quality.md](connection-quality.md): the detector rules for `internet_*`, `high_latency` and `high_packet_loss`, and the thresholds they use
 - [connection-watchdog.md](connection-watchdog.md): the producer of `watchcat_recovery` and `sim_failover`
 - [carrier-aggregation.md](carrier-aggregation.md): the sibling dashboard surface whose release clock uses the same commit-after-render ref discipline
 - `DESIGN.md`: the Age-Gated Tone Rule, the Functional-Color Promise, the Saved-State Honesty Rule, and the motion canon

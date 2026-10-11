@@ -5,7 +5,7 @@
 
 The Alerts subsystem consolidates the three previously-independent notification channels — **SMS**, **Email**, and **Discord** — behind ONE page, ONE CGI endpoint, and ONE backend state machine. It exists to answer a single question every poll cycle: *"the internet just went down / came back / the device just rebooted — which enabled, routed, and physically-capable channel(s) should fire?"* Before this rework each channel carried its own downtime timer, its own threshold, and (for Discord) its own autonomous Go-side timer — three clocks that could drift apart and double-send. Now a single monotonic timer in `alert_engine.sh` drives all dispatch, and each channel library (`email_alerts.sh`, `sms_alerts.sh`, `discord_alerts.sh`) is reduced to a pure *transport* that only knows how to SEND, never *when*.
 
-> ℹ️ NOTE: This engine decides alert **dispatch** only. The Recent Activities feed (`events.sh`, surfaced at `/monitoring`) has its own independent internet-lost/internet-restored detection and is **not** touched by the alert engine. A device can log a "connection lost" activity without sending any alert, and vice-versa.
+> ℹ️ NOTE: This engine decides alert **dispatch** only. Whether the link went down or came back is decided once, by `detect_data_connection_events` in `events.sh` (the Recent Activities producer), and the engine follows its `ev_link_state`. So every outage that reaches a channel also has an `internet_lost` / `internet_restored` pair in the feed; an outage shorter than the [alert wait](#threshold-semantics) is logged and sends nothing. Detector rules: [connection-quality.md → One detector, one alert](connection-quality.md#one-detector-one-alert).
 
 ---
 
@@ -23,6 +23,8 @@ The Alerts subsystem consolidates the three previously-independent notification 
 | Reboot breadcrumb helper | `/usr/bin/qmanager_crash_log_append` (sudoers-gated root helper) |
 | Routing config | `/etc/qmanager/alert_routing.json` (**persistent**, version 1) |
 | Channel configs | `/etc/qmanager/{sms_alerts,email_alerts,discord_bot}.json` (**persistent**, **no secrets**) |
+| Alert wait (one for all channels) | `alert_after_min` in `/etc/qmanager/quality_thresholds.json`, resolved by `cq_alert_after_min` (`/usr/lib/qmanager/conn_state.sh`); default 5 min |
+| Link verdict source | `ev_link_state`, set by `detect_data_connection_events` in `events.sh` |
 | Secrets store | `/etc/qmanager-secrets/` (`0700 root:root`) — `discord_bot_token`, `email_app_password`, `msmtprc` (each `0600 root:root`) |
 | Secret helper | `/usr/bin/qmanager_secret_set` (sudoers-gated root helper; value on **stdin**) |
 | Test-email helper | `/usr/bin/qmanager_email_send` (sudoers-gated root helper; one verb, `test`) |
@@ -128,6 +130,8 @@ Config was additive through the centralized-alerts consolidation: no channel key
 | `discord_bot.json` | `enabled`, `owner_discord_id`, `threshold_minutes`, `token_set`, `autonomous_notify` | the token is **not in this file** — `token_set` is a non-secret marker boolean |
 
 These three files stay `www-data:www-data 0644` on purpose: the CGI must keep rewriting them, and they no longer hold anything worth protecting. The credentials themselves live in a separate root-only directory — see below.
+
+> ℹ️ NOTE: `threshold_minutes` in these files is now a **copy** of the one alert wait. The authority is `alert_after_min` in `/etc/qmanager/quality_thresholds.json` (Connection Quality); the per-channel keys are only the resolver's fallbacks for a device that has never written it. Every `save_settings` writes the same value into all four places.
 
 ---
 
@@ -253,24 +257,29 @@ The `bot_token` / `app_password` JSON-key redaction patterns are still in `_reda
 - **`alert_engine_init`** — once, at poller startup. Resets in-memory state, runs the boot-id reboot check (below), loads routing, and refreshes each channel's config.
 - **`check_alerts`** — once per poll cycle, after the connectivity verdict for that cycle is known.
 
-The engine reads two poller globals: `conn_internet_available` (`true`/`false`/`null`) and `conn_during_recovery`. It never probes or issues AT commands itself.
+The poller calls `detect_data_connection_events` immediately before `check_alerts`, so the engine reads that same cycle's `ev_link_state` (`"down"` / `"up"` / `""`). It also reads `CQ_ALERT_AFTER_MIN` (from `conn_state.sh`) and, for late reboot delivery only, `conn_internet_available`. It never probes or issues AT commands itself.
 
 ### Per-cycle flow
 
-1. **Bail on low-power / recovery.** If `/tmp/qmanager_low_power_active` exists, or `conn_during_recovery = true`, return immediately — no timer reset, no dispatch, no config reload. (See guardrails.)
-2. **Pick up reload flags.** If the CGI touched any of `qmanager_alert_routing_reload`, `qmanager_email_reload`, `qmanager_sms_reload`, `qmanager_discord_reload` in `/tmp/`, consume (delete) the flag and re-read that config.
+1. **Bail on low-power.** If `/tmp/qmanager_low_power_active` exists, return immediately. There is **no** freeze during watchdog recovery any more.
+2. **Pick up reload flags.** If the CGI touched any of `qmanager_alert_routing_reload`, `qmanager_email_reload`, `qmanager_sms_reload`, `qmanager_discord_reload` in `/tmp/`, consume (delete) the flag, re-read that config, and re-resolve the wait. (`qmanager_events_reload` is consumed earlier in the cycle by the poller's `cq_thresholds_refresh`, which also re-resolves the wait.)
 3. **Read the monotonic clock.** `int($1)` from `/proc/uptime`. If unreadable, skip the cycle.
-4. **Edge-detect connectivity:**
-   - `null`/empty → do nothing (don't guess; if already tracking an outage, leave the timer running — the poller may just be stuck on AT I/O).
-   - `false` and not already down → start tracking: record `_ae_down_start = now_up`, reset the SMS `connection_lost` latch.
-   - `true` and currently down → recovery: run `_ae_handle_restore`, clear the timer.
-5. **While down:** check whether the SMS `connection_lost` threshold has now elapsed (fires once per outage, latched by `_ae_lost_sent_sms`).
+4. **Follow the detector:**
+   - `""` (stale/unknown) → do nothing; a running outage timer keeps running.
+   - `down` and not already down → start tracking: record `_ae_down_start = now_up`, reset the SMS `connection_lost` latch, re-resolve the wait.
+   - `up` and currently down → recovery: run `_ae_handle_restore`, clear the timer.
+5. **While down:** send `connection_lost` once the outage reaches the wait (once per outage, latched by `_ae_lost_sent_sms`).
 6. **Late reboot delivery:** if a reboot was detected at startup but the device came back already connected (never observed "down" by this engine — e.g. a clean user reboot with a fast reconnect), deliver the reboot alert once, here.
 
 ### Threshold semantics
 
-- **`connection_lost`** — SMS only. Fires once when the *ongoing* outage crosses the SMS channel's own `threshold_minutes`.
-- **`connection_restored`** — each channel is evaluated independently against *its own* `threshold_minutes` at recovery time: a channel fires iff the TOTAL outage duration crossed that channel's threshold. This preserves the exact semantics of the three timers the engine replaced (each channel used to track downtime and threshold independently).
+There is **one wait** for every channel: `alert_after_min`, resolved by `cq_alert_after_min` in `conn_state.sh` from `quality_thresholds.json`, else the SMS, email, then Discord `threshold_minutes`, else 5. Each candidate must be an integer 1–1440. `_ae_wait_secs` converts it to seconds (300 if unset).
+
+- **`connection_lost`** — SMS only. Fires once when the *ongoing* outage reaches the wait. It is not deferred while the watchdog ladder runs.
+- **`connection_restored`** — SMS, email and Discord (routing permitting). Each fires at restore iff the TOTAL outage reached the same wait.
+- **Degraded links never reach a channel.** `high_latency` / `high_packet_loss` are Network Events only.
+
+Measured on RM520N-GL `61368cd2` (`/tmp` copies, faked clock, dispatch stubbed): a simulated 2-minute outage logged `internet_lost` + `internet_restored` and sent nothing (under the 5-minute default); a 10-minute outage sent the SMS at 5 min and `connection_restored` on all three channels.
 
 Durations in message text are formatted from the monotonic elapsed seconds (`_ae_format_duration` → e.g. `"1h 4m 12s"`).
 
@@ -279,10 +288,11 @@ Durations in message text are formatted from the monotonic elapsed seconds (`_ae
 ## Guardrails
 
 - **Monotonic clock only.** Durations come from `/proc/uptime`, never `date +%s`. NTP/NITZ can step the wall clock backward or forward mid-outage; a monotonic source can't produce a negative or inflated downtime. (`date +%s` *is* used for the reboot ledger's wall-clock epoch and the coalescer window — those are timestamps, not durations, and a small clock step there is harmless.)
-- **Freeze during watchdog recovery.** When `conn_during_recovery = true`, `check_alerts` returns at the very top — no timer reset, no dispatch, not even config reloads. This mirrors `events.sh`'s `detect_data_connection_events` guard, so a watchdog recovery action (radio toggle, SIM swap) is never misread as a real downtime edge.
+- **No edge detector here.** The engine never compares `conn_internet_available` against a previous value. Two detectors could disagree about the same outage, so the feed and the channels could tell different stories. Following `ev_link_state` also inherits the detector's hold on a tier-flap repeat drop.
+- **No freeze during watchdog recovery** (removed 2026-10-11). The old freeze deferred the down SMS until the ladder finished; the down SMS is now gated by the wait alone.
 - **Freeze during low-power windows.** `/tmp/qmanager_low_power_active` suppresses all dispatch, same as the legacy per-channel timers.
-- **Connectivity signal only.** The downtime signal is `conn_internet_available` exclusively — never latency or packet loss. Those are *quality* signals owned by `events.sh` / the Quality Thresholds card, not connectivity signals.
-- **Null-safe.** Stale/null ping data never starts or ends an outage; it only leaves an existing timer running.
+- **Connectivity signal only.** Never latency or packet loss; a degraded link reaches no channel.
+- **Null-safe.** `ev_link_state=""` (stale/unknown ping data) never starts or ends an outage; it only leaves an existing timer running.
 - **Poller-lifetime state.** The outage timer and latches are in-memory only, not persisted across a poller restart — matching the pre-existing per-channel timers this engine replaced.
 
 ---
@@ -441,6 +451,7 @@ Returns all three channels' settings, the routing matrix, the capability table, 
 }
 ```
 
+- `threshold_minutes` — the same value on all three channels: the one wait from `cq_alert_after_min`, not the channel file's own key. The response shape is unchanged so the shipped page keeps working.
 - `configured` — per channel, whether it has everything needed to send (SMS: phone set; email: sender + recipient + password stored; Discord: owner id + token stored).
 - `msmtp_installed` — whether the `msmtp` mailer binary is present.
 - `connected` — Discord daemon reachable / logged in (read from `/tmp/qmanager_discord_status.json`).
@@ -459,14 +470,14 @@ Returns all three channels' settings, the routing matrix, the capability table, 
 **`save_settings`** validates everything up front, then writes each config atomically (temp + `mv`):
 
 - Booleans (`sms.enabled` etc.) must be literal `true`/`false`.
-- `threshold_minutes` per channel: integer 1–60.
+- `threshold_minutes` per channel: integer 1–1440; an omitted one defaults to the current wait. The three fields now set **one** value: the last of SMS, email, Discord (in that order) that differs from the current wait wins, so an unchanged field never overwrites an edited one. That value is merge-written to `quality_thresholds.json` `.alert_after_min` (`cq_quality_merge`; failure → `write_failed`) **before** the channel files, and then written as `threshold_minutes` into all three channel files.
 - SMS phone (when enabled): 7–15 digits, optional leading `+`, must start with a country code (not `0`).
 - Email (when enabled): valid sender + recipient addresses; **control-character gate first** (a newline in any field templated into `msmtprc` would inject arbitrary msmtp directives — config-injection defense); a password is required only when `app_password_set` is not already `true`. The gate can check only a *newly typed* password — an already-stored one was validated by the helper when it was set, and this process can no longer read it. `qmanager_secret_set` re-validates the password and `sender_email` itself before templating, so nothing reaches `msmtprc` unchecked.
 - Discord (when enabled): numeric snowflake owner id (15–25 digits); a bot token is required only when `token_set` is not already `true`.
 - **Marker carry-forward (replaces the old secret preservation):** the CGI can no longer read a stored secret, so an omitted/empty `app_password` or `bot_token` carries the existing `*_set` marker forward and leaves the credential untouched at its root-only path. The client still sends a secret only when the user typed a new one; the error slugs (`missing_app_password` / `missing_bot_token`) are unchanged so the frontend's handling and i18n still fire.
 - **Routing clamp:** the submitted routing is merged over the default (`$def * $usr`), then `connection_lost.email` and `connection_lost.discord` are hard-set to `false` — server-authoritative, mirroring `_ae_capable`.
 - **Discord service state:** enabling restarts `qmanager_discord` (a *restart*, not start — the daemon caches token/owner/DM-channel in memory at startup); disabling stops it.
-- **Reload signalling:** touches all four reload flags (`sms`, `email`, `discord`, `routing`) so the poller's `check_alerts` picks up the new config on its next cycle.
+- **Reload signalling:** touches the four alert reload flags (`sms`, `email`, `discord`, `routing`) plus `/tmp/qmanager_events_reload`, so the poller picks up the new config and wait on its next cycle.
 
 **Error shape** (all failures): `{ "success": false, "error": "<code>", "detail"?: "<human message>" }`.
 
@@ -531,11 +542,11 @@ The Alerts page owns *notification* config only. Several adjacent files are owne
 | File | Owner | Alerts relationship |
 |------|-------|---------------------|
 | `qmanager.conf` `[watchcat]` (`watchcat.*`) | Connection Watchdog (`watchdog.sh`) | Off-limits. Recovery tiers, thresholds, SIM-failover config. |
-| `ping_profile.json` | Watchdog (`interval_sec`) + Connection Quality (`profile`/`targets`) | Off-limits. The connectivity *producer's* config. |
-| `quality_thresholds.json` | Connection Quality (Latency & Loss Thresholds card, feeding `events.sh`) | Off-limits. Latency/loss presets are quality signals, not connectivity. |
+| `ping_profile.json` | Connection Quality (all keys; the Watchdog page writes `interval_sec` through `watchdog.sh`) | Off-limits. The connectivity *producer's* config. |
+| `quality_thresholds.json` | Connection Quality (presets, and `alert_after_min`) | **One key only:** `alerts.sh` merge-writes `alert_after_min` through `cq_quality_merge`, never a whole-file write. The presets are off-limits. |
 | `crash.log` | Watchdog (Tier 4) + Scheduled Reboot worker + the `user` root helper | **Read-only** for the engine; written only by root paths. Three writers, two line shapes — see [the line contract](#the-crashlog-line-contract). |
 
-The alert engine *reads* the connectivity verdict indirectly (via the poller's `conn_internet_available` global, itself derived from `qmanager_ping`) but never touches any of these files. Conversely, the watchdog and quality subsystems never touch `alert_routing.json` or the channel configs. This clean separation is why an alert can fire without a watchdog recovery, and a recovery can happen without an alert.
+The alert engine *reads* the link verdict indirectly (via `ev_link_state` from `events.sh`, itself derived from `qmanager_ping`) and writes none of these files. Conversely, the watchdog and quality subsystems never touch `alert_routing.json` or the channel configs. An alert can fire without a watchdog recovery, and a recovery can happen without an alert.
 
 ---
 

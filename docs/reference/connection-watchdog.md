@@ -1,6 +1,6 @@
 # Connection Watchdog
 
-> **Applies to:** RM520N-GL (SDX65) · verified 2026-08
+> **Applies to:** RM520N-GL (SDX65) · verified 2026-10-11 (backend sections; serial `61368cd2`)
 > **RG501Q-EU (SDX55):** unverified — see [`platform-matrix.md`](./platform-matrix.md)
 
 The Connection Watchdog (`qmanager_watchcat`) is a self-healing daemon that watches the modem's internet reachability and, when the link stays down, climbs a four-step recovery ladder from the gentlest fix (re-register to the network) to the most disruptive (reboot the device). It never pings on its own — it is a pure *state machine* that reads the verdict already produced by the ping daemon (`qmanager_ping`) and decides what to do about it. Its headline capability is **Tier-3 SIM failover**: on a dual-SIM RM520N-GL it can swap to the backup SIM slot when the primary carrier goes dark, ride on it, and later revert. This document describes the watchdog exactly as it ships on the RM520N-GL.
@@ -23,7 +23,8 @@ The Connection Watchdog (`qmanager_watchcat`) is a self-healing daemon that watc
 | SIM-slot read-back gate | `scripts/usr/lib/qmanager/slot_verify.sh` (`verify_quimslot`) — gates Tier-3 switch/revert before either is trusted |
 | Reboot log | `/etc/qmanager/crash.log` (**persistent** — Tier-4 token bucket source) |
 | Frontend page | `/monitoring/watchdog` (`components/monitoring/watchdog/`) |
-| Ping source | `/tmp/qmanager_ping.json` (from `qmanager_ping`; see `docs/BACKEND.md`) |
+| Ping source | `/tmp/qmanager_ping.json` (from `qmanager_ping`), read only through `/usr/lib/qmanager/conn_state.sh` — see [connection-quality.md](connection-quality.md) |
+| Probe cadence | Not owned here: `interval_sec` in `/etc/qmanager/ping_profile.json` (Connection Quality). The CGI mirrors it as `probe_interval` |
 
 **The recovery ladder, at a glance:**
 
@@ -43,26 +44,26 @@ The Connection Watchdog (`qmanager_watchcat`) is a self-healing daemon that watc
 The daemon runs one loop on a `check_interval` cadence (default 10s), transitioning between these states:
 
 ```
-MONITOR ──streak_fail>0──▶ SUSPECT ──streak_fail ≥ fail_threshold──▶ RECOVERY ──▶ COOLDOWN ──▶ MONITOR
-   ▲                          │  (connectivity restored naturally)                     │
-   └──────────────────────────┘◀────────────────────────────────────────────────────┘
+MONITOR ──streak_fail>0 or reachable=false──▶ SUSPECT ──down for fail_threshold × interval_sec──▶ RECOVERY ──▶ COOLDOWN ──▶ MONITOR
+   ▲                                             │  (reachable=true and streak_fail=0)                            │
+   └─────────────────────────────────────────────┘◀──────────────────────────────────────────────────────────────┘
 LOCKED    — maintenance mode; sleeps until the lock clears
 DISABLED  — turned off (config, or auto-disabled by the Tier-4 cap)
 ```
 
-- **MONITOR** — the healthy resting state. Reads `qmanager_ping.json` each cycle; if the ping daemon reports any failure streak (`streak_fail > 0`) it moves to SUSPECT.
-- **SUSPECT** — the decision window. The watchdog compares the ping daemon's **raw `streak_fail`** — the count of consecutive failed *probes* the daemon has already tallied — directly against `fail_threshold`. A clean read (`reachable=true` and `streak_fail == 0`) returns straight to MONITOR; when `streak_fail ≥ fail_threshold` the watchdog declares the connection down and enters RECOVERY. This is why the UI previews "declares down after ~`probe_interval × fail_threshold`s" — the daemon probes every `probe_interval` seconds, so it takes roughly that many probes to reach the threshold.
+Every cycle starts with `conn_state_read` (`conn_state.sh`). A stale or missing cache skips the cycle: no state change, no recovery decision.
 
-> ℹ️ NOTE — the double-debounce fix: the watchdog now trusts the ping daemon's `streak_fail` as the single count of consecutive failures, rather than re-counting its own loop cycles on top of the daemon's already-debounced signal. Previously each side counted independently (the daemon debounced its probes into a verdict, *then* the watchdog counted its own passes on top), so the real time-to-recovery was the product of two debounce windows and drifted far from what the UI advertised. `check_interval` is now purely the watchdog's internal *sampling* cadence — how often it wakes to re-read the cache — and is no longer the unit the down-declaration is measured in; the probe cadence (`probe_interval`) is what governs detection timing.
+- **MONITOR** — the healthy resting state. Any failure streak (`streak_fail > 0`) or a `reachable=false` verdict moves it to SUSPECT.
+- **SUSPECT** — the decision window. A clean read (`reachable=true` and `streak_fail == 0`) returns to MONITOR. The link is declared **down** when `conn_state_down_for $((fail_threshold × interval_sec))` is true: a fresh read, `reachable=false`, **and** the producer's monotonic `fail_elapsed_sec` at or past that many seconds. `interval_sec` comes from the cache the same cycle, so a cadence change applies at once.
+
+> ℹ️ NOTE — the trigger is wall-clock, not a probe count. During an outage a failing cycle costs up to ~12 s (four legs × 3 s) whatever `interval_sec` says, so counting `streak_fail` against `fail_threshold` stretched the real time to recovery well past the "~N s" the page promises. `fail_elapsed_sec` measures the outage directly. Because `reachable` only turns `false` after the profile's `fail_secs`, the real trigger is the **later** of `fail_secs` and `fail_threshold × interval_sec` (relaxed defaults: 30 s vs 5 × 5 = 25 s → 30 s). `streak_fail` survives only as the MONITOR → SUSPECT cue and the `failure_count` readout in the state file. `check_interval` is purely the watchdog's sampling cadence.
 - **RECOVERY** — runs the current tier's action (see the ladder below), then drops into COOLDOWN. It doesn't linger here.
 - **COOLDOWN** — waits for the action to settle, then re-reads the ping verdict to decide success or escalation (see *Cooldown adjudication*).
 - **LOCKED** — set whenever a maintenance condition is present: the lock file `/tmp/qmanager_watchcat.lock` exists (touched by the OTA updater and installer), a long-running AT command is in flight (`/tmp/qmanager_long_running`), or a SIM-profile apply is running (`/tmp/qmanager_profile_apply.pid` points at a live process). The watchdog parks here so its AT commands never race those operations.
 - **DISABLED** — `watchcat.enabled=0`, or the daemon shut itself off after tripping the Tier-4 reboot cap.
 
 <a id="carrier-intercept-short-circuit-now-inert"></a>
-> ℹ️ NOTE — carrier-intercept short-circuit is **inert, and still present** (v0.1.32): the watchdog contains a branch that short-circuits recovery when the ping daemon reports `connectivity=limited` (a captive/billing portal), plus the `read_ping()` TSV fields 5 and 6 that feed it. After the [ICMP producer port](connection-quality.md#why-the-tri-state-is-gone), `qmanager_ping` **no longer emits `connectivity` or `limited` at all** — an ICMP echo either answers or it doesn't. The branch is therefore dead code that never fires.
->
-> **It is removed by a separate approved follow-up change, not by the 2026-09-02 probe redesign.** Do not read its continued presence as evidence that a `connectivity` field exists at the producer — it does not, and [the producer key contract](connection-quality.md#the-producer-key-contract) is the authority. **The recovery ladder is unaffected** either way: it keys off `streak_fail`, which the producer does emit, so genuine-outage detection and recovery are intact.
+> ℹ️ NOTE — there is no carrier-`limited` branch. The old short-circuit read `connectivity` / `limited_reason`, keys the [ICMP producer](connection-quality.md#why-the-tri-state-is-gone) never writes; it and the private `read_ping()` were deleted on 2026-10-11. [The producer key contract](connection-quality.md#the-producer-key-contract) is the authority on what the cache holds.
 
 ### The escalation engine
 
@@ -75,11 +76,16 @@ Each tier's return code drives the engine:
 
 ### Cooldown adjudication
 
-When the cooldown timer expires, `finish_cooldown` re-reads the ping cache to decide whether the recovery worked:
+When the cooldown timer expires, `finish_cooldown` re-reads the ping cache through `conn_state_read` and decides **once**:
 
-1. **Fresh read, reachable** → success. Reset to MONITOR. If this was a Tier-3 swap, *finalize* the failover (below).
+1. **Fresh read, `reachable=true`** (`conn_state_is_up`) → success, whatever `during_recovery` says (the watchdog's own flag is still up at this point). Reset to MONITOR. If this was a Tier-3 swap, *finalize* the failover (below).
 2. **Fresh read, unreachable** → failure. If Tier 3, revert the SIM first; then escalate to the next enabled tier.
-3. **Stale/missing ping data** → the ping daemon's cache can go transiently stale right after a radio or SIM churn. Rather than misjudging that as a failure, the watchdog **retries up to 3 times**, extending the cooldown by one `check_interval` each round. Only after 3 stale rounds does it treat the recovery as failed — and it does so *without* consulting the stale `reachable` value (which predates the cooldown and could read a spurious "true").
+3. **Stale/missing ping data** → the cache can go transiently stale right after a radio or SIM churn. The watchdog **retries up to 3 times**, extending the cooldown by one `check_interval` each round and re-stamping the recovery flag, which stays up across the retries.
+4. **Still stale after 3 retries** → **inconclusive**: no escalation, because acting on data it cannot trust could walk the ladder to a Tier-4 reboot. It removes the recovery flag and returns to MONITOR at tier 0. If the cooldown was ending a **Tier 3** swap (`current_sim_slot != original_sim_slot`), it first reverts with `sim_failover_fallback`, exactly as an unrestored Tier 3 does. Without that revert the modem stayed on the backup SIM with no failover record, the user's revert request was ignored, and the next outage stopped at Tier 3 because the backup slot now equalled the current slot.
+
+The recovery flag is removed exactly once, after the decision, on every path.
+
+Proved on RM520N-GL `61368cd2` (`/tmp` drivers): a stale-exhausted cooldown returns `monitor` / tier 0 (the previous build escalated to Tier 2).
 
 ---
 
@@ -128,7 +134,7 @@ Around that core sequence, Tier 3:
 
 **Finalize (in cooldown, on success):** when connectivity comes back on the backup SIM, the daemon writes `/etc/qmanager/qmanager_sim_failover`, emits a **"SIM failover confirmed"** event, registers the landed ICCID in the known-SIMs set (below), and auto-applies any SIM profile matching the new card.
 
-**Fallback (revert to original):** triggered when the modem is unresponsive after the swap, the backup slot's SIM state cannot be confirmed after 3 attempts or comes back as anything other than `+CPIN: READY`, or cooldown finds the backup SIM still can't reach the internet. It **read-back verifies the revert landed** via `verify_quimslot(original_sim_slot)` before trusting it — same rationale as the Tier-3 switch gate, and the same "no second write-retry, fall through to best-effort handling" posture on a verify failure (an unconfirmed revert emits an error event asking for a manual check rather than looping). Once verified, it restarts the tower-failover daemon, registers the reverted ICCID in the known-SIMs set, and re-applies that SIM's profile.
+**Fallback (revert to original):** triggered when the modem is unresponsive after the swap, the backup slot's SIM state cannot be confirmed after 3 attempts or comes back as anything other than `+CPIN: READY`, or cooldown finds the backup SIM still can't reach the internet, or the cooldown ends inconclusive on stale data. It **read-back verifies the revert landed** via `verify_quimslot(original_sim_slot)` before trusting it — same rationale as the Tier-3 switch gate, and the same "no second write-retry, fall through to best-effort handling" posture on a verify failure (an unconfirmed revert emits an error event asking for a manual check rather than looping). Once verified, it restarts the tower-failover daemon, registers the reverted ICCID in the known-SIMs set, and re-applies that SIM's profile.
 
 ### Tier 4 — Reboot Device (deferred)
 
@@ -159,9 +165,8 @@ Config lives in `/etc/qmanager/qmanager.conf` under `[watchcat]`, read/written v
 | Key | Type | CGI-validated range | Default | Meaning |
 |-----|------|--------------------|---------|---------|
 | `enabled` | bool (0/1) | — | off | Master enable. Saving toggles the systemd unit (enable+start / stop+disable). |
-| `fail_threshold` | int | 1–20 | 5 | Consecutive failed **probes** before recovery — compared directly against the ping daemon's raw `streak_fail`. Renamed from the retired `max_failures` (which counted the watchdog's own loop cycles). |
-| `probe_interval` | int (s) | 1–60 | 5 | Probe cadence — how often the ping daemon probes. **The Watchdog is the sole writer**; on save it is propagated into `/etc/qmanager/ping_profile.json`'s `.interval_sec`. |
-| `check_interval` | int (s) | 5–60 | 10 | The watchdog's internal *sampling* loop — how often it wakes to re-read the ping cache. No longer drives the down-declaration timing (that's `probe_interval × fail_threshold`). The UI offers 5 / 10 / 15 / 30. |
+| `fail_threshold` | int | 1–20 | 5 | "About N probes' worth of time": down is declared after `fail_threshold × interval_sec` seconds of producer-measured failure (`fail_elapsed_sec`). Renamed from the retired `max_failures`. |
+| `check_interval` | int (s) | 5–60 | 10 | The watchdog's internal *sampling* loop — how often it wakes to re-read the ping cache. Does not drive the down-declaration timing. The page never sends it. |
 | `cooldown` | int (s) | 10–300 | 60 | Wait after each recovery step before re-checking (Tier 3 is floored at 90s). |
 | `tier1_enabled` | bool | — | on | Enable Tier 1 (re-register). |
 | `tier2_enabled` | bool | — | on | Enable Tier 2 (radio toggle). |
@@ -172,24 +177,24 @@ Config lives in `/etc/qmanager/qmanager.conf` under `[watchcat]`, read/written v
 
 > ℹ️ NOTE: The failure-count key is now `fail_threshold` (the retired `max_failures` is migrated away — see *Migrations* below). There are still **no** `quality_*`, `ssr_*`, or `primary_recheck_*` keys on the RM520N-GL; quality-trigger, SSR-aware-hold, and auto-failback are not implemented here.
 
-### Split ownership of the probe cadence
+<a id="split-ownership-of-the-probe-cadence"></a>
+### The probe cadence is not a watchdog setting
 
-`probe_interval` is stored in **two** places, with the Watchdog as the single source of truth:
+The cadence belongs to Connection Quality: `interval_sec` in `/etc/qmanager/ping_profile.json`, else the active profile's value. The watchdog daemon reads the live value out of the ping cache each cycle. `watchdog.sh` exposes it as `probe_interval` so the Detection card keeps working:
 
-1. `watchcat.probe_interval` in `qmanager.conf` — the canonical value the Watchdog's Detection card reads and writes.
-2. `.interval_sec` in `/etc/qmanager/ping_profile.json` — what the ping daemon (`qmanager_ping`) actually consumes.
+- **GET** `probe_interval` = `conn_state_cadence`'s effective value (override, else the profile table), never a stored watchdog key.
+- **POST** `probe_interval` is validated (1–60) and written to `ping_profile.json` `.interval_sec` **only when it differs** from the current effective value, with `/tmp/qmanager_ping_reload` touched. The page sends `probe_interval` with every per-card save, so this check is what keeps a Ladder-card save from rewriting the cadence.
+- The write is an atomic key-merge that sets `.interval_sec` alone, guarded by `jq -e 'type == "object"'` (fallback `{}`) and a `[ -s tmp ]` promote check. It is best-effort: a failure logs and the save still succeeds.
 
-On every save, `watchdog.sh` propagates (1) into (2) via an **atomic jq key-merge** (read the existing JSON, set only `.interval_sec`, temp-file + `mv`) and touches **both** `/tmp/qmanager_ping_reload` (so the ping daemon re-reads its cadence) and `/tmp/qmanager_watchcat_reload` (so the watchdog re-reads its config). The merge never overwrites the whole file, so it can't clobber the `profile`/`target_ipv4`/`target_ipv6` keys that the Connection Quality "Probe Targets" card owns independently in the same file (see [Ping source / split ownership](#ping-source--split-ownership)).
+`[watchcat].probe_interval` is never written or read by the CGI or the daemon. The installer's `migrate_watchcat_fail_threshold` and the `config.sh` seed still create it with value 5; it is inert. `propagate_probe_interval()` is gone.
 
-`propagate_probe_interval()` (`watchdog.sh:73-95`) guards the existing file with `jq -e 'type == "object"'` before merging and falls back to `{}` on failure, because a merge *indexes* what it reads — anything that isn't an object (malformed, empty, whitespace-only, `null`, scalar, array) aborts jq. This path is best-effort and already swallows stderr, so before the guard an aborted jq failed **silently**: the log recorded it, the user still saw a successful save, and the cadence never reached the daemon. The success condition also requires `[ -s "${PING_PROFILE_CONFIG}.tmp" ]` so a zero-byte temp is never promoted.
-
-> ⚠️ WARNING — `jq -e .` is the **wrong** predicate here and must not be substituted in: `-e` tests output truthiness, so it passes `5`/`"str"`/`[1,2]` (unmergeable) and rejects `null`/`false` (parseable). The other writer of this same file carries the identical guard for the identical reason — full rationale, rc matrix, and test coverage in [connection-quality.md → Corrupt-config guard](connection-quality.md#corrupt-config-guard). Change one writer's guard and you must change both.
+> ⚠️ WARNING — `jq -e .` is the **wrong** predicate for the object guard: `-e` tests output truthiness, so it passes `5`/`"str"`/`[1,2]` (unmergeable) and rejects `null`/`false` (parseable). `settings/ping_profile.sh` carries the identical guard — rationale and rc matrix in [connection-quality.md → Corrupt-config guard](connection-quality.md#corrupt-config-guard). Change one writer's guard and you must change both.
 
 ### Migrations (hand-written — `config.sh` has no key-migration primitive)
 
 `qm_config_*` only seeds an empty config; it has no rename/migrate step, so the `max_failures` → `fail_threshold` rename is handled by two idempotent, defensive migrations:
 
-- **Installer** (`install_rm520n.sh` → `migrate_watchcat_fail_threshold`, run on every install/OTA): if `fail_threshold` is unset and `max_failures` is set, copy the value across and delete the old key; if both are unset, seed `fail_threshold=5`; if `fail_threshold` is already present, just prune any leftover `max_failures`. It also seeds `probe_interval=5` (the daemon's relaxed-profile default) when unset.
+- **Installer** (`install_rm520n.sh` → `migrate_watchcat_fail_threshold`, run on every install/OTA): if `fail_threshold` is unset and `max_failures` is set, copy the value across and delete the old key; if both are unset, seed `fail_threshold=5`; if `fail_threshold` is already present, just prune any leftover `max_failures`. It also seeds `probe_interval=5` when unset; nothing reads that key any more.
 - **Runtime** (`watchdog.sh` → `migrate_fail_threshold`, run on both GET and the save's Pass 2): covers a device that hits the CGI *before* the installer migration runs — same copy-across-then-delete logic, idempotent (returns immediately once `fail_threshold` is present).
 
 The delete side uses the new `qm_config_delete` primitive added to `config.sh` in this change.
@@ -217,7 +222,7 @@ The delete side uses the new `qm_config_delete` primitive added to `config.sh` i
 | `qmanager_watchcat_reload` | CGI (`save_settings`) | Signals a live config reload. |
 | `qmanager_watchcat_revert_sim` | CGI (`revert_sim`) | User-requested SIM revert; consumed by the daemon. |
 | `qmanager_watchcat_disabled` | daemon (Tier-4 auto-disable) | Read by the CGI as `auto_disabled`; cleared when the user re-enables. |
-| `qmanager_recovery_active` | daemon **and** `qmanager_profile_apply` | Set during any recovery; suppresses event noise (and, via `qmanager_ping`'s `during_recovery`, every alert) while acting. **Shared with another writer that may be a different UID** — see below. |
+| `qmanager_recovery_active` | daemon **and** `qmanager_profile_apply` | Set during any recovery; surfaces as `during_recovery` in the ping cache and `status: "recovery"` in `status.json`. It does **not** silence events or alerts: the first outage edge still logs and the down SMS is not deferred. Inside the window, `events.sh` holds only a repeat drop after a restore. **Shared with another writer that may be a different UID** — see below. |
 | `qmanager_sim_swap_detected` | poller (boot detector) | Physical-SIM-swap notification surfaced in the UI; distinct from watchdog failover. |
 | `qmanager_ping.json` | `qmanager_ping` | The connectivity verdict the watchdog reads (never writes). |
 
@@ -336,7 +341,7 @@ Returns the saved config plus a snapshot of daemon/failover/swap state:
    { "success": false, "error": "invalid_field", "field": "cooldown", "reason": "must be an integer between 10 and 300" }
    ```
 
-2. **Pass 2 (apply):** only reached when every field validated. First runs the defensive `migrate_fail_threshold()` (in case this device hasn't been touched by the installer migration yet), then writes each key via `qm_config_set`, touches the reload flag, and toggles the service — enable+restart when `enabled=1` (also clearing `auto_disabled`), or stop+disable when `enabled=0`. When `probe_interval` is present it additionally propagates the value into `ping_profile.json.interval_sec` and touches `/tmp/qmanager_ping_reload` (see below).
+2. **Pass 2 (apply):** only reached when every field validated. First runs the defensive `migrate_fail_threshold()` (in case this device hasn't been touched by the installer migration yet), then writes each key via `qm_config_set`, touches the reload flag, and toggles the service — enable+restart when `enabled=1` (also clearing `auto_disabled`), or stop+disable when `enabled=0`. A `probe_interval` that differs from the current cadence is written to `ping_profile.json.interval_sec` (see below).
 
    ```json
    { "success": true }
@@ -348,7 +353,7 @@ Returns the saved config plus a snapshot of daemon/failover/swap state:
 
 **Field ranges** (Pass 1): `fail_threshold` 1–20, `probe_interval` 1–60, `check_interval` 5–60, `cooldown` 10–300, `max_reboots_per_hour` 1–10, `backup_sim_slot` `1`/`2`/`null`.
 
-**`probe_interval` propagation (Watchdog is the sole writer):** on save, `watchdog.sh` writes `watchcat.probe_interval` to `qmanager.conf` *and* merges it into `/etc/qmanager/ping_profile.json`'s `.interval_sec` via an atomic jq key-merge (`propagate_probe_interval`), then touches **both** reload flags — `/tmp/qmanager_ping_reload` (ping daemon re-reads cadence) and `/tmp/qmanager_watchcat_reload` (watchdog re-reads config). The merge only sets `.interval_sec`, so it never clobbers the `profile`/`target_ipv4`/`target_ipv6` keys owned by the Connection Quality "Probe Targets" card. Propagation is best-effort: the `watchcat.probe_interval` write always lands, and a failed merge is logged and skipped rather than failing the save.
+**`probe_interval` is a mirror of Connection Quality's `interval_sec`.** GET reports the effective cadence; POST writes `.interval_sec` only when the value changed, and stores nothing under `[watchcat]`. Full rules: [The probe cadence is not a watchdog setting](#split-ownership-of-the-probe-cadence).
 
 **`action: "dismiss_sim_swap"`** — marks the physical-SIM-swap notification dismissed. → `{ "success": true }`
 
@@ -392,9 +397,10 @@ RecoveryActivityCard   full width: the newest 5 rows + an "All events" link to /
 
 - **Phase block** (left edge): a 44px disc, label, blurb. Colour lives only on the disc (`PHASE_DISC`); eleven phases, eleven distinct glyphs (`PHASE_GLYPH`). While a cooldown runs the blurb becomes the live countdown (`watchdog.band.cooldownStep`, or `cooldownCaption` when the tier is unknown). The disc carries the surface's one ambient loop (`animate-pulse-ring`) while the phase is `recovery`.
 - **Three figures** (right edge): Failed checks `n / fail_threshold`, Recoveries with the last tier and its age, Reboots `n / max_reboots_per_hour`. Under `unknown` every figure is `null` and renders an em dash with an `sr-only` word, never a zero. Below a 30rem card the figures become receipt rows.
+  > ℹ️ Failed checks is the producer's `streak_fail` (the state file's `failure_count`). Since 2026-10-11 the daemon declares down on elapsed time (`fail_threshold × interval_sec`), not on that count, so `n / fail_threshold` is an approximation: a failing cycle can take longer than `interval_sec`.
   > ⚠️ The Reboots figure does **not** say "this hour". `count_recent_reboots` runs at daemon start and inside `execute_tier4` only, never in the main loop, so `reboots_this_hour` is frozen between daemon starts — a device that took a tier-4 reboot reads "2 / 3" for days. The caption says "since the watchdog started", and when tier 4 is off it says "Reboot step is off".
 - **Probe strip** (full width, under both): `deriveStrip(connectivity, phase)` draws the last `STRIP.SLOTS` (60) entries of `connectivity.latency_history`, oldest on the left, left-padded with empty bars. A `null` entry is a full-height destructive bar; an answered probe is `22 + 60 × (rtt / max)` percent tall. The head shows a destructive "N no reply" chip when any probe missed, and `avg_latency_ms` rounded. The left caption is `round(history.length × history_interval_sec / 60)` minutes, minimum 1 — taken from the array **length**, never `history_size`, because the ping daemon truncates its history on every probe-winner change. Under `unknown`, or with an empty history, the strip renders its empty state.
-  > ⚠️ The strip depends on the poller's `connectivity` block (`ConnectivityStatus` in `types/modem-status.ts`). The parallel Connection Quality unification run may reshape that block. A renamed or moved `latency_history` does not fail loudly: `deriveStrip` defaults it to `[]` and the strip shows "No probe data from the modem" on a healthy device. Re-check `deriveStrip` when that run lands.
+  > ⚠️ The strip depends on the poller's `connectivity` block (`ConnectivityStatus` in `types/modem-status.ts`). The Connection Quality unification (2026-10-11) only **added** keys (`thresholds`, `dns_lookup_ms`, `dns_resolver`); `latency_history` and `history_interval_sec` are unchanged. A future rename would not fail loudly: `deriveStrip` defaults it to `[]` and the strip shows "No probe data from the modem" on a healthy device.
 
 ### Recovery ladder
 
@@ -415,7 +421,7 @@ RecoveryActivityCard   full width: the newest 5 rows + an "All events" link to /
   - Each next armed tier adds `cooldown`, except after tier 3, which adds `max(90, cooldown)` — the daemon's `SIM_SETTLE_SECS=90` floor (`SIM_SWITCH_MIN_WAIT` in `derive.ts`).
   - A tier 3 armed with no slot ends the list with the `stopped` note (watchcat return code 2, see above).
   - The other notes are `off` (master off), `none` (no tier armed) and `invalid` (a value outside the CGI ranges 1–60 / 1–20 / 10–300).
-  > ℹ️ NOTE: the times are an estimate from configured values ("about"). The daemon's stale-cache retry, which extends a cooldown by `check_interval` up to three times (`finish_cooldown`), and the time each tier's own commands take are not modelled.
+  > ℹ️ NOTE: the times are an estimate from configured values ("about"). Not modelled: the producer's own `fail_secs` (the daemon waits for the later of `fail_secs` and `probe_interval × fail_threshold`), the stale-cache retry that extends a cooldown by `check_interval` up to three times (`finish_cooldown`), and the time each tier's own commands take.
 
 ### The pair, and why Detection sits beside the Ladder
 
@@ -468,41 +474,19 @@ Detection pairs with the **Ladder**, not with Activity. The Ladder's height is f
 
 ---
 
-## Ping source / split ownership
+<a id="ping-source--split-ownership"></a>
+## Ping source
 
-The connectivity verdict the watchdog reads is produced by the **`qmanager_ping` daemon** — a small always-on producer that issues plain **ICMP `ping`** probes and writes its verdict, including the raw `streak_fail` count, to `/tmp/qmanager_ping.json`. As of 2026-09-02 it walks a **four-leg chain** (`cloudflare.com` → `google.com` → `1.1.1.1` → `8.8.8.8`), short-circuiting on the first success; the two hostname legs let the resolver pick the address family, replacing the old IPv4-first / IPv6-fallback pair. It runs independently of the watchdog: **the daemon stays up regardless of `watchcat.enabled`**, so the Connection Quality page and the poller still get a live verdict even when the watchdog itself is off. The watchdog only ever *reads* that file — it never probes and never writes it.
+The connectivity verdict the watchdog reads is produced by the **`qmanager_ping` daemon**, an always-on ICMP prober that writes `/tmp/qmanager_ping.json` (four-leg chain, `fail_elapsed_sec`, `streak_fail`, `interval_sec`). It runs regardless of `watchcat.enabled`. The watchdog only ever *reads* that file, and only through `conn_state.sh`, the reader it shares with the poller — it never probes and never writes it. Producer details: [connection-quality.md → The producer](connection-quality.md#the-producer--qmanager_ping-shell-icmp-daemon).
 
 <a id="ping-cache-staleness-is-derived"></a>
 ### Ping-cache staleness is derived, not hardcoded
 
-`read_ping()` no longer compares the cache's age against a bare `PING_STALE_THRESHOLD=15` — **that variable is deleted.** It now reads `interval_sec` out of the cache and computes the threshold from the cadence the daemon itself reports:
+`conn_state_read` computes `stale_threshold = max(3 × interval_sec, 15)` from the cadence the cache itself reports, measures age on `mono` against `/proc/uptime` (wall clock only when `mono` is absent), and clamps an implausible `interval_sec` (non-numeric, or outside 1–300) back to 5 so staleness detection can never switch itself off. A stale read skips the cycle, and in cooldown it counts toward the three-retry limit. Full rule: [connection-quality.md → The staleness threshold](connection-quality.md#derived-staleness-threshold).
 
-```
-stale_threshold = max(3 × interval_sec, 15)
-```
+> ⚠️ WARNING: the daemon sources `conn_state.sh` behind `[ -f ]`. When the file is missing it logs `qlog_error` and installs stubs that always read stale, so the ladder never acts; BusyBox ash would otherwise **exit** on the `.` and take the watchdog down with it.
 
-`interval_sec` 1 → **15** · 5 → **15** · 10 → **30**.
-
-**Why the old bare 15 was wrong:** at the `quiet` profile (`interval_sec` 10) a perfectly healthy cycle sat right on it, so a working link could make this ladder skip cycles for no reason at all. The floor of 15 is the same number the four-leg probe budget is checked against — `4 × (PROBE_TIMEOUT + 1)` = `4 × 3` = 12 < 15 — so a worst-case failing chain can never look stale.
-
-An implausible `interval_sec` (non-numeric, or outside 1–300) is **clamped back to 5** rather than obeyed: a garbage value would otherwise compute a threshold so large that staleness detection silently switches off, and this ladder would then act on a dead daemon's last verdict.
-
-> ℹ️ NOTE — `interval_sec` is **appended as TSV field 7** in `read_ping()`. An append leaves `cut -f1`…`-f6` untouched, so the field-renumbering hazard is structurally absent from this change. Fields 5 and 6 still read `connectivity` / `limited_reason` — keys the daemon no longer emits — and are inert; see the [inert short-circuit note](#carrier-intercept-short-circuit-now-inert).
-
-> ℹ️ NOTE — **planned follow-up, not landed.** A separate approved change will restructure that TSV, delete the inert `limited` machinery, switch the down-declaration to a wall-clock comparison against the producer's `fail_elapsed_sec`, retire `propagate_probe_interval()` in the watchdog CGI, and fix `finish_cooldown()`'s stale-retry extension. None of that has shipped — `propagate_probe_interval()` still exists and still propagates `watchcat.probe_interval` into `interval_sec`.
-
-> ℹ️ NOTE — the watchdog's input did **not** change with the ICMP port. The recovery ladder keys off `streak_fail`, which the new shell ICMP producer emits exactly as the old Rust HTTP/204 producer did. What the watchdog lost is the `connectivity=limited` short-circuit (see the [inert-short-circuit note](#carrier-intercept-short-circuit-now-inert)) — a producer field that no longer exists. Full producer details: [connection-quality.md → The producer](connection-quality.md#the-producer--qmanager_ping-shell-icmp-daemon).
-
-The daemon's own config lives in `/etc/qmanager/ping_profile.json`, and that one file has **two independent writers** (each an atomic key-merge, never a whole-file overwrite):
-
-| Owner | CGI | Keys it writes | Reload flag it touches |
-|-------|-----|----------------|------------------------|
-| **Connection Watchdog** (Detection card) | `monitoring/watchdog.sh` | `interval_sec` (from `watchcat.probe_interval`) | `/tmp/qmanager_ping_reload` **and** `/tmp/qmanager_watchcat_reload` |
-| **Connection Quality** ("Probe Targets" card) | `settings/ping_profile.sh` | `profile`, `target_host_1`, `target_host_2`, `target_ip_1`, `target_ip_2` | `/tmp/qmanager_ping_reload` |
-
-Because each writer merges only its own keys, the two never clobber each other. This is the split-ownership realignment: **the Watchdog owns the *cadence* (probe interval + fail threshold), the Connection Quality page owns the *targets*** — now four ICMP legs (two hostnames, two IPv4 literals) rather than the retired HTTP `target_1`/`target_2` URLs. One documented side effect: since `ping_profile.sh` merges only its own keys, changing `profile` no longer resets the daemon's per-field `interval_sec`/`fail_secs`/`recover_secs`/`history_secs` overrides — once present, those pass through unchanged. `profile` is now effectively a label paired with the targets.
-
-> ℹ️ NOTE: The Quality Thresholds card (latency/loss presets feeding `events.sh` alerts) is a **separate** surface and was not touched by this rework.
+The cadence and the probe config (`/etc/qmanager/ping_profile.json`) belong to Connection Quality; this page's only write path into that file is the `probe_interval` mirror described in [The probe cadence is not a watchdog setting](#split-ownership-of-the-probe-cadence). The full write-path table is in [connection-quality.md](connection-quality.md#ping_profilejson--one-owner-two-write-paths).
 
 ---
 
