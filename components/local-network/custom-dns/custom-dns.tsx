@@ -237,7 +237,6 @@ const CustomDnsComponent = () => {
               error={error}
               fieldError={fieldError}
               available={available}
-              blockCorrupt={blockCorrupt}
               onSave={saveSettings}
               onSaved={markSaved}
             />

@@ -28,7 +28,6 @@ import {
   CARD_TITLE,
   FIELD,
   FIELD_GLYPH,
-  PROVENANCE,
   ROW,
   ROW_GROUP,
 } from "./shapes";
@@ -70,9 +69,6 @@ import {
 // =============================================================================
 
 const K = "ethernet";
-
-/** Where the value is read back from. A literal the device holds, never prose. */
-const CONFIG_PATH = "/etc/qmanager/ethernet_speed";
 
 const SPEED_LIMIT_LABEL_ID = "ethernet-speed-limit-label";
 
@@ -196,15 +192,6 @@ export function SpeedLimitCard({
             </div>
           </div>
         </div>
-
-        {/* The path is a machine string, so it takes the machine voice. It sits
-            after a colon rather than inside the sentence: a path spliced
-            mid-sentence would force every locale to keep it at the English word
-            position, which is the one thing a translator must be free to move. */}
-        <span className={PROVENANCE}>
-          {t(`${K}.settings.provenance`)}{" "}
-          <span className="font-mono">{CONFIG_PATH}</span>
-        </span>
       </CardContent>
     </Card>
   );

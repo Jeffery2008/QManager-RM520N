@@ -106,7 +106,6 @@
       "consequence_unresponsive": "The modem stopped answering, so this control is held until the next successful read.",
       "consequence_unread": "The modem hasn't answered yet, so there is nothing to change until the first read lands.",
       "consequence_absent": "There is no ethernet port to configure on this device.",
-      "provenance": "Saved to the modem. Read back from:",
       "toast_success": "Link speed updated",
       "toast_error": "Failed to set link speed",
       "toast_confirm_error": "Couldn't confirm the new speed. Check the link."
@@ -334,13 +333,11 @@
     "cards": {
       "ttl": {
         "title": "TTL & Hop Limit",
-        "description": "Applied to outbound packets on the cellular interface.",
-        "provenance": "Read from the live packet rules, replayed at boot from"
+        "description": "Applied to outbound packets on the cellular interface."
       },
       "mtu": {
         "title": "Maximum transmission unit",
-        "description": "The largest packet the cellular interface will send without fragmenting.",
-        "provenance": "Applied to every interface matching"
+        "description": "The largest packet the cellular interface will send without fragmenting."
       }
     },
     "rows": {
@@ -454,8 +451,6 @@
       "description": "Up to four. dnsmasq is reloaded in place — no reboot, no dropped link.",
       "save": "Save and apply",
       "add": "Add resolver",
-      "provenance": "{{used}} of {{max}} used · read back from",
-      "provenance_corrupt": "{{used}} of {{max}} used · could not be read cleanly from",
       "blocked_unavailable": "dnsmasq is not in the path, so this would have no effect."
     },
     "rows": {
@@ -535,7 +530,6 @@
       "description": "Every setting here takes effect on the next boot. Applying reboots the modem.",
       "apply": "Apply and reboot",
       "discard": "Discard changes",
-      "provenance": "Read back from:",
       "provenance_dirty": "{{count}} unsaved changes",
       "delta_automatic": "Automatic",
       "delta_unset": "Not set",

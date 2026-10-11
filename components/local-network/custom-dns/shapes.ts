@@ -419,17 +419,3 @@ export const DELTA = {
 export const ERROR_BOX =
   "flex flex-col gap-1 rounded-field bg-destructive-container px-4 py-3 text-on-destructive-container";
 export const ERROR_TEXT = "text-[0.8125rem] leading-relaxed text-pretty";
-
-/**
- * The provenance line under the card.
- *
- * It names the file the value is read back FROM, which is the one thing a
- * settings card cannot otherwise tell you: the fields show what you asked for,
- * and this says where the answer comes from.
- *
- * This constant is the LINE's ink and size only. The path's `font-mono` is
- * written at the call site, beside the literal path — the machine voice belongs
- * to that one string, and hoisting a single voice token into a shared module
- * would separate it from the only thing it is ever true of.
- */
-export const PROVENANCE = "text-on-surface-variant flex flex-wrap items-center gap-x-1 px-1 text-xs";

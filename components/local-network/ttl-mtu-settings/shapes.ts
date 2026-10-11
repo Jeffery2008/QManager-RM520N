@@ -148,8 +148,7 @@ export const TILE = {
    * `tabular-nums` in the UI face and NEVER `font-mono`. A TTL, a hop limit and
    * an MTU are quantities the interface is currently applying, not identifiers
    * the device emits verbatim — and the Machine-Voice Rule sends only the latter
-   * to mono. The one mono string on this surface is the config path in the
-   * provenance line, written at its call site.
+   * to mono.
    */
   VALUE:
     "flex min-w-0 items-center gap-2 text-[1.375rem] font-bold leading-[1.1] tracking-[-0.015em] tabular-nums",
@@ -421,25 +420,8 @@ export const DELTA = {
 } as const;
 
 /**
- * The provenance line under a card.
- *
- * It names where the value on screen came FROM, which is the one thing a
- * settings card cannot otherwise tell you: the field shows what you asked for,
- * and this says who answered. The path's `font-mono` is written at the call
- * site, beside the literal path — the machine voice belongs to that one string,
- * and hoisting a single voice token into a shared module would separate it from
- * the only thing it is ever true of.
- *
- * The same slot carries the blocking reason when Apply is disabled, in
- * `PROVENANCE_BLOCKED`. That is deliberate re-use rather than a second line: the
- * question "why can't I press this" and the question "where did this number come
- * from" are asked in the same glance, at the same place, and a card that grows a
- * row when a value goes out of range moves the button out from under the cursor.
- *
- * `destructive-on-surface` is INK on a neutral card ground — the system's
- * primary mechanism for colour — never a fill and never an alpha wash. It
- * replaces `border-destructive/50 bg-destructive/10 text-destructive`, which was
- * both an alpha on a role colour and a hairline on a fill.
+ * The footer status line: why Apply is blocked (`PROVENANCE_BLOCKED`, destructive
+ * ink on the card, never a fill), else the unsaved count, else empty.
  */
 export const PROVENANCE = "text-on-surface-variant px-1 text-xs";
 export const PROVENANCE_BLOCKED = "text-destructive-on-surface px-1 text-xs";

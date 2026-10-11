@@ -284,20 +284,6 @@ export const FIELD =
 /** The glyph riding inside the trigger during the applying state. */
 export const FIELD_GLYPH = "size-3.5";
 
-/**
- * The provenance line under the card.
- *
- * It names the file the value is read back FROM, which is the one thing a
- * settings card cannot otherwise tell you: the Select shows what you asked for,
- * and this says where the answer comes from.
- *
- * This constant is the LINE's ink and size only. The path's `font-mono` is
- * written at the call site, beside the literal path — the machine voice belongs
- * to that one string, and hoisting a single voice token into a shared module
- * would separate it from the only thing it is ever true of.
- */
-export const PROVENANCE = "text-on-surface-variant px-1 text-xs";
-
 // -----------------------------------------------------------------------------
 // Page shell
 // -----------------------------------------------------------------------------

@@ -63,7 +63,7 @@ import {
 //
 // It is answered in both directions rather than one:
 //
-//   * Apply is DISABLED whenever the form cannot be applied, and the provenance
+//   * Apply is DISABLED whenever the form cannot be applied, and the status
 //     line beside it becomes the reason — the answer to "why can't I press this"
 //     lands in the same glance as the button, not in a field error above it.
 //   * The submit handler still refuses, because Enter inside a text input
@@ -102,18 +102,6 @@ type OnOff = "on" | "off";
 const renderCheckGlyph = (className: string) => (
   <CheckIcon size={SEGMENTED.GLYPH} className={className} aria-hidden="true" />
 );
-
-/**
- * Where the value on screen came from.
- *
- * NOT simply a config file, and the distinction is the point. `ttl.sh`'s GET
- * reads the LIVE iptables mangle rules rather than the persisted file, so the
- * figures here are what the kernel is doing right now; `/etc/qmanager/ttl_state`
- * is what gets replayed at boot. A provenance line claiming the file is the
- * source would be naming the wrong one, which is the class of quiet inaccuracy
- * this re-author exists to remove.
- */
-const TTL_STATE_PATH = "/etc/qmanager/ttl_state";
 
 /** The bounds `ttl.sh` enforces. Stated here so the copy and the gate agree. */
 const TTL_MIN = 1;
@@ -515,26 +503,20 @@ export function TtlSettingsCard({
         </form>
       </CardContent>
       {/* Outside the form so `mt-auto` reaches the card edge; `form=` keeps Enter-to-submit.
-          Status: why Apply is dead, else the unsaved count, else provenance. */}
+          Status: why Apply is dead, else the unsaved count, else nothing. */}
       <CardFoot
         className={CARD_PAD}
         liveStatus={false}
         status={
-          <span
-            className={blockedKey !== null ? PROVENANCE_BLOCKED : PROVENANCE}
-            role={blockedKey !== null ? "alert" : undefined}
-          >
-            {blockedKey !== null ? (
-              t(blockedKey, { min: TTL_MIN, max: TTL_MAX })
-            ) : dirtyCount > 0 ? (
-              t(`${K}.footer.unsaved`, { count: dirtyCount })
-            ) : (
-              <>
-                {t(`${K}.cards.ttl.provenance`)}{" "}
-                <span className="font-mono">{TTL_STATE_PATH}</span>
-              </>
-            )}
-          </span>
+          blockedKey !== null ? (
+            <span className={PROVENANCE_BLOCKED} role="alert">
+              {t(blockedKey, { min: TTL_MIN, max: TTL_MAX })}
+            </span>
+          ) : dirtyCount > 0 ? (
+            <span className={PROVENANCE}>
+              {t(`${K}.footer.unsaved`, { count: dirtyCount })}
+            </span>
+          ) : undefined
         }
         actions={
           <>

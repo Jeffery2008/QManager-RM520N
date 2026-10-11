@@ -106,7 +106,6 @@
       "consequence_unresponsive": "數據機已停止回應，因此在下一次成功讀取前鎖定此控制項。",
       "consequence_unread": "數據機尚未回應，在首次讀取完成前沒有可變更的內容。",
       "consequence_absent": "此裝置上沒有可設定的乙太網路連接埠。",
-      "provenance": "已儲存到數據機。讀取自：",
       "toast_success": "鏈路速度已更新",
       "toast_error": "設定鏈路速度失敗",
       "toast_confirm_error": "無法確認新速度。請檢查鏈路。"
@@ -334,13 +333,11 @@
     "cards": {
       "ttl": {
         "title": "TTL 與跳躍限制",
-        "description": "套用於行動網路介面上的外送封包。",
-        "provenance": "讀取自即時封包規則，開機時重放自"
+        "description": "套用於行動網路介面上的外送封包。"
       },
       "mtu": {
         "title": "最大傳輸單元",
-        "description": "行動網路介面在不分片的情況下能送出的最大封包。",
-        "provenance": "套用於所有符合下列樣式的介面"
+        "description": "行動網路介面在不分片的情況下能送出的最大封包。"
       }
     },
     "rows": {
@@ -454,8 +451,6 @@
       "description": "最多四個。dnsmasq 會原地重新載入 — 無需重啟，連線不中斷。",
       "save": "儲存並套用",
       "add": "新增解析器",
-      "provenance": "已使用 {{used}} / {{max}} · 讀取自",
-      "provenance_corrupt": "已使用 {{used}} / {{max}} · 無法完整讀取自",
       "blocked_unavailable": "dnsmasq 不在轉送路徑上，這樣做不會有任何作用。"
     },
     "rows": {
@@ -535,7 +530,6 @@
       "description": "這裡的每一項設定都會在下次開機時生效。套用會重啟數據機。",
       "apply": "套用並重啟",
       "discard": "捨棄變更",
-      "provenance": "讀取自：",
       "provenance_dirty": "{{count}} 項未儲存的變更",
       "delta_automatic": "自動",
       "delta_unset": "未設定",

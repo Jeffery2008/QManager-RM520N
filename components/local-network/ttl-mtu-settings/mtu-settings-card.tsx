@@ -73,11 +73,8 @@ import {
 // An out-of-range value takes an INSET ring rather than a border — a border
 // would change the field's box and shift every neighbour by 2px the moment a
 // digit went out of range, i.e. a layout that moves while you are typing into
-// it. Apply goes dead, and the provenance slot beside it becomes the specific
-// reason in destructive ink. That is one slot doing two jobs on purpose: "why
-// can't I press this" and "where did this number come from" are asked in the
-// same glance, and growing a second line would push the button out from under
-// the cursor at the exact moment it is refused.
+// it. Apply goes dead, and the footer status slot beside it carries the specific
+// reason in destructive ink, so the button never moves out from under the cursor.
 // =============================================================================
 
 const K = "ttlMtu";
@@ -88,17 +85,6 @@ type OnOff = "on" | "off";
 const renderCheckGlyph = (className: string) => (
   <CheckIcon size={SEGMENTED.GLYPH} className={className} aria-hidden="true" />
 );
-
-/**
- * The interfaces the write lands on.
- *
- * A machine string — `mtu.sh` globs `/sys/class/net` for exactly this prefix and
- * runs `ip link set <iface> mtu N` on each match — so it takes the machine voice
- * in the provenance line. It is NOT a config path: this setting has no file the
- * value is read back from, which is precisely why naming the interfaces is the
- * honest provenance here and naming a file would not be.
- */
-const RMNET_GLOB = "rmnet_data*";
 
 /** The bounds `mtu.sh` enforces. Stated here so the copy and the gate agree. */
 const MTU_MIN = 576;
@@ -415,21 +401,15 @@ export function MtuSettingsCard({
         className={CARD_PAD}
         liveStatus={false}
         status={
-          <span
-            className={blockedKey !== null ? PROVENANCE_BLOCKED : PROVENANCE}
-            role={blockedKey !== null ? "alert" : undefined}
-          >
-            {blockedKey !== null ? (
-              t(blockedKey, { min: MTU_MIN, max: MTU_MAX })
-            ) : dirtyCount > 0 ? (
-              t(`${K}.footer.unsaved`, { count: dirtyCount })
-            ) : (
-              <>
-                {t(`${K}.cards.mtu.provenance`)}{" "}
-                <span className="font-mono">{RMNET_GLOB}</span>
-              </>
-            )}
-          </span>
+          blockedKey !== null ? (
+            <span className={PROVENANCE_BLOCKED} role="alert">
+              {t(blockedKey, { min: MTU_MIN, max: MTU_MAX })}
+            </span>
+          ) : dirtyCount > 0 ? (
+            <span className={PROVENANCE}>
+              {t(`${K}.footer.unsaved`, { count: dirtyCount })}
+            </span>
+          ) : undefined
         }
         actions={
           <>

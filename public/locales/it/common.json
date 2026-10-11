@@ -106,7 +106,6 @@
       "consequence_unresponsive": "Il modem ha smesso di rispondere, quindi questo controllo resta bloccato fino alla prossima lettura riuscita.",
       "consequence_unread": "Il modem non ha ancora risposto, quindi non c'è nulla da modificare finché non arriva la prima lettura.",
       "consequence_absent": "Su questo dispositivo non c'è alcuna porta ethernet da configurare.",
-      "provenance": "Salvato sul modem. Riletto da:",
       "toast_success": "Velocità collegamento aggiornata",
       "toast_error": "Impossibile impostare la velocità del collegamento",
       "toast_confirm_error": "Impossibile confermare la nuova velocità. Controlla il collegamento."
@@ -334,13 +333,11 @@
     "cards": {
       "ttl": {
         "title": "TTL e limite di hop",
-        "description": "Applicati ai pacchetti in uscita sull'interfaccia cellulare.",
-        "provenance": "Letti dalle regole sui pacchetti attive, riapplicati all'avvio da"
+        "description": "Applicati ai pacchetti in uscita sull'interfaccia cellulare."
       },
       "mtu": {
         "title": "Unità massima di trasmissione",
-        "description": "Il pacchetto più grande che l'interfaccia cellulare invia senza frammentarlo.",
-        "provenance": "Applicata a ogni interfaccia che corrisponde a"
+        "description": "Il pacchetto più grande che l'interfaccia cellulare invia senza frammentarlo."
       }
     },
     "rows": {
@@ -454,8 +451,6 @@
       "description": "Fino a quattro. dnsmasq viene ricaricato al volo: nessun riavvio, nessun collegamento interrotto.",
       "save": "Salva e applica",
       "add": "Aggiungi resolver",
-      "provenance": "{{used}} di {{max}} usati · riletti da",
-      "provenance_corrupt": "{{used}} di {{max}} usati · non è stato possibile rileggerli correttamente da",
       "blocked_unavailable": "dnsmasq non è nel percorso, quindi non avrebbe alcun effetto."
     },
     "rows": {
@@ -535,7 +530,6 @@
       "description": "Ogni impostazione qui ha effetto al prossimo avvio. Applicare riavvia il modem.",
       "apply": "Applica e riavvia",
       "discard": "Scarta le modifiche",
-      "provenance": "Riletto da:",
       "provenance_dirty": "{{count}} modifiche non salvate",
       "delta_automatic": "Automatico",
       "delta_unset": "Non impostato",

@@ -106,7 +106,6 @@
       "consequence_unresponsive": "Modem berhenti merespons, jadi kontrol ini ditahan sampai pembacaan berhasil berikutnya.",
       "consequence_unread": "Modem belum merespons, jadi tidak ada yang dapat diubah sampai pembacaan pertama masuk.",
       "consequence_absent": "Tidak ada port ethernet yang dapat dikonfigurasi di perangkat ini.",
-      "provenance": "Disimpan ke modem. Dibaca kembali dari:",
       "toast_success": "Kecepatan tautan diperbarui",
       "toast_error": "Gagal mengatur kecepatan tautan",
       "toast_confirm_error": "Tidak dapat mengonfirmasi kecepatan baru. Periksa tautan."
@@ -334,13 +333,11 @@
     "cards": {
       "ttl": {
         "title": "TTL & Batas Hop",
-        "description": "Diterapkan pada paket keluar di antarmuka seluler.",
-        "provenance": "Dibaca dari aturan paket yang aktif, diputar ulang saat boot dari"
+        "description": "Diterapkan pada paket keluar di antarmuka seluler."
       },
       "mtu": {
         "title": "Unit transmisi maksimum",
-        "description": "Paket terbesar yang dikirim antarmuka seluler tanpa fragmentasi.",
-        "provenance": "Diterapkan ke setiap antarmuka yang cocok dengan"
+        "description": "Paket terbesar yang dikirim antarmuka seluler tanpa fragmentasi."
       }
     },
     "rows": {
@@ -454,8 +451,6 @@
       "description": "Maksimal empat. dnsmasq dimuat ulang di tempat — tanpa reboot, tanpa tautan terputus.",
       "save": "Simpan dan terapkan",
       "add": "Tambah resolver",
-      "provenance": "{{used}} dari {{max}} terpakai · dibaca kembali dari",
-      "provenance_corrupt": "{{used}} dari {{max}} terpakai · tidak dapat dibaca dengan bersih dari",
       "blocked_unavailable": "dnsmasq tidak berada di jalur, jadi ini tidak akan berpengaruh."
     },
     "rows": {
@@ -535,7 +530,6 @@
       "description": "Setiap pengaturan di sini berlaku pada boot berikutnya. Menerapkannya akan me-reboot modem.",
       "apply": "Terapkan dan reboot",
       "discard": "Buang perubahan",
-      "provenance": "Dibaca kembali dari:",
       "provenance_dirty": "{{count}} perubahan belum tersimpan",
       "delta_automatic": "Otomatis",
       "delta_unset": "Belum diatur",

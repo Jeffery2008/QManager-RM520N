@@ -345,19 +345,5 @@ export const MAC_FIELD = `${FIELD} h-[2.625rem] px-3.5 font-mono uppercase place
 /** The glyph riding inside a trigger or an action pill. */
 export const FIELD_GLYPH = "size-3.5";
 
-/**
- * The provenance line under the card.
- *
- * It names the file the values are read back FROM, which is the one thing this
- * card cannot otherwise tell you: the Selects show what was asked for, and this
- * says where the answer comes from — a config file QManager wrote, not a live
- * read of the modem. When the draft is dirty the same slot reports the unsaved
- * count instead, because in that state the more useful fact is that the file
- * and the form disagree.
- *
- * This constant is the LINE's ink and size only. The path's `font-mono` is
- * written at the call site beside the literal path — the machine voice belongs
- * to that one string, and hoisting a single voice token into a shared module
- * would separate it from the only thing it is ever true of.
- */
+/** The footer status line: the unsaved count while the draft is dirty, empty otherwise. */
 export const PROVENANCE = "text-on-surface-variant text-xs";

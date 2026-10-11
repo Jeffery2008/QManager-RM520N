@@ -47,7 +47,6 @@ import {
   FIELD,
   FIELD_REMOVE,
   ACTION_SKELETON,
-  PROVENANCE,
   ROW,
   ROW_GROUP,
 } from "./shapes";
@@ -109,14 +108,6 @@ const renderCheckGlyph = (className: string) => (
 
 const MAX_RESOLVERS = 4;
 
-/**
- * The file the whole surface is read back from, and the one thing a settings
- * card cannot otherwise tell you: the fields show what you asked for, and this
- * says where the answer comes from. A machine string, so it is never translated
- * and it renders in the mono face at the call site.
- */
-const DNSMASQ_CONF = "/etc/data/dnsmasq.conf";
-
 // IPv4 dotted-quad: four 0-255 octets.
 const IPV4_RE =
   /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
@@ -154,11 +145,6 @@ export interface CustomDnsCardProps {
   fieldError: CustomDnsFieldError | null;
   /** False when dnsmasq is not in the path at all — every write is refused. */
   available: boolean;
-  /**
-   * True when the sentinel block is malformed. Read here ONLY to caption the
-   * provenance line honestly; it deliberately does not disable anything.
-   */
-  blockCorrupt: boolean;
   onSave: (data: CustomDnsApplyData) => Promise<boolean>;
   onSaved: () => void;
 }
@@ -170,7 +156,6 @@ export function CustomDnsCard({
   error,
   fieldError,
   available,
-  blockCorrupt,
   onSave,
   onSaved,
 }: CustomDnsCardProps) {
@@ -381,8 +366,6 @@ export function CustomDnsCard({
     }
   };
 
-  const usedCount = nonEmptyServers.length;
-
   return (
     <Card className={CARD_SHELL}>
       <CardHeader className={CARD_PAD}>
@@ -555,19 +538,6 @@ export function CustomDnsCard({
       <CardFoot
         className={CARD_PAD}
         liveStatus={false}
-        status={
-          <p className={PROVENANCE}>
-            <span>
-              {t(
-                blockCorrupt
-                  ? `${K}.card.provenance_corrupt`
-                  : `${K}.card.provenance`,
-                { used: usedCount, max: MAX_RESOLVERS },
-              )}
-            </span>
-            <span className="font-mono">{DNSMASQ_CONF}</span>
-          </p>
-        }
         actions={
           <>
             <Button
@@ -642,7 +612,6 @@ export function CustomDnsCardSkeleton() {
         className={CARD_PAD}
         liveStatus={false}
         aria-hidden="true"
-        status={<Skeleton className="h-3 w-[18rem] max-w-full rounded-pill" />}
         actions={
           <>
             <Skeleton className={cn(ACTION_SKELETON, "w-[8.5rem]")} />

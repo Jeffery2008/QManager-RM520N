@@ -112,15 +112,11 @@ import {
 // -----------------------------------------------------------------------------
 // The delta chip is rendered on every row, clean or not, going `invisible` when
 // clean. Promoting a row therefore moves nothing — no reflow of the group, no
-// jump of the rows below. The footer's provenance slot doubles as the unsaved
-// count, because when the form and the file disagree, the disagreement is the
-// more useful fact.
+// jump of the rows below. The footer's status slot carries the unsaved count
+// while dirty and stays quiet otherwise.
 // =============================================================================
 
 const K = "ipPassthrough";
-
-/** Where the values are read back from. A literal the device holds, never prose. */
-const CONFIG_PATH = "/etc/qmanager/ippt_config.json";
 
 /**
  * `NatMode` and `UsbModeLocal` are descriptive strings rather than the wire's
@@ -750,21 +746,15 @@ export function IPPassthroughCard({
           </form>
         </CardContent>
 
-        {/* Outside the form so `mt-auto` reaches the card edge; `form=` keeps Enter-to-submit.
-            The path sits after a colon so a locale can move it. */}
+        {/* Outside the form so `mt-auto` reaches the card edge; `form=` keeps Enter-to-submit. */}
         <CardFoot
           className={CARD_PAD}
           status={
-            <span className={PROVENANCE}>
-              {dirtyCount > 0 ? (
-                t(`${K}.card.provenance_dirty`, { count: dirtyCount })
-              ) : (
-                <>
-                  {t(`${K}.card.provenance`)}{" "}
-                  <span className="font-mono">{CONFIG_PATH}</span>
-                </>
-              )}
-            </span>
+            dirtyCount > 0 ? (
+              <span className={PROVENANCE}>
+                {t(`${K}.card.provenance_dirty`, { count: dirtyCount })}
+              </span>
+            ) : undefined
           }
           actions={
             <>
