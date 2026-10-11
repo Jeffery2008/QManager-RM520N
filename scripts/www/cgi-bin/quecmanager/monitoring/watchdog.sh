@@ -16,7 +16,7 @@
 # Connection Quality (settings/ping_profile.sh) owns the probe cadence. The
 # Watchdog owns only fail_threshold: it declares the link down after about
 # fail_threshold x interval_sec of continuous failure. GET reports the live
-# interval_sec as `probe_interval`; POST accepts probe_interval and ignores it.
+# interval_sec as `probe_interval`; a changed POSTed probe_interval writes that one value.
 #
 # Endpoint: GET/POST /cgi-bin/quecmanager/monitoring/watchdog.sh
 # Install location: /www/cgi-bin/quecmanager/monitoring/watchdog.sh
@@ -186,7 +186,13 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             validate_int "$f_fail_threshold" 1 20 || reject_field "fail_threshold" "must be an integer between 1 and 20"
         fi
 
-        # probe_interval is accepted for the shipped UI but never stored.
+        # probe_interval is Connection Quality's interval_sec; only a changed value is written.
+        f_probe_interval=$(printf '%s' "$POST_DATA" | jq -r '.probe_interval // empty')
+        if [ -n "$f_probe_interval" ]; then
+            validate_int "$f_probe_interval" 1 60 || reject_field "probe_interval" "must be an integer between 1 and 60"
+            conn_state_cadence "$PING_PROFILE_CONFIG"
+            [ "$f_probe_interval" = "$CQ_CFG_INTERVAL_SEC" ] && f_probe_interval=""
+        fi
 
         f_check_interval=$(printf '%s' "$POST_DATA" | jq -r '.check_interval // empty')
         if [ -n "$f_check_interval" ]; then
@@ -260,6 +266,20 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         fi
 
         [ -n "$f_max_reboots" ] && qm_config_set watchcat max_reboots_per_hour "$f_max_reboots"
+
+        if [ -n "$f_probe_interval" ]; then
+            _pp='{}'
+            [ -f "$PING_PROFILE_CONFIG" ] && _pp=$(cat "$PING_PROFILE_CONFIG" 2>/dev/null)
+            printf '%s' "$_pp" | jq -e 'type == "object"' >/dev/null 2>&1 || _pp='{}'
+            if printf '%s' "$_pp" | jq --argjson v "$f_probe_interval" '.interval_sec = $v' > "${PING_PROFILE_CONFIG}.tmp" 2>/dev/null &&
+                [ -s "${PING_PROFILE_CONFIG}.tmp" ]; then
+                mv "${PING_PROFILE_CONFIG}.tmp" "$PING_PROFILE_CONFIG"
+                touch /tmp/qmanager_ping_reload
+            else
+                rm -f "${PING_PROFILE_CONFIG}.tmp"
+                qlog_error "Failed to write interval_sec to $PING_PROFILE_CONFIG"
+            fi
+        fi
 
         # Signal running watchcat daemon to reload config (if it's already running)
         touch "$RELOAD_FLAG"
