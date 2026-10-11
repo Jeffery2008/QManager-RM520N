@@ -463,6 +463,13 @@ fi
     alert_engine_init() { :; }
 }
 
+# Shared ping.json reader + staleness rule. Fail-closed stub: no lib = always stale.
+. /usr/lib/qmanager/conn_state.sh 2>/dev/null || {
+    qlog_warn "conn_state.sh not found, connectivity reads as unknown"
+    conn_state_read() { CQ_STALE=1; CQ_STALE_REASON="conn_state.sh missing"; return 1; }
+    conn_state_why() { printf '%s' "$CQ_STALE_REASON"; }
+}
+
 # Profile manager (for boot-time profile auto-apply)
 . /usr/lib/qmanager/profile_mgr.sh 2>/dev/null || {
     auto_apply_profile() { :; }
@@ -1554,25 +1561,7 @@ PING_CACHE="/tmp/qmanager_ping.json"
 PING_HISTORY_RAW="/tmp/qmanager_ping_history"   # flat-file ring buffer from ping daemon
 PING_DAEMON_STALE_EVENT_THRESHOLD=60  # seconds before emitting ping_daemon_stale
 
-# Staleness is DERIVED per read, never hardcoded:
-#
-#     stale_threshold = max(3 * interval_sec, 15)
-#
-# interval 1 -> 15 · interval 5 -> 15 · interval 10 -> 30.
-#
-# The old bare 10 was derived from nothing and had two silent consequences.
-# At the quiet profile (interval_sec 10) a perfectly healthy cycle already sat
-# ON the cliff, so the verdict could read "unknown" with nothing wrong. And
-# during the outage this feature exists to detect, one over-budget cycle would
-# flip the verdict to "unknown" instead of "disconnected" — an unknown verdict
-# is the null that used to swallow the internet_lost alert outright.
-#
-# The floor of 15 is the same number the four-leg probe budget is checked
-# against: 4 legs * (PROBE_TIMEOUT + 1) = 12 < 15.
-#
-# The derivation lives INLINE inside read_ping_data() rather than in a helper
-# function: that is the unit the harness extracts and runs on its own, and a
-# helper defined out here would be undefined in it.
+# Staleness and the ping.json read live in conn_state.sh (shared with watchcat).
 
 read_ping_data() {
     # Reset to defaults if ping file missing or stale
@@ -1595,113 +1584,52 @@ read_ping_data() {
         return
     fi
 
-    # Check staleness (ping daemon may have crashed). The threshold is derived
-    # from the cadence the daemon itself reports, so both values come out of
-    # the SAME read.
-    local ping_ts
-    local now
-    local age
-    local _pmeta
-    local ping_interval
-    local stale_threshold
-    _pmeta=$(jq -r '[
-        ((.timestamp) | if . == null then "" else tostring end),
-        ((.interval_sec) | if . == null then "5" else tostring end)
-    ] | @tsv' "$PING_CACHE" 2>/dev/null)
-    ping_ts=$(printf '%s' "$_pmeta" | cut -f1)
-    ping_interval=$(printf '%s' "$_pmeta" | cut -f2)
+    # One shared read + staleness verdict (empty/unreadable cache = stale).
+    local ping_ts now
     now=$(date +%s)
+    if ! conn_state_read; then
+        qlog_warn "Ping data stale ($(conn_state_why)), marking unknown"
+        conn_internet_available="null"
+        conn_status="unknown"
+        conn_latency="null"
+        conn_avg_latency="null"
+        conn_min_latency="null"
+        conn_max_latency="null"
+        conn_jitter="null"
+        conn_packet_loss="null"
+        conn_history="[]"
+        conn_history_interval=0
+        conn_during_recovery="false"
+        conn_profile="unknown"
+        conn_last_family="null"
 
-    # stale_threshold = max(3 * interval_sec, 15)
-    #
-    # An implausible interval_sec is treated as unset rather than obeyed. The
-    # cadence a probe daemon can sanely run at is bounded (the profile table
-    # tops out at 10s), and a corrupt or garbage value here would otherwise
-    # compute a threshold so large that staleness detection silently switches
-    # off — the one failure mode this guard exists to prevent, failing open.
-    case "$ping_interval" in
-        ''|*[!0-9]*) ping_interval=5 ;;
-    esac
-    { [ "$ping_interval" -ge 1 ] && [ "$ping_interval" -le 300 ]; } 2>/dev/null || ping_interval=5
-    stale_threshold=$((3 * ping_interval))
-    [ "$stale_threshold" -lt 15 ] && stale_threshold=15
-
-    if [ -n "$ping_ts" ]; then
-        age=$((now - ping_ts))
-        if [ "$age" -gt "$stale_threshold" ]; then
-            qlog_warn "Ping data stale (age=${age}s > ${stale_threshold}s), marking unknown"
-            conn_internet_available="null"
-            conn_status="unknown"
-            conn_latency="null"
-            conn_avg_latency="null"
-            conn_min_latency="null"
-            conn_max_latency="null"
-            conn_jitter="null"
-            conn_packet_loss="null"
-            conn_history="[]"
-            conn_history_interval=0
-            conn_during_recovery="false"
-            conn_profile="unknown"
-            conn_last_family="null"
-
-            # Track sustained staleness: emit a one-shot event when the
-            # ping daemon has been stale long enough that alerts could be
-            # silently missing. _ping_stale_since=0 means "not currently
-            # tracking"; a positive value is the epoch when staleness began.
-            if [ "$_ping_stale_since" -eq 0 ] 2>/dev/null; then
+        # One-shot ping_daemon_stale event after sustained staleness;
+        # _ping_stale_since is 0 (not tracking) or the epoch it began/last fired.
+        if [ "$_ping_stale_since" -eq 0 ] 2>/dev/null; then
+            _ping_stale_since=$now
+        else
+            local stale_dur=$((now - _ping_stale_since))
+            if [ "$stale_dur" -ge "$PING_DAEMON_STALE_EVENT_THRESHOLD" ] 2>/dev/null; then
+                append_event "ping_daemon_stale" \
+                    "Ping daemon stale, alerts may be missed" \
+                    "warning"
                 _ping_stale_since=$now
-            else
-                local stale_dur=$((now - _ping_stale_since))
-                if [ "$stale_dur" -ge "$PING_DAEMON_STALE_EVENT_THRESHOLD" ] 2>/dev/null; then
-                    append_event "ping_daemon_stale" \
-                        "Ping daemon stale, alerts may be missed" \
-                        "warning"
-                    # Restart the window from now so the next emission only
-                    # fires after another full threshold has elapsed. Storing
-                    # a real epoch (rather than a future-offset value) keeps
-                    # the variable's invariant easy to reason about: it is
-                    # always either 0 (healthy) or the epoch at which we
-                    # last either started tracking or emitted a heartbeat.
-                    _ping_stale_since=$now
-                fi
             fi
-            return
         fi
+        return
     fi
     # Fresh data — clear any stale-tracking state.
     _ping_stale_since=0
 
-    # Step A: Extract slim scalar fields from ping JSON (single jq call)
-    # ping.json no longer carries stats/history — those are computed here from raw file.
-    #
-    # EIGHT positional fields. Field 6 (last_target) is the new one, so
-    # profile and last_family moved down one place each — every offset below
-    # the insertion was renumbered:
-    #
-    #   1 reachable   2 last_rtt_ms   3 during_recovery   4 interval_sec
-    #   5 targets[0]  6 last_target   7 profile           8 last_family
-    local _pdata
-    local _first_target
-    local _last_target
-    _pdata=$(jq -r '[
-        ((.reachable) | if . == null then "null" else tostring end),
-        ((.last_rtt_ms) | if . == null then "null" else tostring end),
-        ((.during_recovery) | if . == null then "false" else tostring end),
-        ((.interval_sec) | if . == null then "5" else tostring end),
-        (.targets[0] // ""),
-        (.last_target // ""),
-        (.profile // "unknown"),
-        ((.last_family) | if . == null then "null" else tostring end)
-    ] | @tsv' "$PING_CACHE" 2>/dev/null)
-
-    conn_internet_available=$(printf '%s' "$_pdata" | cut -f1)
-    conn_latency=$(printf '%s' "$_pdata" | cut -f2)
-    conn_during_recovery=$(printf '%s' "$_pdata" | cut -f3)
-    conn_history_interval=$(printf '%s' "$_pdata" | cut -f4)
-    _first_target=$(printf '%s' "$_pdata" | cut -f5)
-    _last_target=$(printf '%s' "$_pdata" | cut -f6)
-    conn_profile=$(printf '%s' "$_pdata" | cut -f7)
-    conn_last_family=$(printf '%s' "$_pdata" | cut -f8)
+    ping_ts="$CQ_TIMESTAMP"
+    local _first_target="$CQ_TARGET"
+    local _last_target="$CQ_LAST_TARGET"
+    conn_internet_available="$CQ_REACHABLE"
+    conn_latency="$CQ_RTT_MS"
+    conn_during_recovery="$CQ_DURING_RECOVERY"
+    conn_history_interval="$CQ_INTERVAL_SEC"
+    conn_profile="${CQ_PROFILE:-unknown}"
+    conn_last_family="${CQ_LAST_FAMILY:-null}"
 
     # ping_target names the leg that ACTUALLY answered, not the first one
     # configured. The chain short-circuits, so targets[0] is only the winner on

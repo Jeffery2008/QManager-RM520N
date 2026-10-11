@@ -2,6 +2,7 @@
 . /usr/lib/qmanager/cgi_base.sh
 . /usr/lib/qmanager/config.sh
 . /usr/lib/qmanager/platform.sh
+. /usr/lib/qmanager/conn_state.sh
 # =============================================================================
 # watchdog.sh — CGI Endpoint: Watchdog Settings & Status (GET + POST)
 # =============================================================================
@@ -11,16 +12,11 @@
 # Config: /etc/qmanager/qmanager.conf [watchcat] section
 # State:  /tmp/qmanager_watchcat.json (read-only, written by daemon)
 #
-# --- Split-ownership (fail cadence vs. probe targets) -----------------------
-# The Watchdog owns BOTH the fail_threshold (consecutive failed probes before
-# recovery — read by qmanager_watchcat against /tmp/qmanager_ping.json's raw
-# .streak_fail) AND the probe_interval (probe cadence). It is the SOLE writer
-# of probe_interval, which it propagates into /etc/qmanager/ping_profile.json's
-# `interval_sec` (an atomic key-merge, never a whole-file overwrite — that file
-# is also written independently by settings/ping_profile.sh for target_1/
-# target_2/profile, and must never clobber the other writer's key). The
-# Connectivity Sensitivity card (settings/ping_profile.sh) owns only the probe
-# targets and no longer has any say over interval or fail cadence.
+# --- Ownership -----------------------------------------------------------
+# Connection Quality (settings/ping_profile.sh) owns the probe cadence. The
+# Watchdog owns only fail_threshold: it declares the link down after about
+# fail_threshold x interval_sec of continuous failure. GET reports the live
+# interval_sec as `probe_interval`; POST accepts probe_interval and ignores it.
 #
 # Endpoint: GET/POST /cgi-bin/quecmanager/monitoring/watchdog.sh
 # Install location: /www/cgi-bin/quecmanager/monitoring/watchdog.sh
@@ -34,7 +30,6 @@ WATCHCAT_STATE="/tmp/qmanager_watchcat.json"
 SIM_SWAP_FLAG="/tmp/qmanager_sim_swap_detected"
 SIM_FAILOVER_FILE="/etc/qmanager/qmanager_sim_failover"
 RELOAD_FLAG="/tmp/qmanager_watchcat_reload"
-PING_RELOAD_FLAG="/tmp/qmanager_ping_reload"
 PING_PROFILE_CONFIG="/etc/qmanager/ping_profile.json"
 REVERT_FLAG="/tmp/qmanager_watchcat_revert_sim"
 DISABLED_FLAG="/tmp/qmanager_watchcat_disabled"
@@ -63,38 +58,6 @@ migrate_fail_threshold() {
     fi
 }
 
-# Propagate the Watchdog-owned probe interval into ping_profile.json's
-# interval_sec via an atomic key-merge (read existing JSON, set only
-# .interval_sec, temp-file + mv). NEVER overwrites the whole file — that would
-# clobber target_host_1/target_host_2/target_ip_1/target_ip_2/profile, which
-# settings/ping_profile.sh owns independently in the same file. Best-effort:
-# logs and continues on failure,
-# matching the non-fatal reload-flag pattern used elsewhere in this endpoint —
-# the watchcat.probe_interval config value is already saved regardless.
-propagate_probe_interval() {
-    local interval="$1"
-    local existing='{}'
-    [ -f "$PING_PROFILE_CONFIG" ] && existing=$(cat "$PING_PROFILE_CONFIG" 2>/dev/null)
-    # Same object guard as settings/ping_profile.sh's merge — this is the OTHER
-    # writer of this same file, so a corrupt config must not defeat both of
-    # them. Worse here than there: this path is best-effort and already
-    # swallows stderr, so an aborted jq would fail SILENTLY (log only, user
-    # still sees success). `type == "object"` also catches the empty and
-    # whitespace-only cases that the old `[ -z ]` test let through.
-    if ! printf '%s' "$existing" | jq -e 'type == "object"' >/dev/null 2>&1; then
-        [ -n "$existing" ] && qlog_warn "Unusable $PING_PROFILE_CONFIG (not a JSON object) — rebuilding from defaults"
-        existing='{}'
-    fi
-    mkdir -p "$(dirname "$PING_PROFILE_CONFIG")"
-    if printf '%s' "$existing" | jq --argjson v "$interval" '.interval_sec = $v' > "${PING_PROFILE_CONFIG}.tmp" 2>/dev/null &&
-        [ -s "${PING_PROFILE_CONFIG}.tmp" ]; then
-        mv "${PING_PROFILE_CONFIG}.tmp" "$PING_PROFILE_CONFIG"
-    else
-        rm -f "${PING_PROFILE_CONFIG}.tmp"
-        qlog_error "Failed to propagate probe_interval into $PING_PROFILE_CONFIG"
-    fi
-}
-
 # reject_field: emit a structured validation error and exit. Used only
 # during PASS 1 (validation) — never after any qm_config_set write.
 reject_field() {
@@ -117,7 +80,9 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
 
     enabled=$(qm_config_get watchcat enabled 0)
     fail_threshold=$(qm_config_get watchcat fail_threshold 5)
-    probe_interval=$(qm_config_get watchcat probe_interval 5)
+    # Read-only: the current ping_profile cadence (Connection Quality owns it).
+    conn_state_cadence "$PING_PROFILE_CONFIG"
+    probe_interval="$CQ_CFG_INTERVAL_SEC"
     check_interval=$(qm_config_get watchcat check_interval 10)
     cooldown=$(qm_config_get watchcat cooldown 60)
     tier1=$(qm_config_get watchcat tier1_enabled 1)
@@ -221,10 +186,7 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
             validate_int "$f_fail_threshold" 1 20 || reject_field "fail_threshold" "must be an integer between 1 and 20"
         fi
 
-        f_probe_interval=$(printf '%s' "$POST_DATA" | jq -r '.probe_interval // empty')
-        if [ -n "$f_probe_interval" ]; then
-            validate_int "$f_probe_interval" 1 60 || reject_field "probe_interval" "must be an integer between 1 and 60"
-        fi
+        # probe_interval is accepted for the shipped UI but never stored.
 
         f_check_interval=$(printf '%s' "$POST_DATA" | jq -r '.check_interval // empty')
         if [ -n "$f_check_interval" ]; then
@@ -271,15 +233,6 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
         fi
 
         [ -n "$f_fail_threshold" ] && qm_config_set watchcat fail_threshold "$f_fail_threshold"
-
-        # probe_interval: Watchdog is the SOLE writer. Save to qmanager.conf
-        # AND propagate into ping_profile.json's interval_sec (atomic merge —
-        # never touches target_1/target_2/profile, which ping_profile.sh owns).
-        if [ -n "$f_probe_interval" ]; then
-            qm_config_set watchcat probe_interval "$f_probe_interval"
-            propagate_probe_interval "$f_probe_interval"
-            touch "$PING_RELOAD_FLAG"
-        fi
 
         [ -n "$f_check_interval" ] && qm_config_set watchcat check_interval "$f_check_interval"
         [ -n "$f_cooldown" ] && qm_config_set watchcat cooldown "$f_cooldown"

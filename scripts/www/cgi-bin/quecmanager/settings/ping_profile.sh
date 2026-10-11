@@ -25,18 +25,12 @@
 #
 # Targets are ICMP hosts (NOT HTTP URLs) — no scheme is prepended.
 #
-# --- Split-ownership (probe targets vs. fail cadence) -----------------------
-# This endpoint owns ONLY `profile` (label) + the four target slots in
-# ping_profile.json. monitoring/watchdog.sh is the SOLE writer of
-# `interval_sec` (the Watchdog owns the probe cadence + fail threshold as of
-# the split-ownership rework — see docs/reference/connection-watchdog.md).
-# Every write here is therefore an ATOMIC KEY-MERGE (read existing JSON, set
-# only the owned keys, temp-file + mv) — NEVER a whole-file overwrite, or it
-# would silently clobber the interval_sec the Watchdog wrote. The daemon's own
-# debounce windows (fail_secs / recover_secs / history_secs) pass through
-# untouched on every save for the same reason; `profile` is effectively a label
-# paired with the targets, and the daemon's profile table remains the source of
-# truth for the threshold values themselves.
+# --- Ownership ---------------------------------------------------------------
+# Connection Quality owns the whole ping_profile.json: label, targets and the
+# cadence keys (interval_sec / fail_secs / recover_secs). Every write is an
+# ATOMIC KEY-MERGE (read, set owned keys, temp-file + mv), so the daemon's
+# cadence overrides pass through a targets-only save untouched. GET reports the
+# effective cadence (override, else the profile table).
 #
 # Endpoint: GET/POST /cgi-bin/quecmanager/settings/ping_profile.sh
 # Install location: /www/cgi-bin/quecmanager/settings/ping_profile.sh
@@ -45,6 +39,7 @@
 # Allow tests / dev override of the lib dir, falling back to the real one
 LIB_DIR="${QM_LIB_DIR:-/usr/lib/qmanager}"
 . "$LIB_DIR/cgi_base.sh"
+. "$LIB_DIR/conn_state.sh"
 
 qlog_init "cgi_ping_profile"
 cgi_headers
@@ -90,14 +85,23 @@ if [ "$REQUEST_METHOD" = "GET" ]; then
         [ -n "$i2" ] && ip_2="$i2"
     fi
 
+    # Effective cadence, same resolution as the daemon (override, else profile table).
+    conn_state_cadence "$CONFIG"
+
     jq -n \
         --arg profile "$profile" \
+        --argjson interval_sec "$CQ_CFG_INTERVAL_SEC" \
+        --argjson fail_secs "$CQ_CFG_FAIL_SECS" \
+        --argjson recover_secs "$CQ_CFG_RECOVER_SECS" \
         --arg target_host_1 "$host_1" \
         --arg target_host_2 "$host_2" \
         --arg target_ip_1 "$ip_1" \
         --arg target_ip_2 "$ip_2" \
         '{success: true, settings: {
             profile: $profile,
+            interval_sec: $interval_sec,
+            fail_secs: $fail_secs,
+            recover_secs: $recover_secs,
             target_host_1: $target_host_1,
             target_host_2: $target_host_2,
             target_ip_1: $target_ip_1,
@@ -278,10 +282,8 @@ if [ "$REQUEST_METHOD" = "POST" ]; then
 
     mkdir -p "$(dirname "$CONFIG")"
 
-    # Atomic key-merge: read the existing file (if any) and set only our own
-    # keys, leaving interval_sec (Watchdog-owned) and the daemon's debounce
-    # fields (fail_secs / recover_secs / history_secs) untouched. See the
-    # file-header note on split ownership.
+    # Atomic key-merge: set only the label + targets; cadence keys
+    # (interval_sec / fail_secs / recover_secs / history_secs) pass through.
     existing_json='{}'
     if [ -f "$CONFIG" ]; then
         existing_json=$(cat "$CONFIG" 2>/dev/null)
