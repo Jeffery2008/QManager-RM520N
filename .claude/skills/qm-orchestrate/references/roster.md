@@ -7,7 +7,7 @@ Ten project agents, all defined in `.claude/agents/`. Every one pins its own mod
 | `qm-scout` | haiku / low | FAST | yes | Locate files and symbols, census call sites, trace a KNOWN path A→B, extract facts | status |
 | `modem-investigator` | opus / medium | diagnostic | source yes; device read-only | Reproduce a bug live, interpret on-device state, map an UNKNOWN flow. Not a census — that is the scout | status |
 | `qm-advocate` | opus / high | FRONTIER | yes | Attack the leading hypothesis or plan before the gate; each challenge names the evidence it rests on and what would settle it | status, then ranked challenges |
-| `cgi-endpoint-builder` | sonnet / medium | WORKHORSE | no | CGI endpoints, libs, daemons, AT and `qcmd` flows, apply pipelines | status |
+| `cgi-endpoint-builder` | sonnet / high | WORKHORSE | no | CGI endpoints, libs, daemons, AT and `qcmd` flows, apply pipelines | status |
 | `ui-builder` | opus / medium | WORKHORSE + design judgment | no | Pages, cards, hooks, types, `shapes.ts` / `derive.ts`, i18n keys | status |
 | `qm-worker` | sonnet / medium | WORKHORSE generic | no | Anything neither CGI nor UI: installer edits under an auditor gate, i18n merges, docs prose under a spec, scripts-dev tooling, mechanical multi-file edits | status |
 | `installer-safety-auditor` | sonnet / medium | gate + validator | yes; device read-only | Pre-gate before installer code is written, and post-verify after | `CLEAR` / `BLOCKED — N must-fix` |

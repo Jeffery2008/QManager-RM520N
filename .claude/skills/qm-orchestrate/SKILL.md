@@ -57,7 +57,7 @@ Pins are the decision, already made. Dispatch with **no `model` argument** unles
 | `qm-scout` | haiku / low | yes | Locate files and symbols, census call sites, trace a KNOWN path, extract facts | status |
 | `modem-investigator` | opus / medium | source yes; device read-only | Reproduce a bug live, interpret on-device state, map an UNKNOWN flow; not a census | status |
 | `qm-advocate` | opus / high | yes | Attack the leading hypothesis or plan before the gate; name what would settle each challenge | status, then ranked challenges |
-| `cgi-endpoint-builder` | sonnet / medium | no | CGI endpoints, libs, daemons, AT/`qcmd` flows, apply pipelines | status |
+| `cgi-endpoint-builder` | sonnet / high | no | CGI endpoints, libs, daemons, AT/`qcmd` flows, apply pipelines | status |
 | `ui-builder` | opus / medium | no | Pages, cards, hooks, types, `shapes.ts` / `derive.ts`, i18n keys | status |
 | `qm-worker` | sonnet / medium | no | Anything neither CGI nor UI: installer edits under an auditor gate, i18n merges, docs prose under a spec, scripts-dev tooling, mechanical multi-file edits | status |
 | `installer-safety-auditor` | sonnet / medium | yes; device read-only | Pre-gate and post-verify for the installer flag | `CLEAR` / `BLOCKED — N must-fix` |

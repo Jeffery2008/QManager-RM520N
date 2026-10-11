@@ -2,7 +2,7 @@
 name: cgi-endpoint-builder
 description: Builds QManager backend shell code — CGI endpoints under `scripts/www/cgi-bin/`, shared libs, daemons, AT/`qcmd` flows and apply pipelines. Executes one ticket against the cgi_base.sh conventions and returns a status, the proof output, a literal diff stat and whether the device was touched.
 model: sonnet
-effort: medium
+effort: high
 color: green
 memory: project
 disallowedTools: Agent
