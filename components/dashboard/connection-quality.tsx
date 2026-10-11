@@ -160,11 +160,12 @@ function bucketHistory(
     if (!touched[i]) return { measured: false, tone: "none", jitter: null };
     const lat = worstLat[i];
     const loss = worstLoss[i];
-    // Red only once the cell's failed share (or the poller's rolling loss) reaches
-    // the configured loss cut; a lone drop below it reads amber, not an outage.
+    // A cell holds only 3-5 rows, so one drop is already 20-33 %: it takes two failed
+    // rows at the loss cut (or the poller's rolling loss at it) to go red.
     const failedPct = (failed[i] / rows[i]) * 100;
     const tone: BucketTone =
-      failedPct >= limits.lossPct || (loss !== null && loss >= limits.lossPct)
+      (failed[i] >= 2 && failedPct >= limits.lossPct) ||
+      (loss !== null && loss >= limits.lossPct)
         ? "destructive"
         : failed[i] > 0 || (lat !== null && lat > limits.latencyMs)
           ? "warning"
