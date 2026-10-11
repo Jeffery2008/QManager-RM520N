@@ -28,13 +28,16 @@
 # =============================================================================
 
 # --- Logging -----------------------------------------------------------------
-. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+# Guarded with -f: BusyBox ash exits when `.` cannot find its file.
+if [ -f /usr/lib/qmanager/qlog.sh ]; then
+    . /usr/lib/qmanager/qlog.sh
+else
     qlog_init() { :; }
     qlog_debug() { :; }
     qlog_info() { :; }
     qlog_warn() { :; }
     qlog_error() { :; }
-}
+fi
 qlog_init "profile_apply"
 [ -f /usr/lib/qmanager/cgi_at.sh ] && . /usr/lib/qmanager/cgi_at.sh
 
@@ -42,9 +45,11 @@ qlog_init "profile_apply"
 # Must define EVENTS_FILE and MAX_EVENTS before sourcing events.sh
 EVENTS_FILE="/tmp/qmanager_events.json"
 MAX_EVENTS=300
-. /usr/lib/qmanager/events.sh 2>/dev/null || {
+if [ -f /usr/lib/qmanager/events.sh ]; then
+    . /usr/lib/qmanager/events.sh
+else
     append_event() { :; }
-}
+fi
 
 # --- Source profile manager library ------------------------------------------
 [ -f /usr/lib/qmanager/profile_mgr.sh ]   && . /usr/lib/qmanager/profile_mgr.sh

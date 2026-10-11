@@ -22,11 +22,14 @@
 # Usage: qmanager_scenario_schedule --now
 # =============================================================================
 
-. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+# Guarded with -f: BusyBox ash exits when `.` cannot find its file.
+if [ -f /usr/lib/qmanager/qlog.sh ]; then
+    . /usr/lib/qmanager/qlog.sh
+else
     qlog_init() { :; }
     qlog_info() { logger -t scenario_schedule "$1"; }
     qlog_warn() { logger -t scenario_schedule "WARN: $1"; }
-}
+fi
 
 [ -f /usr/lib/qmanager/scenario_mgr.sh ] && . /usr/lib/qmanager/scenario_mgr.sh
 

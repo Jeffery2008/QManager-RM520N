@@ -29,11 +29,14 @@
 # Dependencies: sms_tool, flock
 # =============================================================================
 
-. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+# Guarded with -f: BusyBox ash exits when `.` cannot find its file.
+if [ -f /usr/lib/qmanager/qlog.sh ]; then
+    . /usr/lib/qmanager/qlog.sh
+else
     qlog_init() { :; }
     qlog_info() { :; }
     qlog_warn() { :; }
-}
+fi
 qlog_init "sms_storage"
 
 SMS_TOOL="/usr/bin/sms_tool"

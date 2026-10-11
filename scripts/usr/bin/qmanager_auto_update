@@ -24,11 +24,14 @@
 # Lock: /tmp/qmanager_update.pid (shared with manual updates)
 # =============================================================================
 
-. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+# Guarded with -f: BusyBox ash exits when `.` cannot find its file.
+if [ -f /usr/lib/qmanager/qlog.sh ]; then
+    . /usr/lib/qmanager/qlog.sh
+else
     qlog_init() { :; }
     qlog_info() { logger -t auto_update "$1"; }
     qlog_warn() { logger -t auto_update "WARN: $1"; }
-}
+fi
 
 [ -f /usr/lib/qmanager/config.sh ] && . /usr/lib/qmanager/config.sh
 [ -f /usr/lib/qmanager/semver.sh ] && . /usr/lib/qmanager/semver.sh

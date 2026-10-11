@@ -19,13 +19,16 @@
 # =============================================================================
 
 # --- Logging -----------------------------------------------------------------
-. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+# Guarded with -f: BusyBox ash exits when `.` cannot find its file.
+if [ -f /usr/lib/qmanager/qlog.sh ]; then
+    . /usr/lib/qmanager/qlog.sh
+else
     qlog_init() { :; }
     qlog_debug() { :; }
     qlog_info() { :; }
     qlog_warn() { :; }
     qlog_error() { :; }
-}
+fi
 qlog_init "tower_schedule"
 
 # --- Validate arguments ------------------------------------------------------
@@ -41,7 +44,7 @@ fi
 # not "no schedule by design" — deny before the guard ever sees it, since an
 # empty sched otherwise passes the guard on purpose. See schedule_timer.sh and
 # docs/reference/scheduled-timers.md ("The 1970 boot window").
-. /usr/lib/qmanager/schedule_timer.sh 2>/dev/null
+[ -f /usr/lib/qmanager/schedule_timer.sh ] && . /usr/lib/qmanager/schedule_timer.sh
 if command -v _qm_timer_fire_allowed >/dev/null 2>&1; then
     if [ "$MODE" = "apply" ]; then
         sched_time=$(jq -r '.schedule.start_time // empty' /etc/qmanager/tower_lock.json 2>/dev/null)

@@ -27,11 +27,14 @@
 # Install location: /usr/bin/qmanager_scheduled_reboot
 # =============================================================================
 
-. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+# Guarded with -f: BusyBox ash exits when `.` cannot find its file.
+if [ -f /usr/lib/qmanager/qlog.sh ]; then
+    . /usr/lib/qmanager/qlog.sh
+else
     qlog_init() { :; }
     qlog_info() { logger -t scheduled_reboot "$1"; }
     qlog_warn() { logger -t scheduled_reboot "$1"; }
-}
+fi
 [ -f /usr/lib/qmanager/platform.sh ] && . /usr/lib/qmanager/platform.sh 2>/dev/null
 command -v pid_alive >/dev/null 2>&1 || pid_alive() { [ -n "$1" ] && [ -d "/proc/$1" ]; }
 
@@ -57,8 +60,8 @@ _qm_crash_log_append() {
     echo "$(date +%s)|$1" >> "$CRASH_LOG" 2>/dev/null
 }
 
-. /usr/lib/qmanager/config.sh 2>/dev/null || :
-. /usr/lib/qmanager/schedule_timer.sh 2>/dev/null || :
+[ -f /usr/lib/qmanager/config.sh ] && . /usr/lib/qmanager/config.sh
+[ -f /usr/lib/qmanager/schedule_timer.sh ] && . /usr/lib/qmanager/schedule_timer.sh
 
 if command -v _qm_timer_fire_allowed >/dev/null 2>&1; then
     sched_time=$(qm_config_get settings sched_reboot_time "" 2>/dev/null)

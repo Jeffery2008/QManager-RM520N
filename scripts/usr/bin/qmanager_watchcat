@@ -27,19 +27,24 @@
 # =============================================================================
 
 # --- Logging -----------------------------------------------------------------
-. /usr/lib/qmanager/qlog.sh 2>/dev/null || {
+# Guarded with -f: BusyBox ash exits when `.` cannot find its file.
+if [ -f /usr/lib/qmanager/qlog.sh ]; then
+    . /usr/lib/qmanager/qlog.sh
+else
     qlog_init() { :; }; qlog_debug() { :; }; qlog_info() { :; }
     qlog_warn() { :; }; qlog_error() { :; }; qlog_state_change() { :; }
-}
+fi
 qlog_init "watchcat"
 
 # --- Events (for append_event) -----------------------------------------------
 # Must define EVENTS_FILE and MAX_EVENTS before sourcing events.sh
 EVENTS_FILE="/tmp/qmanager_events.json"
 MAX_EVENTS=300
-. /usr/lib/qmanager/events.sh 2>/dev/null || {
+if [ -f /usr/lib/qmanager/events.sh ]; then
+    . /usr/lib/qmanager/events.sh
+else
     append_event() { :; }
-}
+fi
 
 # --- Config helper (RM520N-GL JSON config via config.sh) ---------------------
 [ -f /usr/lib/qmanager/config.sh ] && . /usr/lib/qmanager/config.sh
@@ -61,16 +66,20 @@ fi
 # --- Known-SIMs set (persists landed ICCID across SIM swaps/reverts so the
 # poller's boot-time swap detector treats it as expected, not a physical
 # swap). Degrades to a silent no-op if the lib is absent. ------------------
-. /usr/lib/qmanager/sim_db.sh 2>/dev/null || {
+if [ -f /usr/lib/qmanager/sim_db.sh ]; then
+    . /usr/lib/qmanager/sim_db.sh
+else
     sim_db_add() { :; }; sim_db_seed_if_absent() { :; }
-}
+fi
 
 # --- QUIMSLOT read-back verification (gates Tier-3 SIM switch/revert before
 # trusting the landed slot). Fail-open (verified) if the lib is absent, so
 # watchcat's existing flow is unchanged without it. -------------------------
-. /usr/lib/qmanager/slot_verify.sh 2>/dev/null || {
+if [ -f /usr/lib/qmanager/slot_verify.sh ]; then
+    . /usr/lib/qmanager/slot_verify.sh
+else
     verify_quimslot() { return 0; }
-}
+fi
 
 # --- File Paths --------------------------------------------------------------
 STATE_FILE="/tmp/qmanager_watchcat.json"
