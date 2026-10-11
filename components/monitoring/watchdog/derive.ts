@@ -17,11 +17,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { BadgeVariant } from "@/components/ui/badge";
 import type { WatchdogSettings } from "@/hooks/use-watchdog-settings";
-import type { WatchcatState, WatchcatStatus } from "@/types/modem-status";
+import type {
+  ConnectivityStatus,
+  WatchcatState,
+  WatchcatStatus,
+} from "@/types/modem-status";
 
-import type { DiscTone, TileValueTone } from "./shapes";
+import { STRIP, type DiscTone, type FigureTone } from "./shapes";
 
 // Watchdog — the surface's ONE derived model. Every child reads this; no
 // component re-infers a state from a payload.
@@ -35,30 +38,12 @@ export type TierIndex = 1 | 2 | 3 | 4;
 /** Escalation order, gentlest first. The one place the four rungs are listed. */
 export const TIERS: readonly TierIndex[] = [1, 2, 3, 4];
 
-/**
- * The machine voice per rung — what the device actually issues. Tier 4 is not
- * an AT command: `run_reboot` shells out to `/sbin/reboot`.
- */
-export const TIER_COMMAND: Record<TierIndex, string> = {
-  1: "AT+COPS=2 → AT+COPS=0",
-  2: "AT+CFUN=0 → AT+CFUN=1",
-  3: "AT+CFUN=0 → AT+QUIMSLOT=N → AT+CFUN=1",
-  4: "reboot",
-};
-
 /** Rung copy keys. The names live HERE and nowhere else on the surface. */
 export const TIER_NAME_KEY: Record<TierIndex, string> = {
   1: "watchdog.ladder.tier1.name",
   2: "watchdog.ladder.tier2.name",
   3: "watchdog.ladder.tier3.name",
   4: "watchdog.ladder.tier4.name",
-};
-
-export const TIER_EFFECT_KEY: Record<TierIndex, string> = {
-  1: "watchdog.ladder.tier1.effect",
-  2: "watchdog.ladder.tier2.effect",
-  3: "watchdog.ladder.tier3.effect",
-  4: "watchdog.ladder.tier4.effect",
 };
 
 /** What the rung costs the user. Stated in the rung, never in a tooltip. */
@@ -68,84 +53,6 @@ export const TIER_CONSEQUENCE_KEY: Record<TierIndex, string> = {
   3: "watchdog.ladder.tier3.consequence",
   4: "watchdog.ladder.tier4.consequence",
 };
-
-/**
- * A rung's resolved state. `running` carries no chip: the promoted container
- * already reports it and a `primary-container` chip on a `primary-container`
- * row is the same surface twice.
- */
-export type RungState = "off" | "on" | "running" | "blocked" | "inactive";
-
-export const RUNG_BADGE = {
-  off: "muted",
-  on: "success",
-  blocked: "warning",
-  inactive: "muted",
-} satisfies Record<Exclude<RungState, "running">, BadgeVariant>;
-
-/** One glyph per rung state. Two states in this slot never share one. */
-export const RUNG_GLYPH = {
-  off: MinusCircleIcon,
-  on: CheckCircle2Icon,
-  blocked: TriangleAlertIcon,
-  inactive: PowerOffIcon,
-} satisfies Record<Exclude<RungState, "running">, LucideIcon>;
-
-export const RUNG_STATUS_KEY = {
-  off: "watchdog.ladder.status.off",
-  on: "watchdog.ladder.status.on",
-  blocked: "watchdog.ladder.status.blocked",
-  inactive: "watchdog.ladder.status.inactive",
-} satisfies Record<Exclude<RungState, "running">, string>;
-
-export interface RungView {
-  tier: TierIndex;
-  state: RungState;
-  /** Draft truth: what the switch shows and what a save would write. */
-  enabled: boolean;
-  /** The draft for this rung differs from saved truth, so it is not in force. */
-  dirty: boolean;
-  command: string;
-}
-
-export interface RungInput {
-  tiers: Record<TierIndex, boolean>;
-  /** Draft master switch. With it off no rung can run, whatever its own flag. */
-  masterEnabled: boolean;
-  /** Draft backup slot. Tier 3 without one stops the ladder, so it blocks. */
-  backupSlot: string;
-  /** Which rungs carry an unsaved edit — the switch or the rung's own field. */
-  dirtyTiers: Record<TierIndex, boolean>;
-  /** Live truth: the tier the daemon is executing right now, 0 for none. */
-  runningTier: number;
-}
-
-export function deriveRungs({
-  tiers,
-  masterEnabled,
-  backupSlot,
-  dirtyTiers,
-  runningTier,
-}: RungInput): RungView[] {
-  return TIERS.map((tier) => {
-    const enabled = tiers[tier];
-    let state: RungState;
-    // Live truth first: a rung the daemon is executing IS running, even if the
-    // draft above it has since been switched off.
-    if (runningTier === tier) state = "running";
-    else if (!masterEnabled) state = "inactive";
-    else if (!enabled) state = "off";
-    else if (tier === 3 && !backupSlot) state = "blocked";
-    else state = "on";
-    return {
-      tier,
-      state,
-      enabled,
-      dirty: dirtyTiers[tier],
-      command: TIER_COMMAND[tier],
-    };
-  });
-}
 
 // -----------------------------------------------------------------------------
 // The phase ladder
@@ -215,7 +122,7 @@ export function derivePhase({
   return pastGrace ? "not_running" : "starting";
 }
 
-/** The disc is the only coloured thing on a tile, so the phase lands here. */
+/** The disc is the only coloured thing in the status card's phase block. */
 export const PHASE_DISC = {
   off: "neutral",
   unknown: "neutral",
@@ -229,20 +136,6 @@ export const PHASE_DISC = {
   locked: "neutral",
   disabled: "neutral",
 } satisfies Record<WatchdogPhase, DiscTone>;
-
-export const PHASE_VALUE_TONE = {
-  off: "neutral",
-  unknown: "neutral",
-  starting: "neutral",
-  not_running: "bad",
-  auto_disabled: "bad",
-  monitor: "neutral",
-  suspect: "alert",
-  recovery: "neutral",
-  cooldown: "neutral",
-  locked: "neutral",
-  disabled: "neutral",
-} satisfies Record<WatchdogPhase, TileValueTone>;
 
 /** Eleven phases, eleven distinct glyphs — the containers are 1.03:1 apart. */
 export const PHASE_GLYPH = {
@@ -293,114 +186,259 @@ export function isLive(phase: WatchdogPhase): boolean {
 }
 
 // -----------------------------------------------------------------------------
-// The status band
+// The status card
 // -----------------------------------------------------------------------------
 
-export interface BandTile {
-  key: "state" | "checks" | "recoveries" | "reboots";
+export interface BandFigure {
+  key: "checks" | "recoveries" | "reboots";
   eyebrowKey: string;
   /** Already-formatted figure, or null when the reading is absent. */
   value: string | null;
   captionKey: string;
   captionParams?: Record<string, string | number>;
+  tone: FigureTone;
+}
+
+export interface BandView {
+  labelKey: string;
+  /** The phase blurb, or the live cooldown countdown in the same slot. */
+  blurbKey: string;
+  blurbParams?: Record<string, string | number>;
+  /** The blurb carries a live figure and must not jitter. */
+  blurbNumeric: boolean;
   disc: DiscTone;
-  valueTone: TileValueTone;
   glyph: LucideIcon;
-  /** The caption carries a live figure and must not jitter. */
-  captionNumeric?: boolean;
   /** The device is acting right now. Carries the surface's one ambient loop. */
-  live?: boolean;
+  live: boolean;
+  figures: BandFigure[];
 }
 
 export interface BandInput {
   phase: WatchdogPhase;
-  /** Already translated: derive owns the key, the caller owns the language. */
-  phaseLabel: string;
   settings: WatchdogSettings;
   watchcat: WatchcatStatus | null;
-  /** Translated tier name for the "last recovery" caption, when there is one. */
-  lastTierName: string | null;
   /** Translated relative time for the last recovery, when there is one. */
   lastAgo: string | null;
 }
 
+const isTier = (n: number | null | undefined): n is TierIndex =>
+  n === 1 || n === 2 || n === 3 || n === 4;
+
 /**
- * Four readings, each honest about absence: a missing figure is `null` and
- * renders as an em dash, never as a zero the device never reported.
+ * Phase plus three readings, each honest about absence: a missing figure is
+ * `null` and renders as an em dash, never as a zero the device never reported.
  */
 export function deriveBand({
   phase,
-  phaseLabel,
   settings,
   watchcat,
-  lastTierName,
   lastAgo,
-}: BandInput): BandTile[] {
+}: BandInput): BandView {
   const known = phase !== "unknown" && watchcat !== null;
   const cooling = known && watchcat.cooldown_remaining > 0;
   const failures = known ? watchcat.failure_count : null;
   const reboots = known ? watchcat.reboots_this_hour : null;
+  const cap = settings.max_reboots_per_hour;
+  const lastTier = known ? watchcat.last_recovery_tier : null;
+  const coolingTier = known ? watchcat.current_tier : null;
 
-  return [
-    {
-      key: "state",
-      eyebrowKey: "watchdog.band.state",
-      value: phaseLabel,
-      captionKey: cooling
-        ? "watchdog.band.cooldownCaption"
-        : PHASE_BLURB_KEY[phase],
-      captionParams: cooling
-        ? { seconds: watchcat.cooldown_remaining }
-        : undefined,
-      captionNumeric: cooling,
-      disc: PHASE_DISC[phase],
-      valueTone: PHASE_VALUE_TONE[phase],
-      glyph: PHASE_GLYPH[phase],
-      live: isLive(phase),
-    },
-    {
-      key: "checks",
-      eyebrowKey: "watchdog.band.checks",
-      value: failures === null ? null : `${failures} / ${settings.fail_threshold}`,
-      captionKey: "watchdog.band.checksCaption",
-      disc: failures !== null && failures > 0 ? "alert" : "neutral",
-      valueTone: failures !== null && failures > 0 ? "alert" : "neutral",
-      glyph: TriangleAlertIcon,
-    },
-    {
-      key: "recoveries",
-      eyebrowKey: "watchdog.band.recoveries",
-      value: known ? String(watchcat.total_recoveries) : null,
-      captionKey:
-        lastTierName && lastAgo
-          ? "watchdog.band.recoveriesLast"
-          : "watchdog.band.recoveriesNone",
-      captionParams:
-        lastTierName && lastAgo
-          ? { tier: lastTierName, ago: lastAgo }
-          : undefined,
-      disc: "neutral",
-      valueTone: "neutral",
-      glyph: ClockIcon,
-    },
-    {
-      key: "reboots",
-      eyebrowKey: "watchdog.band.reboots",
-      value:
-        reboots === null
-          ? null
-          : `${reboots} / ${settings.max_reboots_per_hour}`,
-      // `count_recent_reboots` runs at daemon start and inside tier 4 only, so
-      // this figure is a running total since start, never a rolling hour.
-      captionKey: settings.tier4_enabled
-        ? "watchdog.band.rebootsCaption"
-        : "watchdog.band.rebootsOff",
-      disc: reboots !== null && reboots > 0 ? "alert" : "neutral",
-      valueTone: reboots !== null && reboots > 0 ? "alert" : "neutral",
-      glyph: PowerOffIcon,
-    },
-  ];
+  return {
+    labelKey: PHASE_LABEL_KEY[phase],
+    blurbKey: cooling
+      ? isTier(coolingTier)
+        ? "watchdog.band.cooldownStep"
+        : "watchdog.band.cooldownCaption"
+      : PHASE_BLURB_KEY[phase],
+    blurbParams: cooling
+      ? { seconds: watchcat.cooldown_remaining, tier: coolingTier ?? 0 }
+      : undefined,
+    blurbNumeric: cooling,
+    disc: PHASE_DISC[phase],
+    glyph: PHASE_GLYPH[phase],
+    live: isLive(phase),
+    figures: [
+      {
+        key: "checks",
+        eyebrowKey: "watchdog.band.checks",
+        value:
+          failures === null ? null : `${failures} / ${settings.fail_threshold}`,
+        captionKey: "watchdog.band.checksCaption",
+        tone: failures !== null && failures > 0 ? "alert" : "neutral",
+      },
+      {
+        key: "recoveries",
+        eyebrowKey: "watchdog.band.recoveries",
+        value: known ? String(watchcat.total_recoveries) : null,
+        captionKey:
+          isTier(lastTier) && lastAgo
+            ? "watchdog.band.recoveriesLast"
+            : "watchdog.band.recoveriesNone",
+        captionParams:
+          isTier(lastTier) && lastAgo ? { tier: lastTier, ago: lastAgo } : undefined,
+        tone: "neutral",
+      },
+      {
+        key: "reboots",
+        eyebrowKey: "watchdog.band.reboots",
+        value: reboots === null ? null : `${reboots} / ${cap}`,
+        // `count_recent_reboots` runs at daemon start and inside tier 4 only, so
+        // this is a running total since start, never a rolling hour.
+        captionKey: settings.tier4_enabled
+          ? "watchdog.band.rebootsCaption"
+          : "watchdog.band.rebootsOff",
+        tone:
+          reboots === null || reboots === 0
+            ? "neutral"
+            : reboots >= cap
+              ? "bad"
+              : "alert",
+      },
+    ],
+  };
 }
+
+// -----------------------------------------------------------------------------
+// The probe strip
+// -----------------------------------------------------------------------------
+
+export type StripBar =
+  | { kind: "none" }
+  | { kind: "miss" }
+  | { kind: "ok"; heightPct: number };
+
+export type StripView =
+  | { kind: "empty" }
+  | {
+      kind: "bars";
+      bars: StripBar[];
+      total: number;
+      missed: number;
+      avgMs: number | null;
+      minutes: number;
+    };
+
+/** The poller's own probe history, oldest first, left-padded to the slot count. */
+export function deriveStrip(
+  connectivity: ConnectivityStatus | null,
+  phase: WatchdogPhase,
+): StripView {
+  const all = connectivity?.latency_history ?? [];
+  if (phase === "unknown" || all.length === 0) return { kind: "empty" };
+
+  const history = all.slice(-STRIP.SLOTS);
+  const answered = history.filter((v): v is number => v !== null);
+  const max = Math.max(1, ...answered);
+  const pad: StripBar[] = Array.from(
+    { length: STRIP.SLOTS - history.length },
+    () => ({ kind: "none" }),
+  );
+  const bars: StripBar[] = history.map((v) =>
+    v === null
+      ? { kind: "miss" }
+      : {
+          kind: "ok",
+          heightPct: Math.round(STRIP.FLOOR_PCT + STRIP.SPAN_PCT * (v / max)),
+        },
+  );
+  const avg = connectivity?.avg_latency_ms;
+  const interval = connectivity?.history_interval_sec ?? 0;
+
+  return {
+    kind: "bars",
+    bars: [...pad, ...bars],
+    total: history.length,
+    missed: history.length - answered.length,
+    avgMs: typeof avg === "number" && Number.isFinite(avg) ? Math.round(avg) : null,
+    minutes: Math.max(1, Math.round((history.length * interval) / 60)),
+  };
+}
+
+// -----------------------------------------------------------------------------
+// The outage timeline
+// -----------------------------------------------------------------------------
+
+/** One integer check for the form and the timeline, mirroring the CGI ranges. */
+export const isIntInRange = (raw: string, min: number, max: number): boolean => {
+  const n = Number(raw);
+  return !(raw.trim() === "" || isNaN(n) || !Number.isInteger(n) || n < min || n > max);
+};
+
+/** The daemon holds at least this long after a SIM switch before rechecking. */
+const SIM_SWITCH_MIN_WAIT = 90;
+
+export interface TimelineInput {
+  enabled: boolean;
+  tiers: Record<TierIndex, boolean>;
+  backupSlot: string;
+  probeInterval: string;
+  failThreshold: string;
+  cooldown: string;
+}
+
+export interface TimelineRow {
+  tier: TierIndex;
+  seconds: number;
+  /** The first armed step runs the moment the outage is declared. */
+  declared: boolean;
+}
+
+export type TimelineNote = "off" | "none" | "invalid" | "stopped";
+
+export interface TimelineView {
+  rows: TimelineRow[];
+  /** Shown only when there are no rows or the ladder stops early. */
+  note: TimelineNote | null;
+}
+
+/**
+ * When each armed step runs into an outage, from the two cards' DRAFTS:
+ * declare at probe interval × threshold, then one wait per step.
+ */
+export function deriveTimeline({
+  enabled,
+  tiers,
+  backupSlot,
+  probeInterval,
+  failThreshold,
+  cooldown,
+}: TimelineInput): TimelineView {
+  if (!enabled) return { rows: [], note: "off" };
+  if (
+    !isIntInRange(probeInterval, 1, 60) ||
+    !isIntInRange(failThreshold, 1, 20) ||
+    !isIntInRange(cooldown, 10, 300)
+  )
+    return { rows: [], note: "invalid" };
+
+  const armed = TIERS.filter((tier) => tiers[tier]);
+  if (armed.length === 0) return { rows: [], note: "none" };
+
+  const wait = Number(cooldown);
+  let at = Number(probeInterval) * Number(failThreshold);
+  const rows: TimelineRow[] = [];
+  for (const [i, tier] of armed.entries()) {
+    rows.push({ tier, seconds: at, declared: i === 0 });
+    // A tier 3 with no slot halts the ladder (watchcat return code 2).
+    if (tier === 3 && !backupSlot) return { rows, note: "stopped" };
+    at += tier === 3 ? Math.max(SIM_SWITCH_MIN_WAIT, wait) : wait;
+  }
+  return { rows, note: null };
+}
+
+/** "N s" under a minute, else "M min S s", dropping a zero seconds part. */
+export function timelineDuration(seconds: number): {
+  key: string;
+  params: Record<string, number>;
+} {
+  if (seconds < 60)
+    return { key: "watchdog.detection.timeline.seconds", params: { s: seconds } };
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s === 0
+    ? { key: "watchdog.detection.timeline.minutes", params: { m } }
+    : { key: "watchdog.detection.timeline.minutesSeconds", params: { m, s } };
+}
+
 
 // -----------------------------------------------------------------------------
 // Relative time

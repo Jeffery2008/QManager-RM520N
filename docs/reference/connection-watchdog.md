@@ -176,7 +176,7 @@ Config lives in `/etc/qmanager/qmanager.conf` under `[watchcat]`, read/written v
 
 `probe_interval` is stored in **two** places, with the Watchdog as the single source of truth:
 
-1. `watchcat.probe_interval` in `qmanager.conf` — the canonical value the Watchdog's Detection tab reads and writes.
+1. `watchcat.probe_interval` in `qmanager.conf` — the canonical value the Watchdog's Detection card reads and writes.
 2. `.interval_sec` in `/etc/qmanager/ping_profile.json` — what the ping daemon (`qmanager_ping`) actually consumes.
 
 On every save, `watchdog.sh` propagates (1) into (2) via an **atomic jq key-merge** (read the existing JSON, set only `.interval_sec`, temp-file + `mv`) and touches **both** `/tmp/qmanager_ping_reload` (so the ping daemon re-reads its cadence) and `/tmp/qmanager_watchcat_reload` (so the watchdog re-reads its config). The merge never overwrites the whole file, so it can't clobber the `profile`/`target_ipv4`/`target_ipv6` keys that the Connection Quality "Probe Targets" card owns independently in the same file (see [Ping source / split ownership](#ping-source--split-ownership)).
@@ -358,67 +358,113 @@ Returns the saved config plus a snapshot of daemon/failover/swap state:
 
 ## Frontend anatomy
 
-> Re-authored to the design canon 2026-09-05. The previous two-column, tabbed, table-driven layout is gone; so are `watchdog-status-card.tsx`, `watchdog-settings-card.tsx` and `watchdog-recovery-activity-card.tsx`.
+> Redesigned 2026-10-11 to the bento / Card-Foot / `SegmentedField` canon. Gone, and not to be restored: the four-tile status band, `AutoDisabledBanner`, the one shared apply on the Ladder card, the per-rung `Switch`es, and the rungs' AT-command tags and effect sentences.
 
-Page: `/monitoring/watchdog` — `components/monitoring/watchdog/watchdog.tsx`. A **single column of full-width bands ordered by cadence**, matching `/monitoring/alerts` and `/monitoring/latency-monitoring`: the band moves every poll, the hero moves on a tier change, Detection never moves, Activity moves rarely.
+Page: `/monitoring/watchdog` — `components/monitoring/watchdog/watchdog.tsx`. Four blocks, top to bottom:
 
 ```
-MonitoringPageHeader          title + description + Refresh pill
-banners (conditional)         SIM failover · auto-disabled
-BAND A  status band           4 × 104px tiles — State · Failed checks · Recoveries · Reboots
-BAND B  hero card             "Recovery ladder": master switch + 4 rungs,
-                              then the surface's ONE CardFoot (WatchdogFoot)
-BAND C  full-width card       "Detection"
-BAND D  full-width card       "Recovery activity"
+MonitoringPageHeader   title + description + Refresh pill (reloads settings, modem status AND activity)
+FailoverBanner         conditional, only while sim_failover.active
+StatusCard             rounded-hero: phase disc + label + blurb · three figures · probe strip
+PAIR                   LadderCard (7fr) | DetectionCard (5fr), one height, each with its OWN CardFoot
+RecoveryActivityCard   full width: the newest 5 rows + an "All events" link to /monitoring/
 ```
 
-**The family's two contract modules.** `components/monitoring/watchdog/shapes.ts` owns every geometry string, control height and tone map on the surface, and the skeletons import the loaded views' own constants (Skeleton-Mirror). `derive.ts` owns the one derived model — the phase, the four tiles, the per-rung state and the tier copy keys. No component re-infers a state from a payload, and no component exports a shape constant. Geometry is restated from the sibling `/monitoring/` families rather than imported.
+**The family's three contract modules.** `shapes.ts` owns every geometry string, control height and tone map; skeletons import the loaded views' own constants (Skeleton-Mirror), and geometry is restated from the sibling `/monitoring/` families rather than imported. `derive.ts` owns the one derived model: the phase (`derivePhase`), the status card (`deriveBand`), the probe strip (`deriveStrip`), the outage timeline (`deriveTimeline`) and the tier copy keys. `use-watchdog-form.ts` owns the draft and the two scoped commits. No component re-infers a state from a payload.
 
-**Data sources (three hooks):**
-- `useWatchdogSettings` (`hooks/use-watchdog-settings.ts`) — the CGI above. Owns settings, `auto_disabled`, and the `save`/`revert_sim` actions. Polls every 30s (silent) so `auto_disabled` surfaces live without flashing the skeleton. It no longer keeps the CGI's `status` / `sim_failover` blocks: nothing read them, and the page takes the same numbers from the poller, which is fresher.
-- `useModemStatus` — the poller's `/tmp/qmanager_status.json` (`watchcat` + `sim_failover` blocks), polled every 5s. Feeds the status band, the running-tier highlight and the failover banner.
-- `useRecentActivities` — the shared Network Events feed, filtered client-side to `watchcat_recovery` + `sim_failover`.
+**Data sources (three hooks, all called in `watchdog.tsx`):**
+- `useWatchdogSettings` (`hooks/use-watchdog-settings.ts`) — the CGI above. Owns settings, `auto_disabled`, and the `save`/`revert_sim` actions. Polls every 30s (silent) so `auto_disabled` surfaces live without flashing the skeleton. It does not keep the CGI's `status` / `sim_failover` blocks; the page takes those numbers from the poller, which is fresher.
+- `useModemStatus({ pollInterval: 5000 })` — the poller's `/tmp/qmanager_status.json`. Reads three blocks: `watchcat` (status card, running-tier highlight), `sim_failover` (failover banner) and `connectivity` (probe strip).
+- `useRecentActivities({ maxEvents: 50 })` — the shared Network Events feed. Lifted to `watchdog.tsx` and passed into `RecoveryActivityCard` so the header Refresh reloads it; the card has no Refresh of its own.
 
 ### `WatchdogPhase` — what the surface may claim
 
-`derive.ts` resolves one total, ordered union: `auto_disabled` → `off` → `unknown` → the live `watchcat.state` → `starting` → `not_running`. A standing config fact outranks a live reading, and not knowing outranks guessing.
+`derive.ts` resolves one total, ordered union: `auto_disabled` → `off` → `unknown` → the live `watchcat.state` → `starting` → `not_running`. A standing config fact outranks a live reading, and not knowing outranks guessing. `auto_disabled` is carried by the status card alone (`bad` disc, its own glyph and blurb); there is no separate banner.
 
-- **`starting` / `not_running`** replace the incumbent's unconditional "Starting Up" tile, which a dead service could sit behind forever. The grace window is **60s**, anchored on the poll's own `receivedAtMs` and re-anchored when the saved master switch flips. It is 60 and not 30 because the poller refreshes the watchcat block on its Tier-1.5 branch (`TIER1_5_EVERY=5`) at a ~3.7-4.0s cycle — so that block is ~20s stale by construction, and a save additionally backgrounds the unit restart.
-- ⚠️ **`not_running` means "has not reported since boot", not "died".** The poller does **not** carry `watchcat.timestamp` into `status.json` (`qmanager_poller:1969-1979` reads nine fields and that is not one of them), so the page cannot distinguish a live daemon from a stale state file. What it detects is the poller's own absent-file path, which sets `enabled=false, state="disabled"`. Propagating the timestamp would make the stronger claim true; that is a poller change, i.e. a different tier.
-- **`unknown` does not key on `isStale` alone.** `useModemStatus` computes staleness by subtracting the modem's clock from the browser's, and this platform has no battery RTC — without a registered SIM the modem sits at Jan 1970 forever, which would pin the page at `unknown` permanently. The modem clock is admitted as evidence only past a plausibility floor; an unreachable read is the clock-independent signal underneath it.
-- **`locked` and `disabled` were factually swapped in the old copy and are now correct.** `locked` is a maintenance hold (`check_locked()` — the lock file, `/tmp/qmanager_long_running`, or a live profile-apply pid). The reboot limit is `auto_disabled`.
+- **`starting` / `not_running`** guard against a dead service sitting behind "Starting" forever. The grace window is **60s** (`GRACE_MS`), anchored on the poll's own `receivedAtMs` and re-anchored when the saved master switch flips. It is 60 and not 30 because the poller refreshes the watchcat block on its Tier-1.5 branch (`TIER1_5_EVERY=5`) at a ~3.7-4.0s cycle — so that block is ~20s stale by construction, and a save additionally backgrounds the unit restart.
+- ⚠️ **`not_running` means "has not reported since boot", not "died".** The poller does **not** carry `watchcat.timestamp` into `status.json` (`read_watchcat_state` in `qmanager_poller` reads nine fields and that is not one of them), so the page cannot distinguish a live daemon from a stale state file. What it detects is the poller's own absent-file path, which sets `enabled=false, state="disabled"`. Propagating the timestamp would make the stronger claim true; that is a poller change.
+- **`unknown` does not key on `isStale` alone.** `useModemStatus` computes staleness by subtracting the modem's clock from the browser's, and this platform has no battery RTC — without a registered SIM the modem sits at Jan 1970 forever, which would pin the page at `unknown` permanently. The modem clock is admitted as evidence only past a plausibility floor (`CLOCK_PLAUSIBLE_AFTER`); an unreachable read is the clock-independent signal underneath it.
+- **`locked` is a maintenance hold** (`check_locked()` — the lock file, `/tmp/qmanager_long_running`, or a live profile-apply pid). The reboot limit is `auto_disabled`. Older copy had the two swapped.
 
-### The bands
+### The status card
 
-- **Status band** (`status-band.tsx`) — four `TILE`s, neutral bodies, colour only on the 52px disc, one distinct glyph per phase. Every tile is honest about absence: under `unknown` the figures are `null` and render an em dash with an `sr-only` word, never a zero. The State caption becomes the live cooldown countdown while one is running.
-  > ⚠️ The Reboots tile does **not** say "this hour". `count_recent_reboots` runs at daemon start and inside `execute_tier4` only, never in the main loop, so `reboots_this_hour` is frozen between daemon starts — a device that took a tier-4 reboot reads "2 / 3" for days. The caption says "since the watchdog started", and when tier 4 is off it says the cap cannot fire.
+`status-band.tsx` (`StatusCard` / `StatusCardSkeleton`) — the surface's one `rounded-hero` anchor (`HERO_SHELL`). It reports **saved** settings, never the half-edited form.
 
-- **Recovery ladder** (`ladder-card.tsx`) — the surface's one `rounded-hero` anchor card, and the merge of what used to be a read-only stepper *and* a settings tab. The master enable is a `SWITCH_ROW` (`primary-container` when on, save-gated). Each rung carries its number, name, effect, **consequence sentence**, the AT sequence as a machine-voice `Tag`, a status chip and its switch. Tier 3's slot `Select` and tier 4's cap `Input` render **inside their own rung** and only while that tier is on, taking `FIELD.SHELL_ON_CONTAINER` because a field is one tonal step above its host.
-  - The running tier is a `primary-container` row (Highlight-by-Container) and carries a **marker**, not a chip: the four rung states are chips (`muted`/`success`/`warning`), but `info` resolves to `primary-container`, which on a promoted row is the same surface twice.
-  - Machine voice is what the device actually issues. Tier 4 is **not** an AT command (`run_reboot` shells out to `/sbin/reboot`) and tier 3 is the three-command Golden Rule, not a bare `AT+QUIMSLOT=N`.
+- **Phase block** (left edge): a 44px disc, label, blurb. Colour lives only on the disc (`PHASE_DISC`); eleven phases, eleven distinct glyphs (`PHASE_GLYPH`). While a cooldown runs the blurb becomes the live countdown (`watchdog.band.cooldownStep`, or `cooldownCaption` when the tier is unknown). The disc carries the surface's one ambient loop (`animate-pulse-ring`) while the phase is `recovery`.
+- **Three figures** (right edge): Failed checks `n / fail_threshold`, Recoveries with the last tier and its age, Reboots `n / max_reboots_per_hour`. Under `unknown` every figure is `null` and renders an em dash with an `sr-only` word, never a zero. Below a 30rem card the figures become receipt rows.
+  > ⚠️ The Reboots figure does **not** say "this hour". `count_recent_reboots` runs at daemon start and inside `execute_tier4` only, never in the main loop, so `reboots_this_hour` is frozen between daemon starts — a device that took a tier-4 reboot reads "2 / 3" for days. The caption says "since the watchdog started", and when tier 4 is off it says "Reboot step is off".
+- **Probe strip** (full width, under both): `deriveStrip(connectivity, phase)` draws the last `STRIP.SLOTS` (60) entries of `connectivity.latency_history`, oldest on the left, left-padded with empty bars. A `null` entry is a full-height destructive bar; an answered probe is `22 + 60 × (rtt / max)` percent tall. The head shows a destructive "N no reply" chip when any probe missed, and `avg_latency_ms` rounded. The left caption is `round(history.length × history_interval_sec / 60)` minutes, minimum 1 — taken from the array **length**, never `history_size`, because the ping daemon truncates its history on every probe-winner change. Under `unknown`, or with an empty history, the strip renders its empty state.
+  > ⚠️ The strip depends on the poller's `connectivity` block (`ConnectivityStatus` in `types/modem-status.ts`). The parallel Connection Quality unification run may reshape that block. A renamed or moved `latency_history` does not fail loudly: `deriveStrip` defaults it to `[]` and the strip shows "No probe data from the modem" on a healthy device. Re-check `deriveStrip` when that run lands.
 
-- **Detection** (`detection-card.tsx`) — probe interval, failure threshold, cooldown, then the derived "declares the connection down after about Ns" line as a `primary-container` notice.
+### Recovery ladder
 
-- **Recovery activity** (`recovery-activity-card.tsx`) — the `/monitoring` 52px day-grouped event row, tone from the shared `presentEvent(…, "card")` so the Age-Gated Tone Rule applies. Resolution is computed over the whole feed *before* filtering, or every recovery would read as permanently ongoing. The row's `message` is producer text from `qmanager_watchcat` and stays untranslated, as on every event feed in the product.
-  - **The event record carries no tier** (`events.sh` emits `timestamp`/`type`/`message`/`severity` only), so the row's `Tag` is the event type. Inferring a tier by matching the daemon's English prose would be a fabricated reading.
+`ladder-card.tsx` — a plain `CARD_SHELL` card (no longer the hero).
 
-- **No Detection/Activity pair.** There is no `COLS` on this surface, deliberately: at 25 events Activity drove a shared track to 1614px and stranded 1123px in Detection, which has three fixed-height fields and nothing to fill with. Both are full-width bands; the measurement is recorded at the top of `shapes.ts`.
+- **Master enable** is an On/Off `SegmentedField` in the header's `CardAction`. While it is off, every rung's control is disabled and the names go quiet.
+- **Each rung** is a number disc, the name, one consequence line (`TIER_CONSEQUENCE_KEY`) and its control. Tiers 1, 2 and 4 take an On/Off pill. **Tier 3 is one "Slot 1 / Slot 2 / Off" pill**: choosing a slot arms tier 3 and sets `backup_sim_slot`; Off clears `tier3_enabled` but keeps the slot, so re-arming restores it. A tier 3 armed with no slot selects no segment and shows a `warning` chip. **Tier 4 carries an inline reboot-cap field** that is never unmounted (disabled when tier 4 or the master is off), so the rung's height does not change.
+- **No AT-command tags and no effect sentences** (No Debug-Build Copy). The AT sequences live in the tier table at the top of this doc.
+- **The running tier** is a `primary-container` row (Highlight-by-Container) with a "Running now" **marker**, not a chip: `info` resolves to `primary-container`, which on a promoted row is the same surface twice. `runningTier` is forced to 0 under `unknown` and `off`, the same gate the status card applies.
 
-- **Apply footer** (`watchdog-foot.tsx`, `WatchdogFoot` / `WatchdogFootSkeleton`) — the one commit for the whole surface, a `CardFoot` on the **Ladder** card's bottom edge (`ladder-card.tsx`). It also commits Detection's fields, so its dirty status names the cards that hold pending edits (`watchdog.save.dirty`, `{{cards}}` joined from `watchdog.ladder.title` / `watchdog.detection.title`). Three status states: clean, dirty, blocked. Blocked names the offending **controls** and clicking Save focuses and reveals the first one; both lists are joined with `Intl.ListFormat` for the active locale. Discard (ghost, text only) is always rendered and disabled when clean or saving. A save that grants tier-4 reboot authority opens a confirm `AlertDialog` first.
+### Detection
+
+`detection-card.tsx` — three receipt rows (key left, control right), then the outage timeline.
+
+- **Probe every** is a `SegmentedField` over `PROBE_INTERVAL_OPTIONS` (1, 2, 5, 10, 15, 30 s) that becomes a `Select` below a 32rem card (`breakpoint="lg"`). **Failure threshold** and **Cooldown** are numeric `InputGroup` fields with the unit inside.
+- **Outage timeline** — `deriveTimeline` is a pure function of **both cards' drafts**, so a ladder edit moves it before anything is saved:
+  - The outage is declared at `probe_interval × fail_threshold`; the first armed tier runs then.
+  - Each next armed tier adds `cooldown`, except after tier 3, which adds `max(90, cooldown)` — the daemon's `SIM_SETTLE_SECS=90` floor (`SIM_SWITCH_MIN_WAIT` in `derive.ts`).
+  - A tier 3 armed with no slot ends the list with the `stopped` note (watchcat return code 2, see above).
+  - The other notes are `off` (master off), `none` (no tier armed) and `invalid` (a value outside the CGI ranges 1–60 / 1–20 / 10–300).
+  > ℹ️ NOTE: the times are an estimate from configured values ("about"). The daemon's stale-cache retry, which extends a cooldown by `check_interval` up to three times (`finish_cooldown`), and the time each tier's own commands take are not modelled.
+
+### The pair, and why Detection sits beside the Ladder
+
+`PAIR` is `grid-cols-1`, then `@4xl/main:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]` with `items-stretch`; each cell is `PAIR_CELL` (`grid min-w-0 *:h-full`), so both cards take the row height. Below 56rem the pair stacks.
+
+Detection pairs with the **Ladder**, not with Activity. The Ladder's height is fixed by construction (four `min-h-16` rungs, a tier-4 field that never unmounts), so the row height is predictable, and Detection's timeline (`TIMELINE.ROOT`, `flex-1 justify-end`) is the one region that absorbs the slack. Activity's height grows with the event count: the 2026-09-05 Detection/Activity pair stranded 1123px in Detection at 25 events, and which card drove the height flipped with the feed. Activity stays a full-width band.
+
+> ℹ️ NOTE: the one thing that grows the Ladder is the tier-4 cap's error line, shown only while the cap is out of range.
+
+### Recovery activity
+
+`recovery-activity-card.tsx` — the `/monitoring` 52px day-grouped event row, tone from the shared `presentEvent(…, "card")` so the Age-Gated Tone Rule applies.
+
+- Shows the newest `LOG_LIMIT` (5) watchdog rows (`watchcat_recovery` + `sim_failover`), sorted by timestamp. The header link "All events" goes to `/monitoring/` (Network Events) for the rest.
+- Resolution is computed by `computeUnresolved(events)` over the **whole unfiltered feed** before the filter and the slice, or every recovery would read as permanently ongoing.
+- The row's `message` is producer text from `qmanager_watchcat` and stays untranslated, as on every event feed in the product.
+- **The event record carries no tier** (`events.sh` emits `timestamp`/`type`/`message`/`severity` only), so the row's `Tag` is the event type. Inferring a tier by matching the daemon's English prose would be a fabricated reading.
+
+### Apply: one `CardFoot` per card
+
+`watchdog-foot.tsx` (`WatchdogFoot` / `WatchdogFootSkeleton`) takes a `scope` and is rendered by each card on its own bottom edge.
+
+| Scope | Card | Draft keys it commits |
+|-------|------|-----------------------|
+| `ladder` | Recovery ladder | `enabled`, `tier1`–`tier4`, `backupSlot`, `maxReboots` |
+| `detection` | Detection | `probeInterval`, `failThreshold`, `cooldown` |
+
+- **The CGI save is one atomic POST of every key**, so a card's save (`submitScope` in `use-watchdog-form.ts`) sends **its own draft over the other card's saved values**. On success only that card's edits are cleared; the other card's unsaved edits survive and stay dirty.
+- **One save at a time.** `busy` disables both Saves while either one is in flight.
+- **The tier-4 confirm `AlertDialog` opens only from the Ladder foot**, when the save newly grants reboot authority (`grantsRebootAuthority`: draft master and tier 4 both on, and they were not both on when saved). It keys on the master too, because a stock device ships tier 4 armed under a master that is off.
+- Status: clean, dirty (`watchdog.save.dirty`), or blocked (`watchdog.save.blockedIn`, naming the card's offending fields joined with `Intl.ListFormat`). Clicking a blocked Save focuses and reveals the first offending control. Discard (ghost) is always rendered, disabled when clean or saving. Each save fires one `toast.success` / `toast.error`, with the failure reason from the call's returned result.
   > ⚠️ `SaveButton` swallows the click while `blockedReason` is set, so the jump to the blocked field runs from an `onClickCapture` on a `contents` wrapper span. An `onClick` on `SaveButton` never fires in that state.
-  > ⚠️ There was a page-level, non-sticky `save-bar.tsx` until 2026-10-06. It is deleted; the Card-Foot Apply Rule in `DESIGN.md` forbids a bar under the card grid, so do not restore one.
+  > ⚠️ Do not restore a page-level `save-bar.tsx` (deleted 2026-10-06) or a single apply spanning both cards (retired 2026-10-11). The Card-Foot Apply Rule in `DESIGN.md` forbids the first; the second made one card's Save commit fields on the other.
 
-**Backup-slot save gating:** enabling Tier 3 without choosing a backup slot **blocks the save** in the form (`use-watchdog-form.ts`) — the frontend guard that keeps you out of the misconfig-stops-ladder state described above. The form validation mirrors the CGI ranges exactly, and its messages are i18n keys the rendering component translates.
+**Backup-slot save gating:** tier 3 armed without a slot **blocks the Ladder's save** — the frontend guard that keeps you out of the misconfig-stops-ladder state described above. The form validation mirrors the CGI ranges exactly, and its messages are i18n keys the rendering component translates.
 
-**`check_interval` is no longer sent.** The form used to hold it in a setter-less `useState` seeded at mount while `settingsSignature` included the key, so a server-side change flipped the signature, `discard()` could not re-seed a field with no setter, and the stale mount-time value was written back over the newer one. The CGI validates and writes the key only when it is present (`watchdog.sh:229,284`), so omitting it preserves the server's value.
+**`check_interval` is never sent.** `toPayload` omits it, and the CGI validates and writes the key only when it is present (`watchdog.sh:229,284`), so the server's value is preserved.
 
-**Form re-seeding vs. the 30s poll:** `use-watchdog-form.ts` seeds its fields from `settings` and re-seeds **in place** when a *value fingerprint* of `settings` changes (`settingsSignature`, a render-phase sync that reuses the hook's own `discard()`). The fingerprint — not an object-identity check — is required here: the hook does `setSettings({ ...json.settings, … })`, so the silent 30s refetch allocates a **fresh object every tick** even when nothing moved, and an identity comparison would wipe in-progress edits twice a minute. See [dashboard-state-motion.md](dashboard-state-motion.md) > Part 3.
+### The draft model
 
-> ℹ️ NOTE: The 30s poll can still re-seed the form mid-edit if the *server values genuinely change* (e.g. the daemon auto-disables itself).
+`useWatchdogForm` holds only the user's edits (`Partial<WatchdogDraft>`) and renders `draft = { ...savedDraft(settings), ...edits }`. There is no fingerprint and no re-seed:
 
-**i18n:** the surface is fully keyed under the top-level `watchdog` key of `public/locales/{en,zh-CN,zh-TW,it,id}/common.json` (122 keys), including screen-reader copy. The only untranslated text is the activity rows' producer-authored `message`.
+- The silent 30s refetch replaces the saved layer only. It never overwrites a field the user has edited, and an unedited field shows a new server value at once (for example after the daemon auto-disables itself).
+- A card is dirty when any of its keys differs from the saved value, so editing a value back to what is saved makes the card clean again.
+- A field the user has edited does **not** pick up a server-side change to that field; Discard drops the edit and shows the server value.
 
-**Motion:** one `staggerContainer` on the page root with every band a `staggerItem` (120ms), `rowCascadeDelay` for the log rows (80ms), and exactly one ambient loop — the state disc while the phase is `recovery`. The footer's unsaved dot (`FOOT.DOT`) is static, because an unsaved edit is not a live thing.
+**i18n:** the surface is fully keyed under the top-level `watchdog` key of `public/locales/{en,zh-CN,zh-TW,it,id}/common.json` (134 keys in each pack), including screen-reader copy. The only untranslated text is the activity rows' producer-authored `message`.
+
+**Motion:** one `staggerContainer` on the page root with every block a `staggerItem`, `rowCascadeDelay` for the log rows, and exactly one ambient loop — the status disc while the phase is `recovery`. The footer's unsaved dot (`FOOT.DOT`) is static, because an unsaved edit is not a live thing.
 
 ---
 
@@ -451,7 +497,7 @@ The daemon's own config lives in `/etc/qmanager/ping_profile.json`, and that one
 
 | Owner | CGI | Keys it writes | Reload flag it touches |
 |-------|-----|----------------|------------------------|
-| **Connection Watchdog** (Detection tab) | `monitoring/watchdog.sh` | `interval_sec` (from `watchcat.probe_interval`) | `/tmp/qmanager_ping_reload` **and** `/tmp/qmanager_watchcat_reload` |
+| **Connection Watchdog** (Detection card) | `monitoring/watchdog.sh` | `interval_sec` (from `watchcat.probe_interval`) | `/tmp/qmanager_ping_reload` **and** `/tmp/qmanager_watchcat_reload` |
 | **Connection Quality** ("Probe Targets" card) | `settings/ping_profile.sh` | `profile`, `target_host_1`, `target_host_2`, `target_ip_1`, `target_ip_2` | `/tmp/qmanager_ping_reload` |
 
 Because each writer merges only its own keys, the two never clobber each other. This is the split-ownership realignment: **the Watchdog owns the *cadence* (probe interval + fail threshold), the Connection Quality page owns the *targets*** — now four ICMP legs (two hostnames, two IPv4 literals) rather than the retired HTTP `target_1`/`target_2` URLs. One documented side effect: since `ping_profile.sh` merges only its own keys, changing `profile` no longer resets the daemon's per-field `interval_sec`/`fail_secs`/`recover_secs`/`history_secs` overrides — once present, those pass through unchanged. `profile` is now effectively a label paired with the targets.

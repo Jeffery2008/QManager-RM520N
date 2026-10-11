@@ -1251,17 +1251,18 @@
       "retry": "重试"
     },
     "band": {
-      "state": "状态",
       "checks": "失败检测",
       "recoveries": "恢复",
       "reboots": "重启",
       "absent": "未上报",
       "checksCaption": "开始恢复前",
       "cooldownCaption": "{{seconds}} 秒后重新检测",
-      "recoveriesLast": "上次：{{tier}}，{{ago}}",
+      "recoveriesLast": "第 {{tier}} 步，{{ago}}",
       "recoveriesNone": "尚无记录",
-      "rebootsCaption": "安全上限，自看门狗启动起计数",
-      "rebootsOff": "重启步骤已关闭，因此该上限不会触发"
+      "rebootsCaption": "自看门狗启动起",
+      "rebootsOff": "重启步骤已关闭",
+      "aria": "看门狗状态",
+      "cooldownStep": "第 {{tier}} 步已执行，{{seconds}} 秒后重新检测。"
     },
     "phase": {
       "off": {
@@ -1282,7 +1283,7 @@
       },
       "auto_disabled": {
         "label": "已自动关闭",
-        "blurb": "已达到重启次数上限，看门狗因此自动关闭。"
+        "blurb": "已达到重启次数上限。待链路稳定后再重新开启。"
       },
       "monitor": {
         "label": "监控中",
@@ -1310,48 +1311,37 @@
       }
     },
     "master": {
-      "title": "连接看门狗",
-      "description": "监控链路并自动恢复连接。保存后生效。",
       "aria": "启用连接看门狗"
     },
     "ladder": {
       "title": "恢复阶梯",
-      "description": "按顺序依次尝试，从最温和的方式开始。只有在上一步未能恢复连接时，才会执行下一步。",
+      "description": "按顺序尝试，从最温和的方式开始。",
       "aria": "恢复阶梯",
       "status": {
-        "on": "开",
-        "off": "关",
         "blocked": "需要插槽",
-        "running": "正在运行",
-        "inactive": "看门狗已关闭"
+        "running": "正在运行"
       },
       "tier1": {
         "name": "重新注册到网络",
-        "effect": "从运营商分离后再重新附着。",
-        "consequence": "链路会中断几秒钟，不会影响其他功能。"
+        "consequence": "链路会中断几秒钟。"
       },
       "tier2": {
         "name": "重启无线电",
-        "effect": "关闭无线电后再重新开启。",
-        "consequence": "锁定基站时会自动跳过此步骤，以确保锁定的基站不受影响。"
+        "consequence": "锁定基站时跳过。"
       },
       "tier3": {
         "name": "切换到备用 SIM 卡",
-        "effect": "故障转移到另一插槽的 SIM 卡，并使用该卡运行。",
-        "consequence": "若未设置备用插槽，恢复流程将止步于此，不会进入重启步骤。",
+        "consequence": "将使用备用卡运行，直到您切回。",
         "slotLabel": "备用 SIM 卡插槽",
-        "slotPlaceholder": "选择插槽",
-        "slot": "插槽 {{slot}}",
-        "slotHint": "看门狗切换到的插槽。主 SIM 卡仍留在另一个插槽中。"
+        "slot": "插槽 {{slot}}"
       },
       "tier4": {
         "name": "重启设备",
-        "effect": "作为最后手段重启调制解调器。",
-        "consequence": "此页面会消失约一分钟，等待调制解调器恢复。",
+        "consequence": "离线约一分钟。",
         "capLabel": "每小时最大重启次数",
-        "capHint": "一小时内允许的重启次数。达到上限后，看门狗会自行关闭。"
+        "capLead": "最多",
+        "capUnit": "次/小时"
       },
-      "unsaved": "未保存",
       "tierAria": "启用此恢复步骤：{{name}}"
     },
     "detection": {
@@ -1359,28 +1349,35 @@
       "description": "静默链路多久后会被判定为断网。",
       "probe": {
         "label": "探测间隔",
-        "placeholder": "选择间隔",
-        "option_one": "{{count}} 秒",
-        "option_other": "{{count}} 秒",
-        "hint": "调制解调器探测互联网连通性的频率。"
+        "short": "{{seconds}}秒"
       },
       "threshold": {
-        "label": "失败阈值",
-        "hint": "连续多少次探测失败后开始执行恢复。"
+        "label": "断网判定",
+        "unit": "次探测失败"
       },
       "cooldown": {
-        "label": "冷却时间（秒）",
-        "hint": "每次恢复步骤后，等待多久再重新检测连接。"
+        "label": "步骤间隔",
+        "unit": "秒"
       },
-      "derived": {
-        "ready": "约 {{seconds}} 秒的探测失败后，将判定连接已断开。",
-        "unavailable": "输入有效的检测数值，即可预览连接何时会被判定为断开。"
+      "timeline": {
+        "eyebrow": "链路中断时",
+        "declaredStep": "判定断网，执行第 {{tier}} 步",
+        "declaredReboot": "判定断网，执行第 4 步：重启",
+        "step": "第 {{tier}} 步",
+        "reboot": "第 4 步：重启",
+        "about": "约 {{time}}",
+        "seconds": "{{s}} 秒",
+        "minutes": "{{m}} 分钟",
+        "minutesSeconds": "{{m}} 分 {{s}} 秒",
+        "off": "看门狗已关闭，不会执行任何步骤。",
+        "none": "没有启用任何步骤，不会执行任何操作。",
+        "invalid": "输入有效的检测数值即可预览时间线。",
+        "stopped": "第 3 步没有插槽，恢复流程将止步于此。"
       }
     },
     "activity": {
       "title": "恢复活动",
       "description": "看门狗执行过的操作，最新优先。",
-      "refresh": "刷新",
       "type": {
         "recovery": "恢复",
         "failover": "SIM 卡故障转移"
@@ -1406,20 +1403,20 @@
         "title": "无法加载恢复活动",
         "retry": "重试"
       },
-      "refreshAria": "刷新恢复活动"
+      "allEvents": "全部事件"
     },
     "save": {
       "discard": "放弃",
       "action": "保存",
       "clean": "所有更改已保存",
-      "dirty": "{{cards}}中有未保存的更改",
+      "dirty": "有未保存的更改",
       "blockedIn": "保存前请检查 {{fields}}",
       "toastOk": "看门狗设置已保存",
       "toastFail": "无法保存看门狗设置",
       "confirmReboot": {
         "title": "允许看门狗重启调制解调器？",
-        "body": "保存后，当所有更温和的步骤都失败时，看门狗可以自行重启调制解调器。",
-        "cap": "每小时最多重启 {{cap}} 次。达到上限后，看门狗会整个关闭（包括监控），直到您重新开启。",
+        "body": "保存后，当所有更温和的步骤都失败时，看门狗可以自行重启调制解调器。此页面会消失约一分钟，等待调制解调器恢复。",
+        "cap": "每小时最多重启 {{cap}} 次。达到上限后，看门狗会自行关闭，直到您重新开启。",
         "cancel": "取消",
         "action": "允许重启"
       }
@@ -1430,10 +1427,6 @@
       "cooldown": "必须介于 10 到 300 秒之间",
       "maxReboots": "必须介于 1 到 10 之间",
       "backupSim": "选择备用 SIM 卡插槽以启用故障转移"
-    },
-    "autoDisabled": {
-      "title": "看门狗已自动关闭",
-      "description": "已达到本小时的重启上限。请在连接稳定后重新启用。"
     },
     "failover": {
       "title": "正在使用备用 SIM 卡",
@@ -1447,6 +1440,15 @@
       "confirm": "恢复 SIM 卡",
       "requested": "已请求恢复 SIM 卡。看门狗将很快处理。",
       "failed": "无法请求恢复 SIM 卡"
+    },
+    "strip": {
+      "title": "探测",
+      "noReply": "{{n}} 次无响应",
+      "average": "平均 {{ms}} 毫秒",
+      "ago": "{{minutes}} 分钟前",
+      "now": "现在",
+      "empty": "调制解调器没有探测数据",
+      "aria": "{{total}} 次探测，{{missed}} 次无响应"
     }
   },
   "aboutDevice": {

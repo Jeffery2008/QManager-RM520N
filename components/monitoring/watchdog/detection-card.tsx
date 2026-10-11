@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { CheckIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { InfoIcon } from "lucide-react";
 
 import {
   Card,
@@ -11,183 +11,219 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import {
+  SegmentedField,
+  SEGMENTED,
+  type SegmentedOption,
+} from "@/components/ui/segmented-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
+import {
+  deriveTimeline,
+  timelineDuration,
+  type TimelineNote,
+  type TimelineRow,
+} from "./derive";
 import {
   CARD_DESC,
   CARD_PAD,
   CARD_SHELL,
   CARD_TITLE,
-  FIELD,
-  FIELD_STACK,
-  NOTICE,
-  NOTICE_GLYPH,
-  NOTICE_NUM,
-  NOTICE_TONE,
+  DETECT,
+  EYEBROW,
+  NUM_FIELD,
   SKELETON,
+  TIMELINE,
 } from "./shapes";
 import {
   FIELD_ID,
   PROBE_INTERVAL_OPTIONS,
-  type RegisterField,
+  draftTiers,
+  type WatchdogDraft,
   type WatchdogForm,
 } from "./use-watchdog-form";
+import { WatchdogFoot, WatchdogFootSkeleton } from "./watchdog-foot";
 
-export interface DetectionCardProps {
-  form: WatchdogForm;
-  registerField: RegisterField;
-}
+const renderCheckGlyph = (className: string) => (
+  <CheckIcon size={SEGMENTED.GLYPH} className={className} aria-hidden="true" />
+);
 
-/**
- * Detection — the cadence half of the form: three fixed-height fields over the
- * one derived reading. A full-width band, not half of a pair (shapes.ts).
- */
-export function DetectionCard({ form, registerField }: DetectionCardProps) {
+const NOTE_KEY: Record<TimelineNote, string> = {
+  off: "watchdog.detection.timeline.off",
+  none: "watchdog.detection.timeline.none",
+  invalid: "watchdog.detection.timeline.invalid",
+  stopped: "watchdog.detection.timeline.stopped",
+};
+
+type NumKey = "failThreshold" | "cooldown";
+
+/** Detection: three receipt rows, the derived outage timeline, its own commit. */
+export function DetectionCard({ form }: { form: WatchdogForm }) {
   const { t } = useTranslation("common");
+  const { draft } = form;
+
+  const probeOptions: SegmentedOption<string>[] = PROBE_INTERVAL_OPTIONS.map(
+    (secs) => ({
+      value: String(secs),
+      label: t("watchdog.detection.probe.short", { seconds: secs }),
+      numeric: true,
+    }),
+  );
 
   return (
     <Card className={CARD_SHELL}>
       <CardHeader className={CARD_PAD}>
-        <CardTitle className={CARD_TITLE}>
-          {t("watchdog.detection.title")}
-        </CardTitle>
+        <CardTitle className={CARD_TITLE}>{t("watchdog.detection.title")}</CardTitle>
         <CardDescription className={CARD_DESC}>
           {t("watchdog.detection.description")}
         </CardDescription>
       </CardHeader>
-      <CardContent className={cn(CARD_PAD, "flex flex-col gap-5")}>
-        <div className={FIELD_STACK}>
-          <div className={FIELD.ROW}>
-            <label className={FIELD.LABEL} htmlFor={FIELD_ID.probeInterval}>
-              {t("watchdog.detection.probe.label")}
-            </label>
-            <Select
-              value={form.probeInterval}
-              onValueChange={form.setProbeInterval}
-            >
-              <SelectTrigger
-                id={FIELD_ID.probeInterval}
-                ref={registerField(FIELD_ID.probeInterval)}
-                aria-invalid={form.errors.probeInterval !== null}
-                aria-describedby={
-                  form.errors.probeInterval
-                    ? `${FIELD_ID.probeInterval}-hint ${FIELD_ID.probeInterval}-error`
-                    : `${FIELD_ID.probeInterval}-hint`
-                }
-                className={cn(FIELD.SHELL, FIELD.INVALID, FIELD.NARROW)}
-              >
-                <SelectValue
-                  placeholder={t("watchdog.detection.probe.placeholder")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {PROBE_INTERVAL_OPTIONS.map((secs) => (
-                  <SelectItem key={secs} value={String(secs)}>
-                    {t("watchdog.detection.probe.option", { count: secs })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p id={`${FIELD_ID.probeInterval}-hint`} className={FIELD.HINT}>
-              {t("watchdog.detection.probe.hint")}
-            </p>
+      <CardContent className={cn(CARD_PAD, DETECT.BODY)}>
+        <div className={DETECT.ROWS}>
+          <div className={DETECT.ROW}>
+            <span className={DETECT.KEY}>{t("watchdog.detection.probe.label")}</span>
+            <div ref={form.registerField(FIELD_ID.probeInterval)} className="contents">
+              <SegmentedField
+                value={draft.probeInterval}
+                onValueChange={(next) => form.setFields({ probeInterval: next })}
+                options={probeOptions}
+                ariaLabel={t("watchdog.detection.probe.label")}
+                breakpoint="lg"
+                glyph={renderCheckGlyph}
+                className={cn("w-auto", DETECT.PROBE_PILL)}
+                selectTriggerClassName={DETECT.PROBE_SELECT}
+              />
+            </div>
             {form.errors.probeInterval ? (
-              <p id={`${FIELD_ID.probeInterval}-error`} className={FIELD.ERROR}>
+              <p id={`${FIELD_ID.probeInterval}-error`} role="alert" className={DETECT.ERROR}>
                 {t(form.errors.probeInterval)}
               </p>
             ) : null}
           </div>
 
-          <div className={FIELD.ROW}>
-            <label className={FIELD.LABEL} htmlFor={FIELD_ID.failThreshold}>
-              {t("watchdog.detection.threshold.label")}
-            </label>
-            <Input
-              id={FIELD_ID.failThreshold}
-              ref={registerField(FIELD_ID.failThreshold)}
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={20}
-              value={form.failThreshold}
-              onChange={(e) => form.setFailThreshold(e.target.value)}
-              aria-invalid={form.errors.failThreshold !== null}
-              aria-describedby={
-                form.errors.failThreshold
-                  ? `${FIELD_ID.failThreshold}-hint ${FIELD_ID.failThreshold}-error`
-                  : `${FIELD_ID.failThreshold}-hint`
-              }
-              className={cn(FIELD.SHELL, FIELD.INVALID, FIELD.NUM, FIELD.NARROW)}
-            />
-            <p id={`${FIELD_ID.failThreshold}-hint`} className={FIELD.HINT}>
-              {t("watchdog.detection.threshold.hint")}
-            </p>
-            {form.errors.failThreshold ? (
-              <p id={`${FIELD_ID.failThreshold}-error`} className={FIELD.ERROR}>
-                {t(form.errors.failThreshold)}
-              </p>
-            ) : null}
-          </div>
-
-          <div className={FIELD.ROW}>
-            <label className={FIELD.LABEL} htmlFor={FIELD_ID.cooldown}>
-              {t("watchdog.detection.cooldown.label")}
-            </label>
-            <Input
-              id={FIELD_ID.cooldown}
-              ref={registerField(FIELD_ID.cooldown)}
-              type="number"
-              inputMode="numeric"
-              min={10}
-              max={300}
-              value={form.cooldown}
-              onChange={(e) => form.setCooldown(e.target.value)}
-              aria-invalid={form.errors.cooldown !== null}
-              aria-describedby={
-                form.errors.cooldown
-                  ? `${FIELD_ID.cooldown}-hint ${FIELD_ID.cooldown}-error`
-                  : `${FIELD_ID.cooldown}-hint`
-              }
-              className={cn(FIELD.SHELL, FIELD.INVALID, FIELD.NUM, FIELD.NARROW)}
-            />
-            <p id={`${FIELD_ID.cooldown}-hint`} className={FIELD.HINT}>
-              {t("watchdog.detection.cooldown.hint")}
-            </p>
-            {form.errors.cooldown ? (
-              <p id={`${FIELD_ID.cooldown}-error`} className={FIELD.ERROR}>
-                {t(form.errors.cooldown)}
-              </p>
-            ) : null}
-          </div>
+          <NumberRow
+            form={form}
+            field="failThreshold"
+            id={FIELD_ID.failThreshold}
+            labelKey="watchdog.detection.threshold.label"
+            unitKey="watchdog.detection.threshold.unit"
+          />
+          <NumberRow
+            form={form}
+            field="cooldown"
+            id={FIELD_ID.cooldown}
+            labelKey="watchdog.detection.cooldown.label"
+            unitKey="watchdog.detection.cooldown.unit"
+          />
         </div>
 
-        {/* The one derived reading on the form: probe cadence x threshold. */}
-        <p role="status" className={cn(NOTICE, NOTICE_TONE.info)}>
-          <InfoIcon className={NOTICE_GLYPH} aria-hidden />
-          {/* The figure inside this sentence retargets on every keystroke. */}
-          <span className={NOTICE_NUM}>
-            {form.estimatedDownSecs === null
-              ? t("watchdog.detection.derived.unavailable")
-              : t("watchdog.detection.derived.ready", {
-                  seconds: form.estimatedDownSecs,
-                })}
-          </span>
-        </p>
+        <Timeline draft={draft} />
       </CardContent>
+      <WatchdogFoot form={form} scope="detection" />
     </Card>
   );
 }
 
-/** Mirrors the loaded card: three fields and the notice, same constants. */
+function NumberRow({
+  form,
+  field,
+  id,
+  labelKey,
+  unitKey,
+}: {
+  form: WatchdogForm;
+  field: NumKey;
+  id: string;
+  labelKey: string;
+  unitKey: string;
+}) {
+  const { t } = useTranslation("common");
+  const error = form.errors[field];
+  return (
+    <div className={DETECT.ROW}>
+      <label htmlFor={id} className={DETECT.KEY}>
+        {t(labelKey)}
+      </label>
+      <InputGroup className={NUM_FIELD.GROUP}>
+        <InputGroupInput
+          id={id}
+          ref={form.registerField(id)}
+          type="text"
+          inputMode="numeric"
+          value={form.draft[field]}
+          onChange={(e) => {
+            const patch: Partial<WatchdogDraft> = {};
+            patch[field] = e.target.value;
+            form.setFields(patch);
+          }}
+          aria-invalid={error !== null}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={NUM_FIELD.INPUT}
+        />
+        <InputGroupAddon align="inline-end" className={NUM_FIELD.UNIT}>
+          {t(unitKey)}
+        </InputGroupAddon>
+      </InputGroup>
+      {error ? (
+        <p id={`${id}-error`} className={DETECT.ERROR}>
+          {t(error)}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** When each armed step runs into an outage, from both cards' drafts. */
+function Timeline({ draft }: { draft: WatchdogDraft }) {
+  const { t } = useTranslation("common");
+  const { rows, note } = deriveTimeline({
+    enabled: draft.enabled,
+    tiers: draftTiers(draft),
+    backupSlot: draft.backupSlot,
+    probeInterval: draft.probeInterval,
+    failThreshold: draft.failThreshold,
+    cooldown: draft.cooldown,
+  });
+
+  const label = (row: TimelineRow) =>
+    row.declared
+      ? row.tier === 4
+        ? t("watchdog.detection.timeline.declaredReboot")
+        : t("watchdog.detection.timeline.declaredStep", { tier: row.tier })
+      : row.tier === 4
+        ? t("watchdog.detection.timeline.reboot")
+        : t("watchdog.detection.timeline.step", { tier: row.tier });
+
+  return (
+    <div className={TIMELINE.ROOT}>
+      <span className={EYEBROW}>{t("watchdog.detection.timeline.eyebrow")}</span>
+      {rows.length > 0 ? (
+        <ul className={TIMELINE.ROWS}>
+          {rows.map((row) => {
+            const d = timelineDuration(row.seconds);
+            return (
+              <li key={row.tier} className={TIMELINE.ROW}>
+                <span className={TIMELINE.KEY}>{label(row)}</span>
+                <span className={TIMELINE.VALUE}>
+                  {t("watchdog.detection.timeline.about", { time: t(d.key, d.params) })}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+      {note ? <p className={TIMELINE.NOTE}>{t(NOTE_KEY[note])}</p> : null}
+    </div>
+  );
+}
+
+/** Mirrors the loaded card: three receipt rows, the timeline, the foot. */
 export function DetectionCardSkeleton() {
   return (
     <Card className={CARD_SHELL} aria-hidden>
@@ -195,18 +231,25 @@ export function DetectionCardSkeleton() {
         <Skeleton className={cn(SKELETON.LINE, "h-5 w-32")} />
         <Skeleton className={cn(SKELETON.LINE, "h-4 w-56")} />
       </CardHeader>
-      <CardContent className={cn(CARD_PAD, "flex flex-col gap-5")}>
-        <div className={FIELD_STACK}>
+      <CardContent className={cn(CARD_PAD, DETECT.BODY)}>
+        <div className={DETECT.ROWS}>
           {[0, 1, 2].map((i) => (
-            <div key={i} className={FIELD.ROW}>
+            <div key={i} className={DETECT.ROW}>
               <Skeleton className={cn(SKELETON.LINE, "h-3.5 w-28")} />
-              <Skeleton className={cn(SKELETON.FIELD, FIELD.NARROW)} />
-              <Skeleton className={cn(SKELETON.LINE, "h-3 w-44")} />
+              <Skeleton className={cn(SKELETON.FIELD, "w-36")} />
             </div>
           ))}
         </div>
-        <Skeleton className={cn(SKELETON.LINE, "h-8 w-full")} />
+        <div className={TIMELINE.ROOT}>
+          <Skeleton className={cn(SKELETON.LINE, "h-3 w-28")} />
+          <div className={TIMELINE.ROWS}>
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className={cn(SKELETON.LINE, "h-4 w-full")} />
+            ))}
+          </div>
+        </div>
       </CardContent>
+      <WatchdogFootSkeleton />
     </Card>
   );
 }

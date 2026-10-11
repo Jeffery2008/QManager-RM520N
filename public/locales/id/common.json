@@ -1251,17 +1251,18 @@
       "retry": "Coba lagi"
     },
     "band": {
-      "state": "Status",
       "checks": "Pemeriksaan Gagal",
       "recoveries": "Pemulihan",
       "reboots": "Reboot",
       "absent": "Tidak dilaporkan",
       "checksCaption": "Sebelum pemulihan dimulai",
       "cooldownCaption": "Memeriksa ulang dalam {{seconds}} detik",
-      "recoveriesLast": "Terakhir: {{tier}}, {{ago}}",
+      "recoveriesLast": "Langkah {{tier}}, {{ago}}",
       "recoveriesNone": "Belum pernah",
-      "rebootsCaption": "Batas keamanan, dihitung sejak watchdog mulai berjalan",
-      "rebootsOff": "Langkah reboot nonaktif, sehingga batas ini tidak dapat berlaku"
+      "rebootsCaption": "Sejak watchdog mulai berjalan",
+      "rebootsOff": "Langkah reboot nonaktif",
+      "aria": "Status watchdog",
+      "cooldownStep": "Langkah {{tier}} dijalankan. Memeriksa ulang dalam {{seconds}} detik."
     },
     "phase": {
       "off": {
@@ -1282,7 +1283,7 @@
       },
       "auto_disabled": {
         "label": "Mati otomatis",
-        "blurb": "Batas reboot tercapai, sehingga watchdog mematikan dirinya sendiri."
+        "blurb": "Batas reboot tercapai. Nyalakan lagi setelah koneksi stabil."
       },
       "monitor": {
         "label": "Memantau",
@@ -1310,77 +1311,73 @@
       }
     },
     "master": {
-      "title": "Watchdog koneksi",
-      "description": "Memantau koneksi dan memulihkannya secara otomatis. Berlaku saat Anda menyimpan.",
       "aria": "Aktifkan watchdog koneksi"
     },
     "ladder": {
       "title": "Urutan pemulihan",
-      "description": "Dicoba secara berurutan, mulai dari yang paling ringan. Setiap langkah hanya dijalankan jika langkah sebelumnya belum memulihkan koneksi.",
+      "description": "Dicoba berurutan, mulai dari yang paling ringan.",
       "aria": "Urutan pemulihan",
       "status": {
-        "on": "Aktif",
-        "off": "Nonaktif",
         "blocked": "Perlu slot",
-        "running": "Sedang berjalan",
-        "inactive": "Watchdog mati"
+        "running": "Sedang berjalan"
       },
       "tier1": {
         "name": "Daftar ulang ke jaringan",
-        "effect": "Melepaskan diri dari operator lalu terhubung kembali.",
-        "consequence": "Koneksi terputus selama beberapa detik. Tidak ada yang lain terpengaruh."
+        "consequence": "Koneksi terputus selama beberapa detik."
       },
       "tier2": {
         "name": "Mulai ulang radio",
-        "effect": "Mematikan radio lalu menyalakannya kembali.",
-        "consequence": "Dilewati otomatis saat penguncian tower aktif, sehingga sel yang terkunci tetap aman."
+        "consequence": "Dilewati saat penguncian tower aktif."
       },
       "tier3": {
         "name": "Beralih ke SIM cadangan",
-        "effect": "Melakukan failover ke slot SIM lain dan menggunakannya.",
-        "consequence": "Tanpa slot cadangan, urutan ini berhenti di sini dan tidak akan sampai ke langkah reboot.",
+        "consequence": "Tetap memakai SIM cadangan sampai Anda mengembalikannya.",
         "slotLabel": "Slot SIM cadangan",
-        "slotPlaceholder": "Pilih slot",
-        "slot": "Slot {{slot}}",
-        "slotHint": "Slot yang dituju watchdog. SIM utama Anda tetap berada di slot satunya."
+        "slot": "Slot {{slot}}"
       },
       "tier4": {
         "name": "Reboot Perangkat",
-        "effect": "Me-reboot modem sebagai upaya terakhir.",
-        "consequence": "Halaman ini akan hilang sekitar satu menit selama modem kembali aktif.",
+        "consequence": "Offline sekitar satu menit.",
         "capLabel": "Maksimum reboot per jam",
-        "capHint": "Berapa kali reboot yang diizinkan dalam satu jam. Saat batas tercapai, watchdog mematikan dirinya sendiri."
+        "capLead": "Hingga",
+        "capUnit": "per jam"
       },
-      "unsaved": "Belum disimpan",
       "tierAria": "Aktifkan langkah pemulihan ini: {{name}}"
     },
     "detection": {
       "title": "Deteksi",
       "description": "Seberapa cepat koneksi yang diam dianggap sebagai gangguan.",
       "probe": {
-        "label": "Interval pemeriksaan",
-        "placeholder": "Pilih interval",
-        "option_one": "{{count}} detik",
-        "option_other": "{{count}} detik",
-        "hint": "Seberapa sering modem memeriksa apakah internet masih dapat dijangkau."
+        "label": "Periksa setiap",
+        "short": "{{seconds}} dtk"
       },
       "threshold": {
-        "label": "Ambang kegagalan",
-        "hint": "Berapa kali pemeriksaan berturut-turut harus gagal sebelum pemulihan dimulai."
+        "label": "Terputus setelah",
+        "unit": "pemeriksaan gagal"
       },
       "cooldown": {
-        "label": "Cooldown (detik)",
-        "hint": "Berapa lama menunggu setelah setiap langkah pemulihan sebelum memeriksa ulang koneksi."
+        "label": "Jeda antarlangkah",
+        "unit": "dtk"
       },
-      "derived": {
-        "ready": "Menyatakan koneksi terputus setelah sekitar {{seconds}} detik pemeriksaan gagal.",
-        "unavailable": "Masukkan nilai deteksi yang valid untuk melihat pratinjau kapan koneksi akan dinyatakan terputus."
+      "timeline": {
+        "eyebrow": "Jika koneksi terputus",
+        "declaredStep": "Gangguan dinyatakan, langkah {{tier}}",
+        "declaredReboot": "Gangguan dinyatakan, langkah 4, reboot",
+        "step": "Langkah {{tier}}",
+        "reboot": "Langkah 4, reboot",
+        "about": "sekitar {{time}}",
+        "seconds": "{{s}} dtk",
+        "minutes": "{{m}} mnt",
+        "minutesSeconds": "{{m}} mnt {{s}} dtk",
+        "off": "Watchdog mati, jadi tidak ada yang berjalan.",
+        "none": "Tidak ada langkah yang aktif, jadi tidak ada yang berjalan.",
+        "invalid": "Masukkan nilai deteksi yang valid untuk melihat pratinjau urutan waktu.",
+        "stopped": "Langkah 3 tidak punya slot, jadi urutan berhenti di sana."
       }
     },
     "activity": {
       "title": "Aktivitas pemulihan",
       "description": "Tindakan yang telah dilakukan watchdog, terbaru dulu.",
-      "refresh": "Segarkan",
       "type": {
         "recovery": "Pemulihan",
         "failover": "Failover SIM"
@@ -1406,20 +1403,20 @@
         "title": "Tidak dapat memuat aktivitas pemulihan",
         "retry": "Coba lagi"
       },
-      "refreshAria": "Muat ulang aktivitas pemulihan"
+      "allEvents": "Semua peristiwa"
     },
     "save": {
       "discard": "Buang",
       "action": "Simpan",
       "clean": "Semua perubahan tersimpan",
-      "dirty": "Ada perubahan yang belum disimpan di {{cards}}",
+      "dirty": "Ada perubahan yang belum disimpan",
       "blockedIn": "Periksa {{fields}} sebelum menyimpan",
       "toastOk": "Pengaturan watchdog tersimpan",
       "toastFail": "Tidak dapat menyimpan pengaturan watchdog",
       "confirmReboot": {
         "title": "Izinkan watchdog me-reboot modem?",
-        "body": "Setelah disimpan, watchdog dapat memulai ulang modem sendiri ketika semua langkah yang lebih ringan telah gagal.",
-        "cap": "Reboot dibatasi {{cap}} kali per jam. Saat batas itu tercapai, watchdog mematikan dirinya sepenuhnya — termasuk pemantauan — sampai Anda menyalakannya lagi.",
+        "body": "Setelah disimpan, watchdog dapat memulai ulang modem sendiri ketika semua langkah yang lebih ringan telah gagal. Halaman ini akan hilang sekitar satu menit selama modem kembali aktif.",
+        "cap": "Reboot dibatasi {{cap}} kali per jam. Saat batas itu tercapai, watchdog mematikan dirinya sampai Anda menyalakannya lagi.",
         "cancel": "Batal",
         "action": "Izinkan reboot"
       }
@@ -1430,10 +1427,6 @@
       "cooldown": "Harus antara 10 dan 300 detik",
       "maxReboots": "Harus antara 1 dan 10",
       "backupSim": "Pilih slot SIM cadangan untuk mengaktifkan failover"
-    },
-    "autoDisabled": {
-      "title": "Watchdog mematikan dirinya sendiri",
-      "description": "Batas reboot untuk jam ini tercapai. Aktifkan kembali setelah koneksi stabil."
     },
     "failover": {
       "title": "Berjalan menggunakan SIM cadangan",
@@ -1447,6 +1440,15 @@
       "confirm": "Pulihkan SIM",
       "requested": "Permintaan pemulihan SIM diterima. Watchdog akan segera memprosesnya.",
       "failed": "Tidak dapat meminta pemulihan SIM"
+    },
+    "strip": {
+      "title": "Pemeriksaan",
+      "noReply": "{{n}} tanpa balasan",
+      "average": "rata-rata {{ms}} ms",
+      "ago": "{{minutes}} mnt lalu",
+      "now": "Sekarang",
+      "empty": "Tidak ada data pemeriksaan dari modem",
+      "aria": "{{total}} pemeriksaan, {{missed}} tanpa balasan"
     }
   },
   "aboutDevice": {

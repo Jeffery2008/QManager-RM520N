@@ -13,17 +13,21 @@ import {
   type WatchdogSettings,
 } from "@/hooks/use-watchdog-settings";
 import { useModemStatus, type UseModemStatusReturn } from "@/hooks/use-modem-status";
+import {
+  useRecentActivities,
+  type UseRecentActivitiesReturn,
+} from "@/hooks/use-recent-activities";
 import { staggerContainer, staggerItem } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
-import { AutoDisabledBanner, FailoverBanner } from "./banners";
+import { FailoverBanner } from "./banners";
 import { DetectionCard, DetectionCardSkeleton } from "./detection-card";
 import {
   deriveBand,
   derivePhase,
+  deriveStrip,
   useGraceGate,
   useTimeAgo,
-  PHASE_LABEL_KEY,
 } from "./derive";
 import { LadderCard, LadderCardSkeleton } from "./ladder-card";
 import { RecoveryActivityCard } from "./recovery-activity-card";
@@ -32,15 +36,16 @@ import {
   CONDITION_TONE,
   HEADER_PILL,
   PAGE_ROOT,
+  PAIR,
+  PAIR_CELL,
   PILL_GLYPH,
 } from "./shapes";
-import { StatusBand, StatusBandSkeleton } from "./status-band";
+import { StatusCard, StatusCardSkeleton } from "./status-band";
 import { useWatchdogForm } from "./use-watchdog-form";
 
 /**
- * `useWatchdogForm` seeds ten fields straight off `settings`, so a partial
- * payload has to be caught BEFORE the form-consuming subtree mounts — a hook
- * cannot be called conditionally, which is why this is a component boundary.
+ * `useWatchdogForm` seeds every field straight off `settings`, so a partial
+ * payload is caught BEFORE the form-consuming subtree mounts.
  */
 function isReady(s: WatchdogSettings | null): s is WatchdogSettings {
   return (
@@ -58,17 +63,17 @@ const WatchdogComponent = () => {
   const { t } = useTranslation("common");
   const hook = useWatchdogSettings();
   const modemStatus = useModemStatus({ pollInterval: 5000 });
+  const activities = useRecentActivities({ maxEvents: 50 });
   const { settings, isLoading, error, refresh } = hook;
 
   const modemRefresh = modemStatus.refresh;
+  const activityRefresh = activities.refresh;
   const reload = React.useCallback(() => {
-    // `refresh` is the hook's `fetchSettings(silent?)`; a click event must
-    // never reach that argument, or a user-triggered reload goes silent.
+    // `refresh` is `fetchSettings(silent?)`: a click event must never reach it.
     refresh();
-    // The band and the ladder's live tier come from the POLLER, not from
-    // settings, so refreshing only the config left the visible half untouched.
     modemRefresh();
-  }, [refresh, modemRefresh]);
+    activityRefresh();
+  }, [refresh, modemRefresh, activityRefresh]);
 
   return (
     <motion.div
@@ -107,27 +112,29 @@ const WatchdogComponent = () => {
           hook={hook}
           settings={settings}
           modemStatus={modemStatus}
+          activities={activities}
         />
       ) : isLoading ? (
         <>
           <motion.div variants={staggerItem}>
-            <StatusBandSkeleton />
+            <StatusCardSkeleton />
           </motion.div>
+          <div className={PAIR}>
+            <motion.div variants={staggerItem} className={PAIR_CELL}>
+              <LadderCardSkeleton />
+            </motion.div>
+            <motion.div variants={staggerItem} className={PAIR_CELL}>
+              <DetectionCardSkeleton />
+            </motion.div>
+          </div>
           <motion.div variants={staggerItem}>
-            <LadderCardSkeleton />
-          </motion.div>
-          <motion.div variants={staggerItem}>
-            <DetectionCardSkeleton />
-          </motion.div>
-          <motion.div variants={staggerItem}>
-            <RecoveryActivityCard />
+            <RecoveryActivityCard activities={activities} />
           </motion.div>
         </>
       ) : (
         <>
           {/* Nothing readable came back, so the settings surface reports the
-              failure outright rather than drawing "-"-shaped optimism.
-              Activity is a separate read and may well have succeeded. */}
+              failure outright. Activity is a separate read. */}
           <motion.div variants={staggerItem}>
             <SettingsUnreadable
               message={error ?? t("watchdog.page.unreadable")}
@@ -135,7 +142,7 @@ const WatchdogComponent = () => {
             />
           </motion.div>
           <motion.div variants={staggerItem}>
-            <RecoveryActivityCard />
+            <RecoveryActivityCard activities={activities} />
           </motion.div>
         </>
       )}
@@ -143,19 +150,17 @@ const WatchdogComponent = () => {
   );
 };
 
-/**
- * The form-consuming subtree. One `useWatchdogForm` owns the draft; one
- * `derivePhase` owns what the device is doing. The band reports SAVED truth,
- * never the half-edited form.
- */
+/** One form owns both drafts; one `derivePhase` owns what the device is doing. */
 function WatchdogSurface({
   hook,
   settings,
   modemStatus,
+  activities,
 }: {
   hook: UseWatchdogSettingsReturn;
   settings: WatchdogSettings;
   modemStatus: UseModemStatusReturn;
+  activities: UseRecentActivitiesReturn;
 }) {
   const { t } = useTranslation("common");
   const timeAgo = useTimeAgo();
@@ -180,28 +185,18 @@ function WatchdogSurface({
     pastGrace,
   });
 
-  const lastTier = watchcat?.last_recovery_tier ?? null;
+  // The status card reports SAVED truth, never the half-edited form.
   const lastTime = watchcat?.last_recovery_time ?? null;
-  const tiles = deriveBand({
+  const band = deriveBand({
     phase,
-    phaseLabel: t(PHASE_LABEL_KEY[phase]),
     settings,
     watchcat,
-    lastTierName:
-      lastTier !== null && lastTier >= 1 && lastTier <= 4
-        ? t(`watchdog.ladder.tier${lastTier}.name`)
-        : null,
     lastAgo: lastTime !== null ? timeAgo(lastTime) : null,
   });
+  const strip = deriveStrip(modemStatus.data?.connectivity ?? null, phase);
 
   return (
     <>
-      {hook.autoDisabled ? (
-        <motion.div variants={staggerItem}>
-          <AutoDisabledBanner />
-        </motion.div>
-      ) : null}
-
       {failover?.active ? (
         <motion.div variants={staggerItem}>
           <FailoverBanner
@@ -217,28 +212,28 @@ function WatchdogSurface({
       ) : null}
 
       <motion.div variants={staggerItem}>
-        <StatusBand tiles={tiles} />
+        <StatusCard band={band} strip={strip} />
       </motion.div>
 
-      <motion.div variants={staggerItem}>
-        {/* Not knowing outranks guessing: the same gate the band applies. */}
-        <LadderCard
-          form={form}
-          runningTier={
-            phase === "unknown" || phase === "off"
-              ? 0
-              : (watchcat?.current_tier ?? 0)
-          }
-          registerField={form.registerField}
-        />
-      </motion.div>
+      <div className={PAIR}>
+        <motion.div variants={staggerItem} className={PAIR_CELL}>
+          {/* Not knowing outranks guessing: the same gate the status card applies. */}
+          <LadderCard
+            form={form}
+            runningTier={
+              phase === "unknown" || phase === "off"
+                ? 0
+                : (watchcat?.current_tier ?? 0)
+            }
+          />
+        </motion.div>
+        <motion.div variants={staggerItem} className={PAIR_CELL}>
+          <DetectionCard form={form} />
+        </motion.div>
+      </div>
 
       <motion.div variants={staggerItem}>
-        <DetectionCard form={form} registerField={form.registerField} />
-      </motion.div>
-
-      <motion.div variants={staggerItem}>
-        <RecoveryActivityCard />
+        <RecoveryActivityCard activities={activities} />
       </motion.div>
     </>
   );

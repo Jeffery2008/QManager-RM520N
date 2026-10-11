@@ -1251,17 +1251,18 @@
       "retry": "Try again"
     },
     "band": {
-      "state": "State",
       "checks": "Failed checks",
       "recoveries": "Recoveries",
       "reboots": "Reboots",
       "absent": "Not reported",
       "checksCaption": "Before recovery starts",
       "cooldownCaption": "Rechecking in {{seconds}}s",
-      "recoveriesLast": "Last: {{tier}}, {{ago}}",
+      "recoveriesLast": "Step {{tier}}, {{ago}}",
       "recoveriesNone": "None yet",
-      "rebootsCaption": "Safety cap, counted since the watchdog started",
-      "rebootsOff": "The reboot step is off, so the cap cannot fire"
+      "rebootsCaption": "Since the watchdog started",
+      "rebootsOff": "Reboot step is off",
+      "aria": "Watchdog status",
+      "cooldownStep": "Step {{tier}} ran. Rechecking in {{seconds}}s."
     },
     "phase": {
       "off": {
@@ -1282,7 +1283,7 @@
       },
       "auto_disabled": {
         "label": "Turned itself off",
-        "blurb": "The reboot limit was reached, so the watchdog switched itself off."
+        "blurb": "It reached the reboot limit. Turn it back on once the link is stable."
       },
       "monitor": {
         "label": "Monitoring",
@@ -1310,77 +1311,73 @@
       }
     },
     "master": {
-      "title": "Connection watchdog",
-      "description": "Watch the link and recover it automatically. Applies when you save.",
       "aria": "Enable the connection watchdog"
     },
     "ladder": {
       "title": "Recovery ladder",
-      "description": "Tried in order, gentlest first. Each step runs only if the one before it did not bring the link back.",
+      "description": "Tried in order, gentlest first.",
       "aria": "Recovery ladder",
       "status": {
-        "on": "On",
-        "off": "Off",
         "blocked": "Needs a slot",
-        "running": "Running now",
-        "inactive": "Watchdog off"
+        "running": "Running now"
       },
       "tier1": {
         "name": "Re-register to the network",
-        "effect": "Detaches from the carrier and attaches again.",
-        "consequence": "The link drops for a few seconds. Nothing else is affected."
+        "consequence": "The link drops for a few seconds."
       },
       "tier2": {
         "name": "Restart the radio",
-        "effect": "Turns the radio off and back on.",
-        "consequence": "Skipped automatically while a tower lock is active, so your locked cells survive."
+        "consequence": "Skipped while a tower lock is active."
       },
       "tier3": {
         "name": "Switch to the backup SIM",
-        "effect": "Fails over to the other SIM slot and rides on it.",
-        "consequence": "Without a backup slot the ladder stops here and never reaches the reboot step.",
+        "consequence": "Rides on the backup until you revert.",
         "slotLabel": "Backup SIM slot",
-        "slotPlaceholder": "Choose a slot",
-        "slot": "Slot {{slot}}",
-        "slotHint": "The slot the watchdog switches to. Your primary SIM stays in the other one."
+        "slot": "Slot {{slot}}"
       },
       "tier4": {
         "name": "Reboot the device",
-        "effect": "Restarts the modem as a last resort.",
-        "consequence": "This page goes away for about a minute while the modem comes back.",
+        "consequence": "Offline for about a minute.",
         "capLabel": "Maximum reboots per hour",
-        "capHint": "How many reboots are allowed in an hour. At the cap the watchdog switches itself off."
+        "capLead": "Up to",
+        "capUnit": "per hour"
       },
-      "unsaved": "Unsaved",
       "tierAria": "Arm this recovery step: {{name}}"
     },
     "detection": {
       "title": "Detection",
       "description": "How quickly a quiet link counts as an outage.",
       "probe": {
-        "label": "Probe interval",
-        "placeholder": "Choose an interval",
-        "option_one": "{{count}} second",
-        "option_other": "{{count}} seconds",
-        "hint": "How often the modem probes the internet to confirm it is reachable."
+        "label": "Probe every",
+        "short": "{{seconds}}s"
       },
       "threshold": {
-        "label": "Failure threshold",
-        "hint": "How many probes in a row must fail before recovery begins."
+        "label": "Down after",
+        "unit": "failed probes"
       },
       "cooldown": {
-        "label": "Cooldown (seconds)",
-        "hint": "How long to wait after each recovery step before checking the connection again."
+        "label": "Wait between steps",
+        "unit": "s"
       },
-      "derived": {
-        "ready": "Declares the connection down after about {{seconds}}s of failed probes.",
-        "unavailable": "Enter valid detection values to preview when the connection is declared down."
+      "timeline": {
+        "eyebrow": "If the link drops",
+        "declaredStep": "Outage declared, step {{tier}}",
+        "declaredReboot": "Outage declared, step 4, reboot",
+        "step": "Step {{tier}}",
+        "reboot": "Step 4, reboot",
+        "about": "about {{time}}",
+        "seconds": "{{s}} s",
+        "minutes": "{{m}} min",
+        "minutesSeconds": "{{m}} min {{s}} s",
+        "off": "The watchdog is off, so nothing runs.",
+        "none": "No steps are armed, so nothing runs.",
+        "invalid": "Enter valid detection values to preview the timeline.",
+        "stopped": "Step 3 has no slot, so the ladder stops there."
       }
     },
     "activity": {
       "title": "Recovery activity",
       "description": "What the watchdog has done, newest first.",
-      "refresh": "Refresh",
       "type": {
         "recovery": "Recovery",
         "failover": "SIM failover"
@@ -1406,20 +1403,20 @@
         "title": "Could not load recovery activity",
         "retry": "Try again"
       },
-      "refreshAria": "Refresh recovery activity"
+      "allEvents": "All events"
     },
     "save": {
       "discard": "Discard",
       "action": "Save",
       "clean": "All changes saved",
-      "dirty": "Unsaved changes in {{cards}}",
+      "dirty": "Unsaved changes",
       "blockedIn": "Check {{fields}} before saving",
       "toastOk": "Watchdog settings saved",
       "toastFail": "Could not save the watchdog settings",
       "confirmReboot": {
         "title": "Let the watchdog reboot the modem?",
-        "body": "Saving this lets the watchdog restart the modem on its own when every gentler step has failed.",
-        "cap": "Reboots are capped at {{cap}} per hour. If it reaches that cap it switches the whole watchdog off — monitoring included — until you turn it back on.",
+        "body": "Saving this lets the watchdog restart the modem on its own when every gentler step has failed. This page goes away for about a minute while the modem comes back.",
+        "cap": "Reboots are capped at {{cap}} per hour. At the cap the watchdog switches itself off until you turn it back on.",
         "cancel": "Cancel",
         "action": "Allow reboots"
       }
@@ -1430,10 +1427,6 @@
       "cooldown": "Must be between 10 and 300 seconds",
       "maxReboots": "Must be between 1 and 10",
       "backupSim": "Choose a backup SIM slot to enable failover"
-    },
-    "autoDisabled": {
-      "title": "The watchdog turned itself off",
-      "description": "It reached the reboot limit for this hour. Re-enable it once the connection is stable."
     },
     "failover": {
       "title": "Running on the backup SIM",
@@ -1447,6 +1440,15 @@
       "confirm": "Revert SIM",
       "requested": "SIM revert requested. The watchdog will process it shortly.",
       "failed": "Could not request the SIM revert"
+    },
+    "strip": {
+      "title": "Probes",
+      "noReply": "{{n}} no reply",
+      "average": "{{ms}} ms average",
+      "ago": "{{minutes}} min ago",
+      "now": "Now",
+      "empty": "No probe data from the modem",
+      "aria": "{{total}} probes, {{missed}} without a reply"
     }
   },
   "aboutDevice": {

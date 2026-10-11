@@ -1251,17 +1251,18 @@
       "retry": "Riprova"
     },
     "band": {
-      "state": "Stato",
       "checks": "Controlli falliti",
       "recoveries": "Ripristini",
       "reboots": "Riavvii",
       "absent": "Non segnalato",
       "checksCaption": "Prima che inizi il ripristino",
       "cooldownCaption": "Nuovo controllo tra {{seconds}} secondi",
-      "recoveriesLast": "Ultimo: {{tier}}, {{ago}}",
+      "recoveriesLast": "Passaggio {{tier}}, {{ago}}",
       "recoveriesNone": "Nessuno finora",
-      "rebootsCaption": "Limite di sicurezza, conteggiato da quando il watchdog è partito",
-      "rebootsOff": "Il passaggio di riavvio è disattivo, quindi il limite non può scattare"
+      "rebootsCaption": "Da quando il watchdog è partito",
+      "rebootsOff": "Passaggio di riavvio disattivo",
+      "aria": "Stato del watchdog",
+      "cooldownStep": "Passaggio {{tier}} eseguito. Nuovo controllo tra {{seconds}} s."
     },
     "phase": {
       "off": {
@@ -1282,7 +1283,7 @@
       },
       "auto_disabled": {
         "label": "Disattivato automaticamente",
-        "blurb": "È stato raggiunto il limite di riavvii, quindi il watchdog si è disattivato da solo."
+        "blurb": "Ha raggiunto il limite di riavvii. Riattivalo quando il collegamento è stabile."
       },
       "monitor": {
         "label": "Monitoraggio",
@@ -1310,77 +1311,73 @@
       }
     },
     "master": {
-      "title": "Watchdog della connessione",
-      "description": "Monitora il collegamento e lo ripristina automaticamente. Si applica al salvataggio.",
       "aria": "Abilita il watchdog della connessione"
     },
     "ladder": {
       "title": "Sequenza di ripristino",
-      "description": "Provati in ordine, dal più delicato. Ogni passaggio viene eseguito solo se quello precedente non ha ripristinato il collegamento.",
+      "description": "Provati in ordine, dal più delicato.",
       "aria": "Sequenza di ripristino",
       "status": {
-        "on": "Attivo",
-        "off": "Disattivo",
         "blocked": "Serve uno slot",
-        "running": "In esecuzione",
-        "inactive": "Watchdog disattivo"
+        "running": "In esecuzione"
       },
       "tier1": {
         "name": "Ripeti la registrazione alla rete",
-        "effect": "Si stacca dall'operatore e si ricollega.",
-        "consequence": "Il collegamento cade per qualche secondo. Nient'altro viene interessato."
+        "consequence": "Il collegamento cade per qualche secondo."
       },
       "tier2": {
         "name": "Riavvia la radio",
-        "effect": "Spegne la radio e la riaccende.",
-        "consequence": "Viene saltato automaticamente quando è attivo un blocco della torre, così le celle bloccate restano intatte."
+        "consequence": "Saltato quando è attivo un blocco della torre."
       },
       "tier3": {
         "name": "Passa alla SIM di backup",
-        "effect": "Esegue il failover sull'altro slot SIM e continua a operare su di esso.",
-        "consequence": "Senza uno slot di backup, la sequenza si ferma qui e non arriva mai al passaggio di riavvio.",
+        "consequence": "Resta sulla SIM di backup finché non torni indietro.",
         "slotLabel": "Slot SIM di backup",
-        "slotPlaceholder": "Scegli uno slot",
-        "slot": "Slot {{slot}}",
-        "slotHint": "Lo slot verso cui passa il watchdog. La SIM principale resta nell'altro."
+        "slot": "Slot {{slot}}"
       },
       "tier4": {
         "name": "Riavvia il dispositivo",
-        "effect": "Riavvia il modem come ultima risorsa.",
-        "consequence": "Questa pagina non sarà raggiungibile per circa un minuto, mentre il modem si riavvia.",
+        "consequence": "Offline per circa un minuto.",
         "capLabel": "Numero massimo di riavvii all'ora",
-        "capHint": "Quanti riavvii sono consentiti in un'ora. Al raggiungimento del limite il watchdog si disattiva da solo."
+        "capLead": "Fino a",
+        "capUnit": "all'ora"
       },
-      "unsaved": "Non salvato",
       "tierAria": "Attiva questo passaggio di ripristino: {{name}}"
     },
     "detection": {
       "title": "Rilevamento",
       "description": "Quanto rapidamente un collegamento silenzioso viene considerato un'interruzione.",
       "probe": {
-        "label": "Intervallo di controllo",
-        "placeholder": "Scegli un intervallo",
-        "option_one": "{{count}} secondo",
-        "option_other": "{{count}} secondi",
-        "hint": "Con quale frequenza il modem verifica la raggiungibilità di internet."
+        "label": "Controlla ogni",
+        "short": "{{seconds}}s"
       },
       "threshold": {
-        "label": "Soglia di errore",
-        "hint": "Quanti controlli falliti di seguito servono prima che inizi il ripristino."
+        "label": "Interruzione dopo",
+        "unit": "controlli falliti"
       },
       "cooldown": {
-        "label": "Cooldown (secondi)",
-        "hint": "Quanto attendere dopo ogni passaggio di ripristino prima di ricontrollare la connessione."
+        "label": "Attesa tra i passaggi",
+        "unit": "s"
       },
-      "derived": {
-        "ready": "Dichiara la connessione interrotta dopo circa {{seconds}} secondi di controlli falliti.",
-        "unavailable": "Inserisci valori di rilevamento validi per vedere un'anteprima di quando la connessione verrà dichiarata interrotta."
+      "timeline": {
+        "eyebrow": "Se il collegamento cade",
+        "declaredStep": "Interruzione dichiarata, passaggio {{tier}}",
+        "declaredReboot": "Interruzione dichiarata, passaggio 4, riavvio",
+        "step": "Passaggio {{tier}}",
+        "reboot": "Passaggio 4, riavvio",
+        "about": "circa {{time}}",
+        "seconds": "{{s}} s",
+        "minutes": "{{m}} min",
+        "minutesSeconds": "{{m}} min {{s}} s",
+        "off": "Il watchdog è disattivo, quindi non viene eseguito nulla.",
+        "none": "Nessun passaggio è attivo, quindi non viene eseguito nulla.",
+        "invalid": "Inserisci valori di rilevamento validi per vedere la sequenza.",
+        "stopped": "Il passaggio 3 non ha uno slot, quindi la sequenza si ferma lì."
       }
     },
     "activity": {
       "title": "Attività di ripristino",
       "description": "Le azioni svolte dal watchdog, dalla più recente.",
-      "refresh": "Aggiorna",
       "type": {
         "recovery": "Ripristino",
         "failover": "Failover SIM"
@@ -1406,20 +1403,20 @@
         "title": "Impossibile caricare l'attività di ripristino",
         "retry": "Riprova"
       },
-      "refreshAria": "Aggiorna attività di ripristino"
+      "allEvents": "Tutti gli eventi"
     },
     "save": {
       "discard": "Scarta",
       "action": "Salva",
       "clean": "Tutte le modifiche sono state salvate",
-      "dirty": "Modifiche non salvate in {{cards}}",
+      "dirty": "Modifiche non salvate",
       "blockedIn": "Controlla {{fields}} prima di salvare",
       "toastOk": "Impostazioni del watchdog salvate",
       "toastFail": "Impossibile salvare le impostazioni del watchdog",
       "confirmReboot": {
         "title": "Consentire al watchdog di riavviare il modem?",
-        "body": "Salvando, il watchdog potrà riavviare il modem da solo quando tutti i passaggi più leggeri hanno fallito.",
-        "cap": "I riavvii sono limitati a {{cap}} all'ora. Al raggiungimento del limite il watchdog si disattiva del tutto — monitoraggio compreso — finché non lo riattivi.",
+        "body": "Salvando, il watchdog potrà riavviare il modem da solo quando tutti i passaggi più leggeri hanno fallito. Questa pagina non sarà raggiungibile per circa un minuto, mentre il modem si riavvia.",
+        "cap": "I riavvii sono limitati a {{cap}} all'ora. Al raggiungimento del limite il watchdog si disattiva finché non lo riattivi.",
         "cancel": "Annulla",
         "action": "Consenti i riavvii"
       }
@@ -1430,10 +1427,6 @@
       "cooldown": "Deve essere compreso tra 10 e 300 secondi",
       "maxReboots": "Deve essere compreso tra 1 e 10",
       "backupSim": "Scegli uno slot SIM di backup per abilitare il failover"
-    },
-    "autoDisabled": {
-      "title": "Il watchdog si è disattivato da solo",
-      "description": "Ha raggiunto il limite di riavvii per quest'ora. Riattivalo quando la connessione sarà stabile."
     },
     "failover": {
       "title": "In esecuzione sulla SIM di backup",
@@ -1447,6 +1440,15 @@
       "confirm": "Ripristina SIM",
       "requested": "Ripristino della SIM richiesto. Il watchdog lo elaborerà a breve.",
       "failed": "Impossibile richiedere il ripristino della SIM"
+    },
+    "strip": {
+      "title": "Controlli",
+      "noReply": "{{n}} senza risposta",
+      "average": "{{ms}} ms di media",
+      "ago": "{{minutes}} min fa",
+      "now": "Ora",
+      "empty": "Nessun dato di controllo dal modem",
+      "aria": "{{total}} controlli, {{missed}} senza risposta"
     }
   },
   "aboutDevice": {

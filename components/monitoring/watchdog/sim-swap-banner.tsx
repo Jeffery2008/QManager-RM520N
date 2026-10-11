@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Trans, useTranslation } from "react-i18next";
@@ -50,9 +50,12 @@ export function SimSwapBanner() {
   // Once the device confirms the alert is gone, drop the optimistic hide. The
   // banner is mounted for the whole session, so without this a later
   // un-dismiss from System Settings would need a page reload to be felt.
-  useEffect(() => {
+  const swapKey = `${simSwap?.detected === true}|${iccid}`;
+  const [prevSwapKey, setPrevSwapKey] = useState(swapKey);
+  if (swapKey !== prevSwapKey) {
+    setPrevSwapKey(swapKey);
     if (!simSwap?.detected) setOptimisticallyHidden(false);
-  }, [simSwap?.detected, iccid]);
+  }
 
   const handleDismissConfirm = useCallback(async () => {
     if (!iccid) return;

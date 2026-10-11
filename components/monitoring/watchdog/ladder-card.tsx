@@ -1,187 +1,189 @@
 "use client";
 
 import * as React from "react";
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, TriangleAlertIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import {
   SegmentedField,
   SEGMENTED,
   type SegmentedOption,
 } from "@/components/ui/segmented-field";
-import { Tag } from "@/components/ui/tag";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import {
-  RUNG_BADGE,
-  RUNG_GLYPH,
-  RUNG_STATUS_KEY,
+  TIERS,
   TIER_CONSEQUENCE_KEY,
-  TIER_EFFECT_KEY,
   TIER_NAME_KEY,
-  deriveRungs,
-  type RungView,
   type TierIndex,
 } from "./derive";
 import {
   CARD_DESC,
+  CARD_PAD,
+  CARD_SHELL,
   CARD_TITLE,
-  FIELD,
-  HERO_PAD,
-  HERO_SHELL,
+  HEAD_ACTION,
+  HEAD_DESC_SPAN,
+  NUM_FIELD,
   RUNG,
   SKELETON,
-  SWITCH_ROW,
-  SWITCH_TARGET,
 } from "./shapes";
 import {
   FIELD_ID,
-  type RegisterField,
+  draftTiers,
+  type WatchdogDraft,
   type WatchdogForm,
 } from "./use-watchdog-form";
 import { WatchdogFoot, WatchdogFootSkeleton } from "./watchdog-foot";
-
-import { Skeleton } from "@/components/ui/skeleton";
 
 export interface LadderCardProps {
   form: WatchdogForm;
   /** Live truth: the tier the daemon is executing now, 0 for none. */
   runningTier: number;
-  registerField: RegisterField;
 }
 
 type OnOff = "on" | "off";
+/** "none" matches no segment: tier 3 armed with no slot selects nothing. */
+type SlotChoice = "1" | "2" | "off" | "none";
 
 /** The lucide check that SegmentedField reserves on every segment. */
 const renderCheckGlyph = (className: string) => (
   <CheckIcon size={SEGMENTED.GLYPH} className={className} aria-hidden="true" />
 );
 
-/**
- * The recovery ladder — the one anchor card on this surface. It replaces both
- * the read-only stepper and the settings card's Recovery tab, so a rung states
- * what it does, what it costs, whether it is armed, and lets you arm it.
- */
-export function LadderCard({
-  form,
-  runningTier,
-  registerField,
-}: LadderCardProps) {
+const TIER_FLAG = { 1: "tier1", 2: "tier2", 3: "tier3", 4: "tier4" } as const;
+
+/** The recovery ladder: master enable on the header, four compact rungs, its own commit. */
+export function LadderCard({ form, runningTier }: LadderCardProps) {
   const { t } = useTranslation("common");
-  const onOffOptions: SegmentedOption<OnOff>[] = [
+  const onOff: SegmentedOption<OnOff>[] = [
     { value: "on", label: t("state.on") },
     { value: "off", label: t("state.off") },
   ];
 
-  const setters: Record<TierIndex, (v: boolean) => void> = {
-    1: form.setTier1Enabled,
-    2: form.setTier2Enabled,
-    3: form.setTier3Enabled,
-    4: form.setTier4Enabled,
-  };
-
-  const rungs = deriveRungs({
-    tiers: {
-      1: form.tier1Enabled,
-      2: form.tier2Enabled,
-      3: form.tier3Enabled,
-      4: form.tier4Enabled,
-    },
-    masterEnabled: form.isEnabled,
-    backupSlot: form.backupSimSlot,
-    dirtyTiers: form.tierDirty,
-    runningTier,
-  });
-
   return (
-    <Card className={HERO_SHELL}>
-      <CardHeader className={HERO_PAD}>
+    <Card className={CARD_SHELL}>
+      <CardHeader className={CARD_PAD}>
         <CardTitle className={CARD_TITLE}>{t("watchdog.ladder.title")}</CardTitle>
-        <CardDescription className={CARD_DESC}>
+        <CardDescription className={cn(CARD_DESC, HEAD_DESC_SPAN)}>
           {t("watchdog.ladder.description")}
         </CardDescription>
-      </CardHeader>
-      <CardContent className={cn(HERO_PAD, "flex flex-col gap-4")}>
-        <div
-          className={cn(
-            SWITCH_ROW.ROOT,
-            SWITCH_ROW.TRANSITION,
-            form.isEnabled ? SWITCH_ROW.ON : SWITCH_ROW.REST,
-            "flex-wrap",
-          )}
-        >
-          {/* The min width wraps the pill under the text on a phone-width card. */}
-          <div className={cn(SWITCH_ROW.TEXT, "min-w-40")}>
-            <p className={SWITCH_ROW.TITLE}>
-              <span className="min-w-0">{t("watchdog.master.title")}</span>
-              {form.masterDirty ? (
-                <UnsavedMarker onTonal={form.isEnabled} />
-              ) : null}
-            </p>
-            <p className={SWITCH_ROW.DESC}>{t("watchdog.master.description")}</p>
-          </div>
+        <CardAction className={HEAD_ACTION}>
           <SegmentedField
-            value={form.isEnabled ? "on" : "off"}
-            onValueChange={(next) => form.setIsEnabled(next === "on")}
-            options={onOffOptions}
+            value={form.draft.enabled ? "on" : "off"}
+            onValueChange={(next) => form.setFields({ enabled: next === "on" })}
+            options={onOff}
             ariaLabel={t("watchdog.master.aria")}
             breakpoint="never"
             glyph={renderCheckGlyph}
           />
-        </div>
-
-        <ul className={RUNG.STACK} aria-label={t("watchdog.ladder.aria")}>
-          {rungs.map((rung) => (
+        </CardAction>
+      </CardHeader>
+      <CardContent className={CARD_PAD}>
+        <ol className={RUNG.STACK} aria-label={t("watchdog.ladder.aria")}>
+          {TIERS.map((tier) => (
             <Rung
-              key={rung.tier}
-              rung={rung}
-              masterOff={!form.isEnabled}
-              onToggle={setters[rung.tier]}
+              key={tier}
+              tier={tier}
               form={form}
-              registerField={registerField}
+              onOff={onOff}
+              // Live truth first: a rung the daemon is executing IS running.
+              running={runningTier === tier}
             />
           ))}
-        </ul>
+        </ol>
       </CardContent>
-      {/* The one commit for Ladder AND Detection: the hero is where it belongs most. */}
-      <WatchdogFoot form={form} />
+      <WatchdogFoot form={form} scope="ladder" />
     </Card>
   );
 }
 
 function Rung({
-  rung,
-  masterOff,
-  onToggle,
+  tier,
   form,
-  registerField,
+  onOff,
+  running,
 }: {
-  rung: RungView;
-  masterOff: boolean;
-  onToggle: (v: boolean) => void;
+  tier: TierIndex;
   form: WatchdogForm;
-  registerField: RegisterField;
+  onOff: SegmentedOption<OnOff>[];
+  running: boolean;
 }) {
   const { t } = useTranslation("common");
-  const running = rung.state === "running";
-  const name = t(TIER_NAME_KEY[rung.tier]);
+  const { draft } = form;
+  const masterOff = !draft.enabled;
+  const armed = draftTiers(draft)[tier];
+  const needsSlot = tier === 3 && armed && !draft.backupSlot;
+  const name = t(TIER_NAME_KEY[tier]);
+  const ariaLabel = t("watchdog.ladder.tierAria", { name });
+
+  let control: React.ReactNode;
+  if (tier === 3) {
+    const slots: SegmentedOption<SlotChoice>[] = [
+      { value: "1", label: t("watchdog.ladder.tier3.slot", { slot: 1 }) },
+      { value: "2", label: t("watchdog.ladder.tier3.slot", { slot: 2 }) },
+      { value: "off", label: t("state.off") },
+    ];
+    const value: SlotChoice = !armed
+      ? "off"
+      : draft.backupSlot === "1" || draft.backupSlot === "2"
+        ? draft.backupSlot
+        : "none";
+    control = (
+      <div ref={form.registerField(FIELD_ID.backupSim)} className="contents">
+        <SegmentedField
+          value={value}
+          onValueChange={(next) =>
+            // Off keeps the slot, so turning the step back on restores it.
+            form.setFields(
+              next === "1" || next === "2"
+                ? { tier3: true, backupSlot: next }
+                : { tier3: false },
+            )
+          }
+          options={slots}
+          ariaLabel={ariaLabel}
+          disabled={masterOff}
+          breakpoint="never"
+          glyph={renderCheckGlyph}
+        />
+      </div>
+    );
+  } else {
+    control = (
+      <SegmentedField
+        value={armed ? "on" : "off"}
+        onValueChange={(next) => {
+          const patch: Partial<WatchdogDraft> = {};
+          patch[TIER_FLAG[tier]] = next === "on";
+          form.setFields(patch);
+        }}
+        options={onOff}
+        ariaLabel={ariaLabel}
+        disabled={masterOff}
+        breakpoint="never"
+        glyph={renderCheckGlyph}
+      />
+    );
+  }
+
+  const capOff = !armed || masterOff;
+  const capError = tier === 4 ? form.errors.maxReboots : null;
 
   return (
     <li
@@ -199,180 +201,84 @@ function Rung({
           running ? RUNG.DISC_RUNNING : RUNG.DISC_REST,
         )}
       >
-        {rung.tier}
+        {tier}
       </span>
 
-      <div className={RUNG.BODY}>
-        <div className={RUNG.HEAD}>
-          <span className={RUNG.NAME}>{name}</span>
-        </div>
-        <p className={RUNG.EFFECT}>{t(TIER_EFFECT_KEY[rung.tier])}</p>
-        {/* The cost of the rung sits in the rung, never behind a tooltip. */}
-        <p className={RUNG.CONSEQUENCE}>{t(TIER_CONSEQUENCE_KEY[rung.tier])}</p>
-        <div className={RUNG.META}>
-          <Tag
-            variant="neutral"
-            className={cn(RUNG.META_CHIP, running && RUNG.META_CHIP_ON_TONAL)}
-          >
-            {rung.command}
-          </Tag>
-          {rung.dirty ? <UnsavedMarker onTonal={running} /> : null}
-        </div>
+      <div className={RUNG.TEXT}>
+        <span className={cn(RUNG.NAME, masterOff && !running && RUNG.NAME_INACTIVE)}>
+          <span className="min-w-0">{name}</span>
+          {running ? (
+            <span className={RUNG.MARKER}>
+              <span aria-hidden className={RUNG.MARKER_DOT} />
+              {t("watchdog.ladder.status.running")}
+            </span>
+          ) : needsSlot ? (
+            <Badge variant="warning">
+              <TriangleAlertIcon className="size-3" />
+              {t("watchdog.ladder.status.blocked")}
+            </Badge>
+          ) : null}
+        </span>
+        <span className={cn(RUNG.COST, running && RUNG.COST_RUNNING)}>
+          {t(TIER_CONSEQUENCE_KEY[tier])}
+        </span>
+      </div>
 
-        {/* A rung's own field carries the same label + hint + error a Detection
-            field does — the blocked foot names it, so it must be findable. */}
-        {rung.tier === 3 && rung.enabled ? (
-          <div className={cn(RUNG.FIELD_SLOT, FIELD.ROW)}>
-            <label className={FIELD.LABEL} htmlFor={FIELD_ID.backupSim}>
-              {t("watchdog.ladder.tier3.slotLabel")}
-            </label>
-            <Select
-              value={form.backupSimSlot}
-              onValueChange={form.setBackupSimSlot}
+      <div className={tier === 4 ? RUNG.CONTROLS_WIDE : RUNG.CONTROLS}>
+        {tier === 4 ? (
+          // Never unmounted: disabling it keeps the rung's height fixed.
+          <label className={RUNG.CAP}>
+            <span className={RUNG.CAP_LEAD}>{t("watchdog.ladder.tier4.capLead")}</span>
+            <InputGroup
+              data-disabled={capOff}
+              className={NUM_FIELD.GROUP}
             >
-              <SelectTrigger
-                host="container"
-                id={FIELD_ID.backupSim}
-                ref={registerField(FIELD_ID.backupSim)}
-                aria-invalid={form.errors.backupSim !== null}
-                aria-describedby={
-                  form.errors.backupSim
-                    ? `${FIELD_ID.backupSim}-hint ${FIELD_ID.backupSim}-error`
-                    : `${FIELD_ID.backupSim}-hint`
-                }
-                className={cn(
-                  FIELD.SHELL,
-                  FIELD.INVALID,
-                  FIELD.NARROW,
-                )}
-              >
-                <SelectValue
-                  placeholder={t("watchdog.ladder.tier3.slotPlaceholder")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">
-                  {t("watchdog.ladder.tier3.slot", { slot: 1 })}
-                </SelectItem>
-                <SelectItem value="2">
-                  {t("watchdog.ladder.tier3.slot", { slot: 2 })}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <p id={`${FIELD_ID.backupSim}-hint`} className={RUNG.FIELD_HINT}>
-              {t("watchdog.ladder.tier3.slotHint")}
-            </p>
-            {form.errors.backupSim ? (
-              <p id={`${FIELD_ID.backupSim}-error`} className={FIELD.ERROR}>
-                {t(form.errors.backupSim)}
-              </p>
-            ) : null}
-          </div>
+              <InputGroupInput
+                id={FIELD_ID.maxReboots}
+                ref={form.registerField(FIELD_ID.maxReboots)}
+                type="text"
+                inputMode="numeric"
+                value={draft.maxReboots}
+                onChange={(e) => form.setFields({ maxReboots: e.target.value })}
+                disabled={capOff}
+                aria-label={t("watchdog.ladder.tier4.capLabel")}
+                aria-invalid={capError !== null}
+                aria-describedby={capError ? `${FIELD_ID.maxReboots}-error` : undefined}
+                className={NUM_FIELD.INPUT}
+              />
+              <InputGroupAddon align="inline-end" className={NUM_FIELD.UNIT}>
+                {t("watchdog.ladder.tier4.capUnit")}
+              </InputGroupAddon>
+            </InputGroup>
+          </label>
         ) : null}
-
-        {rung.tier === 4 && rung.enabled ? (
-          <div className={cn(RUNG.FIELD_SLOT, FIELD.ROW)}>
-            <label className={FIELD.LABEL} htmlFor={FIELD_ID.maxReboots}>
-              {t("watchdog.ladder.tier4.capLabel")}
-            </label>
-            <Input
-              host="container"
-              id={FIELD_ID.maxReboots}
-              ref={registerField(FIELD_ID.maxReboots)}
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={10}
-              value={form.maxRebootsPerHour}
-              onChange={(e) => form.setMaxRebootsPerHour(e.target.value)}
-              aria-invalid={form.errors.maxReboots !== null}
-              aria-describedby={
-                form.errors.maxReboots
-                  ? `${FIELD_ID.maxReboots}-hint ${FIELD_ID.maxReboots}-error`
-                  : `${FIELD_ID.maxReboots}-hint`
-              }
-              className={cn(
-                FIELD.SHELL,
-                FIELD.INVALID,
-                FIELD.NUM,
-                FIELD.NARROW,
-              )}
-            />
-            <p id={`${FIELD_ID.maxReboots}-hint`} className={RUNG.FIELD_HINT}>
-              {t("watchdog.ladder.tier4.capHint")}
-            </p>
-            {form.errors.maxReboots ? (
-              <p id={`${FIELD_ID.maxReboots}-error`} className={FIELD.ERROR}>
-                {t(form.errors.maxReboots)}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+        {control}
       </div>
 
-      <div className={RUNG.ACTIONS}>
-        {rung.state === "running" ? (
-          // The promoted container already reports the state and the disc
-          // already carries it, so this is a marker rather than a second fill.
-          <span className={RUNG.MARKER}>
-            <span aria-hidden className={RUNG.MARKER_DOT} />
-            {t("watchdog.ladder.status.running")}
-          </span>
-        ) : (
-          <RungChip state={rung.state} />
-        )}
-        {/* Not the rung's name alone: "Reboot the device, switch, on" reads as a
-            control that reboots now, rather than one that arms a policy. */}
-        <Switch
-          checked={rung.enabled}
-          onCheckedChange={onToggle}
-          disabled={masterOff}
-          aria-label={t("watchdog.ladder.tierAria", { name })}
-          className={SWITCH_TARGET}
-        />
-      </div>
+      {capError ? (
+        <p id={`${FIELD_ID.maxReboots}-error`} className={RUNG.ERROR}>
+          {t(capError)}
+        </p>
+      ) : null}
     </li>
   );
 }
 
-/** The draft differs from what the device was told. Never a status chip. */
-function UnsavedMarker({ onTonal }: { onTonal: boolean }) {
-  const { t } = useTranslation("common");
-  return (
-    <span className={RUNG.DELTA}>
-      <span
-        aria-hidden
-        className={onTonal ? RUNG.DELTA_DOT_ON_TONAL : RUNG.DELTA_DOT}
-      />
-      {t("watchdog.ladder.unsaved")}
-    </span>
-  );
-}
-
-function RungChip({ state }: { state: Exclude<RungView["state"], "running"> }) {
-  const { t } = useTranslation("common");
-  const Glyph = RUNG_GLYPH[state];
-  return (
-    <Badge variant={RUNG_BADGE[state]}>
-      <Glyph className="size-3" />
-      {t(RUNG_STATUS_KEY[state])}
-    </Badge>
-  );
-}
-
-/** Mirrors the loaded card: one switch row over four rungs, then the foot. */
+/** Mirrors the loaded card: header with its pill, four rungs, then the foot. */
 export function LadderCardSkeleton() {
   return (
-    <Card className={HERO_SHELL} aria-hidden>
-      <CardHeader className={HERO_PAD}>
+    <Card className={CARD_SHELL} aria-hidden>
+      <CardHeader className={CARD_PAD}>
         <Skeleton className={cn(SKELETON.LINE, "h-5 w-40")} />
-        <Skeleton className={cn(SKELETON.LINE, "h-4 w-64")} />
+        <Skeleton className={cn(SKELETON.LINE, HEAD_DESC_SPAN, "h-4 w-56")} />
+        <CardAction className={HEAD_ACTION}>
+          <Skeleton className={cn(SKELETON.PILL, "w-36")} />
+        </CardAction>
       </CardHeader>
-      <CardContent className={cn(HERO_PAD, "flex flex-col gap-4")}>
-        <Skeleton className={SKELETON.SWITCH} />
+      <CardContent className={CARD_PAD}>
         <div className={RUNG.STACK}>
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className={SKELETON.RUNG} />
+          {TIERS.map((tier) => (
+            <Skeleton key={tier} className={SKELETON.RUNG} />
           ))}
         </div>
       </CardContent>

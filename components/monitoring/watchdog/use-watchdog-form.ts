@@ -10,16 +10,18 @@ import type {
   WatchdogSavePayload,
   WatchdogSaveResult,
 } from "@/hooks/use-watchdog-settings";
-import type { TierIndex } from "./derive";
+import { isIntInRange, type TierIndex } from "./derive";
 
-// The backend save is ATOMIC — one POST carrying every field — so one hook owns
-// the whole draft, its validation, the blocking set and the focus map.
+// Ladder and Detection each commit their own draft. The CGI save is atomic, so
+// a card's save sends its draft over the OTHER card's saved values.
 
-/** Probe cadence options (seconds) offered by the Probe Interval Select. */
+/** Probe cadence options (seconds) offered by the Probe Every control. */
 export const PROBE_INTERVAL_OPTIONS = [1, 2, 5, 10, 15, 30] as const;
 
 /** A callback-ref factory: the form owns the map, a card registers into it. */
 export type RegisterField = (id: string) => (el: HTMLElement | null) => void;
+
+export type WatchdogScope = "ladder" | "detection";
 
 /** The five controls, by the id they register under. */
 export const FIELD_ID = {
@@ -30,16 +32,13 @@ export const FIELD_ID = {
   maxReboots: "watchdog-max-reboots",
 } as const;
 
-/** Reading order, which is also the order a blocked save walks them in. */
-const FIELD_ORDER = [
-  "probeInterval",
-  "failThreshold",
-  "cooldown",
-  "backupSim",
-  "maxReboots",
-] as const;
+/** Reading order per card, which is also the order a blocked save walks them in. */
+const SCOPE_FIELDS = {
+  ladder: ["backupSim", "maxReboots"],
+  detection: ["probeInterval", "failThreshold", "cooldown"],
+} as const satisfies Record<WatchdogScope, readonly (keyof WatchdogFormErrors)[]>;
 
-/** A blocked save names the FIELD, not a tab. There are no tabs now. */
+/** A blocked save names the FIELD by its visible label. */
 export const FIELD_LABEL_KEY: Record<keyof WatchdogFormErrors, string> = {
   probeInterval: "watchdog.detection.probe.label",
   failThreshold: "watchdog.detection.threshold.label",
@@ -56,65 +55,48 @@ export interface WatchdogFormErrors {
   backupSim: string | null;
 }
 
-export interface WatchdogForm {
-  // Master
-  isEnabled: boolean;
-  setIsEnabled: (v: boolean) => void;
-
-  // Detection policy
-  probeInterval: string; // one of PROBE_INTERVAL_OPTIONS, as a string (ping cadence)
-  setProbeInterval: (v: string) => void;
+/** Every field the two cards edit. Numbers stay strings while typed. */
+export interface WatchdogDraft {
+  enabled: boolean;
+  tier1: boolean;
+  tier2: boolean;
+  tier3: boolean;
+  tier4: boolean;
+  backupSlot: string;
+  maxReboots: string;
+  probeInterval: string;
   failThreshold: string;
-  setFailThreshold: (v: string) => void;
   cooldown: string;
-  setCooldown: (v: string) => void;
-  /** probe_interval × fail_threshold — honest "declares down after ~Ns". */
-  estimatedDownSecs: number | null;
+}
 
-  // Recovery ladder tiers
-  tier1Enabled: boolean;
-  setTier1Enabled: (v: boolean) => void;
-  tier2Enabled: boolean;
-  setTier2Enabled: (v: boolean) => void;
-  tier3Enabled: boolean;
-  setTier3Enabled: (v: boolean) => void;
-  tier4Enabled: boolean;
-  setTier4Enabled: (v: boolean) => void;
-  backupSimSlot: string;
-  setBackupSimSlot: (v: string) => void;
-  maxRebootsPerHour: string;
-  setMaxRebootsPerHour: (v: string) => void;
+const SCOPE_KEYS = {
+  ladder: ["enabled", "tier1", "tier2", "tier3", "tier4", "backupSlot", "maxReboots"],
+  detection: ["probeInterval", "failThreshold", "cooldown"],
+} as const satisfies Record<WatchdogScope, readonly (keyof WatchdogDraft)[]>;
 
-  // Derived
-  errors: WatchdogFormErrors;
-  hasValidationErrors: boolean;
-  isDirty: boolean;
-  /** The master switch carries an unsaved edit. */
-  masterDirty: boolean;
-  /** Per rung: the switch or the rung's own field carries an unsaved edit. */
-  tierDirty: Record<TierIndex, boolean>;
-  /** A Detection-card field carries an unsaved edit. */
-  detectionDirty: boolean;
-  /** Fields blocking the save, in reading order. Empty when nothing blocks. */
+export interface ScopeState {
+  dirty: boolean;
+  /** Fields blocking this card's save, in reading order. */
   blockedFields: (keyof WatchdogFormErrors)[];
-  /**
-   * This save would newly let the watchdog reboot the modem unattended. Keyed
-   * on both flags, not on the tier switch: a stock device ships tier 4 already
-   * armed under a master that is off, so the master is the gesture that grants
-   * the authority.
-   */
-  grantsRebootAuthority: boolean;
-
-  // Focus
-  registerField: RegisterField;
-  /** Focus and reveal the first blocking control. No-op when nothing blocks. */
-  focusFirstBlocked: () => void;
-
-  // Flow
   isSaving: boolean;
+  /** Either card is saving; one save at a time. */
+  busy: boolean;
   saved: boolean;
   submit: () => Promise<void>;
   discard: () => void;
+  /** Focus and reveal the first blocking control. No-op when nothing blocks. */
+  focusFirstBlocked: () => void;
+}
+
+export interface WatchdogForm {
+  /** The draft both cards render: saved truth overlaid with unsaved edits. */
+  draft: WatchdogDraft;
+  setFields: (patch: Partial<WatchdogDraft>) => void;
+  errors: WatchdogFormErrors;
+  scopes: Record<WatchdogScope, ScopeState>;
+  /** Newly lets the watchdog reboot unattended; keyed on master AND tier 4 (stock ships tier 4 armed, master off). */
+  grantsRebootAuthority: boolean;
+  registerField: RegisterField;
 }
 
 interface UseWatchdogFormArgs {
@@ -123,28 +105,40 @@ interface UseWatchdogFormArgs {
   saveSettings: (payload: WatchdogSavePayload) => Promise<WatchdogSaveResult>;
 }
 
-// Value fingerprint of every field the form mirrors. A change means server
-// truth moved and the fields must be re-seeded; an identical signature (the
-// common case for the hook's 30s background refetch, which allocates a fresh
-// settings object every tick) leaves the user's edits alone.
-const settingsSignature = (s: WatchdogSettings): string =>
-  [
-    s.enabled,
-    s.fail_threshold,
-    s.probe_interval,
-    s.check_interval,
-    s.cooldown,
-    s.tier1_enabled,
-    s.tier2_enabled,
-    s.tier3_enabled,
-    s.tier4_enabled,
-    s.backup_sim_slot,
-    s.max_reboots_per_hour,
-  ].join("-");
+const savedDraft = (s: WatchdogSettings): WatchdogDraft => ({
+  enabled: s.enabled,
+  tier1: s.tier1_enabled,
+  tier2: s.tier2_enabled,
+  tier3: s.tier3_enabled,
+  tier4: s.tier4_enabled,
+  backupSlot: s.backup_sim_slot != null ? String(s.backup_sim_slot) : "",
+  maxReboots: String(s.max_reboots_per_hour),
+  probeInterval: String(s.probe_interval),
+  failThreshold: String(s.fail_threshold),
+  cooldown: String(s.cooldown),
+});
 
-const isIntInRange = (raw: string, min: number, max: number) => {
-  const n = Number(raw);
-  return !(raw === "" || isNaN(n) || !Number.isInteger(n) || n < min || n > max);
+const toPayload = (d: WatchdogDraft): WatchdogSavePayload => ({
+  action: "save_settings",
+  enabled: d.enabled,
+  fail_threshold: parseInt(d.failThreshold, 10),
+  probe_interval: parseInt(d.probeInterval, 10),
+  cooldown: parseInt(d.cooldown, 10),
+  tier1_enabled: d.tier1,
+  tier2_enabled: d.tier2,
+  tier3_enabled: d.tier3,
+  tier4_enabled: d.tier4,
+  backup_sim_slot: d.backupSlot ? parseInt(d.backupSlot, 10) : null,
+  max_reboots_per_hour: parseInt(d.maxReboots || "3", 10),
+});
+
+const omit = (
+  edits: Partial<WatchdogDraft>,
+  keys: readonly (keyof WatchdogDraft)[],
+): Partial<WatchdogDraft> => {
+  const next = { ...edits };
+  for (const k of keys) delete next[k];
+  return next;
 };
 
 export function useWatchdogForm({
@@ -153,154 +147,67 @@ export function useWatchdogForm({
   saveSettings,
 }: UseWatchdogFormArgs): WatchdogForm {
   const { t } = useTranslation("common");
-  const { saved, markSaved } = useSaveFlash();
+  const ladderFlash = useSaveFlash();
+  const detectionFlash = useSaveFlash();
 
-  const [isEnabled, setIsEnabled] = useState(settings.enabled);
-  const [probeInterval, setProbeInterval] = useState(
-    String(settings.probe_interval),
-  );
-  const [failThreshold, setFailThreshold] = useState(
-    String(settings.fail_threshold),
-  );
-  const [cooldown, setCooldown] = useState(String(settings.cooldown));
-  const [tier1Enabled, setTier1Enabled] = useState(settings.tier1_enabled);
-  const [tier2Enabled, setTier2Enabled] = useState(settings.tier2_enabled);
-  const [tier3Enabled, setTier3Enabled] = useState(settings.tier3_enabled);
-  const [tier4Enabled, setTier4Enabled] = useState(settings.tier4_enabled);
-  const [backupSimSlot, setBackupSimSlot] = useState(
-    settings.backup_sim_slot != null ? String(settings.backup_sim_slot) : "",
-  );
-  const [maxRebootsPerHour, setMaxRebootsPerHour] = useState(
-    String(settings.max_reboots_per_hour),
-  );
+  // Edits overlay server truth, so a re-read never eats a typed value and one
+  // card's save leaves the other card's half-edit alone.
+  const [edits, setEdits] = useState<Partial<WatchdogDraft>>({});
+  const [savingScope, setSavingScope] = useState<WatchdogScope | null>(null);
 
-  // --- Derived preview ---
-  // Raw probe streak at the probe cadence: probe_interval × fail_threshold.
-  const estimatedDownSecs = useMemo<number | null>(() => {
-    if (!isIntInRange(probeInterval, 1, 60)) return null;
-    if (!isIntInRange(failThreshold, 1, 20)) return null;
-    return Number(probeInterval) * Number(failThreshold);
-  }, [probeInterval, failThreshold]);
+  const saved = useMemo(() => savedDraft(settings), [settings]);
+  const draft = useMemo<WatchdogDraft>(() => ({ ...saved, ...edits }), [saved, edits]);
 
-  // --- Validation (mirrors the CGI field ranges) ---
+  const setFields = useCallback((patch: Partial<WatchdogDraft>) => {
+    setEdits((prev) => ({ ...prev, ...patch }));
+  }, []);
+
   // Values are i18n KEYS; the rendering component translates them.
-  const errors = useMemo<WatchdogFormErrors>(() => {
-    const failThresholdErr =
-      failThreshold && !isIntInRange(failThreshold, 1, 20)
-        ? "watchdog.errors.failThreshold"
-        : null;
-    const probeIntervalErr =
-      probeInterval && !isIntInRange(probeInterval, 1, 60)
-        ? "watchdog.errors.probeInterval"
-        : null;
-    const cooldownErr =
-      cooldown && !isIntInRange(cooldown, 10, 300)
-        ? "watchdog.errors.cooldown"
-        : null;
-    const maxRebootsErr =
-      tier4Enabled && maxRebootsPerHour && !isIntInRange(maxRebootsPerHour, 1, 10)
-        ? "watchdog.errors.maxReboots"
-        : null;
-    // Backup slot is required whenever Tier 3 (SIM failover) is enabled — an
-    // unset slot leaves the ladder unable to fail over, so block the save.
-    const backupSimErr =
-      tier3Enabled && !backupSimSlot
-        ? "watchdog.errors.backupSim"
-        : null;
-
-    return {
-      failThreshold: failThresholdErr,
-      probeInterval: probeIntervalErr,
-      cooldown: cooldownErr,
-      maxReboots: maxRebootsErr,
-      backupSim: backupSimErr,
-    };
-  }, [failThreshold, probeInterval, cooldown, tier4Enabled, maxRebootsPerHour, tier3Enabled, backupSimSlot]);
-
-  const hasValidationErrors = useMemo(
-    () => Object.values(errors).some(Boolean),
-    [errors],
+  const errors = useMemo<WatchdogFormErrors>(
+    () => ({
+      failThreshold:
+        draft.failThreshold && !isIntInRange(draft.failThreshold, 1, 20)
+          ? "watchdog.errors.failThreshold"
+          : null,
+      probeInterval:
+        draft.probeInterval && !isIntInRange(draft.probeInterval, 1, 60)
+          ? "watchdog.errors.probeInterval"
+          : null,
+      cooldown:
+        draft.cooldown && !isIntInRange(draft.cooldown, 10, 300)
+          ? "watchdog.errors.cooldown"
+          : null,
+      maxReboots:
+        draft.tier4 && draft.maxReboots && !isIntInRange(draft.maxReboots, 1, 10)
+          ? "watchdog.errors.maxReboots"
+          : null,
+      // An unset slot leaves the ladder unable to fail over, so it blocks.
+      backupSim:
+        draft.tier3 && !draft.backupSlot ? "watchdog.errors.backupSim" : null,
+    }),
+    [draft],
   );
 
-  // Empty-while-required fields aren't range errors but still can't be saved.
-  const hasEmptyRequired =
-    failThreshold.trim() === "" ||
-    probeInterval.trim() === "" ||
-    cooldown.trim() === "" ||
-    (tier4Enabled && maxRebootsPerHour.trim() === "");
-
-  // Per-control dirty state. A chip that reads "On" for an unsaved draft is the
-  // page reporting a policy the device has not been told about, so each rung
-  // carries its own marker rather than relying on the ladder foot to say so.
-  const savedBackupSlot =
-    settings.backup_sim_slot != null ? String(settings.backup_sim_slot) : "";
-  const masterDirty = isEnabled !== settings.enabled;
-  // Reboot authority is the AND of both flags, so the transition to confirm is
-  // the pair going true — whichever switch moved.
-  const grantsRebootAuthority =
-    isEnabled && tier4Enabled && !(settings.enabled && settings.tier4_enabled);
-  const tierDirty: Record<TierIndex, boolean> = {
-    1: tier1Enabled !== settings.tier1_enabled,
-    2: tier2Enabled !== settings.tier2_enabled,
-    3:
-      tier3Enabled !== settings.tier3_enabled ||
-      backupSimSlot !== savedBackupSlot,
-    4:
-      tier4Enabled !== settings.tier4_enabled ||
-      maxRebootsPerHour !== String(settings.max_reboots_per_hour),
-  };
-  const detectionDirty =
-    probeInterval !== String(settings.probe_interval) ||
-    failThreshold !== String(settings.fail_threshold) ||
-    cooldown !== String(settings.cooldown);
-
-  const isDirty = useMemo(
-    () =>
-      isEnabled !== settings.enabled ||
-      probeInterval !== String(settings.probe_interval) ||
-      failThreshold !== String(settings.fail_threshold) ||
-      cooldown !== String(settings.cooldown) ||
-      tier1Enabled !== settings.tier1_enabled ||
-      tier2Enabled !== settings.tier2_enabled ||
-      tier3Enabled !== settings.tier3_enabled ||
-      tier4Enabled !== settings.tier4_enabled ||
-      backupSimSlot !==
-        (settings.backup_sim_slot != null
-          ? String(settings.backup_sim_slot)
-          : "") ||
-      maxRebootsPerHour !== String(settings.max_reboots_per_hour),
-    [
-      settings,
-      isEnabled,
-      probeInterval,
-      failThreshold,
-      cooldown,
-      tier1Enabled,
-      tier2Enabled,
-      tier3Enabled,
-      tier4Enabled,
-      backupSimSlot,
-      maxRebootsPerHour,
-    ],
-  );
-
-  // An empty required field is not a range error but still blocks, so the two
-  // sets are merged here rather than in each consumer.
+  // An empty required field is not a range error but still blocks.
   const emptyRequired: Partial<Record<keyof WatchdogFormErrors, boolean>> = {
-    probeInterval: probeInterval.trim() === "",
-    failThreshold: failThreshold.trim() === "",
-    cooldown: cooldown.trim() === "",
-    maxReboots: tier4Enabled && maxRebootsPerHour.trim() === "",
+    probeInterval: draft.probeInterval.trim() === "",
+    failThreshold: draft.failThreshold.trim() === "",
+    cooldown: draft.cooldown.trim() === "",
+    maxReboots: draft.tier4 && draft.maxReboots.trim() === "",
   };
 
-  const blockedFields = FIELD_ORDER.filter(
-    (key) => errors[key] !== null || emptyRequired[key] === true,
-  );
+  const blockedFor = (scope: WatchdogScope) =>
+    SCOPE_FIELDS[scope].filter(
+      (key) => errors[key] !== null || emptyRequired[key] === true,
+    );
+  const dirtyFor = (scope: WatchdogScope) =>
+    SCOPE_KEYS[scope].some((k) => draft[k] !== saved[k]);
 
-  // The map is a ref because a card mounts and unmounts its tier-3/tier-4
-  // controls with the switch; nothing renders off it.
+  const grantsRebootAuthority =
+    draft.enabled && draft.tier4 && !(settings.enabled && settings.tier4_enabled);
+
+  // A ref, because nothing renders off it.
   const fieldRefs = useRef<Record<string, HTMLElement | null>>({});
-
   const registerField = useCallback<RegisterField>(
     (id) => (el) => {
       fieldRefs.current[id] = el;
@@ -308,127 +215,72 @@ export function useWatchdogForm({
     [],
   );
 
-  // A DOM side effect in a handler, never a setState in an effect. With the
-  // tabs gone there is nothing to switch to first, so no rAF is needed.
-  const focusFirstBlocked = useCallback(() => {
-    const first = blockedFields[0];
-    if (!first) return;
-    const el = fieldRefs.current[FIELD_ID[first]];
+  const focusField = (key: keyof WatchdogFormErrors) => {
+    const host = fieldRefs.current[FIELD_ID[key]];
+    if (!host) return;
+    // A segmented control registers its wrapper; focus its first visible segment.
+    const el = host.matches("input, button")
+      ? host
+      : Array.from(host.querySelectorAll<HTMLElement>("input, button")).find(
+          (n) => n.getClientRects().length > 0 && !n.hasAttribute("disabled"),
+        );
     if (!el) return;
     el.focus({ preventScroll: true });
-    const reduce = isMotionReduced();
-    el.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
-  }, [blockedFields]);
+    el.scrollIntoView({
+      block: "center",
+      behavior: isMotionReduced() ? "auto" : "smooth",
+    });
+  };
 
-  const submit = useCallback(async () => {
-    if (hasValidationErrors || hasEmptyRequired || !isDirty || isSaving) return;
+  const submitScope = async (scope: WatchdogScope) => {
+    if (!dirtyFor(scope) || blockedFor(scope).length > 0 || isSaving) return;
+    // This card's draft over the other card's SAVED values.
+    const sent: WatchdogDraft = { ...saved };
+    for (const k of SCOPE_KEYS[scope]) Object.assign(sent, { [k]: draft[k] });
 
-    const payload: WatchdogSavePayload = {
-      action: "save_settings",
-      enabled: isEnabled,
-      fail_threshold: parseInt(failThreshold, 10),
-      probe_interval: parseInt(probeInterval, 10),
-      cooldown: parseInt(cooldown, 10),
-      tier1_enabled: tier1Enabled,
-      tier2_enabled: tier2Enabled,
-      tier3_enabled: tier3Enabled,
-      tier4_enabled: tier4Enabled,
-      backup_sim_slot: backupSimSlot ? parseInt(backupSimSlot, 10) : null,
-      max_reboots_per_hour: parseInt(maxRebootsPerHour || "3", 10),
-    };
-
-    // The RESULT carries the backend's reason; the hook's `error` state is set
-    // in the same tick, so this closure would only ever see the previous value.
-    const result = await saveSettings(payload);
+    setSavingScope(scope);
+    // The RESULT carries the backend's reason; hook `error` state would be stale here.
+    const result = await saveSettings(toPayload(sent));
+    setSavingScope(null);
     if (result.ok) {
-      markSaved();
+      setEdits((prev) => omit(prev, SCOPE_KEYS[scope]));
+      (scope === "ladder" ? ladderFlash : detectionFlash).markSaved();
       toast.success(t("watchdog.save.toastOk"));
     } else {
       toast.error(t("watchdog.save.toastFail"), {
         description: result.message ?? undefined,
       });
     }
-  }, [
-    hasValidationErrors,
-    hasEmptyRequired,
-    isDirty,
-    isSaving,
-    isEnabled,
-    failThreshold,
-    probeInterval,
-    cooldown,
-    tier1Enabled,
-    tier2Enabled,
-    tier3Enabled,
-    tier4Enabled,
-    backupSimSlot,
-    maxRebootsPerHour,
-    saveSettings,
-    markSaved,
-    t,
-  ]);
+  };
 
-  // Discard resets every field to the server-truth in `settings`.
-  const discard = useCallback(() => {
-    setIsEnabled(settings.enabled);
-    setProbeInterval(String(settings.probe_interval));
-    setFailThreshold(String(settings.fail_threshold));
-    setCooldown(String(settings.cooldown));
-    setTier1Enabled(settings.tier1_enabled);
-    setTier2Enabled(settings.tier2_enabled);
-    setTier3Enabled(settings.tier3_enabled);
-    setTier4Enabled(settings.tier4_enabled);
-    setBackupSimSlot(
-      settings.backup_sim_slot != null ? String(settings.backup_sim_slot) : "",
-    );
-    setMaxRebootsPerHour(String(settings.max_reboots_per_hour));
-  }, [settings]);
-
-  // ── Re-seed on server-truth change (render-phase, React-Compiler safe) ──────
-  // `discard` is the already-correct re-seed path (pure setState, no async, no
-  // toast), so reuse it rather than maintaining a parallel seeding path.
-  const signature = settingsSignature(settings);
-  const [prevSignature, setPrevSignature] = useState(signature);
-  if (signature !== prevSignature) {
-    setPrevSignature(signature);
-    discard();
-  }
+  const scopeState = (scope: WatchdogScope): ScopeState => ({
+    dirty: dirtyFor(scope),
+    blockedFields: blockedFor(scope),
+    isSaving: isSaving && savingScope === scope,
+    busy: isSaving,
+    saved: (scope === "ladder" ? ladderFlash : detectionFlash).saved,
+    submit: () => submitScope(scope),
+    discard: () => setEdits((prev) => omit(prev, SCOPE_KEYS[scope])),
+    focusFirstBlocked: () => {
+      const first = blockedFor(scope)[0];
+      if (first) focusField(first);
+    },
+  });
 
   return {
-    isEnabled,
-    setIsEnabled,
-    probeInterval,
-    setProbeInterval,
-    failThreshold,
-    setFailThreshold,
-    cooldown,
-    setCooldown,
-    estimatedDownSecs,
-    tier1Enabled,
-    setTier1Enabled,
-    tier2Enabled,
-    setTier2Enabled,
-    tier3Enabled,
-    setTier3Enabled,
-    tier4Enabled,
-    setTier4Enabled,
-    backupSimSlot,
-    setBackupSimSlot,
-    maxRebootsPerHour,
-    setMaxRebootsPerHour,
+    draft,
+    setFields,
     errors,
-    hasValidationErrors,
-    isDirty,
-    masterDirty,
-    tierDirty,
-    detectionDirty,
-    blockedFields,
+    scopes: { ladder: scopeState("ladder"), detection: scopeState("detection") },
     grantsRebootAuthority,
     registerField,
-    focusFirstBlocked,
-    isSaving,
-    saved,
-    submit,
-    discard,
   };
 }
+
+/** Tier on/off by index, for the rungs and the timeline. */
+export const draftTiers = (d: WatchdogDraft): Record<TierIndex, boolean> => ({
+  1: d.tier1,
+  2: d.tier2,
+  3: d.tier3,
+  4: d.tier4,
+});

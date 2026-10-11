@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { CardSimIcon, PowerOffIcon, RotateCcwIcon } from "lucide-react";
+import { CardSimIcon, RotateCcwIcon } from "lucide-react";
 
 import {
   AlertDialog,
@@ -18,25 +18,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Banner, bannerActionVariants } from "@/components/ui/banner";
 import type { SimFailoverStatus } from "@/types/modem-status";
-
-/**
- * The watchdog turned itself off after the tier-4 token bucket tripped. A
- * standing condition about the whole page, so it takes no dismiss.
- *
- * `stale` is the primitive's only destructive page-level role; the name is
- * historical and the container is what this needs.
- */
-export function AutoDisabledBanner() {
-  const { t } = useTranslation("common");
-  return (
-    <Banner
-      role="stale"
-      icon={PowerOffIcon}
-      title={t("watchdog.autoDisabled.title")}
-      description={t("watchdog.autoDisabled.description")}
-    />
-  );
-}
 
 export interface FailoverBannerProps {
   failover: SimFailoverStatus;

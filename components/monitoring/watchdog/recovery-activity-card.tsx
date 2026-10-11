@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { motion, type Variants } from "motion/react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowRightLeftIcon,
   CheckCircle2Icon,
+  ChevronRightIcon,
   InboxIcon,
   RefreshCcwIcon,
   TriangleAlertIcon,
@@ -25,7 +27,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tag } from "@/components/ui/tag";
-import { useRecentActivities } from "@/hooks/use-recent-activities";
+import type { UseRecentActivitiesReturn } from "@/hooks/use-recent-activities";
 import {
   computeUnresolved,
   eventKey,
@@ -50,6 +52,8 @@ import {
   CONDITION_TONE,
   DAY,
   LOG,
+  LOG_LIMIT,
+  LOG_LINK,
   LOG_STACK,
   PILL_GLYPH,
   ROW,
@@ -120,14 +124,16 @@ interface DayGroup {
 }
 
 /**
- * Recovery activity — the same 52px event row the dashboard and the Monitoring
- * log render, because it is the same feed. A full-width band, so the list runs
- * its own length exactly as the Network Events log does.
+ * Recovery activity: the same 52px event row the dashboard and Network Events
+ * render. The newest five; "All events" links to the full log.
  */
-export function RecoveryActivityCard() {
+export function RecoveryActivityCard({
+  activities,
+}: {
+  activities: UseRecentActivitiesReturn;
+}) {
   const { t, i18n } = useTranslation("common");
-  const { events, isLoading, isRefreshing, error, refresh } =
-    useRecentActivities({ maxEvents: 50 });
+  const { events, isLoading, error, refresh } = activities;
   const nowSec = useNowSec();
   const timeAgo = useTimeAgo();
 
@@ -161,7 +167,8 @@ export function RecoveryActivityCard() {
     const kept = events
       .map((event, index) => ({ event, index }))
       .filter(({ event }) => WATCHDOG_TYPES.has(event.type))
-      .sort((a, b) => b.event.timestamp - a.event.timestamp);
+      .sort((a, b) => b.event.timestamp - a.event.timestamp)
+      .slice(0, LOG_LIMIT);
 
     kept.forEach(({ event, index }) => {
       const ms = event.timestamp * 1000;
@@ -216,22 +223,11 @@ export function RecoveryActivityCard() {
           {t("watchdog.activity.description")}
         </CardDescription>
         <CardAction>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => refresh()}
-            disabled={isLoading || isRefreshing}
-            aria-label={t("watchdog.activity.refreshAria")}
-            size="action"
-            className="bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
-          >
-            <RefreshCcwIcon
-              className={cn(
-                PILL_GLYPH,
-                isRefreshing && "motion-safe:animate-spin",
-              )}
-            />
-            {t("watchdog.activity.refresh")}
+          <Button asChild variant="ghost" className={LOG_LINK}>
+            <Link href="/monitoring/">
+              {t("watchdog.activity.allEvents")}
+              <ChevronRightIcon className={PILL_GLYPH} aria-hidden />
+            </Link>
           </Button>
         </CardAction>
       </CardHeader>

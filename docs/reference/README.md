@@ -47,7 +47,7 @@ This file is the **router**. One row per reference doc, and each row lists only 
 | --- | --- | --- |
 | [alerts.md](alerts.md) | `/monitoring/alerts`, `monitoring/alerts.sh`, `alert_engine.sh`, `alert_routing.json`, `/etc/qmanager-secrets/`, `qmanager_secret_set`, `qmanager_email_send`, `token_set` / `app_password_set` | RM520N |
 | [connection-quality.md](connection-quality.md) | `qmanager_ping`, `/tmp/qmanager_ping.json`, `ping_profile.json`, `connectivity.status`, `packet_loss_pct`, `jitter_ms`, `PRESET_LIMIT`, `/system-settings/connection-quality`, the dashboard Internet chip | RM520N |
-| [connection-watchdog.md](connection-watchdog.md) | `/monitoring/watchdog`, `qmanager_watchcat`, its 4-tier recovery ladder, `verify_quimslot`, `interval_sec`, the ping-cache staleness threshold | RM520N |
+| [connection-watchdog.md](connection-watchdog.md) | `/monitoring/watchdog`, `qmanager_watchcat`, its 4-tier recovery ladder, `verify_quimslot`, `interval_sec`, the ping-cache staleness threshold, `use-watchdog-form` scoped saves, `deriveTimeline`, the status card probe strip | RM520N |
 | [discord-bot.md](discord-bot.md) | `discord-bot/`, `qmanager_discord`, `qmanager-discord.service`, `build-discord-bot.sh`, the slash commands, `/etc/qmanager/discord_dm_channel` | RM520N |
 | [recent-activities.md](recent-activities.md) | `events.sh`, `/tmp/qmanager_events.json`, `fetch_events.sh`, `use-recent-activities`, `lib/event-presentation.ts`, `splitEventMessage`, `components/monitoring/network-events/` | RM520N |
 | [tailscale.md](tailscale.md) | `/monitoring/tailscale`, `vpn/tailscale.sh`, `qmanager_tailscale_mgr`, `tailscaled`, `/etc/qmanager/tailscale_ssh`, `TailscaleView`, any `tailscale up` invocation | RM520N |
