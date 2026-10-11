@@ -1,26 +1,32 @@
 # Dashboard Chart Cards
 
-The three dashboard cards that were the last to be retargeted onto the `QManager Dashboard Final`
-mock: **Device Metrics**, **Live Latency** and **Signal History**. Two of them draw recharts line and
-area charts, one draws a stack of meters, and all three carry contracts that are easy to delete by
-accident because nothing in TypeScript or the build enforces them. This note records what those
-contracts are and why each exists, so a future edit does not quietly break a chart that still
-compiles.
+The three data-dense dashboard cards: **Device Metrics**, **Connection Quality** and **Signal
+History**. Signal History draws a recharts area chart, Device Metrics draws a stack of meters, and
+Connection Quality draws latency bars plus two 28-cell history strips with no chart library. All three
+carry contracts that are easy to delete by accident because nothing in TypeScript or the build
+enforces them. This note records what those contracts are and why each exists, so a future edit does
+not quietly break a card that still compiles.
+
+> ℹ️ NOTE: Connection Quality replaced the **Live Latency** card (`live-latency.tsx`, a recharts
+> latency/packet-loss chart with the Speed Test tile beneath it) on 2026-10-11. It was ported from
+> QManager-the101's `components/dashboard/connection-quality.tsx` and re-aligned to this backend. The
+> `latency.*` i18n keys went with the old card.
 
 ## Quick Reference
 
 | Item | Value |
 |------|-------|
 | Device Metrics | `components/dashboard/device-metrics.tsx` |
-| Live Latency | `components/dashboard/live-latency.tsx` |
+| Connection Quality | `components/dashboard/connection-quality.tsx`; geometry in `QUALITY` (`components/dashboard/shapes.ts`) |
+| Connection Quality data | `connectivity` from the status poll (prop) + `useLatencyHistory()` → `GET /cgi-bin/quecmanager/at_cmd/fetch_ping_history.sh` every 30 s |
 | Signal History | `components/dashboard/signal-history.tsx` |
 | Meter primitive | `components/ui/metric-bar.tsx` |
 | Draw-in animation | `.chart-draw` / `.chart-area` in `app/globals.css`, applied **only** via `useChartDrawIn()` |
 | Chart motion hooks | `hooks/use-chart-motion.ts` — `useChartDrawIn()` (entrance) + `useChartSeriesMotion()` (poll updates) |
-| Series colours | `--chart-nr` (5G NR), `--chart-lte` (4G LTE); Live Latency draws `--primary` (latency) and `--on-surface-variant` (packet loss) |
-| Direction glyphs | Device Metrics' data-usage row: `text-downlink-on-surface` (rx) / `text-uplink-on-surface` (tx) — see [color-system.md](color-system.md) |
+| Series colours | `--chart-nr` (5G NR), `--chart-lte` (4G LTE) |
+| Direction glyphs | Device Metrics' data-usage row and Connection Quality's cached speedtest figures: `text-downlink-on-surface` (down) / `text-uplink-on-surface` (up) — see [color-system.md](color-system.md) |
 | Mandatory chart props | `{...useChartSeriesMotion()}` and `pathLength={1}` on every animated series |
-| i18n namespace | `dashboard` (`metrics.*`, `latency.*`, `signal_history.*`) |
+| i18n namespace | `dashboard` (`metrics.*`, `connection_quality.*`, `speedtest.*`, `signal_history.*`) |
 | Design canon | `DESIGN.md` > Motion > "Chart draw-in", and > Color > "Data visualization" |
 
 > ℹ️ NOTE: "recharts" is the charting library these cards use. It renders SVG and owns the DOM nodes
@@ -67,7 +73,7 @@ A live-polling chart has two distinct motion jobs, and they were in direct confl
 | Job | When | Owner |
 |-----|------|-------|
 | **Entrance** — the trace draws itself in | Once, on first paint (and on metric switch in Signal History) | CSS `.chart-draw`, applied via `useChartDrawIn()` |
-| **Update** — the trace moves to a new shape | Every poll (~2-3s Live Latency, 10s Signal History) | recharts, configured by `useChartSeriesMotion()` |
+| **Update** — the trace moves to a new shape | Every poll (10s Signal History) | recharts, configured by `useChartSeriesMotion()` |
 
 Only recharts can do the second job: it interpolates each point from its previous *plot* position to
 its new one (`Area.js:250-265`), and nothing outside recharts knows where a point sits in plot space.
@@ -128,13 +134,13 @@ These are all silent failures. Each one compiles, renders, and is wrong.
 
 | Contract | Where | What breaks without it |
 |----------|-------|------------------------|
-| `accessibilityLayer` | Live Latency's `AreaChart` | Recharts' keyboard navigation and screen-reader announcements for the series disappear. The chart becomes a picture. |
-| `useId()`-derived gradient ids | Both chart cards | SVG `<defs>` ids are **document-global**. A literal id collides the moment two instances of the card mount, and both charts then paint from whichever definition rendered last. Live Latency additionally strips `:` from the generated id, because React's `useId` emits characters that are not valid in an SVG id reference. |
+| `accessibilityLayer` | Signal History's `AreaChart` | Recharts' keyboard navigation and screen-reader announcements for the series disappear. The chart becomes a picture. |
+| `useId()`-derived gradient ids | Signal History (`gradientId`, also the segment `layoutId`) | SVG `<defs>` ids are **document-global**. A literal id collides the moment two instances of the card mount, and both charts then paint from whichever definition rendered last. |
 | `connectNulls={false}` | Signal History's areas | A `null` means the modem reported **no 5G leg on that sample**, not a missing reading. With `connectNulls` on, recharts interpolates straight through the gap and the card draws a 5G signal that did not exist. The area must break. |
-| A `null` latency sample stays `null` | Live Latency's series, and the Latency Monitoring card's realtime + aggregate series | A lost ping is an **absent** reading, not a fast one. Mapping it to `0` drew a total blackout as a live-updating flat line pinned to the floor of the plot — a perfectly healthy-looking 0 ms link. Both cards must pass `null` through so recharts breaks the path and skips the dot; the packet-loss series beside it is what states the outage. The Latency Monitoring card's rolling average must also **exclude** gaps rather than average in zeros, or the headline number sinks precisely when the link is worst. See [connection-quality.md](connection-quality.md#latency-charts-null-is-a-gap). |
+| A `null` latency sample stays `null` | Connection Quality's rows and reachability strip, and the Latency Monitoring card's realtime + aggregate series | A lost ping is an **absent** reading, not a fast one. Mapping it to `0` drew a total blackout as a perfectly healthy-looking 0 ms link. Connection Quality passes a `null` `latency_ms` / `dns_lookup_ms` to `MetricBar` untouched (an empty track and `—`) and counts a `null` history `lat` as a **lost probe** (a red strip cell). The Latency Monitoring card passes `null` through so recharts breaks the path, and its rolling average must **exclude** gaps rather than average in zeros, or the headline number sinks precisely when the link is worst. See [connection-quality.md](connection-quality.md#latency-charts-null-is-a-gap). |
 | `domain={["dataMin - 5", "dataMax + 5"]}` as **strings** | Signal History's `YAxis` | These are recharts' relative-domain expressions and only work as strings. Passing numbers pins the axis to an absolute range, which is wrong for RSRP (negative, carrier-dependent) and flattens every chart into a line near one edge. |
-| `baseValue` | Signal History's areas | The fill anchors at zero instead of at the data floor. RSRP is negative, so a zero baseline fills the entire plot. The card computes it as `min(non-null values) - Y_AXIS_PAD`, and that `- Y_AXIS_PAD` is load-bearing: it must equal the `YAxis` domain floor above, **not** the bare data minimum. Recharts derives the default for an *unset* `baseValue` from the resolved axis domain (`Area.getBaseValue`), but an explicit **number** is used verbatim with no reference to the domain — so passing the bare minimum left the fill's bottom edge `Y_AXIS_PAD` units above the actual axis floor. On narrow-banded metrics (RSRP/RSRQ/SINR barely move) that blank band is most of the visible fill, which is what made a real area chart read as a thin line with a faint shadow. Live Latency looks right precisely because it sets no `baseValue` at all. |
-| `chartConfig` object **keys** | Both chart cards | shadcn's `ChartStyle` emits one `--color-<key>` CSS custom property per entry, and the strokes, the gradient stops and the tooltip swatch all read those back as raw template strings (`` var(--color-${name}) ``). Renaming a key breaks all three at runtime with **no** type error. Live Latency's keys must stay `latency` / `packetloss`; Signal History's are `rsrp4G` / `rsrp5G` / `rsrq4G` / `rsrq5G` / `sinr4G` / `sinr5G`. |
+| `baseValue` | Signal History's areas | The fill anchors at zero instead of at the data floor. RSRP is negative, so a zero baseline fills the entire plot. The card computes it as `min(non-null values) - Y_AXIS_PAD`, and that `- Y_AXIS_PAD` is load-bearing: it must equal the `YAxis` domain floor above, **not** the bare data minimum. Recharts derives the default for an *unset* `baseValue` from the resolved axis domain (`Area.getBaseValue`), but an explicit **number** is used verbatim with no reference to the domain — so passing the bare minimum left the fill's bottom edge `Y_AXIS_PAD` units above the actual axis floor. On narrow-banded metrics (RSRP/RSRQ/SINR barely move) that blank band is most of the visible fill, which is what made a real area chart read as a thin line with a faint shadow. |
+| `chartConfig` object **keys** | Signal History | shadcn's `ChartStyle` emits one `--color-<key>` CSS custom property per entry, and the strokes, the gradient stops and the tooltip swatch all read those back as raw template strings (`` var(--color-${name}) ``). Renaming a key breaks all three at runtime with **no** type error. Signal History's keys are `rsrp4G` / `rsrp5G` / `rsrq4G` / `rsrq5G` / `sinr4G` / `sinr5G`. |
 
 ## Signal History
 
@@ -173,75 +179,118 @@ mock's 240ms offset belongs to a single page-wide cascade, and this page runs se
 stagger containers, so a hardcoded delay would land the widest card late rather than recreate the
 mock's rhythm.
 
-## Live Latency
+## Connection Quality
 
-### The chip reports reachability, not latency quality
+One card answering "how steady has the link been over the last half hour", with the latest speed
+test on its bottom row. It reads two sources and grades every mark against the cuts the poller
+already applies, so the card cannot disagree with the Internet chip or the `high_latency` /
+`high_packet_loss` events beside it.
 
-`chipTone()` derives the header chip from what the component knows first-hand:
+### Anatomy and sources
 
-| Condition | Variant | Glyph |
-|-----------|---------|-------|
-| No connectivity object | `muted` | `MinusCircleIcon` |
-| `latency_ms === null` (last probe timed out) | `destructive` | `XCircleIcon` |
-| A reading exists | `success` | `CheckCircle2Icon` |
+Top to bottom, every row from `components/dashboard/connection-quality.tsx`:
 
-It deliberately does **not** tone by a latency threshold. The backend owns latency thresholds, in the
-Connection Quality presets that feed the `high_latency` alert (see
-[connection-quality.md](connection-quality.md)). A second copy of those numbers in the frontend could
-disagree with the alert firing directly beside it, which is worse than having no chip at all. A
-distinct glyph per tone is mandatory rather than decorative: the role containers sit within ~1.03:1 of
-each other, so colour alone does not separate these states for a deuteranopic reader.
+| Row | Shows | Source |
+|-----|-------|--------|
+| Internet | Current RTT, bar + ms | `connectivity.latency_ms` |
+| DNS lookup | Carrier-resolver lookup time, bar + ms | `connectivity.dns_lookup_ms` — the row is **omitted** when the key is absent, and drawn as an empty track and `—` when it is `null` |
+| Probing | The host being pinged, mono | `connectivity.ping_target` (this backend has no `probe_target`) |
+| Reachability strip | 28 cells over 30 minutes, oldest first, plus a state label | `useLatencyHistory()` cells; label from `connectivity.status` |
+| Jitter strip | 28 bars over the same buckets, plus "N ms now" | history `jit` per bucket; header from `connectivity.jitter_ms` |
+| Axis | Age of the oldest visible sample … "Now" | the bucketed history |
+| Footer | Typical / Worst / Loss | `avg_latency_ms` / `max_latency_ms` / `packet_loss_pct` (Loss to one decimal) |
+| Speed Test | Running phase, cached result, or `—` | `useSpeedtest({ watch: true })` |
 
-The chip's label and glyph crossfade through the shared `SwapLabel` primitive, keyed on
-`` `${tone.variant}-${hasReading}` ``. This card previously hand-rolled a duplicate of that component
-and left the **glyph outside** it, so the one channel that separates these tones in greyscale snapped
-in a single frame while the container fill morphed over `standard`. See
-[dashboard-state-motion.md](dashboard-state-motion.md).
+The status poll arrives as a prop from `home-component.tsx`, whose cadence is
+`connectivity.history_interval_sec × 1000 + 250` ms (`home-component.tsx:41`). The strips come from
+`useLatencyHistory()` (`hooks/use-latency-history.ts`), which polls
+`fetch_ping_history.sh` every 30 s, so the strips move at most twice a minute while the rows move every
+poll. Geometry lives in `QUALITY` in `components/dashboard/shapes.ts` and is shared with the
+skeleton: `BUCKETS: 28`, `WINDOW_S: 1800`, `TRACK_H: 26`.
 
-### Loading state
+### Thresholds come from the poller
 
-`isLoading` had been declared on the props interface and passed by the parent, but never destructured,
-so the card had no loading state at all. It now renders a skeleton on the zero-shift overlay
-construction, and the chart carries the `CHART_BOX` height whose absence let `ResponsiveContainer`
-pop the layout on load (`ResponsiveContainer` renders nothing until it has measured its parent, so an
-unpinned parent measures zero and then jumps).
+Every latency and loss cut reads `connectivity.thresholds` (`{ latency_ms, loss_pct }`, resolved from
+the Connection Quality preset; see [connection-quality.md](connection-quality.md)). Only when an older
+poller omits the block does the card fall back to `250` ms / `30` % (`connection-quality.tsx:61-62`),
+which are the backend's `tolerant` defaults.
 
-### `CHART_BOX` is floor-plus-grow, not a fixed height
+| Mark | Green | Amber | Red |
+|------|-------|-------|-----|
+| Internet / DNS bar (track = 2 × cut) | below the cut | `>=` latency cut | `>=` 2 × latency cut |
+| Reachability cell | answered, worst RTT within the cut, worst loss under the loss cut | worst RTT `>` latency cut | **any** lost probe in the span, or worst `loss >=` loss cut |
+| Jitter bar (height = jitter / 80 ms, floor 7 px) | `< 15` ms | `15`–`39` ms | `>= 40` ms |
 
-`CHART_BOX` (`min-h-[150px] flex-1`) is the single source for the plot box across all four branches —
-chart, skeleton, empty and error — so the loading handoff cannot jump.
+> ⚠️ WARNING: Do not reintroduce fixed latency cuts on the rows. The port first kept the101's 60 /
+> 100 ms, so a normal 114 ms cellular RTT drew a red bar beside "Responsive" above an all-green strip.
+> Grading on `thresholds.latency_ms` fixed it; measured on RM520N-GL data, 114 ms and 210 ms render
+> green at 23 % and 42 % of the track. The jitter cuts (15 / 40 ms, `connection-quality.tsx:65-66`)
+> are fixed on purpose: the backend has no jitter threshold.
 
-The mock's plot really is 150px, and this card matched it, yet a large dead gap opened between the
-plot and the Speed Test tile. That is a **mock-vs-product structural difference**, not a wrong number:
-in the mock this card sits beside two naturally-equal-height columns so 150px leaves no slack, but in
-the real dashboard grid it is a row-mate of Device Metrics (seven metric rows, taller), the row
-equalises heights, and the tile's `mt-auto` pools every pixel of that slack in the middle. `flex-1`
-hands the slack to the plot instead.
+> ℹ️ NOTE: the bar turns amber **at** the cut (`MetricBar` tests `value >= warnAt`) while a strip cell
+> turns amber only **above** it (`lat > latencyMs`). A reading of exactly the cut can therefore show
+> an amber bar over a green cell.
 
-The `min-h` floor still discharges the `ResponsiveContainer` obligation above: it guarantees a
-measurable height on the first frame, before the flex parent has resolved how much slack there is.
-`aspect-auto` at the call site is still required to defeat `ChartContainer`'s base `aspect-video`.
+### Bucketing rules (`bucketHistory`)
 
-### Series colours
+- **The window is anchored on the newest entry's `ts`**, the modem's clock, never `Date.now()`. The
+  browser's clock and the modem's can disagree (the modem boots at 1970 until its clock is set); anchoring on the browser would push every
+  sample out of the window.
+- **A span with no samples is unmeasured** (`bg-surface-container-high` cell, 3 px jitter stub), never
+  green. "Nothing was recorded" is not "the link was fine".
+- **Jitter comes only from answered probes.** A failed row's `jit` is the window statistic, often a
+  literal `0`, so reading it would draw a dropout as perfectly smooth.
+- **The jitter header goes to "No reading" while the current probe fails**, because `jitter_ms` is
+  then a stale window statistic.
+- **A `null` footer figure renders `—`**: the window is under the poller's ten-sample floor. It is
+  never coerced to `0`.
 
-`latency` uses `--primary` — the surface's one brand-weight data series. `packetloss` uses
-**`--on-surface-variant`**, the neutral ink.
+### The reachability label
 
-That neutral is a deliberate answer, not a placeholder. Packet loss was originally `--lte`, i.e. the
-**4G LTE identity hue**, on a series that has nothing to do with which radio is attached; a user who
-learned violet = LTE on the CA strip read a violet trace here and had to unlearn it. Nothing else in
-the palette fits either: packet loss has no **direction**, so neither Downlink Rose nor Uplink Cyan
-applies, and painting it from the **functional** ramp would make a healthy 0% line permanently red —
-"reports, never alarms" cuts hard against a fault-coloured series that is drawn even when nothing is
-wrong. The legend swatch moves with it (`bg-on-surface-variant`).
+`reachState()` maps `connectivity.status`:
 
-> ℹ️ NOTE: the historical trap here is still worth keeping. `--secondary` is **not** Carrier Violet in
-> this repo — shipped `--secondary` is a shadcn neutral that backs progress tracks, so reaching for it
-> renders grey. Carrier Violet is `--lte-*`. See `DESIGN.md` > Colors > Secondary.
+| `status` | Label | Ink |
+|----------|-------|-----|
+| `connected` | Responsive | `text-success-on-surface` |
+| `degraded`, `recovery` | Degraded | `text-warning-on-surface` |
+| `disconnected` **and** `dns_lookup_ms` is a number | No ping reply | `text-warning-on-surface` |
+| `disconnected` | Unreachable | `text-destructive-on-surface` |
+| `unknown` or missing | Not measured | `text-on-surface-variant` |
 
-The cached-speedtest result chips on this card follow the direction contract rather than the radio
-one: download is `downlink-container`, upload is `uplink-container`
-(`live-latency.tsx:888`). See [speedtest.md](speedtest.md) and [color-system.md](color-system.md).
+The "No ping reply" branch exists because some carriers filter ICMP: when DNS still resolves, the
+link is up and only the ping is blocked, so red would overstate it.
+
+### Three states
+
+| State | When | Renders |
+|-------|------|---------|
+| Loading | `isLoading` | `QualitySkeleton`, built from the same `QUALITY` constants |
+| Error | `!modemReachable && !connectivity` — no poll has **ever** landed | "Can't reach the modem" `Empty`. A later failed poll keeps the last reading instead |
+| Empty | `connectivity.internet_available === null` (the ping daemon is not reporting) | "Nothing is probing" `Empty` with a link to `/system-settings/connection-quality`; the Speed Test row still renders below it |
+
+### The Speed Test row
+
+The row that sat under Live Latency's chart moved to the bottom of this card (user decision). It is a
+`PillRow` with three branches at one height: running (phase label, live figure, progress bar in the
+`w-14` `LANE`), cached result (age `Tag`, download and upload in direction ink with
+`arrow_circle_down` / `arrow_circle_up`, `connection-quality.tsx:492-513`) and never run (`—`).
+
+- **The card holds the one watching hook**, `useSpeedtest({ watch: true })`
+  (`connection-quality.tsx:398`), so a run started from the dialog or another tab shows here.
+  `SpeedtestDialog`, which the card mounts, keeps its own non-watching `useSpeedtest()`. See
+  [speedtest.md](speedtest.md).
+- **The live figure is not a `TickingValue`.** The run updates every 500 ms and the tick would never
+  finish.
+- **An age past 365 days reads "just now".** That is a clock disagreement (for example a result stamped during the 1970 boot window), not
+  an old test.
+- **The row is wrapped in `mt-auto`**, which pins it to the card's bottom edge and is how this card
+  absorbs the trio row's slack. See [dashboard.md](dashboard.md#the-trio-row-and-why-one-card-could-not-absorb-slack).
+
+### Known gaps
+
+- A single failed ping turns a strip cell red regardless of `loss_pct` (`sawLoss` in `bucketHistory`, inherited from the101).
+- Off-scale shapes and type copied from the101: `rounded-[3px]` / `rounded-[2px]` on cells and bars (`QUALITY.CELL` / `QUALITY.BAR`, and the skeleton), and 10.5 / 11 / 13 / 19 px text sizes, against the type-ramp rule under [What the mock was deliberately not followed on](#what-the-mock-was-deliberately-not-followed-on).
+- The `timeline` glyph (`components/ui/material-symbol-names.ts:173`) is no longer used by any component but is still in the font subset; it was Live Latency's empty-state icon.
 
 ## Device Metrics
 
@@ -323,7 +372,7 @@ not "fix" them back:
 
 - [dashboard-state-motion.md](dashboard-state-motion.md) for the other dashboard motion contract — the
   live value tick cascade (`TickGroup`) and the status chip morph (`SwapLabel`). Device Metrics carries
-  a `TickGroup`; Live Latency's single figure is deliberately ungrouped
+  a `TickGroup`; Connection Quality's `TickingValue` figures are not grouped
 - [carrier-aggregation.md](carrier-aggregation.md) for the other dashboard data-visualisation surface
 - [recent-activities.md](recent-activities.md) for the dashboard event feed and the Age-Gated Tone Rule
 - [connection-quality.md](connection-quality.md) for who owns latency thresholds and where the

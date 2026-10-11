@@ -3,7 +3,7 @@
 > **Applies to:** RM520N-GL (SDX65) · verified 2026-08
 > **RG501Q-EU (SDX55):** unverified — see [`platform-matrix.md`](./platform-matrix.md)
 
-QManager's Speed Test measures download, upload and latency by shelling out to the **Ookla Speedtest CLI** — a proprietary binary the installer downloads onto the modem rather than bundling. Four CGI endpoints wrap it (availability, server list, start, status), one React hook drives the whole lifecycle, and two surfaces consume that hook: the **Speed Test tile** inside the dashboard's Live Latency card, and the **Speed Test dialog** the tile opens. The feature exists because "is my connection actually delivering what the carrier promised?" is the single most common question a modem owner has, and the signal metrics elsewhere on the dashboard cannot answer it.
+QManager's Speed Test measures download, upload and latency by shelling out to the **Ookla Speedtest CLI** — a proprietary binary the installer downloads onto the modem rather than bundling. Four CGI endpoints wrap it (availability, server list, start, status), one React hook drives the whole lifecycle, and two surfaces consume that hook: the **Speed Test row** at the bottom of the dashboard's Connection Quality card, and the **Speed Test dialog** the row opens. The feature exists because "is my connection actually delivering what the carrier promised?" is the single most common question a modem owner has, and the signal metrics elsewhere on the dashboard cannot answer it.
 
 > ⚠️ WARNING: **A single run costs roughly 400 MB of cellular data** (398 MB measured live on a full run). This is not a bug and it is not tunable — see [Cost & Measurement Reality](#cost--measurement-reality).
 
@@ -20,12 +20,12 @@ QManager's Speed Test measures download, upload and latency by shelling out to t
 | Hook | `hooks/use-speedtest.ts` |
 | Pure state machine | `lib/speedtest-phases.ts` (`resolveStepStates`) |
 | Types | `types/speedtest.ts` |
-| UI | `components/dashboard/live-latency.tsx` (tile), `components/dashboard/speedtest-dialog.tsx` (dialog) |
+| UI | `components/dashboard/connection-quality.tsx` (row), `components/dashboard/speedtest-dialog.tsx` (dialog) |
 | i18n | `dashboard` namespace, `speedtest.*` subtree, all 5 locales |
 | Poll cadences | 500 ms while running, 10 s idle heartbeat (`watch` mode only) |
 | Data cost | ~400 MB per run |
 
-Related: [dashboard-chart-cards.md](dashboard-chart-cards.md) (the Live Latency card that hosts the tile), [icon-system.md](icon-system.md) (this surface is inside the Material Symbols route scope), [connection-quality.md](connection-quality.md) (the continuous latency telemetry the tile sits beneath).
+Related: [dashboard-chart-cards.md](dashboard-chart-cards.md) (the Connection Quality card that hosts the row), [icon-system.md](icon-system.md) (this surface is inside the Material Symbols route scope), [connection-quality.md](connection-quality.md) (the continuous latency telemetry the tile sits beneath).
 
 ---
 
@@ -200,7 +200,7 @@ Other properties of the function worth keeping:
 
 | Consumer | Mode | Idle | Running |
 | -------- | ---- | ---- | ------- |
-| Dashboard tile (`live-latency.tsx`) | `watch: true` | 10 s detect heartbeat | 500 ms |
+| Dashboard row (`connection-quality.tsx`) | `watch: true` | 10 s detect heartbeat | 500 ms |
 | Dialog (`speedtest-dialog.tsx`) | default | no polling at all | 500 ms |
 
 `watch: true` is the entire "a run started somewhere else shows up here" feature. Previously the tile fired a one-shot fetch on mount and another on dialog close, so a run started in another tab — or from another device on the LAN — was invisible until something happened to reopen the dialog. The status endpoint took its `flock` precisely so that two hook instances polling at once is *expected* rather than merely tolerated.
@@ -294,21 +294,17 @@ Everything the rule protects is still paid for. All four states carry a distinct
 
 This matters because `success-container` and `warning-container` measure roughly **1.03:1** apart — the same surface to the eye, and identical under deuteranopia.
 
-### `SPEEDTEST_TILE_H` is shared by the tile and the skeleton
+### The row keeps one height
 
-`SPEEDTEST_TILE_H = "min-h-[88px]"` in `live-latency.tsx` is consumed by **both** the Speed Test tile and `LiveLatencySkeleton`.
+The Speed Test row is a `PillRow` pinned to the bottom of Connection Quality (`mt-auto`), so it takes the card's spare height. Running, cached and never-run all render inside the same pill, so switching state never moves the card.
 
-This is not a tidiness preference. The Live Latency card runs a skeleton→content **crossfade overlay** — both are on screen at once during the handoff — so a drifted height is not a rounding detail, it is a visible jump at the exact moment the real content lands (the Skeleton-Mirror Rule).
-
-The old 88 px was already wrong by 2 px: the play button was inheriting `Button`'s `size-9` (36 px) instead of the comp's 34 px. Pinning the disc to `size-[34px]` closes that gap rather than papering over it. It is a **min**-height, not a fixed one — the idle sentence must be allowed to wrap on a narrow card — but it must never change when the tile switches *between* its three states, which is why all three bodies are matched to a 34 px action row rather than left to their intrinsic sizes.
-
-### Tile states
+### Row states
 
 | State | Condition | Renders |
 | ----- | --------- | ------- |
-| Running | `isRunning` | `primary-container` fill, spinner disc, live figure + phase-local progress meter, `animate-live-ping` dot with the phase name |
+| Running | `isRunning` | `animate-live-ping` dot with the phase name, live figure + phase-local progress meter |
 | Cached | `cachedResult`, not running | Play button + two direction figure pills (download rose, upload cyan) + a relative "14 min ago" caption |
-| Idle | neither | Play button + `speedtest.idle_description` |
+| Idle | neither | Play button + an em dash |
 
 The relative timestamp ticks on its **own** 30 s clock (`useNowSec`), independent of the status poll — in `watch` mode the endpoint returns a byte-identical cached result each time, React bails out of the re-render, and the label would otherwise freeze at whatever it said when the result first arrived. Ages beyond `ABSURD_AGE_SEC` (365 days) or negative ages collapse to "just now", because the modem stamps the result with its own clock and the browser supplies `now` — on a device that has not reached NTP, a naive diff renders "20454 d ago".
 

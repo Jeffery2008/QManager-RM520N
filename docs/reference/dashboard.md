@@ -15,8 +15,8 @@ constructions **are** the canon's worked examples, and rewriting them is churn r
 than a win.
 
 Two sibling docs already own halves of this surface and are **not** superseded:
-[`dashboard-chart-cards.md`](dashboard-chart-cards.md) (Device Metrics, Live Latency,
-Signal History — the recharts contracts) and
+[`dashboard-chart-cards.md`](dashboard-chart-cards.md) (Device Metrics, Connection Quality,
+Signal History — the recharts, threshold and history-strip contracts) and
 [`dashboard-state-motion.md`](dashboard-state-motion.md) (the tick cascade, the chip
 morph, the save flow). This doc owns everything else: composition, the shape module, the
 three-state contract, and which parts are load-bearing.
@@ -54,7 +54,7 @@ Reading order, top to bottom:
 | Header | Page title, description, and the Radio / Internet / Stale rail | full |
 | Top | Network Status hero + the NR / LTE pair (left, 3 cols) · Device Information (right, 2 cols) | full |
 | Aggregation | Carrier Aggregation strip | full |
-| Trio | Device Metrics · Live Latency · Recent Activity | full |
+| Trio | Device Metrics · Connection Quality · Recent Activity | full |
 | History | Signal History | full |
 
 **The page header is not optional.** The dashboard was for a long
@@ -124,23 +124,24 @@ The surface uses three repeating units, and the canon owns all three.
   beside eyebrow → value → caption. **A tile body is neutral; the disc carries the
   colour.** A `min-h-` on a *tile* is a bug, not a lenient pin: a floor cannot be a
   mirror.
-  > ⚠️ **But not every `min-h-` on this surface is that bug.** `live-latency.tsx`'s
-  > `CHART_BOX = "min-h-[150px] flex-1"` is correct as shipped and must not be
-  > "corrected" to a pin. `ChartContainer`'s base class is `aspect-video`, so an unpinned
-  > chart's height is a function of the card's *width* and changes as the grid reflows;
-  > and recharts' `ResponsiveContainer` renders **nothing** until it has measured its
-  > parent, so a zero-height parent on the first frame makes the card pop when the
-  > measurement lands. The floor guarantees a measurable height on frame one; the
-  > `flex-1` beside it absorbs the slack from Device Metrics being the taller row-mate.
-  > **A floor standing in for a mirror is a defect; a floor guaranteeing a first-frame
-  > measurement is not.** Neither failure shows in a static screenshot.
-- **Bars — one thickness, two widths.** Every bar in the product is
+  > ⚠️ **One kind of `min-h-` is not that bug: a floor under a recharts chart that also
+  > grows.** `ChartContainer`'s base class is `aspect-video`, so an unpinned chart's
+  > height is a function of the card's *width*; and recharts' `ResponsiveContainer`
+  > renders **nothing** until it has measured its parent, so a zero-height parent on the
+  > first frame makes the card pop when the measurement lands. A floor there guarantees a
+  > measurable height on frame one. Live Latency's `CHART_BOX = "min-h-[150px] flex-1"`
+  > was that case; it left with the card on 2026-10-11, and no `min-h-` remains under
+  > `components/dashboard/`. **A floor standing in for a mirror is a defect; a floor
+  > guaranteeing a first-frame measurement is not.** Neither failure shows in a static
+  > screenshot.
+- **Bars — one thickness, three widths.** Every bar in the product is
   **8px tall**. What varies is **width**, chosen by slot:
 
   | Form | Width | Where | Why |
   |------|-------|-------|-----|
   | **Full-width meter** | spans the row | Device Metrics — CPU, memory, storage, temperature | The bar owns its own line beneath the label, so it has the width to spend |
-  | **Inline lane** | `w-14` (56px) | The NR / LTE signal rows | It shares a 40px row with the figure it qualifies. A full-width bar under the last line would read as a coloured bottom border rather than as a gauge |
+  | **Inline lane** | `w-14` (56px), `LANE` | The NR / LTE signal rows; Connection Quality's speedtest progress bar | It shares a 40px row with the figure it qualifies. A full-width bar under the last line would read as a coloured bottom border rather than as a gauge |
+  | **Compact lane** | `w-11` (44px), `QUALITY.LANE` | Connection Quality's Internet and DNS lookup rows | It sits between a label and a fixed `w-16` value column in a 20px row inside one tile, so both rows share a right edge whatever their digit counts |
 
   > **Why one thickness.** `DESIGN.md` rests the whole quality ramp on length — adjacent
   > stops sit *deliberately* below the CVD separation floor, on the understanding that
@@ -225,13 +226,16 @@ value that holds steady for minutes invents an event.
 ## The trio row, and why one card could not absorb slack
 
 
-Device Metrics, Live Latency and Recent Activity share one grid row and are `h-full`-locked
+Device Metrics, Connection Quality and Recent Activity share one grid row and are `h-full`-locked
 by `*:data-[slot=card]:h-full`. Equalising a 3-up row is the documented norm — "Equal
 heights are explicit" — but it only works if every card can *use* the height it is given.
 
 - **Device Metrics drives it.** Seven rows: four `MeterRow` plus three `PillRow` (data
   used, LTE cell distance, NR cell distance). It is the tallest by content.
-- **Live Latency absorbs.** `CHART_BOX`'s `flex-1` hands the chart whatever slack exists.
+- **Connection Quality absorbs.** Its body is a `flex-1` column and the Speed Test row is
+  wrapped in `mt-auto`, so any slack pools as space above that row and the row stays on the
+  card's bottom edge. The skeleton's last bar carries the same `mt-auto`. Before 2026-10-11
+  Live Latency absorbed it through its chart box's `flex-1`.
 - **Recent Activity could not.** Its list was pinned *and* clipped —
   `maxHeight: LIST_MAX_H` (332px) under `overflow-hidden` — so every pixel past 332
   became dead space at the bottom of that card.
@@ -257,8 +261,9 @@ construction.
 > the push and then vanishes at the end.
 
 > ℹ️ This was originally reported as the Speed Test tile creating "a huge whitespace gap".
-> The tile was real but secondary — shrinking it to a row takes ~48px off **Live Latency**,
-> which was already absorbing fine, and gives Recent Activity nothing. **Measure which card
+> The tile was real but secondary — shrinking it to a row took ~48px off **Live Latency**
+> (the card Connection Quality replaced), which was already absorbing fine, and gave
+> Recent Activity nothing. **Measure which card
 > cannot absorb before shrinking the one that can.**
 
 ## Orb sizing
@@ -437,8 +442,8 @@ moment the two tie, and at a tie nothing but Tailwind's name sort decides. *The 
 specificity claim is measurable in one line of `getComputedStyle`; do not argue it.*
 
 > ℹ️ A fifth was withdrawn **before** execution: finding 06 claimed `live-latency.tsx`'s
-> `CHART_BOX = "min-h-[150px] flex-1"` was a floor where the canon says pin. It is correct
-> as shipped and its own JSDoc carried the counter-evidence. That reasoning is preserved
+> `CHART_BOX = "min-h-[150px] flex-1"` was a floor where the canon says pin. It was correct
+> as shipped (the file was later deleted with the card) and its own JSDoc carried the counter-evidence. That reasoning is preserved
 > in full under [Tiles, rows and lanes](#tiles-rows-and-lanes).
 
 ---

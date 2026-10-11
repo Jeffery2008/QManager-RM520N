@@ -45,13 +45,13 @@ Downlink Rose exists to break that overload. Both direction roles now hold hues 
 | Surface | Download | Upload |
 | ------- | -------- | ------ |
 | Speedtest dialog `ROLE` map (`speedtest-dialog.tsx`) | `downlink-*` | `uplink-*` |
-| Cached speedtest figures (`live-latency.tsx`) and Device Metrics data-usage glyphs (`device-metrics.tsx`), via `DIRECTION` in `dashboard/shapes.ts` | `text-downlink-on-surface` + `arrow_circle_down` | `text-uplink-on-surface` + `arrow_circle_up` |
+| Cached speedtest figures (`connection-quality.tsx`) and Device Metrics data-usage glyphs (`device-metrics.tsx`), via `DIRECTION` in `dashboard/shapes.ts` | `text-downlink-on-surface` + `arrow_circle_down` | `text-uplink-on-surface` + `arrow_circle_up` |
 | AMBR rate chips (`RATE_CHIP.ON_DOWNLOAD` / `.ON_UPLOAD`, `cellular/settings/shapes.ts`) | `bg-downlink` | `bg-uplink` |
 
 Three consequences that are easy to get wrong:
 
 - **A capacity or a count takes neither.** An aggregate channel width, a negotiated link rate or a client or carrier count is not a direction. Rose would claim a download it is not, cyan an upload. These were rose and cyan until 2026-08-16 (the old rule gave rose "and capacity" and cyan "and counts"), which made the axis untrue; `DESIGN.md` > Colors > Direction deleted both second meanings. The Radio Information Carriers tile, the antenna-statistics chain-count tile, the Traffic Engine counts and the Ethernet link-rate tile are neutral now (The Neutral-Default Rule).
-- **A directionless figure takes neither.** Latency has no direction, so the speedtest's ping role is neutral. Packet loss on the Live Latency chart is neutral for the same reason plus one more: painting it from the functional ramp would draw a healthy 0% line permanently red, and this product reports rather than alarms.
+- **A directionless figure takes neither.** Latency has no direction, so the speedtest's ping role is neutral. The Loss figure in the dashboard Connection Quality card's footer is neutral ink for the same reason. Its reachability and jitter strips do take success / warning / destructive, because each cell is a verdict against a cut (the configured latency and loss thresholds, or the fixed 15 / 40 ms jitter steps), not a raw series; an unmeasured cell is `surface-container-high`, never green.
 - **Direction always pairs its hue with an arrow glyph.** Hue alone never says which way.
 
 > ⚠️ Residual deviations, tracked in `DESIGN.md` > Migration Deltas (grep `bg-downlink|bg-uplink|text-uplink` over `components app`, 2026-10-06): `BANDWIDTH_DISC` in `components/cellular/radio/summary-tiles.tsx` and `DISC_RATE` in `components/cellular/settings/shapes.ts` still colour a capacity on `bg-downlink`, and the Donate glyph in `components/nav-section.tsx` wears `text-uplink`. All three contradict the rule above. Move them to neutral when you next touch the surface, and correct the comment beside each in the same change.

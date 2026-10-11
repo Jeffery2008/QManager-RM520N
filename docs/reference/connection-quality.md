@@ -3,7 +3,7 @@
 > **Applies to:** RM520N-GL (SDX65) · verified 2026-10-11 (unification run, serial `61368cd2`)
 > **RG501Q-EU (SDX55):** the pipeline itself is unverified there — but the three [platform facts](#platform-facts-that-shape-this-design) the probe chain depends on (`ping`, `timeout`, DNS caching) were measured on **both** devices on 2026-09-01. See [`platform-matrix.md`](./platform-matrix.md)
 
-"Connection Quality" is the **measurement / telemetry** side of QManager's connectivity stack — the part that *observes* how good the internet link is and turns raw probe results into latency, jitter, and packet-loss numbers the UI can chart. It is deliberately separate from the [Connection Watchdog](connection-watchdog.md), which is the **recovery** side — the state machine that *acts* when the link goes down. This document covers the producer→poller consumer chain that feeds the Connection Quality page (`/system-settings/connection-quality`) and the dashboard's latency card. It does **not** re-document the watchdog's recovery ladder — see the sibling doc for that.
+"Connection Quality" is the **measurement / telemetry** side of QManager's connectivity stack — the part that *observes* how good the internet link is and turns raw probe results into latency, jitter, and packet-loss numbers the UI can chart. It is deliberately separate from the [Connection Watchdog](connection-watchdog.md), which is the **recovery** side — the state machine that *acts* when the link goes down. This document covers the producer→poller consumer chain that feeds the Connection Quality page (`/system-settings/connection-quality`) and the dashboard's Connection Quality card. It does **not** re-document the watchdog's recovery ladder — see the sibling doc for that.
 
 > ℹ️ NOTE: The two docs are siblings by design. Connection Quality owns **everything about measuring the link**: the probe targets, the probe cadence (`interval_sec`), the latency/loss thresholds, the `degraded` verdict and the single alert wait (`alert_after_min`). The Watchdog owns only **recovery policy**: `fail_threshold`, the ladder, cooldowns and SIM failover. The Watchdog page still shows and edits the cadence, but it reads and writes Connection Quality's `interval_sec` — see [Ownership boundary](#ownership-boundary--who-owns-what).
 
@@ -36,7 +36,8 @@
 | Quality reload flag | `/tmp/qmanager_events_reload` (consumed by `cq_thresholds_refresh` in the poller) |
 | Poller status output | `/tmp/qmanager_status.json` → `connectivity` block (typed as `ConnectivityStatus` in `types/modem-status.ts`) |
 | Dashboard "Internet" chip | `buildInternetChip()` in `components/dashboard/network-status.tsx` — reads `connectivity.status` and nothing else |
-| Latency charts | `components/dashboard/live-latency.tsx` and `components/monitoring/latency-monitoring/latency-monitoring-card.tsx` — a `null` RTT renders as a **gap**, never as 0 ms |
+| Dashboard card | `components/dashboard/connection-quality.tsx` — grades its bars and history strips on `connectivity.thresholds`; see [dashboard-chart-cards.md](dashboard-chart-cards.md#connection-quality) |
+| Latency displays | `components/dashboard/connection-quality.tsx` and `components/monitoring/latency-monitoring/latency-monitoring-card.tsx` — a `null` RTT is an **absent** reading, never 0 ms |
 
 **The three-daemon split, at a glance:**
 
@@ -235,7 +236,7 @@ Per-field JSON keys (`interval_sec`, `fail_secs`, `recover_secs`, `history_secs`
 
 **Reload without restart:** any writer updates `ping_profile.json` and then `touch /tmp/qmanager_ping_reload`. The daemon tests for that flag once per cycle, re-reads config, re-resolves the profile and the four target slots, unlinks the flag, and continues — streak counters survive the reload, so switching cadence mid-flight never resets the reachability verdict.
 
-> ℹ️ NOTE — the daemon is independent of the Watchdog. `qmanager_ping` stays up regardless of `watchcat.enabled`, so the Connection Quality page and the dashboard latency card get a live verdict even when the Watchdog is switched off. The Watchdog only ever *reads* `qmanager_ping.json`.
+> ℹ️ NOTE — the daemon is independent of the Watchdog. `qmanager_ping` stays up regardless of `watchcat.enabled`, so the Connection Quality page and the dashboard's Connection Quality card get a live verdict even when the Watchdog is switched off. The Watchdog only ever *reads* `qmanager_ping.json`.
 
 <a id="measured-on-hardware"></a>
 ### Measured on hardware
@@ -350,7 +351,7 @@ From those, in a single pass, it derives the `connectivity` block written into `
 
 The degraded cut is the **same** `CQ_LOSS_PCT` the event detector uses, so the chip and the Network Events feed cannot disagree about what "too much loss" means. It was a hard-coded 10 % until 2026-10-11. Latency alone never makes the status `degraded`. The cut lives in the poller because the poller is the only layer holding the rolling loss window; a component deriving its own verdict from raw `internet_available` would paint a link losing 90 % of its packets as full success.
 
-**Where it surfaces:** the dashboard latency card, the dashboard's "Internet" chip, and the Connection Quality page's live "Current" readouts consume this via the `useModemStatus` hook (5-second poll of `/tmp/qmanager_status.json`). The latency **chart** additionally pulls the NDJSON history through `GET /cgi-bin/quecmanager/at_cmd/fetch_ping_history.sh`, which reads `/tmp/qmanager_ping_history.json` from RAM and reshapes it into a JSON array — zero modem contact.
+**Where it surfaces:** the dashboard's Connection Quality card, the dashboard's "Internet" chip, and the Connection Quality page's live "Current" readouts consume this via the `useModemStatus` hook (5-second poll of `/tmp/qmanager_status.json`). The Connection Quality card's reachability and jitter strips additionally pull, every 30 s through `useLatencyHistory()`, the NDJSON history through `GET /cgi-bin/quecmanager/at_cmd/fetch_ping_history.sh`, which reads `/tmp/qmanager_ping_history.json` from RAM and reshapes it into a JSON array — zero modem contact.
 
 ---
 
@@ -396,9 +397,9 @@ What to take from it when editing this pipeline:
 <a id="latency-charts-null-is-a-gap"></a>
 ### Latency charts — a lost ping is a gap, never 0 ms
 
-Both chart sites treat a `null` RTT sample as an **absent** reading rather than a fast one. Previously a total blackout drew a live-updating flat line pinned to the floor of the plot, which reads as a perfectly healthy 0 ms link:
+Both latency displays treat a `null` RTT sample as an **absent** reading rather than a fast one. Previously a total blackout drew a live-updating flat line pinned to the floor of the plot, which reads as a perfectly healthy 0 ms link:
 
-- `components/dashboard/live-latency.tsx` maps a `null` history entry to `null`, not `0`. Recharts breaks the path and skips the dot, and the packet-loss series beside it still rises, so the outage is stated rather than merely missing.
+- `components/dashboard/connection-quality.tsx` passes a `null` `latency_ms` or `dns_lookup_ms` to `MetricBar` untouched, so the row shows an empty track and `—`. In the history strip a `null` `lat` counts as a lost probe and turns that cell (one 28th of 30 minutes, about 64 s) red; it never contributes a latency or a jitter reading.
 - `components/monitoring/latency-monitoring/latency-monitoring-card.tsx` does the same for realtime samples and for aggregate buckets in which every ping was lost. Its rolling latency average **excludes** gaps rather than averaging in zeros — a window half of which timed out averages the readings it has, and the packet-loss figure beside it reports the other half.
 
 > ℹ️ NOTE — `ok` on a ping row is still wired: `PingEntriesCard` reads it to print "Timeout" in the latency cell, which is why an aggregate row can carry a printable `0` there without the table ever showing "null ms". Do not delete it as dead.
@@ -631,6 +632,6 @@ The `limited` state is a **genuine capability loss**, and the 2026-09-01 chip fi
 - Centralized Alerts — routing, capability and the channel transports behind the one wait — [alerts.md](alerts.md)
 - Recent Activities — how the `internet_*` / `high_*` events are drawn and paired — [recent-activities.md](recent-activities.md)
 - Sites monitor — per-site TCP connect latency, a separate daemon that does not feed this verdict — [sites-monitor.md](sites-monitor.md)
-- Dashboard chart cards — the Live Latency card's chip, geometry and recharts contracts — [dashboard-chart-cards.md](dashboard-chart-cards.md)
+- Dashboard chart cards — the dashboard Connection Quality card's rows, history strips and threshold grading — [dashboard-chart-cards.md](dashboard-chart-cards.md#connection-quality)
 - AT command transport (`qcmd`, flock serialization) — [at-command-transport.md](at-command-transport.md)
 - Platform architecture, daemons, boot sequence — `../rm520n-gl-architecture.md`

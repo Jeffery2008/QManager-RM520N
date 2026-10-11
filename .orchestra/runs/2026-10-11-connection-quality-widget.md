@@ -1,5 +1,5 @@
 # Run: Connection Quality dashboard widget (replaces Live Latency)
-status: active
+status: closed
 lane: full
 base: 700bb603   branch: wt/cq-widget (.claude/worktrees/wt+cq-unify)   opened: 2026-10-11   lead: opus
 
@@ -20,13 +20,20 @@ Proceed to porting Connection Quality widget now. It will fully replace the Live
 |---|---|---|---|---|---|
 | R1 | the101 Connection Quality widget: files, data contract, primitives, i18n | recon | qm-scout | none | ACCEPTED |
 | R2 | RM520N Live Latency card: mount, hook, consumers, available fields/primitives | recon | qm-scout | none | ACCEPTED |
-| B1 | Port connection-quality.tsx, carry Speedtest row, retire live-latency.tsx, i18n x5, configured thresholds | build | ui-builder | components/dashboard/{connection-quality.tsx,live-latency.tsx,home-component.tsx,shapes.ts}, public/locales/*/dashboard.json, types/modem-status.ts (only if needed) | DISPATCHED |
+| B1 | Port connection-quality.tsx, carry Speedtest row, retire live-latency.tsx, i18n x5, configured thresholds | build | ui-builder | components/dashboard/{connection-quality.tsx,live-latency.tsx,home-component.tsx,shapes.ts}, public/locales/*/dashboard.json, types/modem-status.ts (only if needed) | ACCEPTED 9d156cbe |
+| V1 | Blind verify with real modem JSON | judgment | qm-verifier | none | ACCEPTED (PASS_WITH_NOTES) |
+| FX1 | Latency bars graded on configured threshold | build | conductor inline | connection-quality.tsx | ACCEPTED e029d43b |
+| D1 | Docs + release notes | docs | docs-writer (+ conductor speedtest.md) | docs/reference/**, RELEASE_NOTES.md | ACCEPTED |
 
 ## Attempts   (append-only)
 | task | # | seat | ticket rev | outcome | checks run | evidence path |
 |---|---|---|---|---|---|---|
 | R1 | 1 | qm-scout | r1 | DONE_WITH_CONCERNS -> accepted | read-only | — |
 | R2 | 1 | qm-scout | r1 | DONE_WITH_CONCERNS -> accepted | read-only | — |
+| B1 | 1 | ui-builder | r1 | DONE_WITH_CONCERNS -> accepted 9d156cbe (sample-data render only) | i18n, tsc, eslint, icons, build | commit body |
+| V1 | 1 | qm-verifier | r1 | PASS_WITH_NOTES (medium: bars on fixed 60/100 ms) | gates + real-data render | — |
+| FX1 | 1 | conductor | inline | e029d43b, real-data render: bars green 23 %/42 % | tsc, eslint, Browser pane | commit body |
+| D1 | 1 | docs-writer | r1 | DONE_WITH_CONCERNS -> accepted; conductor fixed speedtest.md | CRLF, source check | — |
 
 ## Findings that survive
 - the101 card = components/dashboard/connection-quality.tsx (855 lines, one file) + useLatencyHistory (30 s, fetch_ping_history.sh) + shapes QUALITY/PAIR_TITLE/PAIR_DESC; en-only i18n (dashboard.json connection_quality, the101 :547-583).
@@ -35,7 +42,8 @@ Proceed to porting Connection Quality widget now. It will fully replace the Live
 - Glyphs public/radar/cloud_off/dns/speed all in material-symbol-names.ts.
 
 ## Device state
-RM520N-GL 61368cd2 runs the unification backend (md5 = 27336a7b files; ping/watchcat lack the later ash guards). Nothing deployed by this run.
+Nothing deployed to the modem by this run. Real status/history JSON was captured read-only (as www-data, session file removed); the copies in public/__cqcap, out/ and scratchpad are deleted (status file held IMEI/IMSI/ICCID/phone; never committed).
 
 ## Handoff — NEXT ACTION
-Collect R1/R2 -> draft plan -> qm-advocate -> AskUserQuestion gate -> ui-builder.
+Run complete on wt/cq-widget (base 700bb603). Next: user decides merge into development / keep / discard; after a merge rerun tsc + i18n:check + build.
+Open (low): one failed ping turns a strip cell red regardless of loss_pct (from the101); bar amber at >= cut vs strip cell at > cut (exactly-at-cut mismatch); off-scale rounded-[3px]/[2px] and 10.5/11/13/19 px text from the101; `timeline` glyph unused in the font subset; Speedtest running state not seen live; entrance animation not seen in a visible tab; connection-quality.md:353 says "5-second poll" (actual history_interval_sec*1000+250).
