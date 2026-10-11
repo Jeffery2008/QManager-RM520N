@@ -32,6 +32,7 @@ Every settings card in the app now saves from the same place — a row along the
 ## 🐛 Fixes
 
 - **Watchdog no longer escalates on missing data.** If probe results go missing after a recovery step, the Watchdog now goes back to monitoring instead of trying the next step, and switches back to your main SIM if it was trying the backup. (Before, missing data counted as a failed step and could walk the ladder toward a reboot.)
+- **Carrier aggregation no longer floods Network Events.** A secondary carrier that blinks out for a moment used to log "LTE CA deactivated" / "LTE CA activated" pairs every few seconds and push everything else out of **Monitoring → Network Events**; now a flapping stretch logs one "churn detected" warning, then one "settled" row once it calms down. (Debounced per LTE/NR on the secondary-carrier count; real changes still log with the old wording.)
 - **TTL & MTU Apply buttons match their Discard buttons.** On **Local Network → TTL & MTU Settings**, the Apply buttons were smaller and squarer than the Discard pill beside them; they are now the same 42px pill.
 - **Neighboring Cells "Read failed" card gives the right advice.** It used to tell you to run the sweep again; it now says to read again.
 - **Neighboring Cells counts cells, not bands.** After a read, the summary on **Cell Scanner → Neighboring Cells** now shows a check and "9 neighbours" instead of "9 available bands", and the per-type rows count cells; Cell Scanner's summary gets the same check-and-total layout.
