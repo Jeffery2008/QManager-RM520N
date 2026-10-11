@@ -62,3 +62,4 @@
 - [jq is unreachable before opt.mount — qm_config_get silently returns its DEFAULT](jq_unreachable_before_opt_mount.md) — /usr/bin/jq is the ONLY jq and points into /opt, mounted at ~boot+30s; this is what actually denied the issue-9 reboot fire (not the guard logic), and what fails rc.unslung 203/EXEC
 
 - [lighttpd DOES export HTTP_AUTHORIZATION; curl STRIPS it across the http->https 301](cgi_env_authorization_and_no_path.md) -- a bearer-token CGI needs no lighttpd change, but `curl -L http://...` arrives unauthenticated while a custom `X-...` header survives; CGI also gets NO PATH at all, so cgi_base.sh's PATH ends in an empty (CWD) element
+- [One pinger, three latency histories](connectivity_single_prober_three_histories.md) — qmanager_ping is the sole ICMP source; watchcat only reads; poller NDJSON history ticks ~16 s, not 10 s
