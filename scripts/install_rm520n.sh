@@ -1602,6 +1602,9 @@ install_backend() {
     # unlike /usr/bin, it survives a rootfs wipe on OTA.
     install -d -o root -g root -m 0755 "$QMANAGER_ROOT/bin"
 
+    # --- Sites monitor rollups: root-written hourly JSONL, CGI read-only ---
+    install -d -o root -g root -m 0755 "$QMANAGER_ROOT/sites"
+
     # --- Shared libraries ---
     # SECURITY: this directory MUST NOT be group/world-writable. Root helpers
     # (qmanager_*_apply, invoked by www-data through a NOPASSWD sudoers grant)
@@ -3812,7 +3815,7 @@ start_services() {
     systemctl restart qmanager-setup 2>/dev/null || true
 
     # Start always-on services with verification
-    for svc in qmanager-cfun-fix qmanager-ping qmanager-poller qmanager-ttl qmanager-mtu qmanager-imei-check; do
+    for svc in qmanager-cfun-fix qmanager-ping qmanager-sites qmanager-poller qmanager-ttl qmanager-mtu qmanager-imei-check; do
         systemctl start "$svc" 2>/dev/null || true
     done
 
