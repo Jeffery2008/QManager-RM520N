@@ -54,7 +54,7 @@ Pins are the decision, already made. Dispatch with **no `model` argument** unles
 
 | Agent | Seat | Read-only? | Dispatched for | Reports |
 |---|---|---|---|---|
-| `qm-scout` | sonnet / low | yes | Locate files and symbols, census call sites, trace a KNOWN path, extract facts | status |
+| `qm-scout` | haiku / low | yes | Locate files and symbols, census call sites, trace a KNOWN path, extract facts | status |
 | `modem-investigator` | opus / medium | source yes; device read-only | Reproduce a bug live, interpret on-device state, map an UNKNOWN flow; not a census | status |
 | `qm-advocate` | opus / high | yes | Attack the leading hypothesis or plan before the gate; name what would settle each challenge | status, then ranked challenges |
 | `cgi-endpoint-builder` | sonnet / medium | no | CGI endpoints, libs, daemons, AT/`qcmd` flows, apply pipelines | status |
@@ -70,7 +70,7 @@ Statuses are `DONE` · `DONE_WITH_CONCERNS` · `NEEDS_CONTEXT` · `BLOCKED`. Ver
 ## Hard rails
 
 1. **Never dispatch `Explore`, `general-purpose`, `Plan`, or any `orchestra-*` agent.** They inherit the lead seat and carry no project contract; `qm-scout` and `qm-worker` exist to replace them. Inherited seats are how 91% of one pass's subagent tokens went to Opus.
-2. **A LIST is Sonnet, a JUDGMENT is Opus.** The failure mode picks the seat: "missing an item" is bought with an exhaustive brief, "concluding wrong" is bought with depth. One measured run fielded six Opus agents and two earned it. Effort before tier within a class — the ticket may say "mechanical, do not deliberate" or "reason carefully about X".
+2. **RECON is Haiku, a BUILD is Sonnet, a JUDGMENT is Opus.** Read-only recon (locate, census, trace a known path, extract facts) goes to `qm-scout` on Haiku 5.5. The failure mode picks the seat: "missing an item" is bought with an exhaustive brief, "concluding wrong" is bought with depth. One measured run fielded six Opus agents and two earned it. Effort before tier within a class — the ticket may say "mechanical, do not deliberate" or "reason carefully about X".
 3. **Overrides need a one-line reason in the ledger.** Never override to `fable`. Never re-tier a running agent.
 4. **Reports are claims.** Every implementation report ends with the literal `git diff --stat <BASE>` and a `device touched:` line; a narrative the diff does not show is a failed run. One builder deployed half-edited code to the modem against a "do not deploy" brief.
 5. **Sequential by default.** Parallel only for provably disjoint WRITE SETs; announce every fan-out — size, seats, why — before it happens.
