@@ -120,7 +120,9 @@ export function useSites(range: SitesRange): UseSitesReturn {
   }, [range, fetchSites]);
 
   const busy = (data?.checking ?? false) || checkPending;
-  const cadence = range === "now" ? "live" : busy ? BUSY_POLL_MS : IDLE_POLL_MS;
+  // A disabled monitor has nothing live to show, so "now" drops to the idle cadence.
+  const live = range === "now" && data?.enabled !== false;
+  const cadence = live ? "live" : busy ? BUSY_POLL_MS : IDLE_POLL_MS;
   useEffect(() => {
     if (cadence !== "live") {
       const id = window.setInterval(() => void fetchSites(rangeRef.current), cadence);
