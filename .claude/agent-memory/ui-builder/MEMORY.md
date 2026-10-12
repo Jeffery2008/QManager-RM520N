@@ -35,3 +35,4 @@
 - [Another agent may rewrite your write-set files mid-run](reference-write-set-rewritten-by-a-consolidation-pass.md) — a consolidation pass inlined my split files and retuned my hover hexes; re-read from disk before reporting, and re-run every gate after
 - [`satisfies Record<K,V>` LOSES an optional field on union access](reference-satisfies-breaks-optional-tone-fields.md) — it keeps each entry's literal type, so members that omitted `spin?` really lack it; use the `: Record<K,V>` annotation, which enforces the same thing
 - [Never hand-escape CJK locale strings](reference-never-hand-escape-cjk-locale-strings.md) — \uXXXX by hand put 繯 for 繞 and 状 for 狀 in zh packs; all gates green. Literal chars + read-back assert
+- [A fetch shim must handle URL objects](reference-fetch-shim-must-handle-url-objects.md) — Next's RSC fetch passes a URL; `input.url` throws, forcing a hard reload that drops the shim
