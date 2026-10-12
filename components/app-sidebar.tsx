@@ -129,10 +129,6 @@ const navSystem: NavItem[] = [
         t_key: "system_health_check",
         url: "/system-settings/system-health-check",
       },
-      {
-        t_key: "connection_quality",
-        url: "/system-settings/connection-quality",
-      },
       { t_key: "languages", url: "/system-settings/languages" },
     ],
   },
@@ -160,14 +156,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navMonitoring: NavItem[] = React.useMemo(
     () => [
       {
-        t_key: "network_events",
-        url: "/monitoring",
-        icon: "donut_small",
+        t_key: "connection_quality",
+        url: "/monitoring/connection-quality",
+        icon: "speed",
         items: [
           { t_key: "latency_monitor", url: "/monitoring/latency" },
-          { t_key: "alerts", url: "/monitoring/alerts" },
+          { t_key: "network_events", url: "/monitoring/events" },
         ],
       },
+      { t_key: "alerts", url: "/monitoring/alerts", icon: "notifications" },
       {
         t_key: "watchdog",
         url: "/monitoring/watchdog",

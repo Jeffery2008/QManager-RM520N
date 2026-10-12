@@ -266,7 +266,7 @@ link is up and only the ping is blocked, so red would overstate it.
 |-------|------|---------|
 | Loading | `isLoading` | `QualitySkeleton`, built from the same `QUALITY` constants |
 | Error | `!modemReachable && !connectivity` — no poll has **ever** landed | "Can't reach the modem" `Empty`. A later failed poll keeps the last reading instead |
-| Empty | `connectivity.internet_available === null` (the ping daemon is not reporting) | "Nothing is probing" `Empty` with a link to `/system-settings/connection-quality`; the Speed Test row still renders below it |
+| Empty | `connectivity.internet_available === null` (the ping daemon is not reporting) | "Nothing is probing" `Empty` with a link to `/monitoring/connection-quality`; the Speed Test row still renders below it |
 
 ### The Speed Test row
 

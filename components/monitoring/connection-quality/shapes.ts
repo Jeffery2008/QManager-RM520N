@@ -1,12 +1,11 @@
 // =============================================================================
-// Connection Quality — the /system-settings/connection-quality family's
+// Connection Quality — the /monitoring/connection-quality family's
 // geometry and tone contract
 // =============================================================================
 // Two sources, and the split is deliberate.
 //
 // The page shell, band and card grammar are IMPORTED from
-// `components/system-settings/shapes.ts` — the same family one level up, so
-// re-declaring its names would be the duplication the restate rule prevents.
+// `components/system-settings/shapes.ts`, the family this page moved out of.
 //
 // Everything below the re-export block is LOCAL to this route: the probe-leg
 // row, the mono field a target is typed into, the preset rail, the readout
@@ -54,7 +53,7 @@ import {
   VALUE_NONE,
   VALUE_TEXT,
   type DiscTone,
-} from "../shapes";
+} from "@/components/system-settings/shapes";
 
 export {
   BAND,

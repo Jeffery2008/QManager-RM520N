@@ -80,7 +80,7 @@ const FAMILY_LABEL_KEY = {
   ipv6: "latencyMonitor.now.family_ipv6",
 } as const;
 
-const LIMITS_HREF = "/system-settings/connection-quality/";
+const LIMITS_HREF = "/monitoring/connection-quality/";
 
 /** Height of a probe's bar: RTT against twice the cut, floored so it reads. */
 function barHeight(ms: number, cuts: Cuts): string {

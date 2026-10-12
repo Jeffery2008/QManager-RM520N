@@ -42,6 +42,7 @@ const routeKeyMap: Record<string, string> = {
   'custom-dns': 'items.custom_dns',
   monitoring: 'groups.monitoring',
   latency: 'items.latency_monitor',
+  events: 'items.network_events',
   alerts: 'items.alerts',
   logs: 'items.logs',
   watchdog: 'items.watchdog',

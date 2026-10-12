@@ -16,10 +16,10 @@ The Recent Activities card is the dashboard's window onto the poller's network e
 | Link / quality detector | `detect_data_connection_events` (`events.sh`), called from `poll_cycle` in `qmanager_poller` — see [Link and Quality Events](#link-and-quality-events) |
 | CGI endpoint | `GET /cgi-bin/quecmanager/at_cmd/fetch_events.sh` (zero modem contact, RAM read only) |
 | Served slice | `EVENTS_SERVE_LIMIT=50` (newest 50 lines of the 300-slot ring) |
-| Hook | `hooks/use-recent-activities.ts` (10s poll, reverses to newest-first, keeps 20 by default; `/monitoring` passes `maxEvents: 50`) |
+| Hook | `hooks/use-recent-activities.ts` (10s poll, reverses to newest-first, keeps 20 by default; `/monitoring/events` passes `maxEvents: 50`) |
 | Presentation model | `lib/event-presentation.ts` (pure, no React) |
 | Dashboard card | `components/dashboard/recent-activities.tsx` (5 rows, glance) |
-| Monitoring surface | `components/monitoring/network-events.tsx` + `components/monitoring/network-events/` (Right now, Activity, the full log; `/monitoring`) — see [Network Events Page](#network-events-page-monitoring) |
+| Monitoring surface | `components/monitoring/network-events.tsx` + `components/monitoring/network-events/` (Right now, Activity, the full log; `/monitoring/events`) — see [Network Events Page](#network-events-page-monitoring) |
 | Repeat runs | `RUN_MIN = 4`, `RUN_GAP_SEC = 600` (`components/monitoring/network-events/derive.ts`) |
 | Identifier contract | `splitEventMessage` / `TRAILING_IDS` in `lib/event-presentation.ts`, fed by `_ev_ids()` in `events.sh` |
 | Event types / severities | `types/modem-status.ts` (`NetworkEventType`, `EventSeverity`, `NetworkEvent`) |
@@ -45,9 +45,9 @@ presentEvent(ev, unres, fr) -> glyph + tone + 4 class slots + sr-only key
 
 Both the append and the trim are **checked**, and a failure logs `EVENT DROPPED [...]` rather than the usual success line — see below for why that matters.
 
-Note the funnel: **300 on disk, 50 served, 20 kept, 5 drawn** on the dashboard; `/monitoring` keeps all 50. Each step exists for a different reason and they are not interchangeable — see [Ring depth vs. served slice](#ring-depth-vs-served-slice).
+Note the funnel: **300 on disk, 50 served, 20 kept, 5 drawn** on the dashboard; `/monitoring/events` keeps all 50. Each step exists for a different reason and they are not interchangeable — see [Ring depth vs. served slice](#ring-depth-vs-served-slice).
 
-> ℹ️ NOTE: the same event log feeds `/monitoring` via `components/monitoring/network-events.tsx`. The link transition is decided once, here in `events.sh`, and the Centralized Alerts engine follows it (`ev_link_state`). A device can still log a "connection lost" activity without dispatching any alert — any outage shorter than the alert wait. See [alerts.md](alerts.md).
+> ℹ️ NOTE: the same event log feeds `/monitoring/events` via `components/monitoring/network-events.tsx`. The link transition is decided once, here in `events.sh`, and the Centralized Alerts engine follows it (`ev_link_state`). A device can still log a "connection lost" activity without dispatching any alert — any outage shorter than the alert wait. See [alerts.md](alerts.md).
 
 ## Link and Quality Events
 
@@ -374,7 +374,7 @@ The pairing lives in the client rather than in `events.sh` because it is a *read
 
 `presentEvent(event, unresolved, fresh, ground = "surface")` returns exactly this,
 and nothing the caller already knows. `ground` is `"surface"` for the dashboard card
-and `"card"` for the `/monitoring` log, which rests directly on a card and needs its
+and `"card"` for the `/monitoring/events` log, which rests directly on a card and needs its
 own weighted fills:
 
 ```ts
@@ -510,7 +510,7 @@ Type sizes stay on the documented ramp (`text-xs` / `text-sm`) rather than the 1
 
 > ℹ️ NOTE: **60px survived the recipe-04 retarget unchanged**, which is deliberate rather than lucky. The two lines swapped roles but kept their sizes, so `LIST_MAX_H`, `ROW_ADVANCE`, the clip edge and the skeleton all stayed valid and the card did not change height against its two grid siblings. Verified at 60.00px on all ten rendered tone × age combinations.
 
-## Network Events Page (`/monitoring`)
+## Network Events Page (`/monitoring/events`)
 
 The full log reads the same hook with `maxEvents: SERVED_EVENTS` (50, from `derive.ts`), so it sees the whole served slice. `computeUnresolved` runs once in `network-events.tsx` over that full newest-first array and is passed down; every card keys into it by index, which is why `derive.ts` carries `IndexedEvent { event, index }` through filtering and grouping.
 
@@ -588,7 +588,7 @@ All card copy is keyed under the `dashboard` namespace, `activities.*`, at 100% 
 
 Two deliberate non-changes:
 
-- **`constants/network-events.ts` was not modified.** `EVENT_LABELS` is still exported but no component reads it. `/monitoring` passes the raw type as the `defaultValue` (`t("activities.events.<type>", { defaultValue: event.type })`), so a type with no locale key renders as e.g. `ca_change`, not a dotted key path.
+- **`constants/network-events.ts` was not modified.** `EVENT_LABELS` is still exported but no component reads it. `/monitoring/events` passes the raw type as the `defaultValue` (`t("activities.events.<type>", { defaultValue: event.type })`), so a type with no locale key renders as e.g. `ca_change`, not a dotted key path.
 - **`formatTimeAgo` in `types/modem-status.ts` was not modified.** It has three live call sites in `watchdog-status-card.tsx` and returns a hard-coded English string by design. The card carries a local `useTimeAgo()` hook whose thresholds (60s, 3600s, 86400s) mirror it exactly, so the two can never disagree about when "1h ago" starts.
 
 Adding a new `NetworkEventType` therefore means: extend the union in `types/modem-status.ts`, add the English label to `EVENT_LABELS`, and add `activities.events.<type>` to all five locale files. Classify it in `lib/event-presentation.ts` only if it is a condition rather than a one-shot.

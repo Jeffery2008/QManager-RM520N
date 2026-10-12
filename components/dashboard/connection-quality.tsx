@@ -572,7 +572,7 @@ const ConnectionQualityComponent = ({
           </EmptyHeader>
           <EmptyContent>
             <Button asChild variant="secondary">
-              <Link href="/system-settings/connection-quality">
+              <Link href="/monitoring/connection-quality">
                 {t("connection_quality.empty_action")}
               </Link>
             </Button>

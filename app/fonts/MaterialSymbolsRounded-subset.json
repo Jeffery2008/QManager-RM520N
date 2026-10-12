@@ -28,7 +28,6 @@
     "dns",
     "do_not_disturb_on",
     "done_all",
-    "donut_small",
     "download",
     "drag_indicator",
     "edit",
@@ -60,6 +59,7 @@
     "more_vert",
     "my_location",
     "network_ping",
+    "notifications",
     "open_in_new",
     "percent",
     "pets",
@@ -119,6 +119,6 @@
     "wifi_tethering_off",
     "work"
   ],
-  "bytes": 43488,
-  "sha256": "9c7bd8505e49c6ce85c0b49f184d5753eb4da4ecc42204f4fef0c9f2ab6231b5"
+  "bytes": 42772,
+  "sha256": "e042a449bcb1c99520025e4c8cdabfabe47550f0d7157624689fb2654ba39d4a"
 }

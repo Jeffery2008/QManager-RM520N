@@ -3,7 +3,7 @@
 > **Applies to:** RM520N-GL (SDX65) · verified 2026-10-11 (unification run, serial `61368cd2`)
 > **RG501Q-EU (SDX55):** the pipeline itself is unverified there — but the three [platform facts](#platform-facts-that-shape-this-design) the probe chain depends on (`ping`, `timeout`, DNS caching) were measured on **both** devices on 2026-09-01. See [`platform-matrix.md`](./platform-matrix.md)
 
-"Connection Quality" is the **measurement / telemetry** side of QManager's connectivity stack — the part that *observes* how good the internet link is and turns raw probe results into latency, jitter, and packet-loss numbers the UI can chart. It is deliberately separate from the [Connection Watchdog](connection-watchdog.md), which is the **recovery** side — the state machine that *acts* when the link goes down. This document covers the producer→poller consumer chain that feeds the Connection Quality page (`/system-settings/connection-quality`) and the dashboard's Connection Quality card. It does **not** re-document the watchdog's recovery ladder — see the sibling doc for that.
+"Connection Quality" is the **measurement / telemetry** side of QManager's connectivity stack — the part that *observes* how good the internet link is and turns raw probe results into latency, jitter, and packet-loss numbers the UI can chart. It is deliberately separate from the [Connection Watchdog](connection-watchdog.md), which is the **recovery** side — the state machine that *acts* when the link goes down. This document covers the producer→poller consumer chain that feeds the Connection Quality page (`/monitoring/connection-quality`) and the dashboard's Connection Quality card. It does **not** re-document the watchdog's recovery ladder — see the sibling doc for that.
 
 > ℹ️ NOTE: The two docs are siblings by design. Connection Quality owns **everything about measuring the link**: the probe targets, the probe cadence (`interval_sec`), the latency/loss thresholds, the `degraded` verdict and the single alert wait (`alert_after_min`). The Watchdog owns only **recovery policy**: `fail_threshold`, the ladder, cooldowns and SIM failover. The Watchdog page still shows and edits the cadence, but it reads and writes Connection Quality's `interval_sec` — see [Ownership boundary](#ownership-boundary--who-owns-what).
 
@@ -17,7 +17,7 @@
 
 | Item | Value |
 |------|-------|
-| Frontend page | `/system-settings/connection-quality` (`components/system-settings/connection-quality/` — shell, `shapes.ts`, `status-band.tsx`, `probe-targets-card.tsx`, `quality-thresholds-card.tsx`, `condition-block.tsx`) |
+| Frontend page | `/monitoring/connection-quality` (`components/monitoring/connection-quality/` — shell, `shapes.ts`, `status-band.tsx`, `probe-targets-card.tsx`, `quality-thresholds-card.tsx`, `condition-block.tsx`) |
 | Producer daemon | `qmanager_ping` — `#!/bin/sh` **ICMP `ping`** daemon (source: `scripts/usr/bin/qmanager_ping`, installed to `/usr/bin/qmanager_ping`) |
 | Probe chain | Four legs, fixed order, short-circuit on first success: `cloudflare.com` → `google.com` → `1.1.1.1` → `8.8.8.8` (all four configurable) |
 | Producer key contract | **13 keys**, one `jq -n` literal, no branches — [see below](#the-producer-key-contract) |
@@ -408,7 +408,7 @@ Both latency displays treat a `null` RTT sample as an **absent** reading rather 
 
 ## The Connection Quality page
 
-The page (`/system-settings/connection-quality`) is a page header, a four-tile **status band**, then a two-card grid (`components/system-settings/connection-quality/connection-quality.tsx`): **Probe Targets** on the left, **Latency & Loss Thresholds** on the right. Both cards are write surfaces; every live readout comes from `useModemStatus`.
+The page (`/monitoring/connection-quality`) is a page header, a four-tile **status band**, then a two-card grid (`components/monitoring/connection-quality/connection-quality.tsx`): **Probe Targets** on the left, **Latency & Loss Thresholds** on the right. Both cards are write surfaces; every live readout comes from `useModemStatus`.
 
 Re-authored onto the design canon 2026-09-06. Geometry and tone live in this family's own `shapes.ts`, which **imports** the page shell, band and card grammar from `components/system-settings/shapes.ts` one level up and restates only what is local to the route. The shell owns both GETs and passes them down, because the band needs the **saved** targets and presets to tone its discs while each card owns the half it writes.
 

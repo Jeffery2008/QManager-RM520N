@@ -47,7 +47,7 @@ Every tone on the page reads `resolveCuts(connectivity)`: `connectivity.threshol
 - **A healthy figure is plain ink** (`FIGURE_INK.ok` = `text-on-surface`) on Right now. History's three figures are always plain ink; a figure past a cut gets an 18px `TriangleAlertIcon` before it, inked by `ALERT_INK` (amber or red) and labelled `latencyMonitor.history.attention`. Only a Sites value is green when healthy (`SITE_INK`), because there it reads as a per-site verdict against the limit.
 - Sites compares a **TCP connect time** against the same latency cut as the ICMP probe. The cut is the user's one latency limit, not a site-specific number.
 - Right now's RTT bar and the strip's bar heights scale to **twice** the latency cut, with a tick at the cut; strip bars are floored at 12 % so a fast probe stays visible, and a lost probe is a full-height red bar.
-- The Limits row links to `/system-settings/connection-quality/`, where the cuts are set.
+- The Limits row links to `/monitoring/connection-quality/`, where the cuts are set.
 
 ## History card
 

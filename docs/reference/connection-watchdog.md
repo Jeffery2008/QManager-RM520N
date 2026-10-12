@@ -433,9 +433,9 @@ Detection pairs with the **Ladder**, not with Activity. The Ladder's height is f
 
 ### Recovery activity
 
-`recovery-activity-card.tsx` — the `/monitoring` 52px day-grouped event row, tone from the shared `presentEvent(…, "card")` so the Age-Gated Tone Rule applies.
+`recovery-activity-card.tsx` — the `/monitoring/events` 52px day-grouped event row, tone from the shared `presentEvent(…, "card")` so the Age-Gated Tone Rule applies.
 
-- Shows the newest `LOG_LIMIT` (5) watchdog rows (`watchcat_recovery` + `sim_failover`), sorted by timestamp. The header link "All events" goes to `/monitoring/` (Network Events) for the rest.
+- Shows the newest `LOG_LIMIT` (5) watchdog rows (`watchcat_recovery` + `sim_failover`), sorted by timestamp. The header link "All events" goes to `/monitoring/events/` (Network Events) for the rest.
 - Resolution is computed by `computeUnresolved(events)` over the **whole unfiltered feed** before the filter and the slice, or every recovery would read as permanently ongoing.
 - The row's `message` is producer text from `qmanager_watchcat` and stays untranslated, as on every event feed in the product.
 - **The event record carries no tier** (`events.sh` emits `timestamp`/`type`/`message`/`severity` only), so the row's `Tag` is the event type. Inferring a tier by matching the daemon's English prose would be a fabricated reading.

@@ -49,7 +49,9 @@ app/                            # Next.js App Router
 │   ├── ip-passthrough/         # IP passthrough
 │   └── custom-dns/             # DNS settings
 ├── monitoring/                 # Monitoring & alerts
-│   ├── page.tsx                # Network events hub
+│   ├── page.tsx                # Redirect → /monitoring/events
+│   ├── events/                 # Network events hub
+│   ├── connection-quality/     # Probe targets + quality limits (sidebar group head)
 │   ├── latency/                # Latency monitoring
 │   ├── alerts/                 # Centralized Alerts (SMS + email + Discord)
 │   ├── email-alerts/           # Redirect → /monitoring/alerts (legacy bookmark)
@@ -122,7 +124,8 @@ constants/                      # Static configuration data
 | `/local-network/mtu` | MTUSettings | MTU configuration |
 | `/local-network/ip-passthrough` | IPPassthrough | IP passthrough mode |
 | `/local-network/custom-dns` | CustomDNS | DNS override |
-| `/monitoring` | NetworkEvents | Event log hub |
+| `/monitoring/connection-quality` | ConnectionQualitySettings | Probe targets and latency / loss limits; sidebar group over Latency Monitor and Network Events (`/system-settings/connection-quality` redirects here) |
+| `/monitoring/events` | NetworkEvents | Event log hub (`/monitoring` redirects here) |
 | `/monitoring/latency` | LatencyMonitoring | Right now (live 60-probe strip), History (1 h / 6 h / 24 h average line) and Sites (per-site connect time) — see `docs/reference/latency-monitor.md` |
 | `/monitoring/alerts` | Alerts | Centralized SMS + email + Discord downtime/reboot alerts |
 | `/monitoring/email-alerts` | Redirect | → `/monitoring/alerts` (legacy bookmark) |
