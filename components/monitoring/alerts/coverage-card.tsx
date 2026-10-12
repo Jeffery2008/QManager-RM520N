@@ -1,243 +1,253 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
+import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import {
+  BellOffIcon,
+  CheckCircle2Icon,
+  CircleAlertIcon,
+  MinusCircleIcon,
+  PlugZapIcon,
+  RefreshCcwIcon,
+  TriangleAlertIcon,
+  UnplugIcon,
+  WrenchIcon,
+  type LucideIcon,
+} from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  BellOffIcon,
-  PlugZapIcon,
-  RefreshCcwIcon,
-  TriangleAlertIcon,
-} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tag } from "@/components/ui/tag";
+import { staggerRowItem, staggerRows } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { ALERT_EVENT_ORDER, type AlertsState } from "@/types/alerts";
+
 import {
-  ALERT_CHANNEL_ORDER,
-  type AlertChannel,
-  type AlertEventKey,
-} from "@/types/alerts";
+  CHANNEL_GLYPH,
+  EVENT_GLYPH,
+  channelNameKey,
+  eventNameKey,
+} from "./constants";
+import {
+  confirmedInput,
+  coverageIsEmpty,
+  deriveCoverage,
+  type CoverageRow,
+  type CoverageVerdict,
+} from "./derive";
 import {
   CARD_DESC,
-  CARD_HEAD,
+  CARD_PAD,
+  CARD_SHELL,
   CARD_TITLE,
   CONDITION,
   CONDITION_TONE,
-  HERO_PAD,
-  HERO_SHELL,
+  COVERAGE_ROW,
   NOTICE,
   NOTICE_GLYPH,
   NOTICE_TONE,
   PILL_GLYPH,
-  type NoticeTone,
+  SKELETON,
 } from "./shapes";
-import { OUTAGE_EVENT, type AlertsCoverage } from "./derive";
-import { CoverageMatrix, CoverageMatrixSkeleton } from "./alert-routing-grid";
-import { coverageIsEmpty } from "./coverage-model";
-import { channelNameKey } from "./coverage-labels";
 
-// The anchor card. The page's condition is carried here, not by the matrix:
-// the matrix always renders a full 3x3 or nothing at all.
+// What reaches you, as SAVED. A draft in Channels never moves this card.
+
+const VERDICT_GLYPH: Record<CoverageVerdict["kind"], LucideIcon> = {
+  all: CheckCircle2Icon,
+  outage: UnplugIcon,
+  partial: CircleAlertIcon,
+  none: BellOffIcon,
+};
 
 export interface AlertsCoverageCardProps {
-  /** Draft-resolved coverage. `null` renders the loading skeleton. */
-  coverage: AlertsCoverage | null;
-  onToggle: (
-    event: AlertEventKey,
-    channel: AlertChannel,
-    next: boolean,
-  ) => void;
-  /** Set when the last read failed. With coverage it degrades to a stale notice. */
+  /** Saved device state. `null` with no error renders the loading skeleton. */
+  state: AlertsState | null;
+  /** Set when the last read failed. With state in hand it degrades to a notice. */
   error?: string | null;
   onRetry?: () => void;
-  /** True while any edit on this page is still only in the browser. */
-  isDirty?: boolean;
-  /** Channels whose form is invalid, so nothing here can reach the device. */
-  blockedChannels?: readonly AlertChannel[];
 }
 
-export function AlertsCoverageCard({
-  coverage,
-  onToggle,
-  error,
-  onRetry,
-  isDirty,
-  blockedChannels,
-}: AlertsCoverageCardProps) {
+export function AlertsCoverageCard({ state, error, onRetry }: AlertsCoverageCardProps) {
   const { t } = useTranslation("common");
+  const coverage = useMemo(
+    () => (state ? deriveCoverage(confirmedInput(state)) : null),
+    [state],
+  );
+
+  const verdict = coverage && !coverageIsEmpty(coverage) ? coverage.verdict : null;
+  const loading = !coverage && !error;
 
   return (
-    <Card className={HERO_SHELL}>
-      <CardHeader className={HERO_PAD}>
-        <div className={CARD_HEAD}>
-          <div className="min-w-0">
-            <CardTitle className={CARD_TITLE}>
-              {t("alerts.coverage.title")}
-            </CardTitle>
-            <CardDescription className={CARD_DESC}>
-              {t("alerts.coverage.description")}
-            </CardDescription>
-          </div>
-        </div>
+    <Card className={CARD_SHELL}>
+      <CardHeader className={CARD_PAD}>
+        <CardTitle className={CARD_TITLE}>{t("alerts.coverage.title")}</CardTitle>
+        <CardDescription className={CARD_DESC}>
+          {t("alerts.coverage.description")}
+        </CardDescription>
+        {verdict ? (
+          <CardAction>
+            <VerdictChip verdict={verdict} />
+          </CardAction>
+        ) : loading ? (
+          <CardAction aria-hidden>
+            <Skeleton className={cn(SKELETON.CHIP, "w-28")} />
+          </CardAction>
+        ) : null}
       </CardHeader>
-      <CardContent className={cn(HERO_PAD, "flex flex-col gap-4")}>
-        <CoverageBody
-          coverage={coverage}
-          onToggle={onToggle}
-          error={error}
-          onRetry={onRetry}
-          isDirty={isDirty}
-          blockedChannels={blockedChannels}
-        />
+      <CardContent className={cn(CARD_PAD, "flex flex-col gap-4")}>
+        {!coverage ? (
+          error ? (
+            <ConditionBlock
+              tone="destructive"
+              glyph={PlugZapIcon}
+              title={t("alerts.coverage.errorTitle")}
+              description={t("alerts.coverage.errorDesc")}
+              action={
+                onRetry
+                  ? { label: t("alerts.coverage.errorRetry"), onClick: onRetry }
+                  : undefined
+              }
+            />
+          ) : (
+            <div
+              role="status"
+              aria-busy
+              aria-label={t("alerts.coverage.loading")}
+              className={COVERAGE_ROW.STACK}
+            >
+              {ALERT_EVENT_ORDER.map((event) => (
+                <Skeleton key={event} className={SKELETON.COVERAGE_ROW} />
+              ))}
+            </div>
+          )
+        ) : coverageIsEmpty(coverage) ? (
+          <ConditionBlock
+            tone="muted"
+            glyph={BellOffIcon}
+            title={t("alerts.coverage.emptyTitle")}
+            description={t("alerts.coverage.emptyDesc")}
+          />
+        ) : (
+          <>
+            {error ? (
+              <p className={cn(NOTICE, NOTICE_TONE.warning)} role="status">
+                <TriangleAlertIcon className={NOTICE_GLYPH} aria-hidden />
+                {t("alerts.coverage.staleNotice")}
+              </p>
+            ) : null}
+            <CoverageRows rows={coverage.rows} />
+          </>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function CoverageBody({
-  coverage,
-  onToggle,
-  error,
-  onRetry,
-  isDirty,
-  blockedChannels = [],
-}: AlertsCoverageCardProps) {
+function VerdictChip({ verdict }: { verdict: CoverageVerdict }) {
   const { t } = useTranslation("common");
-
-  if (!coverage) {
-    return error ? (
-      <ConditionBlock
-        tone="destructive"
-        glyph={<PlugZapIcon className={CONDITION.GLYPH} />}
-        title={t("alerts.coverage.errorTitle")}
-        description={t("alerts.coverage.errorDesc")}
-        action={
-          onRetry
-            ? { label: t("alerts.coverage.errorRetry"), onClick: onRetry }
-            : undefined
-        }
-      />
-    ) : (
-      <div role="status" aria-busy aria-label={t("alerts.coverage.loading")}>
-        <CoverageMatrixSkeleton />
-      </div>
-    );
-  }
-
-  if (coverageIsEmpty(coverage)) {
-    return (
-      <ConditionBlock
-        tone="muted"
-        glyph={<BellOffIcon className={CONDITION.GLYPH} />}
-        title={t("alerts.coverage.emptyTitle")}
-        description={t("alerts.coverage.emptyDesc")}
-      />
-    );
-  }
-
+  const Glyph = VERDICT_GLYPH[verdict.kind];
+  const label =
+    verdict.kind === "partial"
+      ? t("alerts.coverage.verdict.partial", {
+          covered: verdict.covered,
+          total: verdict.total,
+        })
+      : t(`alerts.coverage.verdict.${verdict.kind}`);
+  // The Badge base already eases its fill and ink on the standard tokens.
   return (
-    <>
-      {error ? (
-        <Notice tone="warning" text={t("alerts.coverage.staleNotice")} />
-      ) : null}
-      <UnsavedNotice isDirty={isDirty} blockedChannels={blockedChannels} />
-      <GapNotice coverage={coverage} />
-      <CoverageMatrix
-        coverage={coverage}
-        onToggle={onToggle}
-        blockedChannels={blockedChannels}
-      />
-    </>
+    <Badge variant={verdict.variant}>
+      <Glyph className="size-3" aria-hidden />
+      {label}
+    </Badge>
   );
 }
 
-/**
- * A blocked form freezes this whole matrix, and the reason is a card away. The
- * blocking channel is named here so the cell and its explanation stay together.
- */
-function UnsavedNotice({
-  isDirty,
-  blockedChannels,
-}: {
-  isDirty?: boolean;
-  blockedChannels: readonly AlertChannel[];
-}) {
+function CoverageRows({ rows }: { rows: CoverageRow[] }) {
   const { t } = useTranslation("common");
-
-  if (blockedChannels.length > 0) {
-    return (
-      <Notice
-        tone="destructive"
-        text={t("alerts.coverage.blockedNotice", {
-          channels: blockedChannels
-            .map((channel) => t(channelNameKey(channel)))
-            .join(", "),
-        })}
-      />
-    );
-  }
-  if (!isDirty) return null;
-  return <Notice tone="warning" text={t("alerts.coverage.unsavedNotice")} />;
-}
-
-/** At most one gap notice: `silent` is the stronger truth and outranks the outage. */
-function GapNotice({ coverage }: { coverage: AlertsCoverage }) {
-  const { t } = useTranslation("common");
-
-  if (coverage.silent) {
-    return <Notice tone="destructive" text={t("alerts.coverage.silentNotice")} />;
-  }
-  if (!coverage.outageGap) return null;
-
-  const capable = ALERT_CHANNEL_ORDER.filter(
-    (channel: AlertChannel) => coverage.cells[OUTAGE_EVENT][channel].capable,
-  );
+  // A row with no channel stays quiet unless a neighbour is covered (Quiet-Default).
+  const allEmpty = rows.every((row) => !row.fires.length && !row.attempt.length);
 
   return (
-    <Notice
-      tone="destructive"
-      text={
-        capable.length > 0
-          ? t("alerts.coverage.outageNoticeWith", {
-              channels: capable.map((c) => t(channelNameKey(c))).join(", "),
-            })
-          : t("alerts.coverage.outageNoticeNone")
-      }
-    />
-  );
-}
-
-function Notice({ tone, text }: { tone: NoticeTone; text: string }) {
-  return (
-    <p className={cn(NOTICE, NOTICE_TONE[tone])} role="status">
-      <TriangleAlertIcon className={NOTICE_GLYPH} aria-hidden />
-      {text}
-    </p>
+    <motion.ul
+      className={COVERAGE_ROW.STACK}
+      variants={staggerRows}
+      initial="hidden"
+      animate="visible"
+    >
+      {rows.map((row) => {
+        const EventGlyph = EVENT_GLYPH[row.event];
+        const empty = !row.fires.length && !row.attempt.length;
+        return (
+          <motion.li key={row.event} variants={staggerRowItem} className={COVERAGE_ROW.ROOT}>
+            <span className={COVERAGE_ROW.EVENT}>
+              <EventGlyph className={COVERAGE_ROW.EVENT_GLYPH} aria-hidden />
+              {t(eventNameKey(row.event))}
+            </span>
+            <span className={COVERAGE_ROW.VIA}>
+              {row.fires.map((channel) => {
+                const Glyph = CHANNEL_GLYPH[channel];
+                return (
+                  <Tag key={channel} variant="neutral">
+                    <Glyph aria-hidden />
+                    {t(channelNameKey(channel))}
+                  </Tag>
+                );
+              })}
+              {row.attempt.map((channel) => (
+                <Badge key={channel} variant="warning">
+                  <WrenchIcon className="size-3" aria-hidden />
+                  {t("alerts.coverage.needsSetup", {
+                    channel: t(channelNameKey(channel)),
+                  })}
+                </Badge>
+              ))}
+              {empty ? (
+                allEmpty ? (
+                  <span className={COVERAGE_ROW.QUIET}>
+                    {t("alerts.coverage.notSent")}
+                  </span>
+                ) : (
+                  <Badge variant="warning">
+                    <MinusCircleIcon className="size-3" aria-hidden />
+                    {t("alerts.coverage.notSent")}
+                  </Badge>
+                )
+              ) : null}
+            </span>
+          </motion.li>
+        );
+      })}
+    </motion.ul>
   );
 }
 
 function ConditionBlock({
   tone,
-  glyph,
+  glyph: Glyph,
   title,
   description,
   action,
 }: {
   tone: keyof typeof CONDITION_TONE;
-  glyph: ReactNode;
+  glyph: LucideIcon;
   title: string;
-  description: string;
+  description: ReactNode;
   action?: { label: string; onClick: () => void };
 }) {
   const skin = CONDITION_TONE[tone];
   return (
     <div className={cn(CONDITION.ROOT, skin.ROOT)} role="status">
       <span className={cn(CONDITION.DISC, skin.DISC)} aria-hidden>
-        {glyph}
+        <Glyph className={CONDITION.GLYPH} />
       </span>
       <span className={CONDITION.TITLE}>{title}</span>
       <p className={CONDITION.DESC}>{description}</p>

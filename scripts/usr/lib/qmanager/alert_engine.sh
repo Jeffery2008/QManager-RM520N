@@ -80,6 +80,9 @@ _AE_CRASH_LOG="/etc/qmanager/crash.log"
 _AE_MAX_REBOOT_HISTORY=10
 _AE_REBOOT_COALESCE_THRESHOLD=3
 _AE_REBOOT_CLASSIFY_WINDOW_SECS=600
+_AE_SANE_EPOCH=1700000000   # wall clock below this is the 1970 boot window (same floor as qmanager_sites)
+_AE_MAX_DISCORD_LOG=100     # same cap as the SMS and email logs
+_AE_DISCORD_TRIM_EVERY=150  # cycles between Discord-log size checks (~10 min at ~4 s/cycle)
 
 # Applied verbatim whenever alert_routing.json is missing or fails to parse.
 _AE_ROUTING_DEFAULT='{"connection_lost":{"sms":true,"email":false,"discord":false},"connection_restored":{"sms":true,"email":true,"discord":true},"reboot":{"sms":true,"email":true,"discord":true}}'
@@ -91,6 +94,9 @@ _ae_down=0            # 1 while an outage is being tracked
 _ae_down_start=0      # /proc/uptime seconds at the down transition
 _ae_lost_sent_sms=0   # connection_lost dispatched for this outage already?
 _ae_reboot_pending=0  # a reboot was detected this boot and not yet alerted
+_ae_boot_unresolved=""  # new boot_id held until the wall clock is sane (classify + ledger wait)
+_ae_cfg_pending=0     # 1 while init ran before jq was available (retried in check_alerts)
+_ae_discord_trim_tick=0
 
 # Discord config mirror (no _read_config equivalent exists in discord_alerts.sh)
 _ae_discord_enabled="false"
@@ -264,7 +270,8 @@ _ae_classify_reboot() {
 
     now=$(date +%s)
     age=$((now - last_epoch))
-    [ "$age" -lt 0 ] && age=0
+    # A breadcrumb from the future is untrusted, not "just now".
+    [ "$age" -lt 0 ] && return 0
 
     if [ "$age" -le "$_AE_REBOOT_CLASSIFY_WINDOW_SECS" ]; then
         case "$last_tag" in
@@ -274,6 +281,25 @@ _ae_classify_reboot() {
             *)                _ae_reboot_cause="unplanned" ;;
         esac
     fi
+}
+
+# _ae_clock_sane — 0 iff the wall clock is past the 1970 boot window.
+_ae_clock_sane() {
+    local now
+    now=$(date +%s 2>/dev/null)
+    case "$now" in ''|*[!0-9]*) return 1 ;; esac
+    [ "$now" -ge "$_AE_SANE_EPOCH" ]
+}
+
+# Classify + ledger + persist the new boot id. Only called once the clock is sane,
+# so a 1970 epoch never reaches reboot_history.json.
+_ae_record_reboot() {
+    local boot_id="$1"
+    _ae_classify_reboot
+    _ae_append_reboot_history "$(date +%s)" "$_ae_reboot_cause"
+    _ae_reboot_pending=1
+    printf '%s' "$boot_id" > "${_AE_LAST_BOOT_ID_FILE}.tmp" 2>/dev/null \
+        && mv "${_AE_LAST_BOOT_ID_FILE}.tmp" "$_AE_LAST_BOOT_ID_FILE" 2>/dev/null
 }
 
 # Detect a reboot by comparing /proc/sys/kernel/random/boot_id against the
@@ -299,13 +325,24 @@ _ae_init_boot_check() {
     local prev_boot_id
     prev_boot_id=$(cat "$_AE_LAST_BOOT_ID_FILE" 2>/dev/null)
     if [ "$cur_boot_id" != "$prev_boot_id" ]; then
-        qlog_info "alert_engine: boot_id changed — classifying reboot cause"
-        _ae_classify_reboot
-        _ae_append_reboot_history "$(date +%s)" "$_ae_reboot_cause"
-        _ae_reboot_pending=1
-        printf '%s' "$cur_boot_id" > "${_AE_LAST_BOOT_ID_FILE}.tmp" 2>/dev/null \
-            && mv "${_AE_LAST_BOOT_ID_FILE}.tmp" "$_AE_LAST_BOOT_ID_FILE" 2>/dev/null
+        if _ae_clock_sane; then
+            qlog_info "alert_engine: boot_id changed — classifying reboot cause"
+            _ae_record_reboot "$cur_boot_id"
+        else
+            # Boot id stays unpersisted so a poller restart in the window still sees the change.
+            qlog_info "alert_engine: boot_id changed, clock not set yet — holding classification"
+            _ae_boot_unresolved="$cur_boot_id"
+        fi
     fi
+}
+
+# Retry the held classification each cycle until the clock steps.
+_ae_resolve_held_reboot() {
+    [ -n "$_ae_boot_unresolved" ] || return 0
+    _ae_clock_sane || return 0
+    qlog_info "alert_engine: clock set — classifying held reboot"
+    _ae_record_reboot "$_ae_boot_unresolved"
+    _ae_boot_unresolved=""
 }
 
 # =============================================================================
@@ -332,6 +369,27 @@ _ae_log_discord_failed() {
         --arg ts "$ts" --arg trigger "$trigger" --arg recipient "$recipient" \
         '{timestamp: $ts, trigger: $trigger, status: "failed", recipient: $recipient}' \
         >> "$logfile" 2>/dev/null
+}
+
+# The Go daemon only appends to the Discord log, so the root engine trims it: a counter keeps
+# the size check to one wc every _AE_DISCORD_TRIM_EVERY cycles. Copy-through, never mv (seeded inode).
+_ae_trim_discord_log() {
+    local logfile count tmp
+    _ae_discord_trim_tick=$((_ae_discord_trim_tick + 1))
+    [ "$_ae_discord_trim_tick" -ge "$_AE_DISCORD_TRIM_EVERY" ] || return 0
+    _ae_discord_trim_tick=0
+
+    logfile="${_DA_LOG:-/tmp/qmanager_discord_log.json}"
+    [ -s "$logfile" ] || return 0
+    count=$(wc -l < "$logfile" 2>/dev/null)
+    case "$count" in ''|*[!0-9]*) return 0 ;; esac
+    [ "$count" -gt "$_AE_MAX_DISCORD_LOG" ] || return 0
+
+    tmp="${logfile}.tmp.$$"
+    if tail -n "$_AE_MAX_DISCORD_LOG" "$logfile" > "$tmp" 2>/dev/null; then
+        cat "$tmp" > "$logfile" 2>/dev/null
+    fi
+    rm -f "$tmp"
 }
 
 # _ae_dispatch <channel> <trigger> <message>
@@ -477,6 +535,13 @@ check_alerts() {
     # No alerts during scheduled low power mode
     [ -f "/tmp/qmanager_low_power_active" ] && return 0
 
+    # Retry what init could not do yet: config reads (jq not mounted) and the held reboot.
+    if [ "$_ae_cfg_pending" = "1" ]; then
+        _ae_load_all_config || return 0
+    fi
+    _ae_resolve_held_reboot
+    _ae_trim_discord_log
+
     # --- Reload flags (touched by the CGI on save) ---
     if [ -f "$_AE_ROUTING_RELOAD_FLAG" ]; then
         rm -f "$_AE_ROUTING_RELOAD_FLAG"
@@ -549,8 +614,28 @@ check_alerts() {
 # =============================================================================
 # alert_engine_init — called once at poller startup
 # =============================================================================
+# Read routing + every channel config + the wait. rc 1 (and pending) while jq is not
+# available: /usr/bin/jq dangles until /opt mounts ~30 s into boot, so early reads are defaults.
+_ae_load_all_config() {
+    if ! command -v jq >/dev/null 2>&1; then
+        if [ "$_ae_cfg_pending" != "1" ]; then
+            qlog_warn "alert_engine: jq not available yet, config load deferred"
+        fi
+        _ae_cfg_pending=1
+        return 1
+    fi
+    _ae_cfg_pending=0
+    _ae_load_routing
+    _ae_refresh_email
+    _ae_refresh_sms
+    _ae_read_discord_config
+    _ae_resolve_wait
+    return 0
+}
+
 alert_engine_init() {
     _ae_reboot_pending=0
+    _ae_boot_unresolved=""
     _ae_down=0
     _ae_down_start=0
     _ae_lost_sent_sms=0
@@ -558,11 +643,7 @@ alert_engine_init() {
     mkdir -p /etc/qmanager 2>/dev/null
 
     _ae_init_boot_check
-    _ae_load_routing
-    _ae_refresh_email
-    _ae_refresh_sms
-    _ae_read_discord_config
-    _ae_resolve_wait
+    _ae_load_all_config
 
-    qlog_info "alert_engine: initialized (reboot_pending=$_ae_reboot_pending wait=${CQ_ALERT_AFTER_MIN:-5}m)"
+    qlog_info "alert_engine: initialized (reboot_pending=$_ae_reboot_pending cfg_pending=$_ae_cfg_pending wait=${CQ_ALERT_AFTER_MIN:-5}m)"
 }

@@ -33,7 +33,10 @@ QManager runs as two different users. Root owns the daemons (`qmanager_poller`, 
 | `fs.protected_regular` | `1` (kernel default on this firmware; confirmed live) |
 | Only ownership both UIDs can write | **`root:root` mode `0666`** |
 | Where shared files are seeded | `scripts/usr/bin/qmanager_setup` (systemd oneshot, runs as root before every other unit) |
-| Seeded shared files | `/tmp/qmanager.log`, `/tmp/qmanager_events.json`, `/tmp/qmanager_profile_state.json`, `/tmp/qmanager_profile_apply.pid`, `/tmp/qmanager_tower_write_inflight` |
+| Seeded shared files | `/tmp/qmanager.log`, `/tmp/qmanager_events.json`, `/tmp/qmanager_profile_state.json`, `/tmp/qmanager_profile_apply.pid`, `/tmp/qmanager_tower_write_inflight`, `/tmp/qmanager_sms_log.json`, `/tmp/qmanager_discord_log.json` |
+| `/tmp/qmanager_sms_log.json` | `root:root` `0666`. **Writers:** `sms_alerts.sh` from the poller's alert engine (root) and from the CGI's SMS test send (www-data). Trimmed to 100 rows by copy-through; see [The alert channel logs](#the-alert-channel-logs) |
+| `/tmp/qmanager_discord_log.json` | `root:root` `0666`. **Writers:** `qmanager_discord` and the alert engine (root), the CGI's Discord test-failure row (www-data). The engine trims it to 100 rows by copy-through |
+| `/tmp/qmanager_email_log.json` | **Not seeded.** Every writer is root (the engine, and `qmanager_email_send` for test sends); www-data only reads it |
 | `/tmp/qmanager_tower_write_inflight` | `root:root` `0666`. **Writers:** `tower/lock.sh` (www-data, via `tower_write_begin`) and `qmanager_tower_schedule` (root). **Reader:** `qmanager_tower_failover` (root). Content-bearing — a UNIX deadline, not a flag — so it **is** seeded; see [The tower-lock in-flight marker](#the-tower-lock-in-flight-marker) |
 | Seeded www-data-only files | `/tmp/qmanager_at.lock`, `/tmp/qmanager_at.pid` (root opens these **read-only**, `9<`) |
 | Forbidden on any seeded file | tmp-file + `mv` (`rename(2)` swaps the inode and destroys the seed) |
@@ -198,6 +201,21 @@ Both UIDs write it, so by the checklist above the only workable ownership is `ro
 
 > ⚠️ WARNING: there is **no** matching "end" call and none should be added. The marker self-expires because it stores a deadline, so a `lock.sh` killed mid-write (crash, OOM, lighttpd recycling the CGI) cannot wedge the watcher into skipping forever. A `trap … rm -f` cleanup would reintroduce both the leak risk and — since www-data cannot unlink a file it did not create, and `rm -f` exits 0 regardless — a silent cross-UID failure.
 
+## The alert channel logs
+
+`/tmp/qmanager_sms_log.json` and `/tmp/qmanager_discord_log.json` (NDJSON, one row per send) are written by both UIDs, so both are seeded `root:root 0666` in `qmanager_setup` (added 2026-10-12):
+
+| Log | Root writers | www-data writers | Trim |
+| --- | --- | --- | --- |
+| `qmanager_sms_log.json` | `_sa_log_event` in `sms_alerts.sh`, called by the poller's alert engine | `monitoring/alerts.sh` `send_test` (SMS) | `_sa_log_event`, on every append past 100 rows |
+| `qmanager_discord_log.json` | `qmanager_discord` (`appendDiscordLog`, `O_APPEND`); `_ae_log_discord_failed` in `alert_engine.sh` | `monitoring/alerts.sh` `send_test` (Discord hand-off failure row) | `_ae_trim_discord_log`, checked every 150 poller cycles, to 100 rows |
+
+Before the seed, whichever UID wrote first after a boot owned the log for that uptime. If a test send from the page came first, the file was www-data-owned and every later alert row from root was refused by `protected_regular` — silently, since every append is `2>/dev/null`. Both trims build into a `$$`-qualified temp and `cat` it through the seeded inode; the SMS trim used to `mv` a fixed `.tmp` over the log, which swapped in the trimming UID's own inode at umask `0022` and locked the other UID out. The Discord log was never trimmed at all before 2026-10-12.
+
+`/tmp/qmanager_email_log.json` is **deliberately not seeded**: since the [secrets relocation](alerts.md#qmanager_email_send--why-a-second-helper-exists) the test send runs inside the root helper `qmanager_email_send`, so every writer is root and www-data only reads it. Do not add it to the seed list unless a www-data writer appears.
+
+> ℹ️ NOTE: The seed lands whenever `qmanager_setup` runs: at boot, and during an install or OTA, whose `start_services()` runs `systemctl restart qmanager-setup` (OTA calls the installer with `--no-reboot`, not `--no-start`). An existing www-data-owned log is re-chowned in place, so its rows survive.
+
 ## Evidence: three bugs this protocol fixes
 
 These were all confirmed on live hardware, not reasoned about.
@@ -253,5 +271,6 @@ The general lesson: when a seeded file is found violating the never-`rm` rule, *
 - [wan-profile-management.md](wan-profile-management.md) — `apn_apply.sh`, the UID-agnostic attach-cycle primitive and its bracket hooks.
 - [connection-watchdog.md](connection-watchdog.md) — the other producer of the recovery flag.
 - [tower-locking.md](tower-locking.md) — `/tmp/qmanager_tower_write_inflight`, the content-bearing marker that is seeded precisely because it is not a flag.
+- [alerts.md](alerts.md) — the SMS, email and Discord channel logs and their `get_log` reader.
 - [recent-activities.md](recent-activities.md) — `events.sh` and the events ring.
 - [qmanager-independence.md](qmanager-independence.md) — the parallel `/etc/qmanager` ownership rule (different directory, different mechanism, same class of mistake).

@@ -19,58 +19,46 @@ import {
   NOTICE,
   NOTICE_GLYPH,
   NOTICE_TONE,
-  SWITCH_ROW,
+  PANEL,
   type NoticeTone,
 } from "./shapes";
 
-// The channel form's controls. One box shape, one label/hint stack, one
-// switch row — shared by all three channels so a field cannot drift per tab.
+// The channel form's controls, shared by all three channels so a field cannot drift per tab.
 
 /** The adornment sitting inside the field box, right-aligned. */
 const ADORNMENT = "absolute top-1/2 right-3 flex -translate-y-1/2 items-center";
 
-// -----------------------------------------------------------------------------
-// ChannelSwitchRow — a channel's master enable, tinted by its own state.
-// -----------------------------------------------------------------------------
 /** The lucide check that SegmentedField reserves on every segment. */
-const renderCheckGlyph = (className: string) => (
+export const renderCheckGlyph = (className: string) => (
   <CheckIcon size={SEGMENTED.GLYPH} className={className} aria-hidden="true" />
 );
 
-export interface ChannelSwitchRowProps {
-  id: string;
+// -----------------------------------------------------------------------------
+// ChannelPanelHead — the channel's name, one line of what it does, and Off/On.
+// -----------------------------------------------------------------------------
+export interface ChannelPanelHeadProps {
   title: string;
   description: string;
   checked: boolean;
   onCheckedChange: (v: boolean) => void;
 }
 
-export function ChannelSwitchRow({
-  id,
+export function ChannelPanelHead({
   title,
   description,
   checked,
   onCheckedChange,
-}: ChannelSwitchRowProps) {
+}: ChannelPanelHeadProps) {
   const { t } = useTranslation("common");
   const options: SegmentedOption<"on" | "off">[] = [
-    { value: "on", label: t("state.on") },
     { value: "off", label: t("state.off") },
+    { value: "on", label: t("state.on") },
   ];
   return (
-    <div
-      id={id}
-      className={cn(
-        SWITCH_ROW.ROOT,
-        SWITCH_ROW.TRANSITION,
-        checked ? SWITCH_ROW.ON : SWITCH_ROW.REST,
-        "flex-wrap",
-      )}
-    >
-      {/* The min width wraps the pill under the text on a phone-width card. */}
-      <div className={cn(SWITCH_ROW.TEXT, "min-w-40")}>
-        <p className={cn(SWITCH_ROW.TITLE, "block")}>{title}</p>
-        <p className={SWITCH_ROW.DESC}>{description}</p>
+    <div className={PANEL.HEAD}>
+      <div className={PANEL.HEAD_TEXT}>
+        <p className={PANEL.TITLE}>{title}</p>
+        <p className={PANEL.SUB}>{description}</p>
       </div>
       <SegmentedField
         value={checked ? "on" : "off"}
@@ -90,7 +78,9 @@ export function ChannelSwitchRow({
 export interface ChannelFieldProps {
   id: string;
   label: string;
-  hint: React.ReactNode;
+  /** A `HintIcon` riding beside the label, for a hint that is not a consequence. */
+  labelAddon?: React.ReactNode;
+  hint?: React.ReactNode;
   /** Present means invalid: it replaces the hint and rings the box. */
   error?: string;
   value: string;
@@ -102,18 +92,12 @@ export interface ChannelFieldProps {
   autoComplete?: string;
   /** Machine voice: a phone number, an address, a Discord id. */
   mono?: boolean;
-  /** A figure the user types. */
-  numeric?: boolean;
-  narrow?: boolean;
-  /** Static text riding inside the box, e.g. a unit. */
-  unit?: string;
-  min?: string;
-  max?: string;
 }
 
 export function ChannelField({
   id,
   label,
+  labelAddon,
   hint,
   error,
   value,
@@ -124,58 +108,35 @@ export function ChannelField({
   inputMode,
   autoComplete,
   mono,
-  numeric,
-  narrow,
-  unit,
-  min,
-  max,
 }: ChannelFieldProps) {
   const describedBy = `${id}-note`;
+  const note = error ?? hint;
   return (
-    <div className={cn(FIELD.ROW, narrow && FIELD.NARROW)}>
-      <label htmlFor={id} className={FIELD.LABEL}>
-        {label}
-      </label>
-      <div className="relative">
-        <Input
-          id={id}
-          type={type}
-          inputMode={inputMode}
-          autoComplete={autoComplete}
-          placeholder={placeholder}
-          min={min}
-          max={max}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          aria-invalid={!!error}
-          aria-describedby={describedBy}
-          className={cn(
-            FIELD.SHELL,
-            FIELD.INVALID,
-            mono && FIELD.MONO,
-            numeric && FIELD.NUM,
-            unit && "pr-24",
-          )}
-        />
-        {unit ? (
-          <span
-            aria-hidden
-            className={cn(ADORNMENT, "text-on-surface-variant text-sm")}
-          >
-            {unit}
-          </span>
-        ) : null}
+    <div className={FIELD.ROW}>
+      <div className={FIELD.LABEL_ROW}>
+        <label htmlFor={id} className={FIELD.LABEL}>
+          {label}
+        </label>
+        {labelAddon}
       </div>
-      {error ? (
-        <p id={describedBy} className={FIELD.ERROR}>
-          {error}
+      <Input
+        id={id}
+        type={type}
+        inputMode={inputMode}
+        autoComplete={autoComplete}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        aria-invalid={!!error}
+        aria-describedby={note ? describedBy : undefined}
+        className={cn(FIELD.SHELL, FIELD.INVALID, mono && FIELD.MONO)}
+      />
+      {note ? (
+        <p id={describedBy} className={error ? FIELD.ERROR : FIELD.HINT}>
+          {note}
         </p>
-      ) : (
-        <p id={describedBy} className={FIELD.HINT}>
-          {hint}
-        </p>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -219,7 +180,7 @@ export function ChannelSecretField({
   const describedBy = `${id}-note`;
   return (
     <div className={FIELD.ROW}>
-      <div className="flex items-center gap-2">
+      <div className={FIELD.LABEL_ROW}>
         <label htmlFor={id} className={FIELD.LABEL}>
           {label}
         </label>

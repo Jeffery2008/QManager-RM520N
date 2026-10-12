@@ -58,12 +58,24 @@ da_bot_status_json() {
 # attempt of its own, since nothing else ever will.
 # Returns: 0 = daemon running and command file written; 1 = otherwise.
 _DA_CMD_FILE="/tmp/qmanager_discord_cmd"
+_DA_CMD_WAIT_SECS=3   # the daemon polls the command file on a 1 s ticker
 
 discord_dispatch_message() {
-    local message="$1" tmp
+    local message="$1" tmp waited=0
 
     if ! da_is_running; then
         qlog_warn "Discord alerts: dispatch skipped — qmanager_discord is not running"
+        return 1
+    fi
+
+    # The daemon holds one command at a time: wait for the previous one to be consumed
+    # rather than overwrite it. The caller logs the failed row.
+    while [ -e "$_DA_CMD_FILE" ] && [ "$waited" -lt "$_DA_CMD_WAIT_SECS" ]; do
+        sleep 1
+        waited=$((waited + 1))
+    done
+    if [ -e "$_DA_CMD_FILE" ]; then
+        qlog_warn "Discord alerts: dispatch skipped — previous command not consumed after ${_DA_CMD_WAIT_SECS}s"
         return 1
     fi
 

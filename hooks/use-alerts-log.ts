@@ -79,14 +79,15 @@ export function useAlertsLog(): UseAlertsLogReturn {
         } else {
           const msg = data.error || "Failed to load alert log";
           setError(msg);
-          if (mode !== "silent") toast.error(msg);
+          // A failed load on mount shows in the card; only a user's refresh toasts.
+          if (mode === "refresh") toast.error(msg);
         }
       } catch (err) {
         if (controller.signal.aborted) return;
         const msg =
           err instanceof Error ? err.message : "Failed to load alert log";
         setError(msg);
-        if (mode !== "silent") toast.error(msg);
+        if (mode === "refresh") toast.error(msg);
       } finally {
         if (!controller.signal.aborted) {
           setIsLoading(false);

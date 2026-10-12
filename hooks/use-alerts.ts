@@ -28,6 +28,7 @@ export interface UseAlertsReturn {
   isSaving: boolean;
   testingChannel: AlertChannel | null;
   installResult: InstallResult;
+  /** Load failures only; save and test failures come back in their own result. */
   error: string | null;
   saveSettings: (payload: AlertsSavePayload) => Promise<MutationResult>;
   sendTest: (channel: AlertChannel) => Promise<MutationResult>;
@@ -83,6 +84,9 @@ export function useAlerts(): UseAlertsReturn {
         routing: json.routing,
         capabilities: json.capabilities,
         reboots: Array.isArray(json.reboots) ? json.reboots : [],
+        ...(typeof json.alert_after_min === "number"
+          ? { alert_after_min: json.alert_after_min }
+          : {}),
       });
     } catch (err) {
       if (!mountedRef.current) return;
@@ -103,7 +107,6 @@ export function useAlerts(): UseAlertsReturn {
   // ---------------------------------------------------------------------------
   const saveSettings = useCallback(
     async (payload: AlertsSavePayload): Promise<MutationResult> => {
-      setError(null);
       setIsSaving(true);
       try {
         const resp = await authFetch(CGI_ENDPOINT, {
@@ -118,7 +121,8 @@ export function useAlerts(): UseAlertsReturn {
 
         if (!json.success) {
           const message = json.detail || json.error || "Failed to save settings";
-          setError(message);
+          // A failed call may still have saved (e.g. service_restart_failed): re-read the truth.
+          await fetchState(true);
           return { ok: false, error: message };
         }
 
@@ -128,7 +132,7 @@ export function useAlerts(): UseAlertsReturn {
         if (!mountedRef.current) return { ok: false, error: null };
         const message =
           err instanceof Error ? err.message : "Failed to save settings";
-        setError(message);
+        await fetchState(true);
         return { ok: false, error: message };
       } finally {
         if (mountedRef.current) setIsSaving(false);
@@ -142,7 +146,6 @@ export function useAlerts(): UseAlertsReturn {
   // ---------------------------------------------------------------------------
   const sendTest = useCallback(
     async (channel: AlertChannel): Promise<MutationResult> => {
-      setError(null);
       setTestingChannel(channel);
       try {
         const resp = await authFetch(CGI_ENDPOINT, {
@@ -157,7 +160,6 @@ export function useAlerts(): UseAlertsReturn {
 
         if (!json.success) {
           const message = json.detail || json.error || "Failed to send test";
-          setError(message);
           return { ok: false, error: message };
         }
         return { ok: true, error: null };
@@ -165,7 +167,6 @@ export function useAlerts(): UseAlertsReturn {
         if (!mountedRef.current) return { ok: false, error: null };
         const message =
           err instanceof Error ? err.message : "Failed to send test";
-        setError(message);
         return { ok: false, error: message };
       } finally {
         if (mountedRef.current) setTestingChannel(null);

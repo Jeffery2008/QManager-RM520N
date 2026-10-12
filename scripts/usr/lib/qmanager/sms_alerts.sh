@@ -211,10 +211,10 @@ _sa_do_send() {
 _sa_send_test_sms() {
     local body="[QManager] Test SMS from your modem"
     if _sa_do_send "$body"; then
-        _sa_log_event "Test SMS" "sent" "$_sa_recipient"
+        _sa_log_event "test" "sent" "$_sa_recipient"
         return 0
     fi
-    _sa_log_event "Test SMS" "failed" "$_sa_recipient"
+    _sa_log_event "test" "failed" "$_sa_recipient"
     return 1
 }
 
@@ -240,12 +240,13 @@ _sa_log_event() {
     local count
     count=$(wc -l < "$_SA_LOG_FILE" 2>/dev/null || echo 0)
     if [ "$count" -gt "$_SA_MAX_LOG" ]; then
-        local tmp="${_SA_LOG_FILE}.tmp"
+        # Both root and www-data append here: copy through the seeded inode, never mv over it
+        # (docs/reference/tmp-file-ownership.md).
+        local tmp="${_SA_LOG_FILE}.tmp.$$"
         if tail -n "$_SA_MAX_LOG" "$_SA_LOG_FILE" > "$tmp" 2>/dev/null; then
-            mv "$tmp" "$_SA_LOG_FILE" 2>/dev/null || rm -f "$tmp"
-        else
-            rm -f "$tmp"
+            cat "$tmp" > "$_SA_LOG_FILE" 2>/dev/null
         fi
+        rm -f "$tmp"
     fi
 }
 
