@@ -408,7 +408,7 @@ One JSON file per DM. `qmanager_setup` seeds the directory `root:root` mode **17
 `discord_dispatch_message <message> [trigger] [recipient]` (in `discord_alerts.sh`) is fire-and-forget and never sleeps:
 
 1. Verifies the daemon is running (see `da_is_running` below). If not, returns 1.
-2. Creates the directory (`mkdir` + `chmod 1777`) if the seed is missing; returns 1 if it still is not there.
+2. Returns 1 if the directory is missing or a symlink. It never creates it: only root (`qmanager_setup`, the daemon) does, and the daemon removes any spool dir that is not a real root-owned 1777 directory ([tmp-file-ownership.md](tmp-file-ownership.md#the-discord-spool-directory)).
 3. Counts `*.json` entries. At `_DA_SPOOL_MAX=50` or more it logs `dispatch refused — spool holds N entries` and returns 1.
 4. Writes the payload to a dot-temp in the same directory (`.tmp.<pid>.<seq>`), then hard-links it (`ln`, which fails if the name exists) to `<epoch %010d>-<pid>-<seq %04d>.json`, for example `1760266800-4123-0001.json`, and removes the temp. On a name clash it bumps the seq and retries (up to 20 times): a subshell shares `$$` and the seq counter, and `mv` would silently overwrite the earlier entry.
 5. Returns 0. It does **not** wait for delivery.

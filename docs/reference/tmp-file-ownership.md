@@ -223,7 +223,7 @@ Before the seed, whichever UID wrote first after a boot owned the log for that u
 
 - Each writer creates a fresh file (dot-temp, then `ln` to a new name), so `protected_regular` never applies: it guards opening an *existing* file, not creating one.
 - Sticky bit: a UID can rename or remove only its own entries. That is enough, because the only remover is the root daemon.
-- If the seed is missing, `discord_dispatch_message` creates the directory (`mkdir` + `chmod 1777`) and the daemon does the same at its watcher start. Whichever UID wins owns it, but mode 1777 lets both write either way.
+- Only root creates the directory: `qmanager_setup` (which first removes a symlink or non-directory at the path) and the daemon. `discord_dispatch_message` refuses (rc 1) if it is missing or a symlink. Every drain tick the daemon checks it is a real, root-owned 1777 directory (`spoolDirTrusted`, `discord-bot/spool_open_unix.go`); anything else (a planted symlink, a www-data-owned dir) is removed with `RemoveAll`, which unlinks a symlink without touching its target, and recreated with the chmod done through an `O_NOFOLLOW` descriptor. Without this, a symlink planted in `/tmp` would make the root daemon chmod its target to 1777 and delete `*.json` files wherever it pointed. Proven on 61368cd2 (2026-10-12) with a www-data symlink and a www-data dir.
 
 Contract and naming: [alerts.md → Spool directory](alerts.md#spool-directory-tmpqmanager_discord_spool).
 

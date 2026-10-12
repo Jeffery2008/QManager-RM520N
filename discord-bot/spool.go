@@ -57,23 +57,32 @@ func appendDiscordLog(trigger, status, recipient string) {
 	}
 }
 
-// ensureSpoolDir creates spoolDir (sticky, world-writable: root and www-data
-// both enqueue) and drops the retired single-slot command file.
-func ensureSpoolDir() {
-	os.Remove(legacyCmdPath)
-	if err := os.MkdirAll(spoolDir, 0o777); err != nil {
+// ensureSpoolDir makes spoolDir a real root-owned sticky 1777 directory (root and
+// www-data both enqueue). Anything else at that /tmp path (symlink, file, foreign dir) is removed first.
+func ensureSpoolDir() bool {
+	if spoolDirTrusted() {
+		return true
+	}
+	if err := os.RemoveAll(spoolDir); err != nil { // RemoveAll unlinks a symlink, never its target
+		log.Printf("cmd watcher: failed to clear untrusted spool path %s: %v", spoolDir, err)
+		return false
+	}
+	if err := os.Mkdir(spoolDir, 0o700); err != nil && !os.IsExist(err) {
 		log.Printf("cmd watcher: failed to create spool dir %s: %v", spoolDir, err)
-		return
+		return false
 	}
-	if err := os.Chmod(spoolDir, os.ModeSticky|0o777); err != nil {
-		log.Printf("cmd watcher: failed to chmod spool dir: %v", err)
+	if err := chmodSpoolDir(); err != nil {
+		log.Printf("cmd watcher: failed to secure spool dir: %v", err)
+		return false
 	}
+	return spoolDirTrusted()
 }
 
 // runCmdWatcher drains spoolDir on a 1s ticker. The shell alert engine owns
 // alert timing; the daemon is the DM transport and records each result to the
 // NDJSON log.
 func runCmdWatcher(s *discordgo.Session, dmCh *dmChannelHolder, cfg *Config, stopCh <-chan struct{}) {
+	os.Remove(legacyCmdPath)
 	ensureSpoolDir()
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -89,6 +98,10 @@ func runCmdWatcher(s *discordgo.Session, dmCh *dmChannelHolder, cfg *Config, sto
 
 // drainSpool delivers every pending entry oldest-first (os.ReadDir sorts by name).
 func drainSpool(s *discordgo.Session, dmCh *dmChannelHolder, cfg *Config, stopCh <-chan struct{}) {
+	// Re-checked every tick: a swapped-in symlink would make the Removes below delete files elsewhere as root.
+	if !ensureSpoolDir() {
+		return
+	}
 	entries, err := os.ReadDir(spoolDir)
 	if err != nil {
 		if !os.IsNotExist(err) {

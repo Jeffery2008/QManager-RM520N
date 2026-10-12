@@ -66,12 +66,10 @@ discord_dispatch_message() {
         return 1
     fi
 
-    if [ ! -d "$_DA_SPOOL" ]; then
-        mkdir "$_DA_SPOOL" 2>/dev/null && chmod 1777 "$_DA_SPOOL" 2>/dev/null
-        if [ ! -d "$_DA_SPOOL" ]; then
-            qlog_error "Discord alerts: cannot create spool dir $_DA_SPOOL"
-            return 1
-        fi
+    # Created only by qmanager_setup / the daemon (root); a dir made here would be untrusted and removed.
+    if [ -L "$_DA_SPOOL" ] || [ ! -d "$_DA_SPOOL" ]; then
+        qlog_error "Discord alerts: spool dir $_DA_SPOOL is missing"
+        return 1
     fi
 
     for f in "$_DA_SPOOL"/*.json; do

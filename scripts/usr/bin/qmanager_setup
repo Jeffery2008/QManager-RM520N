@@ -140,6 +140,9 @@ chmod 666 /tmp/qmanager.log \
       /tmp/qmanager_sms_log.json /tmp/qmanager_discord_log.json
 
 # Discord DM spool: root daemon drains it, root (poller) and www-data (CGI test) both enqueue.
+if [ -L /tmp/qmanager_discord_spool ] || { [ -e /tmp/qmanager_discord_spool ] && [ ! -d /tmp/qmanager_discord_spool ]; }; then
+    rm -f /tmp/qmanager_discord_spool
+fi
 install -d -o root -g root -m 1777 /tmp/qmanager_discord_spool
 
 # Session directory — www-data needs write access (cleared on reboot since /tmp is tmpfs)
