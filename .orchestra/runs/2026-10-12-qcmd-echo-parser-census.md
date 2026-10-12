@@ -31,7 +31,7 @@ Census every parser in scripts/usr/lib/qmanager/parse_at.sh, scripts/usr/bin/qma
 - Safe only by accident: parse_ippt_mpdn_rule (reply says "MPDN_rule", echo "MPDN_RULE", case-sensitive key); parse_time_advance (parse_at.sh:896/910, echo has <3 commas so NF>=3 drops it).
 - Both accidental-safe parsers now anchored (parse_at.sh:897, :911, :1148).
 - Daemons censused: no echo-matching parse. Several non-empty checks pass only because of the echo (watchcat:442, tower_schedule:127, tower_failover:202/212); correct, since empty stdout means failure.
-- scripts/debug_poller_at.sh calls qcmd_exec, which it never defines (lines 43, 74): fails unless sourced. Not fixed.
+- scripts/debug_poller_at.sh called qcmd_exec, which it never defines (lines 43, 74); now raw qcmd like the rest of the script (user: "fix debug_poller_at.sh too").
 - RG501Q-EU unreachable this session; anchor not run there.
 
 ## Device state
