@@ -2,28 +2,33 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion } from "motion/react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import {
-  CheckCircle2Icon,
+  ArrowUpRightIcon,
   CircleAlertIcon,
+  CircleCheckIcon,
+  CircleDashedIcon,
+  CircleSlashIcon,
   RefreshCwIcon,
   RotateCcwIcon,
   RouteOffIcon,
   TriangleAlertIcon,
+  type LucideIcon,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { CardFoot } from "@/components/ui/card-foot";
+import { HintIcon } from "@/components/ui/hint-icon";
 import { Input } from "@/components/ui/input";
 import { SaveButton, useSaveFlash } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,7 +37,6 @@ import type {
   PingProfileTargets,
   UsePingProfileReturn,
 } from "@/hooks/use-ping-profile";
-import { staggerRowItem, staggerRows } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { ConnectivityStatus } from "@/types/modem-status";
 
@@ -43,38 +47,32 @@ import {
   CARD_PAD,
   CARD_SHELL,
   CARD_TITLE,
-  CHIP_ON_TONAL,
-  CONDITION_PANEL,
+  CONDITION,
   DELTA,
   EYEBROW,
+  FAILED,
   FIELD_ERROR,
   FIELD_MONO,
-  GROUP_FILL,
+  FOCUS_RING,
+  GROUP,
+  GROUP_HEAD,
   HOSTNAME_LEGS,
-  LABEL_LINE,
   LEG,
-  NOTE,
-  NOTICE,
   PILL_GLYPH,
-  ROW_GROUP,
-  SKELETON,
+  ROW,
+  ROW_STACK,
   SKELETON_LOCAL,
   SLOT_ORDER,
   type SlotKey,
 } from "./shapes";
 
-// =============================================================================
-// Probe Targets — the four endpoints the modem pings, in probe order
-// =============================================================================
-// The daemon short-circuits on the first leg that answers, so the list IS the
-// design: numbered, ordered, with the leg that actually carried the connection
-// promoted. Probe cadence and the failure threshold belong to the Watchdog.
-// =============================================================================
+// Probe Targets: the four endpoints the modem pings, in probe order. Cadence
+// and the failure threshold belong to the Watchdog, linked from the interval row.
 
 const K = "connection_quality.targets";
+const WATCHDOG_HREF = "/monitoring/watchdog/";
 
-/** The seeded chain, mirroring `scripts/etc/qmanager/ping_profile.json` and the
- *  CGI's own fallbacks, so a restore lands where a fresh install would. */
+/** The seeded chain, so a restore lands where a fresh install would. */
 const DEFAULT_TARGETS: PingProfileTargets = {
   target_host_1: "cloudflare.com",
   target_host_2: "google.com",
@@ -84,9 +82,6 @@ const DEFAULT_TARGETS: PingProfileTargets = {
 
 const PLACEHOLDER: Record<SlotKey, string> = DEFAULT_TARGETS;
 
-/** The group's header strip: eyebrow left, the restore pill pushed right. */
-const GROUP_HEAD = "flex items-center gap-3 px-1";
-
 /** Label leaf per slot; the key says which leg, never the config key name. */
 const LABEL_LEAF: Record<SlotKey, string> = {
   target_host_1: "host_1",
@@ -95,12 +90,7 @@ const LABEL_LEAF: Record<SlotKey, string> = {
   target_ip_2: "ip_2",
 };
 
-// ─── Validation — mirrors validate_target() in the CGI ──────────────────────
-//
-// The backend re-validates every save regardless; this exists so the user sees
-// the same verdict inline that the CGI would have returned. A client laxer than
-// the server produces a rejection naming a slot the user cannot see, so the two
-// charsets below are kept deliberately identical to the shell's.
+// ─── Validation: mirrors validate_target() in the CGI ───────────────────────
 
 type ValidationCode =
   | "empty"
@@ -125,8 +115,7 @@ function checkCommonRules(trimmed: string): ValidationCode | null {
   return null;
 }
 
-// family `host` — letters, digits, dot and hyphen, plus label sanity: no
-// leading or trailing dot or hyphen, no doubled dot, no hyphen beside a dot.
+// family `host`: letters, digits, dot and hyphen, plus label sanity.
 function validateHost(value: string): ValidationCode | null {
   const trimmed = value.trim();
   const common = checkCommonRules(trimmed);
@@ -136,8 +125,7 @@ function validateHost(value: string): ValidationCode | null {
   return null;
 }
 
-// family `ipv4_literal` — digits and dot only, and a dotted quad of four
-// octets, each 1-3 digits and no greater than 255.
+// family `ipv4_literal`: a dotted quad, each octet 1-3 digits and at most 255.
 function validateIpv4Literal(value: string): ValidationCode | null {
   const trimmed = value.trim();
   const common = checkCommonRules(trimmed);
@@ -158,26 +146,41 @@ function validateSlot(slot: SlotKey, value: string): ValidationCode | null {
     : validateIpv4Literal(value);
 }
 
-// ─── The answering leg ──────────────────────────────────────────────────────
+// ─── The chain's verdict ────────────────────────────────────────────────────
+
+type LegState = "hostname" | "fallback" | "none" | "unknown";
+
+interface LegVerdict {
+  state: LegState;
+  index: number;
+}
 
 /**
- * Mirrors `legState()` in `status-band.tsx` rule for rule — the card and the
- * band must never disagree about which leg carried the connection.
- *
- * `ping_target` falls back to the first configured slot when nothing has
- * answered, so a match alone is not proof: the daemon's own reachability
- * verdict has to agree, and an empty slot never matches.
+ * Which leg carried the connection, from the SAVED chain. `ping_target` falls
+ * back to the first slot when nothing answered, so the daemon's verdict must agree.
  */
-function answeredIndex(
+function legState(
   conn: ConnectivityStatus | undefined,
   targets: PingProfileTargets,
-): number {
-  if (!conn || conn.internet_available !== true) return -1;
-  if (conn.last_family === "none") return -1;
-  return SLOT_ORDER.findIndex(
+): LegVerdict {
+  if (!conn || conn.status === "unknown") return { state: "unknown", index: -1 };
+  if (conn.internet_available !== true || conn.last_family === "none") {
+    return { state: "none", index: -1 };
+  }
+  const index = SLOT_ORDER.findIndex(
     (slot) => targets[slot] !== "" && targets[slot] === conn.ping_target,
   );
+  // Reachable but no saved slot matches: the daemon is still probing the previous chain.
+  if (index < 0) return { state: "unknown", index: -1 };
+  return { state: index < HOSTNAME_LEGS ? "hostname" : "fallback", index };
 }
+
+const VERDICT: Record<LegState, { variant: BadgeVariant; glyph: LucideIcon; key: string }> = {
+  hostname: { variant: "success", glyph: CircleCheckIcon, key: "verdict.answering" },
+  fallback: { variant: "warning", glyph: TriangleAlertIcon, key: "verdict.fallback" },
+  none: { variant: "destructive", glyph: CircleSlashIcon, key: "verdict.none" },
+  unknown: { variant: "muted", glyph: CircleDashedIcon, key: "verdict.unknown" },
+};
 
 // ─── Card ───────────────────────────────────────────────────────────────────
 
@@ -189,7 +192,13 @@ export default function ProbeTargetsCard({
   profile,
 }: ProbeTargetsCardProps): React.JSX.Element {
   const { t } = useTranslation("system-settings");
-  const { targets, isLoading, error, refresh } = profile;
+  const { targets, isLoading, refresh } = profile;
+  const { data: modemStatus, isLoading: statusLoading } = useModemStatus();
+  const connectivity = modemStatus?.connectivity;
+
+  const verdict = targets && !statusLoading ? legState(connectivity, targets) : null;
+  const spec = verdict ? VERDICT[verdict.state] : null;
+  const VerdictGlyph = spec?.glyph;
 
   return (
     <Card className={CARD_SHELL}>
@@ -198,31 +207,42 @@ export default function ProbeTargetsCard({
         <CardDescription className={CARD_DESC}>
           {t(`${K}.description`)}
         </CardDescription>
+        {isLoading || (targets && !spec) ? (
+          <CardAction>
+            <Skeleton className={SKELETON_LOCAL.VERDICT} />
+          </CardAction>
+        ) : spec && verdict && VerdictGlyph ? (
+          <CardAction>
+            <Badge variant={spec.variant}>
+              <VerdictGlyph className="size-3" aria-hidden="true" />
+              {t(`${K}.${spec.key}`, { n: verdict.index + 1 })}
+            </Badge>
+          </CardAction>
+        ) : null}
       </CardHeader>
 
-      <CardContent className={cn(CARD_PAD, CARD_BODY, "gap-4")}>
+      <CardContent className={cn(CARD_PAD, CARD_BODY)}>
         {isLoading ? (
           <ProbeTargetsSkeleton />
         ) : !targets ? (
-          // A failed read, or an envelope carrying no settings at all. The form
-          // would otherwise fill itself with its own defaults and look saved.
           <ConditionBlock
             tone="destructive"
             glyph={CircleAlertIcon}
             ariaRole="alert"
             title={t(`${K}.error.title`)}
-            description={
-              error
-                ? t(`${K}.error.body_detail`, { detail: error })
-                : t(`${K}.error.body`)
-            }
+            description={t(`${K}.error.body`)}
             onAction={() => void refresh()}
             actionLabel={t(`${K}.error.retry`)}
             actionGlyph={RefreshCwIcon}
-            className={CONDITION_PANEL.SCREEN}
+            className={CONDITION.SCREEN}
           />
         ) : (
-          <ProbeChain profile={profile} targets={targets} />
+          <ProbeChain
+            profile={profile}
+            targets={targets}
+            answered={verdict?.index ?? -1}
+            intervalSec={statusLoading ? undefined : (connectivity?.history_interval_sec ?? null)}
+          />
         )}
       </CardContent>
     </Card>
@@ -231,49 +251,45 @@ export default function ProbeTargetsCard({
 
 // ─── Loading ────────────────────────────────────────────────────────────────
 
-/**
- * Real `ROW_GROUP` / `LEG.ROOT` / `NOTE.ROOT` boxes wearing slivers, so every
- * height RESOLVES to the loaded view's rather than being asserted against it.
- */
 function ProbeTargetsSkeleton(): React.JSX.Element {
   return (
     <>
-      <div className={GROUP_HEAD}>
-        <Skeleton className={cn(SKELETON.TILE.EYEBROW, "w-28")} />
-        <Skeleton className={cn(SKELETON.TIME.ACTION, "ml-auto")} />
-      </div>
-
-      <div className={cn(ROW_GROUP, GROUP_FILL)}>
-        {SLOT_ORDER.map((slot) => (
-          <div key={slot} className={LEG.ROOT}>
-            <div className={LEG.MAIN}>
-              <Skeleton className={SKELETON_LOCAL.LEG.DISC} />
-              <div className={LEG.TEXT}>
-                <Skeleton className={cn(SKELETON_LOCAL.LEG.LABEL, "w-36")} />
-                <Skeleton className={cn(SKELETON_LOCAL.LEG.KIND, "w-full")} />
-              </div>
-            </div>
-            <div className={LEG.CONTROL}>
-              <Skeleton className={SKELETON_LOCAL.LEG.FIELD} />
-            </div>
+      {[0, 1].map((group) => (
+        <div key={group} className={GROUP}>
+          <div className={GROUP_HEAD}>
+            <Skeleton className={SKELETON_LOCAL.EYEBROW} />
           </div>
-        ))}
-      </div>
-
-      {/* Both notes. Absent, the card understates itself by two tonal blocks. */}
-      {[0, 1].map((note) => (
-        <div key={note} className={NOTE.ROOT}>
-          <Skeleton className={cn(SKELETON_LOCAL.LEG.KIND, "w-full")} />
-          <Skeleton className={cn(SKELETON_LOCAL.LEG.KIND, "mt-1 w-2/3")} />
+          <div className={ROW_STACK}>
+            {[0, 1].map((leg) => (
+              <div key={leg} className={LEG.ROW}>
+                <Skeleton className={SKELETON_LOCAL.DISC} />
+                <Skeleton className={SKELETON_LOCAL.FIELD} />
+              </div>
+            ))}
+          </div>
         </div>
       ))}
-
-      {/* The card foot. Absent, the card jumps by its height plus gap. */}
+      <IntervalRowSkeleton />
       <CardFoot
+        className="mt-0"
         liveStatus={false}
-        actions={<Skeleton className={SKELETON.TIME.ACTION} />}
+        actions={
+          <>
+            <Skeleton className={SKELETON_LOCAL.ACTION} />
+            <Skeleton className={SKELETON_LOCAL.ACTION} />
+          </>
+        }
       />
     </>
+  );
+}
+
+function IntervalRowSkeleton(): React.JSX.Element {
+  return (
+    <div className={cn(ROW.ROOT, "mt-auto")} aria-hidden="true">
+      <Skeleton className={cn(SKELETON_LOCAL.ROW_TEXT, "w-24")} />
+      <Skeleton className={cn(SKELETON_LOCAL.ROW_TEXT, "w-20")} />
+    </div>
   );
 }
 
@@ -283,18 +299,26 @@ interface ProbeChainProps {
   profile: UsePingProfileReturn;
   /** Narrowed: this subtree only renders once the GET has landed. */
   targets: PingProfileTargets;
+  /** The answering leg's index in the SAVED chain, or -1. */
+  answered: number;
+  /** `undefined` while the modem status loads, `null` when it does not report one. */
+  intervalSec: number | null | undefined;
 }
 
-function ProbeChain({ profile, targets }: ProbeChainProps): React.JSX.Element {
+function ProbeChain({
+  profile,
+  targets,
+  answered,
+  intervalSec,
+}: ProbeChainProps): React.JSX.Element {
   const { t } = useTranslation("system-settings");
-  const { isSaving, saveError, save } = profile;
-  const { data: modemStatus } = useModemStatus();
+  const { isSaving, save } = profile;
   const { saved, markSaved } = useSaveFlash();
 
-  // Edits are HELD and overlaid on the server values, never synced into local
-  // state by an effect — a re-read landing mid-typing would eat the edit.
+  // Edits are HELD and overlaid on the server values, never synced by an effect.
   const [edits, setEdits] = React.useState<Partial<PingProfileTargets>>({});
   const [errors, setErrors] = React.useState<SlotErrors>({});
+  const [failed, setFailed] = React.useState(false);
 
   const values = React.useMemo(() => {
     const out = {} as PingProfileTargets;
@@ -307,18 +331,16 @@ function ProbeChain({ profile, targets }: ProbeChainProps): React.JSX.Element {
   const hasValidationErrors = SLOT_ORDER.some((slot) => errors[slot]);
   const canSave = isDirty && !isSaving && !hasValidationErrors;
 
-  // Promotion reports the SAVED chain, not the draft: a half-typed field is not
-  // what the daemon is probing (The State-Honesty Rule).
-  const answered = answeredIndex(modemStatus?.connectivity, targets);
-
   const setSlot = (slot: SlotKey, value: string) => {
     setEdits((prev) => ({ ...prev, [slot]: value }));
     setErrors((prev) => ({ ...prev, [slot]: validateSlot(slot, value) }));
+    setFailed(false);
   };
 
   const restoreDefaults = () => {
     setEdits({ ...DEFAULT_TARGETS });
     setErrors({});
+    setFailed(false);
   };
 
   const handleSave = async () => {
@@ -341,22 +363,19 @@ function ProbeChain({ profile, targets }: ProbeChainProps): React.JSX.Element {
 
     try {
       await save(payload);
-      // Hold the trimmed values, so a save that normalised whitespace does not
-      // leave the row reading dirty against what the server now has.
+      // Hold the trimmed values so a normalised save does not read dirty.
       setEdits(payload);
+      setFailed(false);
       markSaved();
       toast.success(t(`${K}.toast.saved`));
     } catch {
-      // `saveError` carries it as a standing notice above the rows; a toast
-      // here would announce the same failure twice.
+      setFailed(true);
+      toast.error(t(`${K}.save_failed`));
     }
   };
 
-  // The CGI defaults each slot independently, so this should not happen — but a
-  // config it could not read at all comes back as four blanks, and four empty
-  // boxes with no explanation is the worst possible reading of that.
+  // A config the CGI could not read at all comes back as four blanks.
   const isEmpty = SLOT_ORDER.every((slot) => !targets[slot]);
-  const restoreLabel = t(`${K}.restore`);
 
   if (isEmpty && !hasEdits) {
     return (
@@ -369,144 +388,125 @@ function ProbeChain({ profile, targets }: ProbeChainProps): React.JSX.Element {
         onAction={restoreDefaults}
         actionLabel={t(`${K}.empty.action`)}
         actionGlyph={RotateCcwIcon}
-        className={CONDITION_PANEL.SCREEN}
+        className={CONDITION.SCREEN}
       />
     );
   }
 
-  const unsaved = t(`${K}.unsaved`);
+  const renderLeg = (slot: SlotKey, index: number) => {
+    const fieldId = `probe-target-${slot}`;
+    const errorId = `${fieldId}-error`;
+    const code = errors[slot] ?? null;
+    const isHostLeg = index < HOSTNAME_LEGS;
+
+    return (
+      <div key={slot} className={LEG.ROOT}>
+        <div className={LEG.ROW}>
+          <span
+            aria-hidden="true"
+            className={cn(LEG.DISC, index === answered ? LEG.DISC_ANSWERED : LEG.DISC_REST)}
+          >
+            {index + 1}
+          </span>
+          <label htmlFor={fieldId} className="sr-only">
+            {t(`${K}.leg.${LABEL_LEAF[slot]}`)}
+          </label>
+          <Input
+            id={fieldId}
+            className={FIELD_MONO}
+            value={values[slot]}
+            onChange={(event) => setSlot(slot, event.target.value)}
+            placeholder={PLACEHOLDER[slot]}
+            inputMode={isHostLeg ? undefined : "numeric"}
+            autoComplete="off"
+            spellCheck={false}
+            aria-invalid={code !== null}
+            aria-describedby={code ? errorId : undefined}
+          />
+        </div>
+        {code ? (
+          <span id={errorId} role="alert" className={FIELD_ERROR}>
+            {t(`${K}.validation.${code}`, { max: MAX_TARGET_LENGTH })}
+          </span>
+        ) : null}
+      </div>
+    );
+  };
+
+  const hasInterval = typeof intervalSec === "number" && intervalSec > 0;
 
   return (
     <>
-      {/* A failed write says so and steps aside. It never replaces the form the
-          user has just filled in. */}
-      {saveError ? (
-        <div role="alert" className={cn(NOTICE.BOX, NOTICE.FAILED)}>
-          <TriangleAlertIcon className={NOTICE.GLYPH} aria-hidden="true" />
-          <span className={NOTICE.STACK}>
-            <span className={NOTICE.TEXT}>{t(`${K}.save_failed`)}</span>
-            <span className={NOTICE.DETAIL}>{saveError}</span>
+      <div className={GROUP}>
+        <div className={GROUP_HEAD}>
+          <span className={EYEBROW}>{t(`${K}.group.hostnames`)}</span>
+        </div>
+        <div className={ROW_STACK}>
+          {SLOT_ORDER.slice(0, HOSTNAME_LEGS).map((slot, i) => renderLeg(slot, i))}
+        </div>
+      </div>
+
+      <div className={GROUP}>
+        <div className={GROUP_HEAD}>
+          <span className={EYEBROW}>{t(`${K}.group.fallback`)}</span>
+          <HintIcon label={t(`${K}.fallback_hint_label`)}>
+            {t(`${K}.fallback_hint`)}
+          </HintIcon>
+        </div>
+        <div className={ROW_STACK}>
+          {SLOT_ORDER.slice(HOSTNAME_LEGS).map((slot, i) =>
+            renderLeg(slot, i + HOSTNAME_LEGS),
+          )}
+        </div>
+      </div>
+
+      {/* Slack sits above this row, so the foot stays on the card's bottom edge. */}
+      {intervalSec === undefined ? (
+        <IntervalRowSkeleton />
+      ) : hasInterval ? (
+        <div className={cn(ROW.ROOT, "mt-auto")}>
+          <span className={ROW.KEY}>{t(`${K}.interval.label`)}</span>
+          <span className={ROW.VALUE}>
+            <Link href={WATCHDOG_HREF} className={cn(ROW.LINK, FOCUS_RING)}>
+              {t(`${K}.interval.value`, { seconds: intervalSec })}
+              <ArrowUpRightIcon aria-hidden="true" className={ROW.LINK_GLYPH} />
+            </Link>
           </span>
         </div>
       ) : null}
 
-      <div className={GROUP_HEAD}>
-        <span className={cn(EYEBROW, "mr-auto min-w-0")}>
-          {t(`${K}.group_head`)}
-        </span>
-        <Button
-          type="button"
-          variant="tonal-neutral"
-          size="action"
-          onClick={restoreDefaults}
-        >
-          <RotateCcwIcon className={PILL_GLYPH} aria-hidden="true" />
-          {restoreLabel}
-        </Button>
-      </div>
-
-      {/* No `initial`/`animate`: this container is a child of the page cascade
-          and must stay on the parent's clock. */}
-      <motion.div className={cn(ROW_GROUP, GROUP_FILL)} variants={staggerRows}>
-        {SLOT_ORDER.map((slot, index) => {
-          const fieldId = `probe-target-${slot}`;
-          const kindId = `${fieldId}-kind`;
-          const errorId = `${fieldId}-error`;
-          const code = errors[slot] ?? null;
-          const isAnswered = index === answered;
-          const isHostLeg = index < HOSTNAME_LEGS;
-
-          return (
-            <motion.div
-              key={slot}
-              variants={staggerRowItem}
-              className={cn(
-                LEG.ROOT,
-                LEG.TRANSITION,
-                isAnswered ? LEG.ANSWERED : LEG.REST,
-              )}
-            >
-              <div className={LEG.MAIN}>
-                <span
-                  className={cn(
-                    LEG.DISC,
-                    LEG.TRANSITION,
-                    isAnswered ? LEG.DISC_ANSWERED : LEG.DISC_REST,
-                  )}
-                >
-                  <span className={LEG.NUMBER}>{index + 1}</span>
-                </span>
-                <div className={LEG.TEXT}>
-                  <span className={LABEL_LINE}>
-                    <label htmlFor={fieldId} className={LEG.LABEL}>
-                      {t(`${K}.leg.${LABEL_LEAF[slot]}`)}
-                    </label>
-                    {isAnswered ? (
-                      // A stock `info` chip is `primary-container`, byte-identical
-                      // to the promoted row, so it is re-grounded on the row's ink.
-                      <Badge variant="info" className={CHIP_ON_TONAL}>
-                        <CheckCircle2Icon className="size-3" aria-hidden="true" />
-                        {t(`${K}.answered`)}
-                      </Badge>
-                    ) : null}
-                  </span>
-                  <span
-                    id={kindId}
-                    className={cn(LEG.KIND, isAnswered && LEG.KIND_ANSWERED)}
-                  >
-                    {isHostLeg ? t(`${K}.kind.host`) : t(`${K}.kind.ip`)}
-                  </span>
-                  {code ? (
-                    <span id={errorId} role="alert" className={FIELD_ERROR}>
-                      {t(`${K}.validation.${code}`, { max: MAX_TARGET_LENGTH })}
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-              <div className={LEG.CONTROL}>
-                <Input
-                  id={fieldId}
-                  host="container"
-                  className={FIELD_MONO}
-                  value={values[slot]}
-                  onChange={(event) => setSlot(slot, event.target.value)}
-                  placeholder={PLACEHOLDER[slot]}
-                  inputMode={isHostLeg ? undefined : "numeric"}
-                  autoComplete="off"
-                  spellCheck={false}
-                  aria-invalid={code !== null}
-                  aria-describedby={code ? `${kindId} ${errorId}` : kindId}
-                />
-              </div>
-            </motion.div>
-          );
-        })}
-      </motion.div>
-
-      <div className={NOTE.ROOT}>
-        <p className={NOTE.TEXT}>{t(`${K}.note_fallback`)}</p>
-      </div>
-
-      <div className={NOTE.ROOT}>
-        <p className={NOTE.TEXT}>
-          {t(`${K}.note_watchdog`)}{" "}
-          <Link href="/monitoring/watchdog" className={NOTE.LINK}>
-            {t(`${K}.note_watchdog_link`)}
-          </Link>
-        </p>
-      </div>
-
       <CardFoot
-        status={isDirty ? <span className={DELTA.ROOT}>{unsaved}</span> : null}
+        className={hasInterval || intervalSec === undefined ? "mt-0" : undefined}
+        status={
+          failed ? (
+            <span className={FAILED.ROOT}>
+              <TriangleAlertIcon className={FAILED.GLYPH} aria-hidden="true" />
+              {t(`${K}.failed`)}
+            </span>
+          ) : isDirty ? (
+            <span className={DELTA}>{t(`${K}.unsaved`)}</span>
+          ) : null
+        }
         actions={
-          <SaveButton
-            onClick={handleSave}
-            isSaving={isSaving}
-            saved={saved}
-            label={t(`${K}.save`)}
-            disabled={!canSave}
-            size="action"
-          />
+          <>
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              size="action"
+              onClick={restoreDefaults}
+            >
+              <RotateCcwIcon className={PILL_GLYPH} aria-hidden="true" />
+              {t(`${K}.restore`)}
+            </Button>
+            <SaveButton
+              onClick={handleSave}
+              isSaving={isSaving}
+              saved={saved}
+              label={t(`${K}.save`)}
+              disabled={!canSave}
+              size="action"
+            />
+          </>
         }
       />
     </>

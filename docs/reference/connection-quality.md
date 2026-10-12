@@ -17,7 +17,7 @@
 
 | Item | Value |
 |------|-------|
-| Frontend page | `/monitoring/connection-quality` (`components/monitoring/connection-quality/` — shell, `shapes.ts`, `status-band.tsx`, `probe-targets-card.tsx`, `quality-thresholds-card.tsx`, `condition-block.tsx`) |
+| Frontend page | `/monitoring/connection-quality` (`components/monitoring/connection-quality/` — shell `connection-quality.tsx`, `shapes.ts`, `probe-targets-card.tsx`, `quality-thresholds-card.tsx`, `condition-block.tsx`) |
 | Producer daemon | `qmanager_ping` — `#!/bin/sh` **ICMP `ping`** daemon (source: `scripts/usr/bin/qmanager_ping`, installed to `/usr/bin/qmanager_ping`) |
 | Probe chain | Four legs, fixed order, short-circuit on first success: `cloudflare.com` → `google.com` → `1.1.1.1` → `8.8.8.8` (all four configurable) |
 | Producer key contract | **13 keys**, one `jq -n` literal, no branches — [see below](#the-producer-key-contract) |
@@ -408,39 +408,42 @@ Both latency displays treat a `null` RTT sample as an **absent** reading rather 
 
 ## The Connection Quality page
 
-The page (`/monitoring/connection-quality`) is a page header, a four-tile **status band**, then a two-card grid (`components/monitoring/connection-quality/connection-quality.tsx`): **Probe Targets** on the left, **Latency & Loss Thresholds** on the right. Both cards are write surfaces; every live readout comes from `useModemStatus`.
+The page (`/monitoring/connection-quality`, shell `components/monitoring/connection-quality/connection-quality.tsx`) is a `MonitoringPageHeader` over two cards side by side: **Probe Targets** left, **Quality Thresholds** right. `PAIR` in `shapes.ts` stacks them below `@[58rem]/main` and splits them 1:1 above it; each sits in a `CARD_CELL` that hands it the full row height, so the two cards are always the same height. There is no status band: the live four-tile band was removed 2026-10-12, and the one live verdict it carried that this page owns (which leg answered) moved into the Probe Targets header. Do not restore it; the Latency Monitor page carries the live readings.
 
-Re-authored onto the design canon 2026-09-06. Geometry and tone live in this family's own `shapes.ts`, which **imports** the page shell, band and card grammar from `components/system-settings/shapes.ts` one level up and restates only what is local to the route. The shell owns both GETs and passes them down, because the band needs the **saved** targets and presets to tone its discs while each card owns the half it writes.
+The shell calls `usePingProfile` and `useQualityThresholds` and passes each card its own; each card reads `useModemStatus` itself for its live parts. `shapes.ts` restates everything it uses and imports no geometry from another family (it no longer imports `components/system-settings/shapes.ts`).
 
-> ⚠️ `shapes.ts` mirrors the preset table from `cq_preset_latency` / `cq_preset_loss` in `scripts/usr/lib/qmanager/conn_state.sh` as `PRESET_LIMIT`, **including the comparison direction**: latency flags strictly above the cut (`_ev_lat_above`, an awk `v > t`), loss flags at or above it (`-ge`). The band's Under/Over chip and the headroom bar both read that map, so a change to the preset table in the shell must land here in the same commit or the UI will disagree with the event that actually fires. (The `shapes.ts` comment still names the retired `_qt_apply_*` functions in `events.sh`.) The poller now publishes the live cuts as `connectivity.thresholds`, which a future UI pass can read instead of mirroring.
+Both cards commit from `CardFoot` and follow the toast rule: a save fires `toast.success` or `toast.error` from the handler, and after a failure the foot status reads **Couldn't save** (`FAILED` in `shapes.ts`) until the next edit or save. While the draft differs from the saved value the foot shows **Unsaved**.
 
-### The status band
-
-Four 104px pinned tiles reading the poller's `connectivity` block — no new request, and no field that did not already exist. Neutral tile bodies; colour only on the 52px disc. Each tile's face is keyed off **one** state union through a `satisfies Record<...>` map, so the value, the caption and the disc cannot answer the same question differently, and every state carries a distinct glyph.
-
-| Tile | Reads | Disc |
-|------|-------|------|
-| Internet | `connectivity.status` | The five-state verdict, one tone and glyph each. Carries the surface's single ambient ring while `status !== "unknown"` |
-| Round trip | `latency_ms`, captioned with `avg`/`min`/`max` | **Binary** against the saved latency cut — neutral or `warning`, never the five-stop quality ramp: a tile has no room for a bar, and the ramp may not travel without one |
-| Packet loss | `packet_loss_pct` | Binary against the saved loss cut. A `null` renders `—` and says the window is under the ten-sample floor — it is **never** coerced to 0 |
-| Answering leg | `ping_target` matched against the saved slots, plus `last_family` | `primary` for a hostname leg, **`warning` for a literal leg** — a fallback leg answering is the visible signature of a broken resolver |
-
-> ⚠️ `ping_target` **falls back to `targets[0]` when nothing has answered yet**, so a string match alone is not proof that a leg replied. `legState()` additionally requires `internet_available === true` and a `last_family` that is not `"none"`. Drop either guard and a dead link paints leg 1 as the answering leg.
->
-> A poller predating the ICMP port sends **no** `last_family` at all. Absence is not a value: the family tag is then not rendered, rather than reported as `None`.
->
-> The leg tile's one meta line is **state-dependent**. A hostname leg shows the target plus its family tag; a **fallback** leg spends that same 18px box on the cause instead (`leg.meta_fallback` — "DNS not resolving"), because the tile is pinned at 104px and there is no second line. The target is not lost: the probe chain card below promotes the answering leg and shows it. `srNote` carries the full sentence to assistive technology in both states.
+> ⚠️ `shapes.ts` mirrors the preset table from `cq_preset_latency` / `cq_preset_loss` in `scripts/usr/lib/qmanager/conn_state.sh` as `PRESET_LIMIT`, **including the comparison direction**: latency flags strictly above the cut (`_ev_lat_above`, an awk `v > t`), loss flags at or above it (`-ge`). The "Flags after" row and the over-limit glyph both read that map, so a change to the preset table in the shell must land here in the same commit or the UI will disagree with the event that actually fires. The poller publishes the live cuts as `connectivity.thresholds`, but this card shows the cut of the **draft** preset, which only the mirror can answer before a save.
 
 ### Probe Targets card (`probe-targets-card.tsx`)
 
-> ℹ️ NOTE: Renamed from `connectivity-sensitivity-card.tsx` in the 2026-09-06 re-authoring. The old name was kept for git-history continuity while the file was only being patched; the re-authoring rewrote it top to bottom, which spent that argument.
+The card owns the **four probe slots** — `target_host_1`, `target_host_2`, `target_ip_1`, `target_ip_2` — in probe order (`SLOT_ORDER`). Layout, top to bottom:
 
-The card owns the **four probe slots** — `target_host_1`, `target_host_2`, `target_ip_1`, `target_ip_2`. They render as four numbered legs in one tonal group, in probe order, and the leg matching `ping_target` is promoted by container. Behavior:
+- **Verdict chip** in the header (`CardAction`), one filled `Badge` from `legState()`. A skeleton stands in while the profile or the modem status loads; there is no chip when the profile GET failed.
+- **Two groups.** *Hostnames* (legs 1–2) and *IPv4 fallback* (legs 3–4, the group's one `HintIcon`). Each leg is a numbered 28px disc beside a mono input; the disc of the answering leg fills `primary`.
+- **Probe interval** pill row, "Every N s", linking to `/monitoring/watchdog/` where the cadence is edited. It reads `connectivity.history_interval_sec` and is **not rendered** when that is absent or not a positive number (a skeleton while the status loads).
+- **Foot:** **Restore defaults** (`tonal-neutral`) fills the draft with `cloudflare.com`, `google.com`, `1.1.1.1`, `8.8.8.8` without saving; **Save Probe Targets** commits it.
+
+`legState()` reads the **saved** targets, never the draft, so typing in a field cannot move the chip:
+
+| State | Condition | Chip |
+|-------|-----------|------|
+| `hostname` | Reachable and `ping_target` matches leg 1 or 2 | `success`, "Leg N answering" |
+| `fallback` | Reachable and `ping_target` matches leg 3 or 4 (an IPv4 leg answered, so DNS failed) | `warning`, "DNS not resolving" |
+| `none` | `internet_available !== true`, or `last_family === "none"` | `destructive`, "No answer" |
+| `unknown` | No `connectivity` block, `status === "unknown"`, or reachable but **no saved slot matches** `ping_target` | `muted`, "Not reporting" |
+
+> ⚠️ `ping_target` **falls back to `targets[0]` when nothing has answered yet**, so a string match alone is not proof that a leg replied. `legState()` checks `internet_available` and `last_family` before it matches. Drop that guard and a dead link paints leg 1 as answering.
+>
+> The no-match `unknown` case is real: right after a save the daemon is still probing the **previous** chain until it consumes `/tmp/qmanager_ping_reload`, so its `ping_target` names a target that is no longer saved. Reporting that as "No answer" would show an outage that does not exist.
+
+Behavior:
 
 - Inputs are **ICMP targets** (hostname or IPv4 literal), **not HTTP URLs** — no scheme is prepended.
 - The four legs are walked in the order listed, short-circuiting on the first success. There is no v4/v6 slot distinction: the resolver picks the family for the two hostname legs.
-- A reset restores the four defaults: `cloudflare.com`, `google.com`, `1.1.1.1`, `8.8.8.8`.
-- Client-side validation mirrors the CGI's two validator kinds; the CGI re-validates server-side.
+- Client-side validation mirrors the CGI's two validator kinds and re-runs on every slot at submit; the CGI re-validates server-side. Values are trimmed before the POST.
+- A config the CGI could not read comes back as four blanks; the card then shows the *No probe chain saved* condition with a Restore defaults action instead of the form.
 
 Data flow: `usePingProfile` hook (`hooks/use-ping-profile.ts`) → `GET/POST /cgi-bin/quecmanager/settings/ping_profile.sh`.
 
@@ -463,9 +466,9 @@ Data flow: `usePingProfile` hook (`hooks/use-ping-profile.ts`) → `GET/POST /cg
 
 So the CGI **rejects a hostname in an IP slot**. That is the point of those two legs: they exist precisely so the verdict survives a broken resolver, and a hostname there would fail for the same reason the two hostname legs already did — the device would then report an outage it does not have. Failures return `cgi_error`'s shape: `{ "success": false, "error": "invalid_target", "detail": "<the rejected value>" }`.
 
-> ℹ️ **The i18n gap is closed.** The route was hardcoded English with no keys in any pack until 2026-09-06; the re-authoring added a `connection_quality` namespace under `system-settings` across all five packs (137 lines each), including the validator messages and toasts. `bun run i18n:check` reports 100% parity.
+> ℹ️ The route's copy lives under `connection_quality` in the `system-settings` namespace of all five packs (`targets.*`, `thresholds.*`, `page.*`), including the validator messages and toasts.
 
-### Latency & Loss Thresholds card (`quality-thresholds-card.tsx`)
+### Quality Thresholds card (`quality-thresholds-card.tsx`)
 
 **Short version:** this card decides *when a slow or lossy link gets flagged* — in the Network Events feed and, for loss, in the `degraded` status. It is not a recovery control: nothing here triggers a modem reset or SIM failover, and a degraded link never reaches an alert channel.
 
@@ -479,7 +482,15 @@ It sets two independent presets — one for latency, one for packet loss — eac
 
 The same file also holds `alert_after_min`, the one wait before any channel hears about an outage (see [One detector, one alert](#one-detector-one-alert)). The card does not edit it yet; the Alerts page's per-channel field writes it.
 
-The presets render as a three-chip `role="radiogroup"`, one selected fill travelling on a shared `layoutId`. They were a `<Tabs>` / `<TabsList>` / `<TabsTrigger>` with **no `TabsContent` anywhere on the page** — a tab widget promising a panel that did not exist, where arrow keys mutated the saved value instead of moving focus. Under each rail sits a borderless tonal readout carrying the blurb, a `MetricBar` headroom bar (live reading against the selected cut) and the Threshold / Debounce / Now trio.
+Per metric (Latency, then Packet loss) the card renders one block:
+
+- **Preset picker:** a `SegmentedField` with `breakpoint="lg"` and no glyph (`glyph={() => null}`), so it is a pill group from `@lg/card` up and a `Select` below.
+- **Flags after** pill row: the debounce and cut of the **draft** preset from `PRESET_LIMIT`, e.g. "3 samples over 250 ms" / "3 samples at 30% or more". It moves as soon as a preset is picked, before any save.
+- **Right now** pill row: the poller's `latency_ms` or `packet_loss_pct` as a plain figure. A `TriangleAlert` glyph appears only past the draft limit, inked with Latency Monitor's own rules from `components/monitoring/latency-monitoring/derive.ts`: latency uses `latencyTone` (warning ink above the cut, destructive above twice it); loss marks only when `lossTone` returns `bad` (at or above the cut, destructive), so the amber any-loss tone is not shown here. A `null` reading renders "No reply" (latency) or "Collecting" (loss, under the ten-sample floor) and is **never** coerced to 0.
+
+When the GET reports `is_default: true` (the file is missing, or either preset in it is not a valid name), the foot status shows an `info` **Built-in defaults** chip and **Save Thresholds stays enabled** with no edits, because writing the defaults is a real write. Unsaved and Couldn't save take the status slot ahead of it.
+
+> ℹ️ Removed 2026-10-12 and not to be restored: the per-preset blurbs, the `MetricBar` headroom readout and the footer note. The `role="radiogroup"` rail that replaced the old `<Tabs>` misuse is also gone; `SegmentedField` is the control now.
 
 Data flow: `useQualityThresholds` → `GET/POST /cgi-bin/quecmanager/settings/quality_thresholds.sh` → `/etc/qmanager/quality_thresholds.json`, poking `/tmp/qmanager_events_reload`. The poller consumes that flag in `cq_thresholds_refresh` at the top of every `read_ping_data()`, so the next cycle's status, detector and alert wait all use the new values without a restart. While jq is not yet mounted at boot, `cq_thresholds_refresh` keeps retrying the first load and the `tolerant` defaults apply meanwhile.
 
@@ -616,7 +627,7 @@ The `limited` state is a **genuine capability loss**, and the 2026-09-01 chip fi
 | Probe cadence (how often) | `ping_profile.json.interval_sec` (override; else the profile table) | **Connection Quality** | `ping_profile.sh`; also the Watchdog page's Probe every, through `watchdog.sh` | this doc |
 | Probe targets (which hosts) | `ping_profile.json.target_host_1` / `target_host_2` / `target_ip_1` / `target_ip_2` | **Connection Quality** | Probe Targets card | this doc |
 | Profile label | `ping_profile.json.profile` | **Connection Quality** | `ping_profile.sh` (the card does not send it) | this doc |
-| Latency/loss thresholds and the `degraded` cut | `quality_thresholds.json.latency.preset` / `loss.preset` | **Connection Quality** | Latency & Loss Thresholds card | this doc |
+| Latency/loss thresholds and the `degraded` cut | `quality_thresholds.json.latency.preset` / `loss.preset` | **Connection Quality** | Quality Thresholds card | this doc |
 | Alert wait | `quality_thresholds.json.alert_after_min` | **Connection Quality** | written today by the Alerts page's per-channel field (`alerts.sh`) | this doc, [alerts.md](alerts.md) |
 | When recovery starts | `watchcat.fail_threshold` (× `interval_sec`, against `fail_elapsed_sec`) | **Watchdog** | Watchdog → Detection card | [connection-watchdog.md](connection-watchdog.md) |
 | Recovery ladder (act on a down link) | `watchcat.*` tiers, cooldown, backup slot, reboot cap | **Watchdog** | Watchdog page | [connection-watchdog.md](connection-watchdog.md) |

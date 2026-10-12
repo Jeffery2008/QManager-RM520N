@@ -1,155 +1,76 @@
-// =============================================================================
-// Connection Quality — the /monitoring/connection-quality family's
-// geometry and tone contract
-// =============================================================================
-// Two sources, and the split is deliberate.
-//
-// The page shell, band and card grammar are IMPORTED from
-// `components/system-settings/shapes.ts`, the family this page moved out of.
-//
-// Everything below the re-export block is LOCAL to this route: the probe-leg
-// row, the mono field a target is typed into, the preset rail, the readout
-// block under it, and the two tonal notes. Those are restated from the
-// SYSTEM's numbers rather than imported from a sibling family:
-//
-//   42px control   28px leg disc   10px field radius   1.5px row gap
-// =============================================================================
-
 import type { PingProfileTargets } from "@/hooks/use-ping-profile";
 import type { QualityPreset } from "@/types/modem-status";
 
-import {
-  BAND,
-  CAPTION,
-  CARD_BODY,
-  CARD_CELL,
-  CARD_DESC,
-  CARD_GRID,
-  CARD_PAD,
-  CARD_SHELL,
-  CARD_TITLE,
-  CHIP_ON_TONAL,
-  COARSE_TARGET,
-  CONDITION,
-  CONDITION_PANEL,
-  DELTA,
-  DISC_TONE,
-  DISC_TRANSITION,
-  EYEBROW,
-  FIELD,
-  FOCUS_RING,
-  GROUP_FILL,
-  LABEL_LINE,
-  META_INK_ON_TONAL,
-  NOTICE,
-  PAGE_HEAD,
-  PAGE_ROOT,
-  PILL_GLYPH,
-  ROW,
-  ROW_GROUP,
-  SKELETON,
-  TILE,
-  VALUE,
-  VALUE_NONE,
-  VALUE_TEXT,
-  type DiscTone,
-} from "@/components/system-settings/shapes";
-
-export {
-  BAND,
-  CAPTION,
-  CARD_BODY,
-  CARD_CELL,
-  CARD_DESC,
-  CARD_GRID,
-  CARD_PAD,
-  CARD_SHELL,
-  CARD_TITLE,
-  CHIP_ON_TONAL,
-  COARSE_TARGET,
-  // The state block's geometry, IMPORTED rather than restated: the family one
-  // level up already owns it, and this route is lucide like the rest of it.
-  CONDITION,
-  CONDITION_PANEL,
-  DELTA,
-  DISC_TONE,
-  DISC_TRANSITION,
-  EYEBROW,
-  FIELD,
-  FOCUS_RING,
-  GROUP_FILL,
-  LABEL_LINE,
-  NOTICE,
-  PAGE_HEAD,
-  PAGE_ROOT,
-  PILL_GLYPH,
-  ROW_GROUP,
-  SKELETON,
-  TILE,
-  VALUE,
-  VALUE_NONE,
-  VALUE_TEXT,
-};
-export type { DiscTone };
+// Connection Quality: this family's geometry, imported by the loaded views AND
+// their skeletons. Restated here, never imported across families.
 
 // -----------------------------------------------------------------------------
-// The Internet tile's ambient loop
+// Page shell
 // -----------------------------------------------------------------------------
 
-/**
- * The surface's ONE ambient loop (One-Loop Rule), spent on the Internet disc
- * and only while the probe daemon is actually reporting. `animate-pulse-ring`
- * is the canon's CSS-only keyframe on the ambient token; its reduced-motion
- * block lives beside it in `globals.css` and nothing here starts it from JS.
- *
- * GEOMETRY ONLY — the hue is `RING_TONE`'s, keyed off the disc it sits under.
- */
-export const RING = "animate-pulse-ring absolute -inset-1.5 rounded-pill";
+/** The route wrapper, as on the other Monitoring pages. */
+export const PAGE_ROOT = "@container/main flex flex-col gap-5 px-4 pb-6 lg:px-6";
 
-/** The halo: its own disc's fill at the ambient alpha. A fixed `bg-primary/25`
- *  measured blue under the green, amber and red discs — 3 of the 4 live states. */
-export const RING_TONE = {
-  neutral: "bg-surface-container-high/25",
-  primary: "bg-primary/25",
-  success: "bg-success/25",
-  warning: "bg-warning/25",
-  destructive: "bg-destructive/25",
-} satisfies Record<DiscTone, string>;
+/** Probe Targets beside Quality Thresholds, one height, stacked below 58rem. */
+export const PAIR =
+  "grid grid-cols-1 items-stretch gap-5 @[58rem]/main:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]";
 
-/** The box the ring and the disc share. Flex, so it shrink-wraps the disc
- *  instead of inheriting an inline box's line-height. */
-export const RING_WRAP = "relative flex flex-none";
+/** A pair cell hands its full height to the card inside it. */
+export const CARD_CELL = "flex min-w-0 flex-col";
 
-/**
- * The answering leg's meta line: the target string beside its family tag.
- * Pinned to `CAPTION`'s own 18px line box so the tile stays at its 104px pin.
- */
-export const TARGET_LINE = {
-  ROW: "flex h-[1.125rem] min-w-0 items-center gap-1.5 overflow-hidden",
-  /** Machine voice: the endpoint the daemon echoes back verbatim. */
-  HOST: "text-on-surface-variant truncate font-mono text-[0.6875rem]",
-  /** Size overrides only; the role stays the `Tag` variant's job. */
-  CHIP: "h-4 min-w-0 shrink px-1.5 py-0 text-[0.6875rem] leading-none",
-  CHIP_TEXT: "truncate",
-  /**
-   * The FALLBACK state spends this one line box on the cause instead of the
-   * target — the tile is pinned, so there is no second line to put it on and
-   * the target is one card down, promoted on the leg that answered. Same 18px
-   * box as `ROW`. The words carry the diagnosis; the ink only seconds it.
-   */
-  REASON:
-    "text-warning-on-surface block truncate leading-[1.125rem] font-medium",
+// -----------------------------------------------------------------------------
+// Card shells
+// -----------------------------------------------------------------------------
+
+/** The important marker is required: twMerge reads an arbitrary shadow as a colour. */
+export const CARD_SHELL =
+  "@container/card flex-1 gap-5 rounded-card border-0 bg-card py-6 shadow-[var(--shadow-whisper)]!";
+
+export const CARD_PAD = "px-6";
+
+/** The body column. `flex-1` lets a pair card hand its slack to one region. */
+export const CARD_BODY = "flex flex-1 flex-col gap-4";
+
+export const CARD_TITLE = "col-start-1 min-w-0 text-lg leading-tight";
+
+/** `CardDescription` hardcodes a retired ink token, so every call site re-inks it. */
+export const CARD_DESC = "text-on-surface-variant col-start-1 text-sm";
+
+export const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+export const PILL_GLYPH = "size-4";
+
+/** The 42px action height every pill button and field shares here. */
+const CONTROL_H = "h-[2.625rem]";
+
+// -----------------------------------------------------------------------------
+// Groups and eyebrows
+// -----------------------------------------------------------------------------
+
+export const EYEBROW =
+  "text-on-surface-variant min-w-0 truncate text-[0.6875rem] leading-[1.125rem] font-semibold tracking-[0.02em] uppercase";
+
+/** An eyebrow over its rows: 9px between them, 5px between rows. */
+export const GROUP = "flex flex-col gap-[0.5625rem]";
+/** min-h-5 is the HintIcon trigger, so a head with or without one keeps one height. */
+export const GROUP_HEAD = "flex min-h-5 flex-wrap items-center gap-x-2 gap-y-2 px-1";
+export const ROW_STACK = "flex flex-col gap-[0.3125rem]";
+
+/** The pending-edit marker in the card foot. */
+export const DELTA = "text-primary text-[0.6875rem] font-semibold tracking-[0.06em] uppercase";
+
+/** A failed save, left in the foot until the next edit or save. */
+export const FAILED = {
+  ROOT: "text-destructive-on-surface inline-flex items-center gap-1.5 text-[0.8125rem] font-semibold",
+  GLYPH: "size-3.5 flex-none",
 } as const;
 
 // -----------------------------------------------------------------------------
-// Probe Targets — the four-leg chain
+// Probe Targets: the four-leg chain
 // -----------------------------------------------------------------------------
 
-/**
- * The chain in PROBE ORDER, and the whole point of the design: the daemon
- * short-circuits on the first leg that answers. Both the card and the status
- * band index by it, so a fifth slot cannot land in one and not the other.
- */
+/** The chain in PROBE ORDER: the daemon stops at the first leg that answers. */
 export const SLOT_ORDER = [
   "target_host_1",
   "target_host_2",
@@ -162,71 +83,50 @@ export type SlotKey = (typeof SLOT_ORDER)[number];
 /** The two hostname legs come first, so the RESOLVER picks the family. */
 export const HOSTNAME_LEGS = 2;
 
-/**
- * One numbered probe leg.
- *
- * A `min-h` FLOOR, not a pin: the kind sentence wraps to two lines on a narrow
- * container where a fixed height would clip it. Its skeleton wears `ROOT` and
- * fills it with slivers, so the height RESOLVES rather than being asserted.
- *
- * `REST` is empty on purpose — a resting leg has no fill of its own, because
- * it already sits on `ROW_GROUP`, so promotion is the only colour on the list.
- */
+/** One leg: a 28px number disc beside its 42px field, the error under the field. */
 export const LEG = {
-  ROOT: "flex min-h-[5rem] flex-col gap-3 rounded-field px-4 py-4 @2xl/card:flex-row @2xl/card:items-center @2xl/card:gap-4",
-  TRANSITION:
-    "transition-[background-color,color] duration-[var(--duration-standard)] ease-[var(--ease-standard)]",
-  /** Disc and text column, paired tighter than the row's own flip gap. */
-  MAIN: "flex min-w-0 flex-1 items-start gap-3",
-  DISC: "grid size-7 flex-none place-items-center rounded-pill",
-  NUMBER: "text-[0.8125rem] leading-none font-semibold tabular-nums",
-  TEXT: "flex min-w-0 flex-1 flex-col gap-1",
-  LABEL: "text-[0.9375rem] font-semibold",
-  /** The one-line kind sentence, on the family's consequence step. */
-  KIND: ROW.CONSEQUENCE,
-  /** The same sentence on a PROMOTED leg. `CONSEQUENCE`'s `on-surface-variant`
-   *  is another role's ink on `primary-container` and measured 4.230:1 in light. */
-  KIND_ANSWERED: `text-on-primary-container ${META_INK_ON_TONAL}`,
-  CONTROL: "flex flex-none items-center @2xl/card:ml-auto",
-  REST: "",
-  ANSWERED: "bg-primary-container text-on-primary-container",
+  ROOT: "flex flex-col gap-1",
+  ROW: "flex items-center gap-3",
+  DISC: "grid size-7 flex-none place-items-center rounded-pill text-[0.8125rem] leading-none font-semibold tabular-nums transition-[background-color,color] duration-[var(--duration-standard)] ease-[var(--ease-standard)]",
   DISC_REST: "bg-surface-container-high text-on-surface-variant",
   DISC_ANSWERED: "bg-primary text-primary-foreground",
 } as const;
 
-/**
- * The family `FIELD` in machine voice: a probe target is an identifier the
- * device echoes back verbatim, so it is mono (The Machine-Voice Rule).
- */
-export const FIELD_MONO = `${FIELD} font-mono pointer-coarse:h-11!`;
+/** A probe target is an identifier the device echoes back verbatim, so mono. */
+const FIELD_H = `${CONTROL_H} pointer-coarse:h-11`;
+export const FIELD_MONO = `${FIELD_H} min-w-0 flex-1 font-mono text-[0.84375rem] font-medium`;
 
-/** A validation message under a field. Its own ink, on the row's neutral fill. */
-export const FIELD_ERROR =
-  "text-destructive-on-surface text-xs leading-relaxed";
+/** Indented past the disc and gap, so it starts at the field's edge. */
+export const FIELD_ERROR = "text-destructive-on-surface pl-10 text-xs leading-relaxed";
 
-/**
- * A tonal note hanging under the leg group: what the chain is, and where probe
- * timing actually lives. `surface-container`, one step above the card, so it
- * reads as an aside rather than as another row.
- */
-export const NOTE = {
-  ROOT: "rounded-field bg-surface-container px-4 py-3",
-  TEXT: "text-on-surface-variant text-[0.8125rem] leading-relaxed text-pretty",
-  LINK: "text-primary-on-surface font-medium underline-offset-4 hover:underline",
+// -----------------------------------------------------------------------------
+// Pill rows, restated from Cellular Information's ROW_SHAPE
+// -----------------------------------------------------------------------------
+
+export const ROW = {
+  ROOT: `flex ${CONTROL_H} min-w-0 items-center justify-between gap-4 rounded-pill bg-surface-container px-4 text-[0.8125rem] leading-5 font-semibold`,
+  KEY: "text-on-surface-variant min-w-0 truncate",
+  VALUE: "flex min-w-0 items-center gap-1.5 whitespace-nowrap tabular-nums",
+  QUIET: "text-on-surface-variant font-medium",
+  LINK: "text-primary-on-surface inline-flex items-center gap-1 rounded-inline font-semibold underline-offset-4 hover:underline",
+  LINK_GLYPH: "size-3.5",
+  /** The over-limit notch, centred on the 20px line box beside its figure. */
+  ALERT: "size-3.5 flex-none",
+} as const;
+
+/** The over-limit glyph's ink, by Latency Monitor's own tone. */
+export const ALERT_INK = {
+  warn: "text-warning-on-surface",
+  bad: "text-destructive-on-surface",
 } as const;
 
 // -----------------------------------------------------------------------------
-// Latency & Loss Thresholds
+// Quality Thresholds
 // -----------------------------------------------------------------------------
 
 /**
- * What each preset actually means, mirrored from `_qt_apply_lat` /
- * `_qt_apply_loss` in `scripts/usr/lib/qmanager/events.sh`. It lives here
- * because the status band and the thresholds card both read it and neither
- * owns the other — the band needs the SAVED cut to tone its discs.
- *
- * The comparisons are the producer's, not a paraphrase: latency flags above
- * the cut, loss flags AT it.
+ * The preset table from `cq_preset_latency` / `cq_preset_loss` in
+ * `scripts/usr/lib/qmanager/conn_state.sh`: latency flags above the cut, loss AT it.
  */
 export const PRESET_LIMIT = {
   latency: {
@@ -244,101 +144,38 @@ export const PRESET_LIMIT = {
   Record<QualityPreset, { limit: number; debounce: number }>
 >;
 
-/** One threshold block: its title, the reserved delta box, and its rail. */
-export const BLOCK = {
-  ROOT: "flex flex-col gap-3",
-  HEAD: "flex min-h-[1.375rem] items-center gap-2 px-1",
-  TITLE: "text-[0.9375rem] font-semibold",
-} as const;
+/** Eyebrow left, the preset pill right; below 32rem the Select wraps to its own line. */
+export const METRIC_HEAD =
+  "flex min-h-[2.625rem] flex-wrap items-center gap-x-3 gap-y-[0.5625rem] pl-1";
 
-const PRESET_HEIGHT = "h-[2.625rem] pointer-coarse:h-11";
+// -----------------------------------------------------------------------------
+// Conditions
+// -----------------------------------------------------------------------------
 
-/**
- * The three-chip preset rail.
- *
- * AN AUTO-FIT GRID, NOT A WRAPPING FLEX ROW. `flex-wrap` plus `flex-1` divides
- * the full width among only the chips that wrapped, so a narrow rail renders
- * two peers beside one double-width outlier. A track list fixes every column
- * at the same width. Same idiom as the family's `DAY_PILL.RAIL`.
- *
- * `THUMB` is the travelling fill, shared by `layoutId`. A rail using it keeps
- * every chip on `OFF` and takes `ON_INK` for the selected label only —
- * painting `ON`'s fill underneath would leave the outgoing chip blue.
- */
-export const PRESET = {
-  RAIL: "grid items-center gap-1.5 grid-cols-[repeat(auto-fit,minmax(6rem,1fr))]",
-  HEIGHT: PRESET_HEIGHT,
-  ROOT: `relative ${PRESET_HEIGHT} min-w-0 rounded-pill px-3 text-[0.8125rem] font-semibold transition-[background-color,color] duration-[var(--duration-standard)] ease-[var(--ease-standard)]`,
-  ON: "bg-primary text-primary-foreground",
-  ON_INK: "text-primary-foreground",
-  OFF: "bg-surface-container-high text-on-surface-variant",
-  /** Rides above `THUMB`, and truncates: `Molto tollerante` overruns a 96px
-   *  column that `Standard` sits comfortably inside. */
-  LABEL: "relative z-10 block min-w-0 truncate",
-  THUMB: "absolute inset-0 rounded-pill bg-primary",
-} as const;
-
-/**
- * The readout under a rail: what the selected preset does, and what the live
- * reading is against it. NO BORDER — a hairline over a fill is chrome around
- * the colour rather than the edge of a block (The No-Hairline-On-Fill Rule).
- */
-export const READOUT = {
-  ROOT: "flex flex-col gap-2.5 rounded-field bg-surface-container-high px-4 py-3.5",
-  TITLE: "text-[0.9375rem] font-semibold",
-  BLURB:
-    "text-on-surface-variant text-[0.78125rem] leading-relaxed text-pretty",
-  /** The live figure and its quality bar, on one line box. */
-  BAR_ROW: "flex items-center gap-3",
-  PAIRS: "grid grid-cols-3 gap-x-3 gap-y-1",
-  PAIR: "flex min-w-0 flex-col gap-0.5",
-  PAIR_LABEL: EYEBROW,
-  /** A reading, so the UI face with `tabular-nums` — never `font-mono`. */
-  PAIR_VALUE: "truncate text-[0.8125rem] font-semibold tabular-nums",
-  /** The "now" figure beside its chip. WRAPS: the chip is `shrink-0` and the
-   *  figure `truncate`, so otherwise the chip takes the column and the reading
-   *  collapses — measured at 0px wide in the single-column layout. */
-  LIVE_LINE: `${LABEL_LINE} min-w-0 flex-wrap`,
+export const CONDITION = {
+  ROOT: "flex flex-col items-center gap-3.5 rounded-hero px-8 py-10 text-center",
+  DISC: "grid size-14 flex-none place-items-center rounded-pill",
+  GLYPH: "size-[1.625rem]",
+  TITLE: "text-xl font-semibold tracking-[-0.01em]",
+  TEXT: "flex flex-col gap-1.5",
+  BODY: "max-w-[44ch] text-sm leading-relaxed text-pretty",
+  ACTION: `mt-2 ${CONTROL_H} gap-2 rounded-pill px-6 text-sm font-semibold`,
+  /** A state block fills the card body instead of a form. */
+  SCREEN: "min-h-0 flex-1 justify-center",
 } as const;
 
 // -----------------------------------------------------------------------------
-// Skeletons
+// Skeletons: placeholder boxes from the loaded constants
 // -----------------------------------------------------------------------------
 
-/** Line boxes — a rendered line's HEIGHT, never its font size. */
-const LINE = {
-  /** `LEG.LABEL` / `READOUT.TITLE` (15px/normal) and `BLOCK.TITLE`. */
-  LABEL: "h-[1.375rem] rounded-inline",
-  /** `LEG.KIND` and `READOUT.BLURB` at 12.5px/relaxed. */
-  KIND: "h-[1.25rem] rounded-inline",
-  /** `READOUT.PAIR_VALUE` at 13px. */
-  PAIR: "h-[1.1875rem] rounded-inline",
-} as const;
-
-/**
- * Placeholders read their box from the loaded view's own constant, so a height
- * can never drift out from under its skeleton. A leg wears the real `LEG.ROOT`
- * at the call site, a chip wears `PRESET.ROOT`, a readout wears `READOUT.ROOT`,
- * and the band's tiles wear `TILE.ROOT` — this module restates none of them.
- */
 export const SKELETON_LOCAL = {
-  LEG: {
-    /** The real disc box, so a change to `LEG.DISC` cannot drift out from it. */
-    DISC: LEG.DISC,
-    LABEL: LINE.LABEL,
-    KIND: LINE.KIND,
-    /** The family's field placeholder plus this route's coarse bump. */
-    FIELD: `${SKELETON.TIME.FIELD} pointer-coarse:h-11`,
-  },
-  BLOCK: {
-    TITLE: LINE.LABEL,
-    /** Wears a `PRESET.RAIL` cell, so it tracks the grid, not a flex basis. */
-    CHIP: `${PRESET_HEIGHT} min-w-0 rounded-pill`,
-  },
-  READOUT: {
-    TITLE: LINE.LABEL,
-    BLURB: LINE.KIND,
-    PAIR_LABEL: "h-[1.0625rem] rounded-inline",
-    PAIR_VALUE: LINE.PAIR,
-  },
+  /** The verdict Badge's 22px box, inline so it sits in the same line box. */
+  VERDICT: "inline-block h-[1.375rem] w-28 rounded-pill align-middle",
+  EYEBROW: "h-3 w-24 rounded-inline",
+  DISC: "size-7 flex-none rounded-pill",
+  FIELD: `${FIELD_H} min-w-0 flex-1 rounded-field`,
+  ROW_TEXT: "h-3 rounded-inline",
+  /** SegmentedField's 42px track; full width where the Select stands in for it. */
+  SEGMENT: `${CONTROL_H} w-full rounded-pill @lg/card:w-72`,
+  ACTION: `${CONTROL_H} w-36 rounded-pill`,
 } as const;
