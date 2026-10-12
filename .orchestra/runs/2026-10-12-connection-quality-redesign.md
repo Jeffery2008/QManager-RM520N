@@ -1,5 +1,5 @@
 # Run: Connection Quality page redesign
-status: active
+status: closed
 lane: full
 base: cf2b5c14ff389b3a846b8910b7ff13be6c1d34b7   branch: worktree-wt-cq-redesign (.claude/worktrees/wt-cq-redesign)   opened: 2026-10-12   lead: opus
 
@@ -44,4 +44,4 @@ Redesign /monitoring/connection-quality on the Watchdog / Network Events / Laten
 RM520N-GL 61368cd2: read-only CGI GETs via a minted session (deleted by the script); /tmp/cqcap.sh self-deleted; grep -c cqcap in /tmp = 0. Nothing deployed.
 
 ## Handoff — NEXT ACTION
-Built, verified and documented in worktree-wt-cq-redesign, uncommitted (12 files, +752/-1726 vs BASE). Temp shim and launch entry deleted; dev server stopped. Waiting on the user: commit and merge into development, keep the branch, or discard. Not run on the device; the user's tarball run is the hardware proof. After a merge, re-run tsc, i18n:check and build on development.
+Closed 2026-10-12. User: "Commit and merge it into development, fix the release note". Committed cebb8185 (release note: CQ dropped from the Discard list), merged development (Alerts run, 3 commits) with one RELEASE_NOTES.md hunk resolved by keeping both sides, post-merge tsc / eslint / i18n:check / icons:check / build all green, then fast-forwarded development. Not run on the device; the user's tarball run is the hardware proof.
