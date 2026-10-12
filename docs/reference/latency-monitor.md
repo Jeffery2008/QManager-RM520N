@@ -28,7 +28,7 @@
 |------|--------|---------|-------|
 | Right now | `connectivity` (status poll) | 5 s | `latency_ms`, `avg_latency_ms`, `max_latency_ms`, `latency_history` (last 60 probes), `history_interval_sec`, `jitter_ms`, `packet_loss_pct`, `ping_target`, `last_family`, `status`, `thresholds` |
 | History | `useLatencyHistory()` archive | 30 s | each row's `lat` only, plus `ts` |
-| Sites | `useSites(range)` | 30 s idle, 3 s busy | `enabled`, `interval_sec`, `checked_at`, `checking`, `sites[].latest`, `sites[].series` |
+| Sites | `useSites(range)` | Now: 2 s while visible and enabled; other ranges: 30 s idle, 3 s busy | `enabled`, `interval_sec`, `checked_at`, `checking`, `sites[].latest`, `sites[].series` |
 
 - **History reads `lat`, never `max` or `avg`.** An archive row's `min` / `avg` / `max` are the poller's rolling statistics over its 60-probe window, so one spike repeats in every row archived while it stays in that window. Worst, Typical and the bucket averages are computed from the per-row `lat` instead; a `null` `lat` is a lost probe.
 - **The strip has a hover readout** (`ProbeStrip` in `now-card.tsx`): the pointer's slot shows its RTT (or No reply) and its age, `(slots − 1 − i) × history_interval_sec`, as Now / N s ago / N min ago; the other bars dim to 40 %. It is pointer-only; the strip's `aria-label` carries the summary.
@@ -75,7 +75,7 @@ Ranges are `1h` / `6h` / `24h` (`HISTORY_RANGE` in `derive.ts`); the default is 
 
 ## Sites card
 
-Ranges are `1h` / `24h` / `7d` (`SitesRange`; the CGI serves more); the default is `1h`. The range pill is hidden while the monitor is off. There is no Check now button: a successful Manage save with the monitor on calls `checkNow()` without blocking the dialog, and only a failed check toasts (`check_failed`).
+Ranges are `now` / `1h` / `24h` / `7d` (`SITES_RANGES`, typed by `SitesRange`; the CGI serves more); the default is **Now** (`latencyMonitor.range.now`). Now is the live view: its reads renew the daemon's live lease and return no history ([sites-monitor.md → Live mode](sites-monitor.md#live-mode)). The range pill is hidden while the monitor is off. There is no Check now button: a successful Manage save with the monitor on calls `checkNow()` without blocking the dialog, and only a failed check toasts (`check_failed`).
 
 **The value under each logo** is chosen in this order:
 
@@ -83,14 +83,18 @@ Ranges are `1h` / `24h` / `7d` (`SitesRange`; the CGI serves more); the default 
 |-----------|-------|
 | `latest` is `null` | "Not checked yet" (quiet) |
 | `latest.ok` is `false` | "No reply" (red), whatever the range average is |
-| `siteAverage(series)` is `null` | `—` |
-| otherwise | the range average, toned by `latencyTone` |
+| the figure is `null` | `—` |
+| otherwise | the figure, toned by `latencyTone` |
+
+The figure is `latest.ms` when the data on screen was read for Now, and `siteAverage(series)` on every other range, because a `range=now` response carries an empty `series`. "Read for Now" is `dataRange === "now"`, not the selected `range`: `dataRange` is the range the current `data` was fetched for, and it lags `range` until the new read lands. Keying on `range` would average a Now response's empty series to `—` for the moment between a switch to another range and its first read.
 
 `siteAverage` is the mean of **answered** samples over the whole range: each bucket's `ms` is weighted by its `ok` count, and buckets with `ms: null` or `ok ≤ 0` are skipped. It is not a mean of bucket means.
 
 **Polling (`hooks/use-sites.ts`).**
 
-- 30 s while idle; 3 s while the response says `checking: true` or a check is pending.
+- **Now, monitor enabled:** every 2 s (`LIVE_POLL_MS`), only while `document.visibilityState` is `visible`. A hidden tab polls nothing; becoming visible fetches at once, then resumes the 2 s interval. Selecting Now in a hidden tab skips the initial read too, so no lease renews. Each read renews the lease, so this gate is what ends live mode on the device.
+- **Now, monitor disabled** (`data.enabled === false`): falls back to the idle cadence. The CGI writes no lease while disabled, so 2 s reads would cost CGI and jq time for nothing.
+- **Other ranges:** 30 s while idle; 3 s while the response says `checking: true` or a check is pending.
 - A check stays pending until a response shows `checking: false` after either having seen `checking: true` or a `checked_at` different from the one before the click. A pending check the daemon never picks up stops counting after 90 s.
 - Every fetch carries a sequence number and only the newest may land, so a slow `7d` read cannot overwrite a newer `1h` one after a range switch.
 
@@ -106,7 +110,8 @@ Ranges are `1h` / `24h` / `7d` (`SitesRange`; the CGI serves more); the default 
 
 - `markFor()` strips a leading `www.` and matches the exact domain or any subdomain of it; any `shopee.*` host gets the Shopee mark. Add a brand by adding one row, nowhere else.
 - **Brand hex is allowed here.** A logo is content, like the RAT marks on the dashboard, so it keeps its brand colour; the label under it carries identity.
-- **`null` colour means on-surface ink.** Use it for near-black brands (TikTok, X, GitHub) and for any brand colour that fails on the light tile (Snapchat's yellow). Check a new hex on the tile in both themes before adding it.
+- **`null` colour means on-surface ink.** Use it for near-black brands (TikTok, X, GitHub) and for any brand colour that fails on either tile: Snapchat's yellow on the light tile, Dota 2's `#BF2E1A` on the dark one (2.88:1; 4.85:1 on light). Check a new hex on the tile in both themes before adding it.
+- **Dota 2 needs its mapped mark.** `dota2.com` serves only a 16 px favicon, which the fallback below reads as "no icon", so `SiDota2` is mapped explicitly.
 - **No mark, a favicon.** An unmapped host loads `https://www.google.com/s2/favicons?domain=<host>&sz=64` (`referrerPolicy="no-referrer"`), crossfading over its monogram once loaded. The browser's HTTP cache keeps it (the service sends `max-age` of 7 days); `faviconSeen` remembers the result for the session so a remount does not flash. The service has no CORS headers, so the image cannot be copied into storage.
 - **Monogram fallback.** A load error (no internet) or an image 16px or smaller (the service's stand-in globe for an unknown domain) shows the first letter of the label (or host).
 
