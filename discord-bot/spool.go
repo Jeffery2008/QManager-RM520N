@@ -46,7 +46,7 @@ func appendDiscordLog(trigger, status, recipient string) {
 		log.Printf("cmd watcher: failed to encode log row: %v", err)
 		return
 	}
-	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := openLogAppend(logPath)
 	if err != nil {
 		log.Printf("cmd watcher: failed to open log %s: %v", logPath, err)
 		return

@@ -12,6 +12,11 @@ func openSpoolEntry(path string) (*os.File, error) {
 	return os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 }
 
+// openLogAppend appends to the /tmp log as root without following a planted symlink.
+func openLogAppend(path string) (*os.File, error) {
+	return os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY|syscall.O_NOFOLLOW, 0644)
+}
+
 // spoolDirTrusted: a real directory (not a symlink) owned by root, mode 1777.
 // In sticky /tmp only its owner can replace it, so it stays trusted once true.
 func spoolDirTrusted() bool {

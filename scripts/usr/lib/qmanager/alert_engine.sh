@@ -380,12 +380,13 @@ _ae_trim_discord_log() {
     _ae_discord_trim_tick=0
 
     logfile="${_DA_LOG:-/tmp/qmanager_discord_log.json}"
-    [ -s "$logfile" ] || return 0
+    # Root writes here: never through a symlink, never to a predictable temp name in /tmp.
+    [ -s "$logfile" ] && [ ! -L "$logfile" ] && [ -f "$logfile" ] || return 0
     count=$(wc -l < "$logfile" 2>/dev/null)
     case "$count" in ''|*[!0-9]*) return 0 ;; esac
     [ "$count" -gt "$_AE_MAX_DISCORD_LOG" ] || return 0
 
-    tmp="${logfile}.tmp.$$"
+    tmp=$(mktemp "${logfile}.XXXXXX" 2>/dev/null) || return 0
     if tail -n "$_AE_MAX_DISCORD_LOG" "$logfile" > "$tmp" 2>/dev/null; then
         cat "$tmp" > "$logfile" 2>/dev/null
     fi
