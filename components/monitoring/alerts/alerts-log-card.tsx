@@ -43,8 +43,8 @@ import {
   CARD_TITLE,
   CONDITION,
   CONDITION_TONE,
-  CROSSFADE_STACK,
   DAY,
+  FEED_FILL,
   LOG,
   LOG_SCROLL,
   LOG_STACK,
@@ -436,7 +436,7 @@ export function AlertsLogCard({
         </CardDescription>
       </CardHeader>
 
-      <CardContent className={cn(CARD_PAD, "flex flex-col gap-4")}>
+      <CardContent className={cn(CARD_PAD, "flex flex-1 flex-col gap-4")}>
         {error && feed.length > 0 ? (
           <div role="alert" className={cn(NOTICE, NOTICE_TONE.destructive)}>
             <TriangleAlertIcon className={NOTICE_GLYPH} />
@@ -448,7 +448,7 @@ export function AlertsLogCard({
 
         {/* Skeleton and feed share ONE grid cell, so the swap costs no layout
             shift and the fill region measures the taller of the two. */}
-        <div className={CROSSFADE_STACK}>
+        <div className={FEED_FILL}>
           {isLoading ? <ActivityFeedSkeleton /> : <div className="flex flex-col">{body}</div>}
         </div>
       </CardContent>
@@ -482,7 +482,7 @@ function ConditionPanel({
   return (
     <div
       role="status"
-      className={cn(CONDITION.ROOT, skin.ROOT, "justify-center")}
+      className={cn(CONDITION.ROOT, skin.ROOT, "h-full justify-center")}
     >
       <span aria-hidden className={cn(CONDITION.DISC, skin.DISC)}>
         <Icon className={CONDITION.GLYPH} />

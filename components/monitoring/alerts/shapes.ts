@@ -19,14 +19,16 @@ export const PILL_GLYPH = "size-4";
  * Channels never drift apart.
  */
 export const BENTO =
-  "grid grid-cols-1 items-start gap-5 @5xl/main:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @5xl/main:grid-rows-[auto_1fr]";
+  "grid grid-cols-1 items-stretch gap-5 @5xl/main:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @5xl/main:grid-rows-[auto_1fr]";
 
+/** `[&>*]:h-full` makes each card fill its stretched cell (Symmetric-Pair Rule). */
 export const BENTO_AREA = {
-  COVERAGE: "min-w-0 @5xl/main:col-start-1 @5xl/main:row-start-1",
+  COVERAGE: "min-w-0 [&>*]:h-full @5xl/main:col-start-1 @5xl/main:row-start-1",
   /** `empty:hidden`: with no channels to show, the cell gives its gap back. */
-  CHANNELS: "min-w-0 empty:hidden @5xl/main:col-start-1 @5xl/main:row-start-2",
+  CHANNELS:
+    "min-w-0 [&>*]:h-full empty:hidden @5xl/main:col-start-1 @5xl/main:row-start-2",
   ACTIVITY:
-    "min-w-0 @5xl/main:col-start-2 @5xl/main:row-span-2 @5xl/main:row-start-1",
+    "min-w-0 [&>*]:h-full @5xl/main:col-start-2 @5xl/main:row-span-2 @5xl/main:row-start-1",
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -175,11 +177,17 @@ export const LOG_STACK = "flex flex-col gap-3";
 
 /** Restated from Network Events: the list scrolls inside the card past about ten rows. */
 export const LOG_SCROLL =
-  "max-h-[min(36rem,70svh)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-tile outline-none [scrollbar-width:thin] focus-visible:ring-[3px] focus-visible:ring-ring";
+  "max-h-[min(36rem,70svh)] overflow-x-hidden overflow-y-auto overscroll-contain rounded-tile outline-none [scrollbar-width:thin] focus-visible:ring-[3px] focus-visible:ring-ring @5xl/main:h-full @5xl/main:max-h-none";
 
 /** Skeleton and content share ONE grid cell, so the swap shifts nothing. */
 export const CROSSFADE_STACK =
   "grid grid-cols-1 grid-rows-1 *:col-start-1 *:row-start-1";
+
+/**
+ * Activity's feed cell. Wide, the feed is pinned inside the cell and scrolls, so
+ * the left column sets the row height and Activity stretches to match it.
+ */
+export const FEED_FILL = `${CROSSFADE_STACK} relative flex-1 @5xl/main:min-h-80 @5xl/main:*:absolute @5xl/main:*:inset-0`;
 
 /** PINNED at 52px so the skeleton mirrors it exactly. Restated from Network Events. */
 const ROW_HEIGHT = "h-[3.25rem]";
