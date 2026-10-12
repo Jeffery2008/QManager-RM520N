@@ -1,6 +1,6 @@
 # Centralized Alerts
 
-> **Applies to:** RM520N-GL (SDX65) · verified 2026-08
+> **Applies to:** RM520N-GL (SDX65) · verified 2026-08; the 2026-10-12 backend fixes were run on RM520N-GL `61368cd2`
 > **RG501Q-EU (SDX55):** unverified — see [`platform-matrix.md`](./platform-matrix.md)
 
 The Alerts subsystem consolidates the three previously-independent notification channels — **SMS**, **Email**, and **Discord** — behind ONE page, ONE CGI endpoint, and ONE backend state machine. It exists to answer a single question every poll cycle: *"the internet just went down / came back / the device just rebooted — which enabled, routed, and physically-capable channel(s) should fire?"* Before this rework each channel carried its own downtime timer, its own threshold, and (for Discord) its own autonomous Go-side timer — three clocks that could drift apart and double-send. Now a single monotonic timer in `alert_engine.sh` drives all dispatch, and each channel library (`email_alerts.sh`, `sms_alerts.sh`, `discord_alerts.sh`) is reduced to a pure *transport* that only knows how to SEND, never *when*.
@@ -23,7 +23,8 @@ The Alerts subsystem consolidates the three previously-independent notification 
 | Reboot breadcrumb helper | `/usr/bin/qmanager_crash_log_append` (sudoers-gated root helper) |
 | Routing config | `/etc/qmanager/alert_routing.json` (**persistent**, version 1) |
 | Channel configs | `/etc/qmanager/{sms_alerts,email_alerts,discord_bot}.json` (**persistent**, **no secrets**) |
-| Alert wait (one for all channels) | `alert_after_min` in `/etc/qmanager/quality_thresholds.json`, resolved by `cq_alert_after_min` (`/usr/lib/qmanager/conn_state.sh`); default 5 min |
+| Alert wait (one for all channels) | `alert_after_min` in `/etc/qmanager/quality_thresholds.json`, resolved by `cq_alert_after_min` (`/usr/lib/qmanager/conn_state.sh`); default 5 min. Exposed as top-level `alert_after_min` (1–1440) in the CGI's `GET` and `save_settings` — see [CGI contract](#cgi-contract--cgi-binquecmanagermonitoringalertssh) |
+| Channel logs | `/tmp/qmanager_{sms,email,discord}_log.json` (NDJSON, cap 100 each). SMS and Discord seeded `root:root 0666` by `qmanager_setup`; email is root-only and unseeded — see [tmp-file-ownership.md](tmp-file-ownership.md#the-alert-channel-logs) |
 | Link verdict source | `ev_link_state`, set by `detect_data_connection_events` in `events.sh` |
 | Secrets store | `/etc/qmanager-secrets/` (`0700 root:root`) — `discord_bot_token`, `email_app_password`, `msmtprc` (each `0600 root:root`) |
 | Secret helper | `/usr/bin/qmanager_secret_set` (sudoers-gated root helper; value on **stdin**) |
@@ -80,7 +81,7 @@ The CGI's `GET` response advertises the same table verbatim, with machine-readab
 
 ### Routing (user preference — `alert_routing.json`)
 
-Per-event, per-channel booleans the user toggles in the routing grid. Missing file or unparseable JSON falls back to the built-in default (see schema below). The engine reads only the `.events` object; the `version` wrapper is metadata for future migrations.
+Per-event, per-channel booleans the user ticks under **Sends for** in each channel's panel. Missing file or unparseable JSON falls back to the built-in default (see schema below). The engine reads only the `.events` object; the `version` wrapper is metadata for future migrations.
 
 ### Effective-send resolution
 
@@ -254,22 +255,25 @@ The `bot_token` / `app_password` JSON-key redaction patterns are still in `_reda
 
 `qmanager_poller` sources `alert_engine.sh` at startup (non-fatal — a broken alert channel must never crash the poller; missing lib stubs out `check_alerts`/`alert_engine_init` to no-ops). It calls:
 
-- **`alert_engine_init`** — once, at poller startup. Resets in-memory state, runs the boot-id reboot check (below), loads routing, and refreshes each channel's config.
+- **`alert_engine_init`** — once, at poller startup. Resets in-memory state, runs the boot-id reboot check (below), then `_ae_load_all_config` (routing, each channel's config, the wait).
 - **`check_alerts`** — once per poll cycle, after the connectivity verdict for that cycle is known.
+
+> ⚠️ WARNING: **Config is not trusted until `jq` exists.** `/usr/bin/jq` is a symlink into `/opt`, which mounts ~30 s into boot (RM520N-GL), and every config read before that silently returns defaults. `_ae_load_all_config` therefore checks `command -v jq` first; without it, it sets `_ae_cfg_pending=1`, logs one `config load deferred` warning, and returns 1. `check_alerts` retries it at the top of every cycle and **skips the whole cycle** while it still fails, so the engine never dispatches against default routing or a default wait. The init log line carries `cfg_pending=` for this reason.
 
 The poller calls `detect_data_connection_events` immediately before `check_alerts`, so the engine reads that same cycle's `ev_link_state` (`"down"` / `"up"` / `""`). It also reads `CQ_ALERT_AFTER_MIN` (from `conn_state.sh`) and, for late reboot delivery only, `conn_internet_available`. It never probes or issues AT commands itself.
 
 ### Per-cycle flow
 
 1. **Bail on low-power.** If `/tmp/qmanager_low_power_active` exists, return immediately. There is **no** freeze during watchdog recovery any more.
-2. **Pick up reload flags.** If the CGI touched any of `qmanager_alert_routing_reload`, `qmanager_email_reload`, `qmanager_sms_reload`, `qmanager_discord_reload` in `/tmp/`, consume (delete) the flag, re-read that config, and re-resolve the wait. (`qmanager_events_reload` is consumed earlier in the cycle by the poller's `cq_thresholds_refresh`, which also re-resolves the wait.)
-3. **Read the monotonic clock.** `int($1)` from `/proc/uptime`. If unreadable, skip the cycle.
-4. **Follow the detector:**
+2. **Finish what init could not.** Retry `_ae_load_all_config` while `_ae_cfg_pending=1` (return if `jq` is still missing); classify a reboot held for the clock (`_ae_resolve_held_reboot`, see [Detection](#detection-boot-id-compare)); and trim the Discord log (`_ae_trim_discord_log`, see [Discord IPC contract](#discord-ipc-contract)).
+3. **Pick up reload flags.** If the CGI touched any of `qmanager_alert_routing_reload`, `qmanager_email_reload`, `qmanager_sms_reload`, `qmanager_discord_reload` in `/tmp/`, consume (delete) the flag, re-read that config, and re-resolve the wait. (`qmanager_events_reload` is consumed earlier in the cycle by the poller's `cq_thresholds_refresh`, which also re-resolves the wait.)
+4. **Read the monotonic clock.** `int($1)` from `/proc/uptime`. If unreadable, skip the cycle.
+5. **Follow the detector:**
    - `""` (stale/unknown) → do nothing; a running outage timer keeps running.
    - `down` and not already down → start tracking: record `_ae_down_start = now_up`, reset the SMS `connection_lost` latch, re-resolve the wait.
    - `up` and currently down → recovery: run `_ae_handle_restore`, clear the timer.
-5. **While down:** send `connection_lost` once the outage reaches the wait (once per outage, latched by `_ae_lost_sent_sms`).
-6. **Late reboot delivery:** if a reboot was detected at startup but the device came back already connected (never observed "down" by this engine — e.g. a clean user reboot with a fast reconnect), deliver the reboot alert once, here.
+6. **While down:** send `connection_lost` once the outage reaches the wait (once per outage, latched by `_ae_lost_sent_sms`).
+7. **Late reboot delivery:** if a reboot was detected at startup but the device came back already connected (never observed "down" by this engine — e.g. a clean user reboot with a fast reconnect), deliver the reboot alert once, here.
 
 ### Threshold semantics
 
@@ -287,7 +291,7 @@ Durations in message text are formatted from the monotonic elapsed seconds (`_ae
 
 ## Guardrails
 
-- **Monotonic clock only.** Durations come from `/proc/uptime`, never `date +%s`. NTP/NITZ can step the wall clock backward or forward mid-outage; a monotonic source can't produce a negative or inflated downtime. (`date +%s` *is* used for the reboot ledger's wall-clock epoch and the coalescer window — those are timestamps, not durations, and a small clock step there is harmless.)
+- **Monotonic clock only.** Durations come from `/proc/uptime`, never `date +%s`. NTP/NITZ can step the wall clock backward or forward mid-outage; a monotonic source can't produce a negative or inflated downtime. (`date +%s` *is* used for the reboot ledger's wall-clock epoch and the coalescer window — those are timestamps, not durations, and the ledger write waits for the [epoch floor](#detection-boot-id-compare).)
 - **No edge detector here.** The engine never compares `conn_internet_available` against a previous value. Two detectors could disagree about the same outage, so the feed and the channels could tell different stories. Following `ev_link_state` also inherits the detector's hold on a tier-flap repeat drop.
 - **No freeze during watchdog recovery** (removed 2026-10-11). The old freeze deferred the down SMS until the ladder finished; the down SMS is now gated by the wait alone.
 - **Freeze during low-power windows.** `/tmp/qmanager_low_power_active` suppresses all dispatch, same as the legacy per-channel timers.
@@ -308,7 +312,12 @@ On `alert_engine_init`, `_ae_init_boot_check`:
 1. Reads `/proc/sys/kernel/random/boot_id` (a fresh random UUID every boot).
 2. Compares against `/etc/qmanager/last_boot_id`.
 3. **First boot (file absent):** record the id, but **never alert.** Installs and OTA upgrades reboot the device themselves; that must not look like a crash to the user.
-4. **Id changed:** classify the cause, append to the ledger, arm `_ae_reboot_pending`, and persist the new id.
+4. **Id changed, clock set:** `_ae_record_reboot` classifies the cause, appends to the ledger, arms `_ae_reboot_pending`, and persists the new id.
+5. **Id changed, clock not set:** hold it in `_ae_boot_unresolved` and persist nothing. `_ae_resolve_held_reboot` retries every cycle and runs step 4 once the clock is sane.
+
+**The epoch floor.** "Clock set" means `date +%s` ≥ `_AE_SANE_EPOCH=1700000000` (`_ae_clock_sane`), the same floor `qmanager_sites` uses. The device has no battery RTC and boots at Jan 1970 until `ql_time_daemon` steps the clock ([scheduled-timers.md](scheduled-timers.md) § "The 1970 boot window"). Classifying before the step compared a 1970 `now` against a real crash.log epoch, so every reboot read as `unplanned` and the ledger stored a 1970 epoch.
+
+> ⚠️ WARNING: **Do not persist `last_boot_id` before classifying.** The id stays unwritten while the reboot is held so a poller restart inside the 1970 window still sees the change. With no SIM the clock never steps, so that boot's reboot is never classified, ledgered or alerted.
 
 ### The `crash.log` line contract
 
@@ -337,7 +346,7 @@ The `skip` shape was added in 2026-09 for issue #9. It is a diagnostic breadcrum
 
 ### Classification (crash.log tags)
 
-`_ae_classify_reboot` takes the newest line **whose verb field is exactly `reboot`** — not simply the last line, which may now be a `skip` — and trusts it only if the entry is within a 600-second window of now (an old breadcrumb from a previous boot must not misclassify this one):
+`_ae_classify_reboot` takes the newest line **whose verb field is exactly `reboot`** — not simply the last line, which may now be a `skip` — and trusts it only if the entry is within a 600-second window of now (an old breadcrumb from a previous boot must not misclassify this one). A **negative** age — a breadcrumb stamped after `now` — is untrusted and leaves the cause `unplanned`; it used to be clamped to 0 and read as "just now":
 
 | crash.log tag | Classified cause |
 |---------------|------------------|
@@ -396,10 +405,15 @@ The Discord daemon (`/usr/bin/qmanager_discord`) is now a **pure DM transport**.
 `discord_dispatch_message` (in `discord_alerts.sh`) is fire-and-forget:
 
 1. Verifies the daemon is running (see `da_is_running` below). If not, returns 1 — the caller logs its own `failed` entry, since nothing else will.
-2. Atomically writes `{"message":"..."}` to `/tmp/qmanager_discord_cmd` (temp file + `mv`).
-3. Returns 0 the instant the hand-off lands. It does **not** wait for delivery.
+2. **Waits for the slot.** While `/tmp/qmanager_discord_cmd` still exists, it sleeps 1 s at a time, up to `_DA_CMD_WAIT_SECS=3`. If the previous command is still unconsumed after that, it logs `previous command not consumed` and returns 1 (the caller logs the `failed` row).
+3. Atomically writes `{"message":"..."}` to `/tmp/qmanager_discord_cmd` (temp file + `mv`).
+4. Returns 0 the instant the hand-off lands. It does **not** wait for delivery.
 
 The daemon's `runCmdWatcher` goroutine polls that path on a 1s ticker: stat → read → remove → `ChannelMessageSend` to the owner DM channel → append its own NDJSON result line (`sent`/`failed`) to `/tmp/qmanager_discord_log.json`. Because the daemon logs success itself, the shell side logs *only* the "never reached the daemon" failure case (`_ae_log_discord_failed`) — otherwise a success would be double-logged.
+
+> ⚠️ WARNING: **The command file holds one message.** Two dispatches inside one daemon tick used to overwrite each other, so the first of two back-to-back alerts was lost with no log row. The bounded wait in step 2 is what prevents that; never replace it with an unconditional `mv`. The wait blocks the caller — the poller, inline — for up to 3 s.
+
+**Log trim.** The daemon only appends, so the root engine trims `/tmp/qmanager_discord_log.json` to the newest `_AE_MAX_DISCORD_LOG=100` rows. `_ae_trim_discord_log` checks the size once every `_AE_DISCORD_TRIM_EVERY=150` cycles (~10 min at ~4 s/cycle) and copies through the seeded inode (`cat tmp > log`), never `mv` ([tmp-file-ownership.md](tmp-file-ownership.md#the-alert-channel-logs)).
 
 ### `autonomous_notify` flag
 
@@ -437,6 +451,7 @@ Returns all three channels' settings, the routing matrix, the capability table, 
 ```json
 {
   "success": true,
+  "alert_after_min": 5,
   "channels": {
     "sms":     { "enabled": false, "recipient_phone": "", "threshold_minutes": 5, "configured": false },
     "email":   { "enabled": false, "sender_email": "", "recipient_email": "", "app_password_set": false,
@@ -451,11 +466,14 @@ Returns all three channels' settings, the routing matrix, the capability table, 
 }
 ```
 
-- `threshold_minutes` — the same value on all three channels: the one wait from `cq_alert_after_min`, not the channel file's own key. The response shape is unchanged so the shipped page keeps working.
+- `alert_after_min` — the one wait, from `cq_alert_after_min`. This is the field the page reads; `useAlertsForm` falls back to `channels.sms.threshold_minutes` only when an older backend omits it.
+- `threshold_minutes` — the same value on all three channels, kept so older clients keep working. It is not the channel file's own key.
 - `configured` — per channel, whether it has everything needed to send (SMS: phone set; email: sender + recipient + password stored; Discord: owner id + token stored).
 - `msmtp_installed` — whether the `msmtp` mailer binary is present.
-- `connected` — Discord daemon reachable / logged in (read from `/tmp/qmanager_discord_status.json`).
+- `connected` — `true` only when `/tmp/qmanager_discord_status.json` says `"connected": true` **and** its mtime is under `DISCORD_STATUS_MAX_AGE=90` s old. The daemon rewrites the file every 30 s; a crashed daemon leaves its last `true` behind, which used to read as connected forever. A negative age (mtime ahead of the clock, e.g. across the boot clock step) also reads `false`.
 - `reboots` — newest-first, capped 10 (read-only mirror of the ledger).
+
+The handler reads each channel config with one `jq` (`cfg_json`, which yields `{}` when the file is absent or unparseable) instead of one per field, and derives `configured` inside the final response `jq`. Measured on RM520N-GL: 14 → 8 `jq` forks per `GET`, 329 → 260 ms.
 
 ### `POST` — dispatched on `action`
 
@@ -464,22 +482,42 @@ Returns all three channels' settings, the routing matrix, the capability table, 
 | `save_settings` | Persist all three channel configs + routing, atomically. |
 | `send_test` | `{channel}` — send a real test alert through that channel's live transport. |
 | `get_log` | Merged NDJSON log across all three channels, newest first, cap 100. |
-| `install_msmtp` | Background `opkg` install of the `msmtp` mailer (optional email dependency). |
+| `install_msmtp` | Background `opkg` install of the `msmtp` mailer (optional email dependency). The CGI writes the background job's PID (`$!`) to `/tmp/qmanager_msmtp_install.pid`; it used to write `$$` from inside the subshell, which is the CGI's own PID, so the already-running guard never matched a live install. |
 | `install_status` | Poll `install_msmtp` progress. |
 
 **`save_settings`** validates everything up front, then writes each config atomically (temp + `mv`):
 
 - Booleans (`sms.enabled` etc.) must be literal `true`/`false`.
-- `threshold_minutes` per channel: integer 1–1440; an omitted one defaults to the current wait. The three fields now set **one** value: the last of SMS, email, Discord (in that order) that differs from the current wait wins, so an unchanged field never overwrites an edited one. That value is merge-written to `quality_thresholds.json` `.alert_after_min` (`cq_quality_merge`; failure → `write_failed`) **before** the channel files, and then written as `threshold_minutes` into all three channel files.
+- **The wait.** A top-level `alert_after_min` wins: when present and non-null it must be an integer 1–1440 with no leading zero (`invalid_threshold` otherwise) and becomes the new wait. Without it (older clients), the per-channel `threshold_minutes` set the wait: each is validated the same way, an **omitted one means the current wait**, and the last of SMS, email, Discord that differs from the current wait wins. Either way the value is merge-written to `quality_thresholds.json` `.alert_after_min` (`cq_quality_merge`; failure → `write_failed`) **before** the channel files, then written as `threshold_minutes` into all three channel files.
+
+  The page sends `alert_after_min` **only when the user edited the wait** and never sends a per-channel `threshold_minutes`. That is the fix for the stale-wait bug: the old page posted all three per-channel values from its form, so a form seeded before another tab or the Connection Quality page changed the wait wrote the old value back on an unrelated save.
 - SMS phone (when enabled): 7–15 digits, optional leading `+`, must start with a country code (not `0`).
 - Email (when enabled): valid sender + recipient addresses; **control-character gate first** (a newline in any field templated into `msmtprc` would inject arbitrary msmtp directives — config-injection defense); a password is required only when `app_password_set` is not already `true`. The gate can check only a *newly typed* password — an already-stored one was validated by the helper when it was set, and this process can no longer read it. `qmanager_secret_set` re-validates the password and `sender_email` itself before templating, so nothing reaches `msmtprc` unchecked.
 - Discord (when enabled): numeric snowflake owner id (15–25 digits); a bot token is required only when `token_set` is not already `true`.
 - **Marker carry-forward (replaces the old secret preservation):** the CGI can no longer read a stored secret, so an omitted/empty `app_password` or `bot_token` carries the existing `*_set` marker forward and leaves the credential untouched at its root-only path. The client still sends a secret only when the user typed a new one; the error slugs (`missing_app_password` / `missing_bot_token`) are unchanged so the frontend's handling and i18n still fire.
 - **Routing clamp:** the submitted routing is merged over the default (`$def * $usr`), then `connection_lost.email` and `connection_lost.discord` are hard-set to `false` — server-authoritative, mirroring `_ae_capable`.
-- **Discord service state:** enabling restarts `qmanager_discord` (a *restart*, not start — the daemon caches token/owner/DM-channel in memory at startup); disabling stops it.
+- **Discord service state.** The daemon caches token, owner and DM channel in memory at startup, so a *restart* (not start) is what picks up a change — but only when one is needed. With Discord enabled, `svc_enable qmanager_discord` always runs; `svc_restart` runs only if Discord was previously disabled, the owner id changed, a new token was stored this save, or `svc_is_running` says the daemon is down. An unrelated save (an SMS number, a routing tick) leaves the bot connected; the old code restarted it on every save, dropping its Gateway session each time. With Discord disabled, the CGI runs `svc_stop` then `svc_disable` (a disable failure is only logged).
+- **Restart failure is reported, after the save.** If `svc_restart` fails, every config is already written and the reload flags touched; the response is then `{ "success": false, "error": "service_restart_failed", "detail": "Discord alert settings were saved, but the Discord service could not be restarted" }`. It takes precedence over `service_enable_failed`. Because a failed response can still mean "saved", `useAlerts.saveSettings` re-reads the state (`fetchState(true)`) on every failed save.
 - **Reload signalling:** touches the four alert reload flags (`sms`, `email`, `discord`, `routing`) plus `/tmp/qmanager_events_reload`, so the poller picks up the new config and wait on its next cycle.
 
 **Error shape** (all failures): `{ "success": false, "error": "<code>", "detail"?: "<human message>" }`.
+
+**`get_log`** runs a single `jq` over whichever of the three logs is non-empty (the whole request went from 6 `jq` forks to 2, counting the `action` parse):
+
+```sh
+jq -R -n -c --arg sms "$SMS_LOG" --arg email "$EMAIL_LOG" '
+    [inputs | input_filename as $f
+     | (fromjson? | select(type == "object")
+        | . + {channel: (if $f == $sms then "sms" elif $f == $email then "email" else "discord" end)})]
+    | {success: true, entries: (sort_by(.timestamp) | reverse | .[0:100]), total: length}' "$@"
+```
+
+- `-R` + `fromjson?` drops a torn line instead of aborting the whole read. The logs are written in place without rename-atomicity ([tmp-file-ownership.md](tmp-file-ownership.md)), so a half-written row is possible.
+- The channel is derived from `input_filename`, so a row never carries its own `channel` key on disk.
+- `timestamp` is a local `"YYYY-MM-DD HH:MM:SS"` string, so a 1970-stamped row sorts oldest and never displaces a real row from the cap.
+- No logs, or a `jq` failure, returns `{"success":true,"entries":[],"total":0}`.
+
+**Log `trigger` values.** An engine row carries the event key (`connection_lost`, `connection_restored`, `reboot`). Every test send — SMS and email from their libraries, the CGI's own SMS and Discord-failure rows — logs `"trigger": "test"` (it used to log free text such as `"Test SMS"`). The Discord daemon logs its own success and failure rows as `"alert"`. `alerts-log-card.tsx` names the three event keys plus `test` and `alert` (`TRIGGER_KEY` → `alerts.activity.trigger.*`) and prints anything else verbatim.
 
 ### Email save & msmtp
 
@@ -488,13 +526,15 @@ The CGI no longer renders `msmtprc` itself — it has no `MSMTP_CONFIG` constant
 1. Writes `email_alerts.json` **first**, carrying the existing `app_password_set` marker forward. Ordering matters: the helper reads `sender_email` out of this file to render `msmtprc`, and it owns the marker — writing the JSON afterwards would clobber whatever the helper just set.
 2. Calls `qmanager_secret_set set email_app_password` (value piped on stdin) when the user typed a new password, or `qmanager_secret_set refresh email_app_password` when they did not — a `sender_email` change alone still has to be re-templated into `msmtprc`.
 
-The helper renders `/etc/qmanager-secrets/msmtprc` for `smtp.gmail.com:587` STARTTLS, `0600 root:root`, from a temp file that carries the final mode and owner *before* the rename, then removes any pre-relocation copy at `/etc/qmanager/msmtprc`.
+The helper renders `/etc/qmanager-secrets/msmtprc` for `smtp.gmail.com:587` STARTTLS with `timeout 30` in its `defaults` block, `0600 root:root`, from a temp file that carries the final mode and owner *before* the rename, then removes any pre-relocation copy at `/etc/qmanager/msmtprc`.
 
 The Discord token is stored the same way (`qmanager_secret_set set discord_bot_token`), and — importantly — **before** the `qmanager-discord` service restart further down, because the daemon reads the secret file at startup. Storing after the restart would race the daemon against a token that is not on disk yet.
 
 A helper failure surfaces as a normal `cgi_error`, reusing the helper's own slug and detail. A save that *looks* successful but silently did not store the credential is worse than a visible error.
 
 > ℹ️ NOTE: `msmtprc` must still never contain a `logfile` directive — msmtp returns `rc=1` if it cannot write its log, even when the mail was sent.
+
+> ℹ️ NOTE: **`timeout 30` caps how long an email send can block the poller.** The engine dispatches inline, so an unreachable SMTP server used to stall the poll cycle for msmtp's default network timeout. The directive lands only when `msmtprc` is next rendered: on the next Alerts save, since every `save_settings` runs `set` or `refresh`. An OTA does not re-render it.
 
 ### `send_test` per channel
 
@@ -506,20 +546,46 @@ A helper failure surfaces as a normal `cgi_error`, reusing the helper's own slug
 
 ## Frontend anatomy
 
-Page: `/monitoring/alerts` — `components/monitoring/alerts/alerts.tsx`. Two hooks, one type contract (`types/alerts.ts`):
+Page: `/monitoring/alerts` — `components/monitoring/alerts/alerts.tsx`. Re-authored 2026-10-12 onto the compact bento used by Latency Monitor, Watchdog and Network Events. Two hooks, one type contract (`types/alerts.ts`):
 
-- **`useAlerts`** (`hooks/use-alerts.ts`) — the whole settings surface: fetches the combined `{channels, routing, capabilities, reboots}`, saves it in one atomic POST, runs per-channel tests, and drives the msmtp install lifecycle. Exposes `saveSettings`, `sendTest`, `runInstall`, `refresh`.
+- **`useAlerts`** (`hooks/use-alerts.ts`) — the whole settings surface: fetches `{alert_after_min, channels, routing, capabilities, reboots}`, saves it in one atomic POST, runs per-channel tests, and drives the msmtp install lifecycle. Exposes `saveSettings`, `sendTest`, `runInstall`, `refresh`.
 - **`useAlertsLog`** (`hooks/use-alerts-log.ts`) — the merged activity log (`get_log`).
 
-Components: `alerts-settings-card.tsx` (per-channel config), `alert-routing-grid.tsx` (the event × channel matrix — renders capability from the API, never hard-coding which cells are possible; incapable cells render disabled with the reason tooltip), `alerts-status-card.tsx`, `alerts-log-card.tsx`, plus `use-alerts-form.ts` (form state) and `constants.tsx`.
+> ⚠️ WARNING: **`useAlerts().error` is load failures only.** `saveSettings` and `sendTest` no longer set it; each returns `{ ok, error }`, and the caller toasts from that result ([toast-confirmation.md](toast-confirmation.md)). The page passes `error` to the Coverage card as "the last read failed": with state in hand it adds a "Showing the settings we last read from the device" notice, and with none it renders the read-failure block. A failed save or test that wrote `error` would put that notice over correct data. Keep mutation failures out of it.
 
-> ℹ️ NOTE: The UI **renders** capability from the API `capabilities` block; it never hard-codes which `(event, channel)` cells are possible. A future capability change is a backend-only edit.
+### Layout
+
+Header (title, one **Refresh** that reloads both the settings and the log), then one bento (`BENTO` / `BENTO_AREA` in `shapes.ts`): **Coverage** over **Channels** on the left (`3fr`), **Activity** spanning both rows on the right (`2fr`), stacked below `@5xl/main`.
+
+| File | Role |
+|------|------|
+| `alerts.tsx` | Page shell, bento, the shared Refresh; `isComplete` stops a partial payload before `useAlertsForm` reads it |
+| `coverage-card.tsx` | `AlertsCoverageCard` — three receipt rows (`COVERAGE_ROW`), one per event, listing the channels that will deliver and the ones that will try and fail; one verdict `Badge` in the header (`all` success, `outage` / `partial` warning, `none` destructive) |
+| `alerts-settings-card.tsx` | `AlertsSettingsCard` — the **Wait before alerting** row (`WaitRow`), the channel rail, one channel's panel (Off/On `SegmentedField`, **Sends for** event ticks, then its fields), and one `CardFoot` holding the selected channel's test button, **Discard** (while dirty) and **Save** for all three channels |
+| `channel-field.tsx` | `ChannelPanelHead`, `ChannelField`, `ChannelSecretField`, `ChannelNotice` |
+| `channel-rail.tsx` | `ChannelRail` — the three-pill channel tabs, each with a saved-status dot |
+| `alerts-log-card.tsx` | `AlertsLogCard` — alert sends and reboots merged into day blocks; the list scrolls inside the card past `LOG_SCROLL`'s `max-h-[min(36rem,70svh)]` |
+| `activity-row.tsx` | `ActivityRow` — the 52px log row |
+| `derive.ts` | `deriveCoverage` — the page's one derived model (cells, channel status, rows, verdict) from saved state |
+| `shapes.ts` | Every class string, tone map and geometry constant for the family |
+| `use-alerts-form.ts` | `useAlertsForm` — the draft, validation, `isDirty`, `buildPayload` |
+| `constants.tsx` | Channel and event glyphs, i18n key helpers, `isEventKey` |
+
+Removed 2026-10-12, do not restore: `alerts-status-card.tsx` (the three-tile status band, which repeated what Coverage already says), `alert-routing-grid.tsx` (the editable 3×3 matrix — routing is now each panel's **Sends for** ticks), `coverage-model.ts` (the draft-versus-saved split that let Coverage preview a draft) and `coverage-labels.tsx` (the matrix cells' tone and glyph maps).
+
+> ℹ️ NOTE: **Coverage is saved truth only.** It derives from `confirmedInput(state)`, never from the draft, so editing a channel does not move it until Save lands. The channel rail's dots read the same saved model, except that a channel whose draft blocks Save (`blockedChannelMap`) shows as incomplete.
+
+> ℹ️ NOTE: The UI **renders** capability from the API `capabilities` block; it never hard-codes which `(event, channel)` pairs are possible. An incapable pair shows as a plain row with its reason (`alerts.coverage.reason.*`, via `reasonKey`) instead of a tick. A future capability change is a backend-only edit.
+
+### The one wait
+
+`WaitRow` edits the single wait (`form.threshold`, validated 1–1440 to match the CGI). `buildPayload` adds a top-level `alert_after_min` **only when the field differs from the saved wait** and never sends a per-channel `threshold_minutes`, so a form that loaded before the wait changed elsewhere cannot write the old value back. The saved wait is `state.alert_after_min`, falling back to `channels.sms.threshold_minutes` for an older backend (`savedWait`).
 
 ### Form re-seeding, and why the secret inputs are cleared on save
 
 `useAlertsForm` mirrors server truth into local `useState` and re-seeds itself **in place** when that truth changes, via a render-phase sync on a value fingerprint (`settingsSignature` in `use-alerts-form.ts`, which calls the hook's own `discard()`). The page used to force the same re-seed by putting a React `key` on `AlertsBody` — that remounted the whole body on every save, which also destroyed the "Saved!" flash, the active settings tab, the show-password / show-token toggles, keyboard focus, and the log card's fetch state. The key is gone; nothing on this page remounts on save. Full reasoning: [dashboard-state-motion.md](dashboard-state-motion.md) > Part 3.
 
-> ⚠️ WARNING: **`alerts-settings-card.tsx` must clear `app_password` and `bot_token` after a successful save**, and this is load-bearing rather than cosmetic. Because `GET` never returns secrets — only `app_password_set` / `token_set` booleans — a **rotation** (an already-set secret replaced with a new one) moves those booleans `true → true` and is therefore invisible to `settingsSignature`. Without the explicit clear, the typed secret stays in the input, `isDirty` (true whenever either secret field is non-empty) never settles, and the Save button stays enabled forever after a successful save. This bug shipped in production: the *first* password a user ever set worked only by accident, because `app_password_set` flipped `false → true` and the old key remounted the field away.
+> ⚠️ WARNING: **`alerts-settings-card.tsx` must clear `app_password` and `bot_token` after a successful save** (`handleSave` calls `form.setAppPassword("")` and `form.setBotToken("")` before `markSaved`), and this is required, not cosmetic. Because `GET` never returns secrets — only `app_password_set` / `token_set` booleans — a **rotation** (an already-set secret replaced with a new one) moves those booleans `true → true` and is therefore invisible to `settingsSignature`. Without the explicit clear, the typed secret stays in the input, `isDirty` (true whenever either secret field is non-blank) never settles, and the Save button stays enabled forever after a successful save. This bug shipped in production: the *first* password a user ever set worked only by accident, because `app_password_set` flipped `false → true` and the old key remounted the field away.
 
 ### Legacy page redirects
 
@@ -550,6 +616,19 @@ The alert engine *reads* the link verdict indirectly (via `ev_link_state` from `
 
 ---
 
+## Known gaps
+
+Found by the 2026-10-12 backend audit and deliberately left for a later change:
+
+- **The Discord command file is single-slot.** `qmanager_discord` reads one `/tmp/qmanager_discord_cmd` per tick; the shell's 3 s [bounded wait](#command-file-tmpqmanager_discord_cmd) avoids overwrites, but drops the message (logged `failed`) whenever the daemon has not taken the previous one within 3 s. A spool directory in the daemon (`discord-bot/`) is the real fix.
+- **The daemon logs every row as `"alert"`.** `appendDiscordLog("alert", …)` in `discord-bot/main.go` does not know which event it sent, so Discord rows in Activity read as a generic alert, and a Discord test success reads as an alert, not a test.
+- **The Discord bot can stay down after a no-internet boot.** A failed `s.Open` is `log.Fatalf` in the daemon, and `qmanager-discord.service` restarts every 10 s with `StartLimitBurst=5` / `StartLimitIntervalSec=3600`, so a boot without internet trips the start limit in ~50 s. The bot then stays down: the save path never calls `svc_reset_failed`, so an Alerts save's restart is refused (`service_restart_failed`) until the hour-long window passes.
+- **Dispatch is inline in the poller and only time-capped.** An SMS, email or Discord send blocks the poll cycle; only email has an explicit cap (`timeout 30` in `msmtprc`) and Discord's hand-off waits up to 3 s.
+- **CGI error slugs are not mapped to `t()`.** A failed save or test toasts the CGI's English `detail` in every language.
+- **Discord owner-ID length disagrees.** The form accepts 17–20 digits (`DISCORD_ID_REGEX` in `use-alerts-form.ts`); the CGI accepts 15–25. The CGI is the authority.
+
+---
+
 ## Related docs
 
 - Connection Watchdog — the recovery ladder that writes `tier4_escalation` reboot breadcrumbs, and the third `crash.log` reader — [connection-watchdog.md](connection-watchdog.md)
@@ -558,5 +637,5 @@ The alert engine *reads* the link verdict indirectly (via `ev_link_state` from `
 - Discord bot internals (daemon lifecycle, DM channel resolution, OAuth) — [discord-bot.md](discord-bot.md)
 - AT command transport (`sms_tool`, `flock` serialization for the SMS channel) — [at-command-transport.md](at-command-transport.md)
 - QManager independence (email/SMS alert install, msmtp, poller PATH, sudoers) — [qmanager-independence.md](qmanager-independence.md)
-- `/tmp` cross-UID ownership rules (why every writer of `/tmp/qmanager_email_log.json` is now root) — [tmp-file-ownership.md](tmp-file-ownership.md)
+- `/tmp` cross-UID ownership rules (why the SMS and Discord logs are seeded and every writer of `/tmp/qmanager_email_log.json` is root) — [tmp-file-ownership.md](tmp-file-ownership.md#the-alert-channel-logs)
 - Platform architecture, poller, boot sequence — `../rm520n-gl-architecture.md`

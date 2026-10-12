@@ -117,21 +117,27 @@ chmod 666 /tmp/qmanager_at.lock /tmp/qmanager_at.pid
 # since tower_write_begin sends stderr to /dev/null. The loser then stops
 # marking its AT writes as in-flight, and the watcher can read the reconnect
 # blip as a genuine bad sample: the exact race the marker exists to prevent.
+#
+# The SMS and Discord alert logs are appended by root (poller, engine, daemon) and by
+# www-data (the CGI test-send paths); the email log is root-only and stays unseeded.
 touch /tmp/qmanager.log \
       /tmp/qmanager_profile_apply.pid /tmp/qmanager_profile_state.json \
       /tmp/qmanager_events.json /tmp/qmanager_tower_write_inflight \
       /tmp/qmanager_dpi_install.json /tmp/qmanager_dpi_install.pid \
-      /tmp/qmanager_dpi_verify.json /tmp/qmanager_dpi_verify.pid
+      /tmp/qmanager_dpi_verify.json /tmp/qmanager_dpi_verify.pid \
+      /tmp/qmanager_sms_log.json /tmp/qmanager_discord_log.json
 chown root:root /tmp/qmanager.log \
       /tmp/qmanager_profile_apply.pid /tmp/qmanager_profile_state.json \
       /tmp/qmanager_events.json /tmp/qmanager_tower_write_inflight \
       /tmp/qmanager_dpi_install.json /tmp/qmanager_dpi_install.pid \
-      /tmp/qmanager_dpi_verify.json /tmp/qmanager_dpi_verify.pid
+      /tmp/qmanager_dpi_verify.json /tmp/qmanager_dpi_verify.pid \
+      /tmp/qmanager_sms_log.json /tmp/qmanager_discord_log.json
 chmod 666 /tmp/qmanager.log \
       /tmp/qmanager_profile_apply.pid /tmp/qmanager_profile_state.json \
       /tmp/qmanager_events.json /tmp/qmanager_tower_write_inflight \
       /tmp/qmanager_dpi_install.json /tmp/qmanager_dpi_install.pid \
-      /tmp/qmanager_dpi_verify.json /tmp/qmanager_dpi_verify.pid
+      /tmp/qmanager_dpi_verify.json /tmp/qmanager_dpi_verify.pid \
+      /tmp/qmanager_sms_log.json /tmp/qmanager_discord_log.json
 
 # Session directory — www-data needs write access (cleared on reboot since /tmp is tmpfs)
 mkdir -p /tmp/qmanager_sessions

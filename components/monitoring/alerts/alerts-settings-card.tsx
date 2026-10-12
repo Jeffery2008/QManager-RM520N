@@ -1,21 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   AlertCircleIcon,
-  CheckCircle2Icon,
   DownloadIcon,
   ExternalLinkIcon,
   Loader2Icon,
-  RefreshCcwIcon,
   MinusCircleIcon,
+  RefreshCcwIcon,
   SendIcon,
   TriangleAlertIcon,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,41 +24,51 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CardFoot } from "@/components/ui/card-foot";
+import { Checkbox } from "@/components/ui/checkbox";
+import { HintIcon } from "@/components/ui/hint-icon";
+import { Input } from "@/components/ui/input";
 import { SaveButton } from "@/components/ui/save-button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { transitionStandard } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { UseAlertsReturn } from "@/hooks/use-alerts";
-import type { AlertChannel, AlertsState } from "@/types/alerts";
-import { ALERT_CHANNEL_ORDER } from "@/types/alerts";
+import {
+  ALERT_CHANNEL_ORDER,
+  ALERT_EVENT_ORDER,
+  type AlertChannel,
+  type AlertsState,
+} from "@/types/alerts";
 
 import {
   ChannelField,
   ChannelNotice,
+  ChannelPanelHead,
   ChannelSecretField,
-  ChannelSwitchRow,
 } from "./channel-field";
 import { ChannelRail, panelId, tabId, type ChannelRailItem } from "./channel-rail";
-import { maskDiscordId, maskEmail, maskPhone } from "./constants";
-import { deriveCoverage } from "./derive";
+import { eventNameKey, reasonKey } from "./constants";
+import { confirmedInput, deriveCoverage, readCapability } from "./derive";
 import {
   CARD_DESC,
-  CARD_FILL,
-  CARD_FILL_REGION,
-  CARD_HEAD,
   CARD_PAD,
   CARD_SHELL,
   CARD_TITLE,
   CONDITION,
   CONDITION_TONE,
+  CROSSFADE_STACK,
   FIELD,
   FOOT,
+  PANEL,
   RAIL,
   SKELETON,
+  TICK_ROW,
+  WAIT_ROW,
   type ConditionTone,
 } from "./shapes";
-import { blockedChannelMap, type AlertsForm } from "./use-alerts-form";
+import { blockedChannelMap, useAlertsForm, type AlertsForm } from "./use-alerts-form";
 
 const ID_BASE = "alert-channel";
+const WAIT_ID = "alert-wait";
 
 /** What went wrong last, and where it belongs on screen. */
 type ActionFault =
@@ -67,44 +76,24 @@ type ActionFault =
   | { scope: "test"; channel: AlertChannel; message: string };
 
 export interface AlertsSettingsCardProps {
-  form: AlertsForm;
   state: AlertsState;
   hook: UseAlertsReturn;
-  /** Bumped after a successful test so the activity card silently refreshes. */
+  /** Called after a test so the activity card silently refreshes. */
   onTested: () => void;
 }
 
 // -----------------------------------------------------------------------------
-// AlertsSettingsCard — the three-channel write surface. Routing lives on the
-// coverage hero; this card owns transports, credentials and one atomic Save.
+// The three-channel write surface: the one wait, the rail, one channel's panel
+// (switch, the events it sends, its fields) and ONE atomic Save in the foot.
 // -----------------------------------------------------------------------------
-export function AlertsSettingsCard({
-  form,
-  state,
-  hook,
-  onTested,
-}: AlertsSettingsCardProps) {
+export function AlertsSettingsCard({ state, hook, onTested }: AlertsSettingsCardProps) {
   const { t } = useTranslation("common");
+  const form = useAlertsForm({ state, isSaving: hook.isSaving });
   const [channel, setChannel] = useState<AlertChannel>("sms");
   const [fault, setFault] = useState<ActionFault | null>(null);
-  const [tested, setTested] = useState<AlertChannel | null>(null);
 
   // The rail reports SAVED truth, never the half-edited form (State-Honesty).
-  const coverage = useMemo(
-    () =>
-      deriveCoverage({
-        channels: state.channels,
-        routing: state.routing?.events ?? ({} as AlertsState["routing"]["events"]),
-        capabilities: state.capabilities,
-      }),
-    [state],
-  );
-
-  const channelsUsable =
-    !!state.channels?.sms && !!state.channels?.email && !!state.channels?.discord;
-
-  // Per-channel form faults, shared with the coverage hero so the two surfaces
-  // cannot disagree about which channel is holding the save back.
+  const coverage = useMemo(() => deriveCoverage(confirmedInput(state)), [state]);
   const channelBlocked = blockedChannelMap(form);
 
   const channelName: Record<AlertChannel, string> = {
@@ -113,14 +102,13 @@ export function AlertsSettingsCard({
     discord: t("alerts.channels.name.discord"),
   };
 
-  // A channel holding an unsaved fault borrows `incomplete`, so the dot asks for
-  // attention from a tab you are not standing on. No new tone is invented.
   const railItems: ChannelRailItem[] = ALERT_CHANNEL_ORDER.map((ch) => ({
     channel: ch,
     label: channelName[ch],
     status: channelBlocked[ch] ? "incomplete" : coverage.channels[ch].status,
+    // A saved-but-incomplete channel is "needs setup" until the user edits something.
     statusLabel: channelBlocked[ch]
-      ? t("alerts.channels.status.needs_fixing")
+      ? t(form.isDirty ? "alerts.channels.status.needs_fixing" : "alerts.channels.status.incomplete")
       : t(`alerts.channels.status.${coverage.channels[ch].status}`),
   }));
 
@@ -128,11 +116,9 @@ export function AlertsSettingsCard({
     (ch) => channelName[ch],
   );
 
-  // ── Save ───────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (form.blocked) return;
     setFault(null);
-    setTested(null);
     const result = await hook.saveSettings(form.buildPayload());
     if (!result.ok) {
       const message = result.error || t("alerts.channels.save.failed");
@@ -140,21 +126,18 @@ export function AlertsSettingsCard({
       toast.error(message);
       return;
     }
-    // Load-bearing: GET never returns a secret, so a rotation moves no value the
-    // form watches. Clearing here is what lets `isDirty` settle after a save.
+    // GET never returns a secret, so a rotation moves no watched value: clearing is what settles `isDirty`.
     form.setAppPassword("");
     form.setBotToken("");
     form.markSaved();
     toast.success(t("alerts.channels.save.succeeded"));
   };
 
-  // ── Test (runs against SAVED config on the device) ─────────────────────────
+  // Runs against the SAVED config on the device.
   const handleTest = async (ch: AlertChannel) => {
     setFault(null);
-    setTested(null);
     const result = await hook.sendTest(ch);
     if (result.ok) {
-      setTested(ch);
       toast.success(t("alerts.channels.test.succeeded", { channel: channelName[ch] }));
     } else {
       const message = result.error || t("alerts.channels.test.failed");
@@ -178,200 +161,288 @@ export function AlertsSettingsCard({
     return null;
   };
 
-  // Guarded: a partial payload reaches this line before the condition below.
-  const testRecipient: Record<AlertChannel, string> = {
-    sms: maskPhone(state.channels?.sms?.recipient_phone ?? ""),
-    email: maskEmail(state.channels?.email?.recipient_email ?? ""),
-    discord: maskDiscordId(state.channels?.discord?.owner_discord_id ?? ""),
-  };
+  const blockedText =
+    blockedNames.length > 0
+      ? t("alerts.channels.save.blocked_in", { channels: blockedNames.join(", ") })
+      : t("alerts.channels.save.blocked");
+  // Only while dirty: a disabled Save takes no pointer events, so a reason there is unreachable.
+  const saveBlockedReason = form.isDirty && form.blocked ? blockedText : null;
 
-  // Only while dirty: a not-dirty Save is `disabled`, and a disabled button
-  // takes no pointer events, so a reason attached there would be unreachable.
-  const saveBlockedReason =
-    form.isDirty && form.blocked
-      ? blockedNames.length > 0
-        ? t("alerts.channels.save.blocked_in", {
-            channels: blockedNames.join(", "),
-          })
-        : t("alerts.channels.save.blocked")
+  const testReason = testBlockedReason(channel);
+  const testing = hook.testingChannel === channel;
+  const visibleFault =
+    fault?.scope === "save" || (fault?.scope === "test" && fault.channel === channel)
+      ? fault.message
       : null;
 
   return (
-    <Card className={cn(CARD_SHELL, CARD_FILL)}>
-      <CardHeader className={CARD_PAD}>
-        <div className={CARD_HEAD}>
-          <div className="min-w-0 space-y-1">
-            <CardTitle className={CARD_TITLE}>
-              {t("alerts.channels.title")}
-            </CardTitle>
-            <CardDescription className={CARD_DESC}>
-              {t("alerts.channels.description")}
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
+    <Card className={CARD_SHELL}>
+      <ChannelsHeader />
 
-      <CardContent className={cn(CARD_PAD, "flex min-h-0 flex-1 flex-col gap-5")}>
-        {!channelsUsable ? (
-          <ChannelsCondition
-            tone={hook.error ? "destructive" : "muted"}
-            title={
-              hook.error
-                ? t("alerts.channels.error.title")
-                : t("alerts.channels.empty.title")
-            }
-            description={
-              hook.error
-                ? hook.error
-                : t("alerts.channels.empty.description")
-            }
-            actionLabel={hook.error ? t("alerts.channels.error.retry") : undefined}
-            onAction={hook.error ? hook.refresh : undefined}
-          />
-        ) : (
-          <>
-            <ChannelRail
-              label={t("alerts.channels.rail_label")}
-              items={railItems}
-              value={channel}
-              onValueChange={setChannel}
-              idBase={ID_BASE}
-            />
+      <CardContent className={cn(CARD_PAD, "flex flex-col gap-5")}>
+        <WaitRow form={form} />
 
-            {/* THE FILL REGION. Everything above and below it is content-height,
-                so this is the one place the pair's slack can land. */}
-            {/* No entrance keyframe: a panel that is invisible until a frame
-                runs is not correct at rest. The rail pill's fill carries the
-                swap instead. */}
-            <div
+        <ChannelRail
+          label={t("alerts.channels.rail_label")}
+          items={railItems}
+          value={channel}
+          onValueChange={setChannel}
+          idBase={ID_BASE}
+        />
+
+        {/* Outgoing and incoming panels share one grid cell, so the crossfade shifts nothing. */}
+        <div className={CROSSFADE_STACK}>
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={channel}
               role="tabpanel"
               id={panelId(ID_BASE, channel)}
               aria-labelledby={tabId(ID_BASE, channel)}
-              className={cn(CARD_FILL_REGION, "flex flex-col gap-5")}
+              className={PANEL.ROOT}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={transitionStandard}
             >
-              {channel === "sms" ? (
-                <SmsPanel form={form} />
-              ) : channel === "email" ? (
-                <EmailPanel form={form} state={state} hook={hook} />
-              ) : (
-                <DiscordPanel form={form} />
-              )}
+              <div className={PANEL.COL}>
+                <ChannelPanelHead
+                  title={t(`alerts.channels.${channel}.title`)}
+                  description={t(`alerts.channels.${channel}.sub`)}
+                  checked={enabledOf(form, channel)}
+                  onCheckedChange={(v) => setEnabled(form, channel, v)}
+                />
+                <SendsFor form={form} state={state} channel={channel} />
+              </div>
+              <div className={PANEL.COL}>
+                {channel === "sms" ? (
+                  <SmsFields form={form} />
+                ) : channel === "email" ? (
+                  <EmailFields form={form} state={state} hook={hook} />
+                ) : (
+                  <DiscordFields form={form} />
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
-              <TestAction
-                label={t(`alerts.channels.${channel}.test`)}
-                blockedReason={testBlockedReason(channel)}
-                isSending={hook.testingChannel === channel}
-                sendingLabel={t("alerts.channels.test.sending")}
-                sentLabel={t("alerts.channels.test.sent")}
-                sentTo={tested === channel ? testRecipient[channel] : null}
-                fault={
-                  fault?.scope === "test" && fault.channel === channel
-                    ? fault.message
-                    : null
-                }
-                onSend={() => handleTest(channel)}
-              />
-            </div>
-
-            {fault?.scope === "save" ? (
-              <ChannelNotice tone="destructive" icon={AlertCircleIcon} live>
-                {fault.message}
-              </ChannelNotice>
-            ) : null}
-          </>
-        )}
+        {visibleFault ? (
+          <ChannelNotice tone="destructive" icon={AlertCircleIcon} live>
+            {visibleFault}
+          </ChannelNotice>
+        ) : null}
       </CardContent>
 
-      {/* No foot on the empty/error condition: there is no draft to commit. */}
-      {channelsUsable ? (
-        <CardFoot
-          className={CARD_PAD}
-          status={
-            <SaveStatus
-              isDirty={form.isDirty}
-              blocked={form.blocked}
-              blockedNames={blockedNames}
-            />
-          }
-          actions={
-            <>
+      <CardFoot
+        className={CARD_PAD}
+        status={
+          <SaveStatus
+            isDirty={form.isDirty}
+            blocked={form.blocked}
+            blockedText={blockedText}
+            idleText={testing ? null : testReason}
+          />
+        }
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="tonal-neutral"
+              size="action"
+              disabled={!!testReason || testing}
+              onClick={() => handleTest(channel)}
+            >
+              {testing ? (
+                <>
+                  <Loader2Icon className="size-4 motion-safe:animate-spin" aria-hidden />
+                  {t("alerts.channels.test.sending")}
+                </>
+              ) : (
+                <>
+                  <SendIcon className="size-4" aria-hidden />
+                  {t(`alerts.channels.${channel}.test`)}
+                </>
+              )}
+            </Button>
+            {form.isDirty ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="action"
                 className="text-on-surface-variant"
                 onClick={form.discard}
-                disabled={!form.isDirty || form.isSaving}
+                disabled={form.isSaving}
               >
                 {t("alerts.channels.save.discard")}
               </Button>
-              <SaveButton
-                type="button"
-                size="action"
-                label={t("alerts.channels.save.action")}
-                isSaving={form.isSaving}
-                saved={form.saved}
-                blockedReason={saveBlockedReason}
-                disabled={!form.isDirty || form.isSaving}
-                onClick={handleSave}
-              />
-            </>
-          }
-        />
-      ) : null}
+            ) : null}
+            <SaveButton
+              type="button"
+              size="action"
+              label={t("alerts.channels.save.action")}
+              isSaving={form.isSaving}
+              saved={form.saved}
+              blockedReason={saveBlockedReason}
+              disabled={!form.isDirty || form.isSaving}
+              onClick={handleSave}
+            />
+          </>
+        }
+      />
     </Card>
   );
 }
 
-// -----------------------------------------------------------------------------
-// Panels
-// -----------------------------------------------------------------------------
-function SmsPanel({ form }: { form: AlertsForm }) {
+function ChannelsHeader() {
   const { t } = useTranslation("common");
-  const on = form.smsEnabled;
+  return (
+    <CardHeader className={CARD_PAD}>
+      <CardTitle className={CARD_TITLE}>{t("alerts.channels.title")}</CardTitle>
+      <CardDescription className={CARD_DESC}>
+        {t("alerts.channels.description")}
+      </CardDescription>
+    </CardHeader>
+  );
+}
+
+function enabledOf(form: AlertsForm, channel: AlertChannel): boolean {
+  if (channel === "sms") return form.smsEnabled;
+  if (channel === "email") return form.emailEnabled;
+  return form.discordEnabled;
+}
+
+function setEnabled(form: AlertsForm, channel: AlertChannel, v: boolean) {
+  if (channel === "sms") form.setSmsEnabled(v);
+  else if (channel === "email") form.setEmailEnabled(v);
+  else form.setDiscordEnabled(v);
+}
+
+// -----------------------------------------------------------------------------
+// The one alert wait. Sent as every channel's `threshold_minutes`.
+// -----------------------------------------------------------------------------
+function WaitRow({ form }: { form: AlertsForm }) {
+  const { t } = useTranslation("common");
+  const invalid = !!form.errors.threshold;
+  const noteId = `${WAIT_ID}-note`;
+  return (
+    <div className={WAIT_ROW.ROOT}>
+      <div className={WAIT_ROW.TEXT}>
+        <label htmlFor={WAIT_ID} className={WAIT_ROW.TITLE}>
+          {t("alerts.channels.threshold_label")}
+        </label>
+        <p id={noteId} className={WAIT_ROW.HINT}>
+          {t("alerts.channels.threshold_hint")}
+        </p>
+      </div>
+      <div className={WAIT_ROW.FIELD_COL}>
+        <div className={WAIT_ROW.FIELD}>
+          <Input
+            id={WAIT_ID}
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="5"
+            value={form.threshold}
+            onChange={(e) => form.setThreshold(e.target.value)}
+            aria-invalid={invalid}
+            aria-describedby={invalid ? `${WAIT_ID}-error` : noteId}
+            className={cn(FIELD.SHELL, FIELD.INVALID, WAIT_ROW.INPUT)}
+          />
+          <span aria-hidden className={WAIT_ROW.UNIT}>
+            {t("alerts.channels.threshold_unit")}
+          </span>
+        </div>
+        {invalid ? (
+          <p id={`${WAIT_ID}-error`} className={FIELD.ERROR}>
+            {t("alerts.channels.threshold_error")}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// The events this channel sends. Capability comes from the API, never a literal.
+// -----------------------------------------------------------------------------
+function SendsFor({
+  form,
+  state,
+  channel,
+}: {
+  form: AlertsForm;
+  state: AlertsState;
+  channel: AlertChannel;
+}) {
+  const { t } = useTranslation("common");
   return (
     <>
-      <ChannelSwitchRow
-        id="sms-enabled"
-        title={t("alerts.channels.sms.switch_title")}
-        description={t(
-          on ? "alerts.channels.sms.switch_on" : "alerts.channels.sms.switch_off",
-        )}
-        checked={on}
-        onCheckedChange={form.setSmsEnabled}
-      />
-      <ChannelField
-        id="sms-phone"
-        label={t("alerts.channels.sms.phone_label")}
-        hint={t("alerts.channels.sms.phone_hint")}
-        error={
-          form.missing.smsPhone
-            ? t("alerts.channels.sms.phone_missing")
-            : on && form.errors.smsPhone
-              ? t("alerts.channels.sms.phone_error")
-              : undefined
-        }
-        value={form.smsPhone}
-        onChange={form.setSmsPhone}
-        disabled={!on}
-        type="tel"
-        inputMode="tel"
-        autoComplete="tel"
-        placeholder="+14155551234"
-        mono
-      />
-      <ThresholdField
-        id="sms-threshold"
-        value={form.smsThreshold}
-        onChange={form.setSmsThreshold}
-        disabled={!on}
-        invalid={on && !!form.errors.smsThreshold}
-      />
+      <p className={PANEL.SECTION_LABEL}>{t("alerts.channels.sends_for")}</p>
+      <div className={PANEL.TICKS}>
+        {ALERT_EVENT_ORDER.map((event) => {
+          const name = t(eventNameKey(event));
+          const { capable, reason } = readCapability(state.capabilities, event, channel);
+          if (!capable) {
+            return (
+              <div key={event} className={TICK_ROW.ROOT}>
+                <span>{name}</span>
+                <span className={TICK_ROW.REASON}>{t(reasonKey(reason))}</span>
+              </div>
+            );
+          }
+          const id = `${ID_BASE}-${channel}-${event}`;
+          return (
+            <label
+              key={event}
+              htmlFor={id}
+              className={cn(TICK_ROW.ROOT, TICK_ROW.INTERACTIVE)}
+            >
+              <span>{name}</span>
+              <Checkbox
+                id={id}
+                checked={form.getRoute(event, channel)}
+                onCheckedChange={(v) => form.setRoute(event, channel, v === true)}
+                className={cn(TICK_ROW.BOX, "focus-visible:ring-0")}
+              />
+            </label>
+          );
+        })}
+      </div>
     </>
   );
 }
 
-function EmailPanel({
+// -----------------------------------------------------------------------------
+// Per-channel fields
+// -----------------------------------------------------------------------------
+function SmsFields({ form }: { form: AlertsForm }) {
+  const { t } = useTranslation("common");
+  const on = form.smsEnabled;
+  return (
+    <ChannelField
+      id="sms-phone"
+      label={t("alerts.channels.sms.phone_label")}
+      hint={t("alerts.channels.sms.phone_hint")}
+      error={
+        form.missing.smsPhone
+          ? t("alerts.channels.sms.phone_missing")
+          : on && form.errors.smsPhone
+            ? t("alerts.channels.sms.phone_error")
+            : undefined
+      }
+      value={form.smsPhone}
+      onChange={form.setSmsPhone}
+      disabled={!on}
+      type="tel"
+      inputMode="tel"
+      autoComplete="tel"
+      placeholder="+14155551234"
+      mono
+    />
+  );
+}
+
+function EmailFields({
   form,
   state,
   hook,
@@ -384,20 +455,7 @@ function EmailPanel({
   const on = form.emailEnabled;
   return (
     <>
-      {!state.channels.email.msmtp_installed ? (
-        <MailerInstall hook={hook} />
-      ) : null}
-      <ChannelSwitchRow
-        id="email-enabled"
-        title={t("alerts.channels.email.switch_title")}
-        description={t(
-          on
-            ? "alerts.channels.email.switch_on"
-            : "alerts.channels.email.switch_off",
-        )}
-        checked={on}
-        onCheckedChange={form.setEmailEnabled}
-      />
+      {!state.channels.email.msmtp_installed ? <MailerInstall hook={hook} /> : null}
       <ChannelField
         id="sender-email"
         label={t("alerts.channels.email.sender_label")}
@@ -447,9 +505,7 @@ function EmailPanel({
           />
         }
         error={
-          form.missing.appPassword
-            ? t("alerts.channels.email.password_missing")
-            : undefined
+          form.missing.appPassword ? t("alerts.channels.email.password_missing") : undefined
         }
         value={form.appPassword}
         onChange={form.setAppPassword}
@@ -465,37 +521,23 @@ function EmailPanel({
         showLabel={t("alerts.channels.email.password_show")}
         hideLabel={t("alerts.channels.email.password_hide")}
       />
-      <ThresholdField
-        id="email-threshold"
-        value={form.emailThreshold}
-        onChange={form.setEmailThreshold}
-        disabled={!on}
-        invalid={on && !!form.errors.emailThreshold}
-      />
     </>
   );
 }
 
-function DiscordPanel({ form }: { form: AlertsForm }) {
+function DiscordFields({ form }: { form: AlertsForm }) {
   const { t } = useTranslation("common");
   const on = form.discordEnabled;
   return (
     <>
-      <ChannelSwitchRow
-        id="discord-enabled"
-        title={t("alerts.channels.discord.switch_title")}
-        description={t(
-          on
-            ? "alerts.channels.discord.switch_on"
-            : "alerts.channels.discord.switch_off",
-        )}
-        checked={on}
-        onCheckedChange={form.setDiscordEnabled}
-      />
       <ChannelField
         id="discord-id"
         label={t("alerts.channels.discord.id_label")}
-        hint={t("alerts.channels.discord.id_hint")}
+        labelAddon={
+          <HintIcon label={t("alerts.channels.discord.id_hint_label")}>
+            {t("alerts.channels.discord.id_hint")}
+          </HintIcon>
+        }
         error={
           form.missing.discordId
             ? t("alerts.channels.discord.id_missing")
@@ -522,9 +564,7 @@ function DiscordPanel({ form }: { form: AlertsForm }) {
           />
         }
         error={
-          form.missing.botToken
-            ? t("alerts.channels.discord.token_missing")
-            : undefined
+          form.missing.botToken ? t("alerts.channels.discord.token_missing") : undefined
         }
         value={form.botToken}
         onChange={form.setBotToken}
@@ -540,54 +580,7 @@ function DiscordPanel({ form }: { form: AlertsForm }) {
         showLabel={t("alerts.channels.discord.token_show")}
         hideLabel={t("alerts.channels.discord.token_hide")}
       />
-      <ThresholdField
-        id="discord-threshold"
-        value={form.discordThreshold}
-        onChange={form.setDiscordThreshold}
-        disabled={!on}
-        invalid={on && !!form.errors.discordThreshold}
-      />
     </>
-  );
-}
-
-// -----------------------------------------------------------------------------
-// Shared rows
-// -----------------------------------------------------------------------------
-
-/** Each channel counts the SAME outage against its OWN wait; say only that. */
-function ThresholdField({
-  id,
-  value,
-  onChange,
-  disabled,
-  invalid,
-}: {
-  id: string;
-  value: string;
-  onChange: (v: string) => void;
-  disabled: boolean;
-  invalid: boolean;
-}) {
-  const { t } = useTranslation("common");
-  return (
-    <ChannelField
-      id={id}
-      label={t("alerts.channels.threshold_label")}
-      hint={t("alerts.channels.threshold_hint")}
-      error={invalid ? t("alerts.channels.threshold_error") : undefined}
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      type="number"
-      inputMode="numeric"
-      min="1"
-      max="60"
-      placeholder="5"
-      numeric
-      narrow
-      unit={t("alerts.channels.threshold_unit")}
-    />
   );
 }
 
@@ -607,7 +600,7 @@ function ExternalHint({
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-primary inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline"
+        className="text-primary-on-surface inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline"
       >
         {linkLabel}
         <ExternalLinkIcon className="size-3" aria-hidden />
@@ -616,76 +609,7 @@ function ExternalHint({
   );
 }
 
-function TestAction({
-  label,
-  blockedReason,
-  isSending,
-  sendingLabel,
-  sentLabel,
-  sentTo,
-  fault,
-  onSend,
-}: {
-  label: string;
-  blockedReason: string | null;
-  isSending: boolean;
-  sendingLabel: string;
-  sentLabel: string;
-  sentTo: string | null;
-  fault: string | null;
-  onSend: () => void;
-}) {
-  return (
-    // No `mt-auto`: the slack belongs AFTER the channel's own block, not wedged
-    // between its fields and its action.
-    <div className="flex flex-col gap-2.5 pt-1">
-      {fault ? (
-        <ChannelNotice tone="destructive" icon={AlertCircleIcon} live>
-          {fault}
-        </ChannelNotice>
-      ) : null}
-      <div className="flex flex-wrap items-center gap-3">
-        <Button
-          type="button"
-          variant="tonal-neutral"
-          size="action"
-          disabled={!!blockedReason || isSending}
-          onClick={onSend}
-        >
-          {isSending ? (
-            <>
-              <Loader2Icon className="size-4 motion-safe:animate-spin" />
-              {sendingLabel}
-            </>
-          ) : (
-            <>
-              <SendIcon className="size-4" />
-              {label}
-            </>
-          )}
-        </Button>
-        {sentTo && !isSending ? (
-          <span className="flex min-w-0 items-center gap-2">
-            <Badge variant="success">
-              <CheckCircle2Icon className="size-3" />
-              {sentLabel}
-            </Badge>
-            <span className="text-on-surface-variant truncate font-mono text-xs">
-              {sentTo}
-            </span>
-          </span>
-        ) : null}
-      </div>
-      {blockedReason && !isSending ? (
-        <p className={FIELD.HINT}>{blockedReason}</p>
-      ) : null}
-    </div>
-  );
-}
-
-// -----------------------------------------------------------------------------
-// MailerInstall — email delivery waits on msmtp; SMS and Discord still save.
-// -----------------------------------------------------------------------------
+// Email delivery waits on msmtp; SMS and Discord still save.
 function MailerInstall({ hook }: { hook: UseAlertsReturn }) {
   const { t } = useTranslation("common");
   const { installResult } = hook;
@@ -701,20 +625,15 @@ function MailerInstall({ hook }: { hook: UseAlertsReturn }) {
         </ChannelNotice>
       ) : null}
       <div className="flex flex-wrap items-center gap-2.5">
-        <Button
-          type="button"
-          size="action"
-          onClick={hook.runInstall}
-          disabled={running}
-        >
+        <Button type="button" size="action" onClick={hook.runInstall} disabled={running}>
           {running ? (
             <>
-              <Loader2Icon className="size-4 motion-safe:animate-spin" />
+              <Loader2Icon className="size-4 motion-safe:animate-spin" aria-hidden />
               {t("alerts.channels.email.mailer_installing")}
             </>
           ) : (
             <>
-              <DownloadIcon className="size-4" />
+              <DownloadIcon className="size-4" aria-hidden />
               {t("alerts.channels.email.mailer_install")}
             </>
           )}
@@ -723,10 +642,10 @@ function MailerInstall({ hook }: { hook: UseAlertsReturn }) {
           type="button"
           variant="tonal-neutral"
           size="action"
-          onClick={hook.refresh}
+          onClick={() => hook.refresh()}
           disabled={running}
         >
-          <RefreshCcwIcon className="size-4" />
+          <RefreshCcwIcon className="size-4" aria-hidden />
           {t("alerts.channels.email.mailer_recheck")}
         </Button>
       </div>
@@ -734,17 +653,17 @@ function MailerInstall({ hook }: { hook: UseAlertsReturn }) {
   );
 }
 
-// -----------------------------------------------------------------------------
-// SaveStatus — the three truthful states of the foot's left edge.
-// -----------------------------------------------------------------------------
+// The foot's left edge: blocked, unsaved, or (clean) why the test is unavailable.
 function SaveStatus({
   isDirty,
   blocked,
-  blockedNames,
+  blockedText,
+  idleText,
 }: {
   isDirty: boolean;
   blocked: boolean;
-  blockedNames: string[];
+  blockedText: string;
+  idleText: string | null;
 }) {
   const { t } = useTranslation("common");
 
@@ -752,33 +671,31 @@ function SaveStatus({
     return (
       <span className={cn(FOOT.LINE, "text-destructive-on-surface")}>
         <AlertCircleIcon className="size-3.5 flex-none" aria-hidden />
-        <span className="font-medium text-pretty">
-          {blockedNames.length > 0
-            ? t("alerts.channels.save.blocked_in", {
-                channels: blockedNames.join(", "),
-              })
-            : t("alerts.channels.save.blocked")}
-        </span>
+        <span className="font-medium text-pretty">{blockedText}</span>
       </span>
     );
   }
   if (isDirty) {
     return (
       <span className={FOOT.LINE}>
-        <span className={FOOT.PULSE} aria-hidden />
+        <span className={FOOT.DOT} aria-hidden />
         <span className="text-on-surface font-medium text-pretty">
           {t("alerts.channels.save.dirty")}
         </span>
       </span>
     );
   }
-  return <span className="text-pretty">{t("alerts.channels.save.clean")}</span>;
+  return (
+    <span className="text-on-surface-variant text-pretty">
+      {idleText ?? t("alerts.channels.save.clean")}
+    </span>
+  );
 }
 
 // -----------------------------------------------------------------------------
-// The empty / error condition. It IS the state, so it takes the fill region.
+// The no-channels condition, and the loading state (Skeleton-Mirror).
 // -----------------------------------------------------------------------------
-function ChannelsCondition({
+export function AlertsChannelsCondition({
   tone,
   title,
   description,
@@ -793,98 +710,84 @@ function ChannelsCondition({
 }) {
   const skin = CONDITION_TONE[tone];
   return (
-    <div
-      role="status"
-      className={cn(
-        CONDITION.ROOT,
-        skin.ROOT,
-        CARD_FILL_REGION,
-        "justify-center",
-      )}
-    >
-      <span aria-hidden className={cn(CONDITION.DISC, skin.DISC)}>
-        {tone === "destructive" ? (
-          <AlertCircleIcon className={CONDITION.GLYPH} />
-        ) : (
-          <MinusCircleIcon className={CONDITION.GLYPH} />
-        )}
-      </span>
-      <span className={CONDITION.TITLE}>{title}</span>
-      <p className={CONDITION.DESC}>{description}</p>
-      {actionLabel && onAction ? (
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onAction}
-          className={cn(CONDITION.ACTION, skin.ACTION)}
-        >
-          <RefreshCcwIcon className="size-4" />
-          {actionLabel}
-        </Button>
-      ) : null}
-    </div>
+    <Card className={CARD_SHELL}>
+      <ChannelsHeader />
+      <CardContent className={CARD_PAD}>
+        <div role="status" className={cn(CONDITION.ROOT, skin.ROOT)}>
+          <span aria-hidden className={cn(CONDITION.DISC, skin.DISC)}>
+            {tone === "destructive" ? (
+              <AlertCircleIcon className={CONDITION.GLYPH} />
+            ) : (
+              <MinusCircleIcon className={CONDITION.GLYPH} />
+            )}
+          </span>
+          <span className={CONDITION.TITLE}>{title}</span>
+          <p className={CONDITION.DESC}>{description}</p>
+          {actionLabel && onAction ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onAction}
+              className={cn(CONDITION.ACTION, skin.ACTION)}
+            >
+              <RefreshCcwIcon className="size-4" aria-hidden />
+              {actionLabel}
+            </Button>
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
-// -----------------------------------------------------------------------------
-// The loading state. Geometry comes from the same constants the loaded view
-// reads, and the fill region is in the same place (Skeleton-Mirror).
-// -----------------------------------------------------------------------------
 export function AlertsSettingsCardSkeleton() {
   const { t } = useTranslation("common");
   return (
     <Card
-      className={cn(CARD_SHELL, CARD_FILL)}
+      className={CARD_SHELL}
       role="status"
       aria-busy="true"
       aria-label={t("alerts.channels.loading")}
     >
-      <CardHeader className={CARD_PAD}>
-        <div className={CARD_HEAD}>
-          <div className="min-w-0 space-y-1">
-            <CardTitle className={CARD_TITLE}>
-              {t("alerts.channels.title")}
-            </CardTitle>
-            <CardDescription className={CARD_DESC}>
-              {t("alerts.channels.description")}
-            </CardDescription>
+      <ChannelsHeader />
+      <CardContent className={cn(CARD_PAD, "flex flex-col gap-5")} aria-hidden>
+        <div className={WAIT_ROW.ROOT}>
+          <div className={WAIT_ROW.TEXT}>
+            <Skeleton className={cn(SKELETON.LINE, "h-4 w-36")} />
+            <Skeleton className={cn(SKELETON.LINE, "h-3.5 w-52")} />
           </div>
+          <Skeleton className={cn(SKELETON.FIELD, "w-[8.5rem]")} />
         </div>
-      </CardHeader>
-
-      <CardContent className={cn(CARD_PAD, "flex min-h-0 flex-1 flex-col gap-5")}>
-        <div className={RAIL.ROOT} aria-hidden>
+        <div className={RAIL.ROOT}>
           {ALERT_CHANNEL_ORDER.map((ch) => (
             <Skeleton key={ch} className={cn(RAIL.PILL, "w-[5.5rem]")} />
           ))}
         </div>
-
-        <div className={cn(CARD_FILL_REGION, "flex flex-col gap-5")} aria-hidden>
-          <Skeleton className={cn(SKELETON.SWITCH, "w-full")} />
-          {[0, 1].map((i) => (
-            <div key={i} className={FIELD.ROW}>
-              <Skeleton className={cn(SKELETON.LINE, "h-4 w-32")} />
-              <Skeleton className={cn(SKELETON.FIELD, "w-full")} />
-              <Skeleton className={cn(SKELETON.LINE, "h-3.5 w-56")} />
+        <div className={PANEL.ROOT}>
+          <div className={PANEL.COL}>
+            <Skeleton className={cn(SKELETON.ACTION, "w-full")} />
+            <div className={PANEL.TICKS}>
+              {ALERT_EVENT_ORDER.map((ev) => (
+                <Skeleton key={ev} className={SKELETON.TICK_ROW} />
+              ))}
             </div>
-          ))}
-          <div className="pt-1">
-            <Skeleton className={cn(SKELETON.ACTION, "w-44")} />
+          </div>
+          <div className={PANEL.COL}>
+            {[0, 1].map((i) => (
+              <div key={i} className={FIELD.ROW}>
+                <Skeleton className={cn(SKELETON.LINE, "h-4 w-32")} />
+                <Skeleton className={cn(SKELETON.FIELD, "w-full")} />
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>
-
       <CardFoot
         className={CARD_PAD}
         liveStatus={false}
         aria-hidden="true"
         status={<Skeleton className={cn(SKELETON.LINE, "h-4 w-36")} />}
-        actions={
-          <>
-            <Skeleton className={cn(SKELETON.ACTION, "w-24")} />
-            <Skeleton className={cn(SKELETON.ACTION, "w-36")} />
-          </>
-        }
+        actions={<Skeleton className={cn(SKELETON.ACTION, "w-36")} />}
       />
     </Card>
   );

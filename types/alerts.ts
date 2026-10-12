@@ -96,16 +96,21 @@ export interface AlertsState {
   capabilities: AlertCapabilities;
   /** Most-recent reboots (newest first), independent of alert routing. */
   reboots: RebootHistoryEntry[];
+  /** The one alert wait in minutes (1-1440). Absent on older backends. */
+  alert_after_min?: number;
 }
 
 // ─── Save payload ────────────────────────────────────────────────────────────
 
 export interface AlertsSavePayload {
   action: "save_settings";
+  /** Only sent when the wait was edited; it wins over every per-channel value. */
+  alert_after_min?: number;
   sms: {
     enabled: boolean;
     recipient_phone: string;
-    threshold_minutes: number;
+    /** Omitted means "keep the current wait". */
+    threshold_minutes?: number;
   };
   email: {
     enabled: boolean;
@@ -113,14 +118,14 @@ export interface AlertsSavePayload {
     recipient_email: string;
     /** Only sent when the user typed a new password. */
     app_password?: string;
-    threshold_minutes: number;
+    threshold_minutes?: number;
   };
   discord: {
     enabled: boolean;
     owner_discord_id: string;
     /** Only sent when the user typed a new bot token. */
     bot_token?: string;
-    threshold_minutes: number;
+    threshold_minutes?: number;
   };
   routing: AlertRouting;
 }

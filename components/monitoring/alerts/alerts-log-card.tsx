@@ -35,12 +35,9 @@ import type {
 } from "@/types/alerts";
 
 import { ActivityRow } from "./activity-row";
+import { eventNameKey, isEventKey } from "./constants";
 import {
   CARD_DESC,
-  CARD_FILL,
-  CARD_FILL_REGION,
-  CARD_HEAD,
-  CARD_HEAD_ACTIONS,
   CARD_PAD,
   CARD_SHELL,
   CARD_TITLE,
@@ -49,12 +46,12 @@ import {
   CROSSFADE_STACK,
   DAY,
   LOG,
+  LOG_SCROLL,
   LOG_STACK,
   NOTICE,
   NOTICE_GLYPH,
   NOTICE_TONE,
   PILL_GLYPH,
-  PILL_ICON,
   SKELETON,
   type ConditionTone,
   type RowTone,
@@ -124,6 +121,18 @@ const CHANNEL_EN: Record<AlertChannel, string> = {
   discord: "Discord",
 };
 
+/** Non-event triggers: test sends, and the Discord daemon's own success rows. */
+const TRIGGER_KEY = new Map<string, string>([
+  ["test", "alerts.activity.trigger.test"],
+  ["alert", "alerts.activity.trigger.alert"],
+]);
+
+function triggerLabel(trigger: string, t: (key: string) => string): string {
+  if (isEventKey(trigger)) return t(eventNameKey(trigger));
+  const key = TRIGGER_KEY.get(trigger);
+  return key ? t(key) : trigger;
+}
+
 /** The backend can name a cause we have no presentation for; fall back rather
  *  than render a row with no glyph at all. */
 function knownCause(value: RebootCause): RebootCause {
@@ -180,23 +189,21 @@ interface DayGroup {
   rows: RowView[];
 }
 
-// The shell owns the log fetch, so the newest delivery can also feed the status
-// band. One `useAlertsLog` instance on the page, never two.
+// The shell owns the log fetch and the page's one Refresh.
 export interface AlertsLogCardProps {
   entries: AlertLogEntry[];
   isLoading: boolean;
-  isRefreshing: boolean;
   error: string | null;
-  onRefresh: () => void;
+  /** The condition block's retry. */
+  onRetry: () => void;
   reboots: RebootHistoryEntry[];
 }
 
 export function AlertsLogCard({
   entries,
   isLoading,
-  isRefreshing,
   error,
-  onRefresh,
+  onRetry,
   reboots,
 }: AlertsLogCardProps) {
   const { t } = useTranslation("common");
@@ -309,7 +316,8 @@ export function AlertsLogCard({
         severityWord: sent
           ? t("alerts.activity.sr.sent", { defaultValue: "Alert sent" })
           : t("alerts.activity.sr.failed", { defaultValue: "Alert failed" }),
-        message: entry.trigger,
+        // Known trigger keys get a name; anything else stays as logged.
+        message: triggerLabel(entry.trigger, (key) => t(key)),
         tagLabel: t(CHANNEL_KEY[channel], {
           defaultValue: CHANNEL_EN[channel],
         }),
@@ -354,12 +362,12 @@ export function AlertsLogCard({
         title={t("alerts.activity.error.title", {
           defaultValue: "Could not load activity",
         })}
-        description={error}
+        description={t("alerts.activity.error.description")}
         actionLabel={t("alerts.activity.error.retry", {
           defaultValue: "Try again",
         })}
         actionIcon={RefreshCcwIcon}
-        onAction={onRefresh}
+        onAction={onRetry}
       />
     );
   } else if (feed.length === 0) {
@@ -385,11 +393,7 @@ export function AlertsLogCard({
         tabIndex={0}
         role="region"
         aria-label={t("alerts.activity.transcript_label")}
-        className={cn(
-          LOG_STACK,
-          CARD_FILL_REGION,
-          "overflow-y-auto rounded-tile outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card",
-        )}
+        className={cn(LOG_STACK, LOG_SCROLL)}
         aria-live="polite"
         aria-relevant="additions"
       >
@@ -420,65 +424,32 @@ export function AlertsLogCard({
   }
 
   return (
-    <Card className={cn(CARD_SHELL, CARD_FILL)}>
+    <Card className={CARD_SHELL}>
       <CardHeader className={CARD_PAD}>
-        <div className={CARD_HEAD}>
-          <div className="min-w-0">
-            <CardTitle className={CARD_TITLE}>
-              {t("alerts.activity.title", { defaultValue: "Activity" })}
-            </CardTitle>
-            <CardDescription className={CARD_DESC}>
-              {t("alerts.activity.description", {
-                defaultValue:
-                  "Alerts sent and reboots recorded, newest first.",
-              })}
-            </CardDescription>
-          </div>
-          <div className={CARD_HEAD_ACTIONS}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={t("alerts.activity.refresh", {
-                defaultValue: "Refresh activity",
-              })}
-              disabled={isRefreshing}
-              onClick={onRefresh}
-              className={cn(
-                PILL_ICON,
-                "bg-surface-container text-on-surface-variant hover:bg-surface-container-high",
-              )}
-            >
-              <RefreshCcwIcon
-                className={cn(PILL_GLYPH, isRefreshing && "motion-safe:animate-spin")}
-              />
-            </Button>
-          </div>
-        </div>
+        <CardTitle className={CARD_TITLE}>
+          {t("alerts.activity.title", { defaultValue: "Activity" })}
+        </CardTitle>
+        <CardDescription className={CARD_DESC}>
+          {t("alerts.activity.description", {
+            defaultValue: "Alerts sent and reboots, newest first.",
+          })}
+        </CardDescription>
       </CardHeader>
 
-      <CardContent
-        className={cn(CARD_PAD, CARD_FILL_REGION, "flex flex-col gap-4")}
-      >
+      <CardContent className={cn(CARD_PAD, "flex flex-col gap-4")}>
         {error && feed.length > 0 ? (
           <div role="alert" className={cn(NOTICE, NOTICE_TONE.destructive)}>
             <TriangleAlertIcon className={NOTICE_GLYPH} />
             {t("alerts.activity.notice.stale", {
-              message: error,
-              defaultValue:
-                "Showing the last activity we managed to read. {{message}}",
+              defaultValue: "Showing the last activity we managed to read.",
             })}
           </div>
         ) : null}
 
         {/* Skeleton and feed share ONE grid cell, so the swap costs no layout
             shift and the fill region measures the taller of the two. */}
-        <div className={cn(CROSSFADE_STACK, CARD_FILL_REGION)}>
-          {isLoading ? (
-            <ActivityFeedSkeleton className="min-h-0" />
-          ) : (
-            <div className="flex min-h-0 flex-col">{body}</div>
-          )}
+        <div className={CROSSFADE_STACK}>
+          {isLoading ? <ActivityFeedSkeleton /> : <div className="flex flex-col">{body}</div>}
         </div>
       </CardContent>
     </Card>
@@ -511,7 +482,7 @@ function ConditionPanel({
   return (
     <div
       role="status"
-      className={cn(CONDITION.ROOT, skin.ROOT, CARD_FILL_REGION, "justify-center")}
+      className={cn(CONDITION.ROOT, skin.ROOT, "justify-center")}
     >
       <span aria-hidden className={cn(CONDITION.DISC, skin.DISC)}>
         <Icon className={CONDITION.GLYPH} />
@@ -535,21 +506,16 @@ function ConditionPanel({
 
 // -----------------------------------------------------------------------------
 // ActivityFeedSkeleton — placeholder rows read the SAME pinned height the real
-// rows do, and the block clips rather than ending short of the card's floor.
+// rows do, inside the same scroll cap.
 // -----------------------------------------------------------------------------
 
 export function ActivityFeedSkeleton({
-  rows = 12,
-  className,
+  rows = 8,
 }: {
   rows?: number;
-  className?: string;
 }) {
   return (
-    <div
-      aria-hidden
-      className={cn(LOG, CARD_FILL_REGION, "overflow-hidden", className)}
-    >
+    <div aria-hidden className={cn(LOG, LOG_SCROLL, "overflow-y-hidden")}>
       <div className={cn(DAY.ROOT, "flex-none")}>
         <Skeleton className={cn("h-3 w-16", SKELETON.LINE)} />
         <span aria-hidden className={DAY.RULE} />

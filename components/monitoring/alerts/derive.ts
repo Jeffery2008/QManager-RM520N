@@ -7,114 +7,66 @@ import {
   type AlertChannels,
   type AlertEventKey,
   type AlertRouting,
+  type AlertsState,
 } from "@/types/alerts";
-import type { DiscTone, RailDotTone, TileValueTone } from "./shapes";
+import type { RailDotTone } from "./shapes";
 
-// Alerts — the page's ONE derived model.
+// Alerts — the page's ONE derived model, from SAVED truth only.
 // The backend resolves every alert with a three-way AND: capable AND channel
 // enabled AND routed. No component may re-infer any of that from a payload.
 
 /** The only event that has to survive the outage it is reporting. */
 export const OUTAGE_EVENT: AlertEventKey = "connection_lost";
 
-// -----------------------------------------------------------------------------
-// The resolved model
-// -----------------------------------------------------------------------------
-
-/**
- * What one (event, channel) pair will actually do.
- *
- * `quiet` and `unrouted` are both "nothing happens", separated because only one
- * of them is the user's own decision: `quiet` means they ticked the cell and the
- * channel's master switch is holding it back.
- */
+/** What one (event, channel) pair will actually do. */
 export type CellState = "fires" | "quiet" | "unrouted" | "incapable";
 
 export interface AlertCell {
-  event: AlertEventKey;
-  channel: AlertChannel;
   state: CellState;
-  /** The backend's three inputs, kept so a cell can explain itself in place. */
   capable: boolean;
-  channelEnabled: boolean;
-  routed: boolean;
   /** The capability table's reason key. Only ever set when `capable` is false. */
   reason?: string;
-  /** The tick has not reached the device yet. */
-  pending: boolean;
-  /**
-   * Presentational only. The engine WILL attempt this send and fail, because
-   * the channel has no credentials yet — `state` still mirrors the engine.
-   */
-  attemptOnly: boolean;
-  /** An incapable pair is not a control; nothing the user does can arm it. */
-  interactive: boolean;
 }
 
 /**
- * A channel's own verdict. `configured` is deliberately NOT part of a cell's
- * state: the engine does not gate on it, so an unconfigured channel resolves as
- * firing and then fails at send time. It belongs to the channel, and it is why
- * `incomplete` exists.
+ * A channel's own verdict. `configured` is not part of a cell's state: the
+ * engine does not gate on it, so an unconfigured channel fires and then fails.
  */
 export type ChannelStatus = "ready" | "incomplete" | "unused" | "off";
 
 export interface ChannelCoverage {
-  channel: AlertChannel;
   status: ChannelStatus;
   enabled: boolean;
   configured: boolean;
-  /** Events this channel will actually send. */
   firing: AlertEventKey[];
-  /** Events the platform lets this channel send at all. */
   capable: AlertEventKey[];
-  /** Ticked but held back by the master switch. */
-  quiet: AlertEventKey[];
 }
 
-/** The band's headline verdict. Never `neutral`: coverage always has an answer. */
-export type CoverageTone = Exclude<DiscTone, "neutral">;
+/** One Coverage row: channels that will deliver, and channels that will try and fail. */
+export interface CoverageRow {
+  event: AlertEventKey;
+  fires: AlertChannel[];
+  attempt: AlertChannel[];
+}
+
+export type CoverageVerdict =
+  | { kind: "all"; variant: BadgeVariant }
+  | { kind: "outage"; variant: BadgeVariant }
+  | { kind: "partial"; variant: BadgeVariant; covered: number; total: number }
+  | { kind: "none"; variant: BadgeVariant };
 
 export interface AlertsCoverage {
   cells: Record<AlertEventKey, Record<AlertChannel, AlertCell>>;
   channels: Record<AlertChannel, ChannelCoverage>;
-  /** Events with at least one firing cell. */
-  covered: AlertEventKey[];
-  uncovered: AlertEventKey[];
-  eventCount: number;
-  coveredCount: number;
-  /** Channels that will report an outage. SMS is the only capable one today. */
-  outageChannels: AlertChannel[];
-  /** An outage would pass silently. */
-  outageGap: boolean;
-  /** Not one cell on the whole matrix fires. */
-  silent: boolean;
-  /** Cells whose resolved state has not reached the device yet. */
-  pendingCount: number;
-  tone: CoverageTone;
+  rows: CoverageRow[];
+  verdict: CoverageVerdict;
 }
 
-/** What `deriveCoverage` reads. A draft and a server payload have the same shape. */
 export interface CoverageInput {
   channels: AlertChannels;
   routing: AlertRouting["events"];
   capabilities: AlertCapabilities;
 }
-
-// -----------------------------------------------------------------------------
-// Tone maps
-// -----------------------------------------------------------------------------
-
-/**
- * Channel status onto a chip role, never a class string. `off` and `unused` share
- * `muted` on purpose, so their glyphs must differ: the fill is not the separator.
- */
-export const CHANNEL_STATUS_BADGE: Record<ChannelStatus, BadgeVariant> = {
-  ready: "success",
-  incomplete: "warning",
-  unused: "muted",
-  off: "muted",
-};
 
 /** The rail dot beside a channel's name. A second channel, never the only one. */
 export const CHANNEL_STATUS_DOT: Record<ChannelStatus, RailDotTone> = {
@@ -124,18 +76,15 @@ export const CHANNEL_STATUS_DOT: Record<ChannelStatus, RailDotTone> = {
   off: "off",
 };
 
-/** The band figure's ink. A good verdict keeps the neutral foreground. */
-export const COVERAGE_VALUE_TONE: Record<CoverageTone, TileValueTone> = {
-  good: "neutral",
-  alert: "alert",
-  bad: "bad",
-};
+export function confirmedInput(state: AlertsState): CoverageInput {
+  return {
+    channels: state.channels,
+    routing: state.routing?.events ?? ({} as AlertRouting["events"]),
+    capabilities: state.capabilities,
+  };
+}
 
-// -----------------------------------------------------------------------------
-// Derivation
-// -----------------------------------------------------------------------------
-
-function readCapability(
+export function readCapability(
   capabilities: AlertCapabilities | undefined,
   event: AlertEventKey,
   channel: AlertChannel,
@@ -157,79 +106,50 @@ function resolveState(
   return channelEnabled ? "fires" : "quiet";
 }
 
-/**
- * Resolve the whole 3x3 matrix plus its roll-ups.
- *
- * Pass the user's working draft as `input` and the device's last confirmed state
- * as `confirmed`; a cell whose resolved state differs between the two is marked
- * pending. With no `confirmed`, nothing is pending.
- */
-export function deriveCoverage(
-  input: CoverageInput,
-  confirmed?: CoverageInput,
-): AlertsCoverage {
+function verdictOf(rows: CoverageRow[]): CoverageVerdict {
+  const covered = rows.filter((row) => row.fires.length > 0).length;
+  if (covered === 0) return { kind: "none", variant: "destructive" };
+  const outage = rows.find((row) => row.event === OUTAGE_EVENT);
+  if (outage && outage.fires.length === 0)
+    return { kind: "outage", variant: "warning" };
+  if (covered < rows.length)
+    return { kind: "partial", variant: "warning", covered, total: rows.length };
+  return { kind: "all", variant: "success" };
+}
+
+export function deriveCoverage(input: CoverageInput): AlertsCoverage {
   const cells = {} as Record<AlertEventKey, Record<AlertChannel, AlertCell>>;
   const channels = {} as Record<AlertChannel, ChannelCoverage>;
 
   for (const channel of ALERT_CHANNEL_ORDER) {
     const state = input.channels?.[channel];
     channels[channel] = {
-      channel,
       status: "off",
       enabled: state?.enabled === true,
       configured: state?.configured === true,
       firing: [],
       capable: [],
-      quiet: [],
     };
   }
 
-  let pendingCount = 0;
-
+  const rows: CoverageRow[] = [];
   for (const event of ALERT_EVENT_ORDER) {
     const row = {} as Record<AlertChannel, AlertCell>;
-
+    const view: CoverageRow = { event, fires: [], attempt: [] };
     for (const channel of ALERT_CHANNEL_ORDER) {
-      const { capable, reason } = readCapability(
-        input.capabilities,
-        event,
-        channel,
-      );
-      const channelEnabled = channels[channel].enabled;
+      const { capable, reason } = readCapability(input.capabilities, event, channel);
+      const c = channels[channel];
       const routed = input.routing?.[event]?.[channel] === true;
-      const state = resolveState(capable, channelEnabled, routed);
-
-      let pending = false;
-      if (confirmed) {
-        const was = readCapability(confirmed.capabilities, event, channel);
-        const wasState = resolveState(
-          was.capable,
-          confirmed.channels?.[channel]?.enabled === true,
-          confirmed.routing?.[event]?.[channel] === true,
-        );
-        pending = wasState !== state;
-        if (pending) pendingCount += 1;
+      const state = resolveState(capable, c.enabled, routed);
+      row[channel] = { state, capable, reason };
+      if (capable) c.capable.push(event);
+      if (state === "fires") {
+        c.firing.push(event);
+        (c.configured ? view.fires : view.attempt).push(channel);
       }
-
-      row[channel] = {
-        event,
-        channel,
-        state,
-        capable,
-        channelEnabled,
-        routed,
-        reason,
-        pending,
-        attemptOnly: state === "fires" && !channels[channel].configured,
-        interactive: capable,
-      };
-
-      if (capable) channels[channel].capable.push(event);
-      if (state === "fires") channels[channel].firing.push(event);
-      if (state === "quiet") channels[channel].quiet.push(event);
     }
-
     cells[event] = row;
+    rows.push(view);
   }
 
   for (const channel of ALERT_CHANNEL_ORDER) {
@@ -240,44 +160,12 @@ export function deriveCoverage(
     else c.status = "ready";
   }
 
-  const covered: AlertEventKey[] = [];
-  const uncovered: AlertEventKey[] = [];
-  for (const event of ALERT_EVENT_ORDER) {
-    const firesSomewhere = ALERT_CHANNEL_ORDER.some(
-      (channel) => cells[event][channel].state === "fires",
-    );
-    (firesSomewhere ? covered : uncovered).push(event);
-  }
+  return { cells, channels, rows, verdict: verdictOf(rows) };
+}
 
-  const outageChannels = ALERT_CHANNEL_ORDER.filter(
-    (channel) => cells[OUTAGE_EVENT]?.[channel]?.state === "fires",
+/** True when the device advertised no capable pair at all — a real empty. */
+export function coverageIsEmpty(coverage: AlertsCoverage): boolean {
+  return ALERT_CHANNEL_ORDER.every(
+    (channel) => coverage.channels[channel].capable.length === 0,
   );
-  const outageGap = outageChannels.length === 0;
-  const silent = covered.length === 0;
-
-  // An outage that passes silently is the failure this page exists to prevent,
-  // so it outranks a merely incomplete channel.
-  const incomplete = ALERT_CHANNEL_ORDER.some(
-    (channel) => channels[channel].status === "incomplete",
-  );
-  const tone: CoverageTone =
-    silent || outageGap
-      ? "bad"
-      : uncovered.length > 0 || incomplete
-        ? "alert"
-        : "good";
-
-  return {
-    cells,
-    channels,
-    covered,
-    uncovered,
-    eventCount: ALERT_EVENT_ORDER.length,
-    coveredCount: covered.length,
-    outageChannels,
-    outageGap,
-    silent,
-    pendingCount,
-    tone,
-  };
 }

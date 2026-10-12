@@ -135,10 +135,10 @@ _ea_send_test_email() {
     html=$(_ea_build_test_html)
 
     if _ea_do_send "Test Alert" "$html"; then
-        _ea_log_event "Test email" "sent" "$_ea_recipient"
+        _ea_log_event "test" "sent" "$_ea_recipient"
         return 0
     else
-        _ea_log_event "Test email" "failed" "$_ea_recipient"
+        _ea_log_event "test" "failed" "$_ea_recipient"
         return 1
     fi
 }

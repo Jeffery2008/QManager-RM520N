@@ -865,87 +865,40 @@
     }
   },
   "alerts": {
-    "band": {
-      "armedEyebrow": "Armed",
-      "armedValue": "{{covered}} of {{total}}",
-      "armedSilent": "No channel can send anything",
-      "armedGap": "Not every event is covered",
-      "armedIncomplete": "{{channels}} still needs setup",
-      "armedAll": "Every event has a channel",
-      "outageEyebrow": "Outage cover",
-      "outageNone": "None",
-      "outageCovered": "Reaches you while the internet is down",
-      "outageGap": "An outage will pass silently",
-      "lastEyebrow": "Last alert",
-      "lastNever": "Never",
-      "lastNeverCaption": "Nothing has been sent",
-      "lastSentCaption": "{{trigger}}, by {{channel}}",
-      "lastFailedCaption": "{{trigger}} failed on {{channel}}",
-      "justNow": "Just now",
-      "minutesAgo": "{{n}} min ago",
-      "hoursAgo": "{{n}} h ago",
-      "daysAgo": "{{n}} d ago",
-      "lastUnknown": "Unknown",
-      "lastUnknownCaption": "Could not read activity",
-      "lastLoading": "Loading the last alert"
-    },
     "coverage": {
       "title": "Coverage",
-      "description": "What actually fires. A cell is live only when the channel is on, set up, and able to send that event.",
+      "description": "What reaches you, as saved.",
       "loading": "Loading coverage",
-      "channel": {
-        "sms": "SMS",
-        "email": "Email",
-        "discord": "Discord"
-      },
-      "channelStatus": {
-        "ready": "Ready",
-        "incomplete": "Needs setup",
-        "unused": "Not used",
-        "off": "Off"
-      },
       "event": {
         "connection_lost": {
-          "name": "Connection lost",
-          "desc": "While the internet is down"
+          "name": "Connection lost"
         },
         "connection_restored": {
-          "name": "Connection restored",
-          "desc": "Once the link is back"
+          "name": "Connection restored"
         },
         "reboot": {
-          "name": "Modem rebooted",
-          "desc": "Sent once it is back, with the cause"
+          "name": "Modem rebooted"
         }
       },
-      "cell": {
-        "fires": "Sends",
-        "quiet": "Silenced",
-        "quietNote": "Channel is off",
-        "unrouted": "Not sending",
-        "incapable": "Can't send",
-        "pendingNote": "Pending save",
-        "attempt": "Will try",
-        "attemptNote": "Channel is not set up yet",
-        "unroutedNote": "Not ticked for this event"
-      },
-      "cellAction": "{{event}} by {{channel}}: {{state}}",
       "reason": {
         "email_needs_internet": "Needs the internet",
         "discord_needs_internet": "Needs the internet",
         "not_supported": "This channel cannot send this event"
       },
-      "silentNotice": "Nothing will be sent. No cell on this matrix is live.",
-      "outageNoticeWith": "An outage would pass silently. Make {{channels}} live to be told.",
-      "outageNoticeNone": "An outage would pass silently. No channel on this device can report one.",
       "staleNotice": "Showing the settings we last read from the device.",
       "errorTitle": "Could not load coverage",
       "errorDesc": "The device did not answer, so we cannot show what will fire.",
       "errorRetry": "Try again",
       "emptyTitle": "Nothing can be routed",
       "emptyDesc": "The device did not report any alert capabilities, so there is nothing to switch on here.",
-      "unsavedNotice": "These ticks are not saved yet. Save them in Channels below.",
-      "blockedNotice": "Nothing here can be saved until the errors in {{channels}} are fixed."
+      "verdict": {
+        "all": "All covered",
+        "outage": "Outage not covered",
+        "partial": "{{covered}} of {{total}} covered",
+        "none": "Nothing will be sent"
+      },
+      "needsSetup": "{{channel}} needs setup",
+      "notSent": "Not sent"
     },
     "channels": {
       "title": "Channels",
@@ -966,19 +919,15 @@
         "needs_fixing": "Has unsaved errors"
       },
       "sms": {
-        "switch_title": "Send SMS alerts",
-        "switch_on": "Texted over the cellular network, so they still arrive during an outage.",
-        "switch_off": "SMS alerts are off.",
         "phone_label": "Recipient phone",
         "phone_hint": "Include the country code with a leading plus.",
         "phone_error": "Enter a number with its country code, like +14155551234.",
         "phone_missing": "A recipient phone number is required.",
-        "test": "Send a test SMS"
+        "test": "Send a test SMS",
+        "title": "SMS alerts",
+        "sub": "Arrives even during an outage."
       },
       "email": {
-        "switch_title": "Send email alerts",
-        "switch_on": "Emailed through Gmail once the connection is back.",
-        "switch_off": "Email alerts are off.",
         "sender_label": "Sender email",
         "sender_hint": "The Gmail account that sends the alert.",
         "sender_missing": "A sender address is required.",
@@ -998,12 +947,11 @@
         "mailer_install": "Install msmtp",
         "mailer_installing": "Installing",
         "mailer_recheck": "Check again",
-        "test": "Send a test email"
+        "test": "Send a test email",
+        "title": "Email alerts",
+        "sub": "Sent through Gmail once the link is back."
       },
       "discord": {
-        "switch_title": "Send Discord alerts",
-        "switch_on": "Sent as a direct message from your bot once the connection is back.",
-        "switch_off": "Discord alerts are off.",
         "id_label": "Owner Discord ID",
         "id_hint": "Turn on Developer Mode, right-click your name, then choose Copy User ID.",
         "id_error": "Enter a numeric Discord user ID of 17 to 20 digits.",
@@ -1016,15 +964,17 @@
         "token_missing": "A bot token is required to send Discord alerts.",
         "token_show": "Show bot token",
         "token_hide": "Hide bot token",
-        "test": "Send a test message"
+        "test": "Send a test message",
+        "title": "Discord alerts",
+        "sub": "A direct message from your bot.",
+        "id_hint_label": "How to find your Discord ID"
       },
       "threshold_label": "Wait before alerting",
-      "threshold_hint": "This channel sends only when the whole outage lasted at least this long. Every channel measures the same outage against its own wait.",
-      "threshold_error": "Enter a whole number of minutes from 1 to 60.",
-      "threshold_unit": "minutes",
+      "threshold_hint": "Shorter outages are logged, not sent.",
+      "threshold_error": "Enter a whole number of minutes from 1 to 1440.",
+      "threshold_unit": "min",
       "test": {
         "sending": "Sending",
-        "sent": "Sent",
         "succeeded": "Test {{channel}} sent",
         "failed": "The test could not be sent.",
         "blocked_off": "Turn this channel on, then save, to send a test.",
@@ -1048,15 +998,16 @@
         "title": "No channels reported",
         "description": "This device did not return any alert channels, so there is nothing to configure yet."
       },
+      "sends_for": "Sends for",
       "error": {
         "title": "Channels could not be loaded",
+        "description": "The device did not answer. Try again in a moment.",
         "retry": "Try again"
       }
     },
     "activity": {
       "title": "Activity",
-      "description": "Alerts sent and reboots recorded, newest first.",
-      "refresh": "Refresh activity",
+      "description": "Alerts sent and reboots, newest first.",
       "event": {
         "reboot": "Modem rebooted"
       },
@@ -1097,12 +1048,17 @@
       },
       "error": {
         "title": "Could not load activity",
+        "description": "The device did not answer. Try again in a moment.",
         "retry": "Try again"
       },
       "notice": {
-        "stale": "Showing the last activity we managed to read. {{message}}"
+        "stale": "Showing the last activity we managed to read."
       },
-      "transcript_label": "Alert and reboot history"
+      "transcript_label": "Alert and reboot history",
+      "trigger": {
+        "test": "Test alert",
+        "alert": "Alert"
+      }
     },
     "page": {
       "title": "Alerts",
