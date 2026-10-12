@@ -1,5 +1,5 @@
 # Run: Sites "Now" live mode + Dota 2 mark
-status: active
+status: closed
 lane: full
 base: a8249a38   branch: development (worktree after gate)   opened: 2026-10-12   lead: opus
 
@@ -18,25 +18,27 @@ base: a8249a38   branch: development (worktree after gate)   opened: 2026-10-12 
 ## Plan
 | id | task | class | seat | write set | state |
 |---|---|---|---|---|---|
-| T1 | daemon live loop + CGI range=now/lease | build | cgi-endpoint-builder | scripts/usr/bin/qmanager_sites, scripts/www/cgi-bin/quecmanager/monitoring/sites.sh | DISPATCHED |
-| T2 | "Now" tab, 2 s visible-only polling, Dota 2 mark, i18n | build | ui-builder | types/sites.ts, hooks/use-sites.ts, components/monitoring/latency-monitoring/**, public/locales/** | DISPATCHED |
-| T3 | docs rows | docs | docs-writer | docs/reference/sites-monitor.md, latency-monitor.md | PENDING |
+| T1 | daemon live loop + CGI range=now/lease | build | cgi-endpoint-builder | scripts/usr/bin/qmanager_sites, scripts/www/cgi-bin/quecmanager/monitoring/sites.sh | VERIFIED c9d162a2 |
+| T2 | "Now" tab, 2 s visible-only polling, Dota 2 mark, i18n | build | ui-builder | types/sites.ts, hooks/use-sites.ts, components/monitoring/latency-monitoring/**, public/locales/** | VERIFIED c9d162a2 + 8e8806ec |
+| T3 | docs | docs | docs-writer | docs/reference/sites-monitor.md, latency-monitor.md, README.md | ACCEPTED 33047f70 |
 
 ## Attempts   (append-only)
 | task | # | seat | ticket rev | outcome | checks run | evidence path |
 |---|---|---|---|---|---|---|
+| T1 | 1 | sonnet/high | r1 | DONE_WITH_CONCERNS (disable did not stop live; conductor fixed in sites.sh) | crlf, bash -n, /tmp daemon run, www-data CGI | .orchestra/scratch/sites-now-live-proof2.txt, -proof3-cgi.txt |
+| T2 | 1 | opus/medium | r1 | DONE_WITH_CONCERNS (Dota ink not red: 2.88:1 dark) | tsc, i18n, build, browser shim | scratchpad build.log |
+| V | 1 | qm-verifier opus/high | — | PASS_WITH_NOTES; note B (2 s polling while disabled) fixed in 8e8806ec | all gates, device e2e, 3-way md5 | .orchestra/scratch/verify-sites-now-build.log |
+| T3 | 1 | opus/medium | r1 | DONE | source citations | — |
 
 ## Findings that survive
 - RM520N-GL bash is 3.2.57: NO `EPOCHREALTIME`, NO `declare -A`; `date +%s%N` prints a literal `%N`. ms timing must come from curl `-w`.
 - Device curl 8.12 protocols: file ftp ftps http https ipfs ipns ws wss — no telnet, no --connect-only.
-- Measured per-site cost on rmnet_data0 (13 sites, 2 rounds): HTTPS HEAD ~8.8 KB; HTTP HEAD port 80 (`--resolve` to cached IP) ~1.1 KB, all 13 rc 0; plain HTTP to :443 ~0.8 KB but rc 52/56/1 mixed.
-- CPU: single core; 13 parallel port-80 HEADs every ~2 s raised total CPU 29% → 54% (~+25 points) while running.
-- `/tmp/qmanager_sites*` is not referenced by install/uninstall (tmpfs).
+- Per-site cost on rmnet_data0: HTTPS HEAD ~8.8 KB; HTTP HEAD :80 ~1.1 KB. Live mode ~25 MB/h, ~+25 CPU points (single core).
+- lighttpd on the device 301s http://127.0.0.1 to https; drive CGI with `curl -k https://127.0.0.1/...`.
+- Open (low, accepted): site-list edits reach live ticks only at the next sweep; range switch shows old figures until the new read lands (pre-existing behaviour).
 
 ## Device state
-RM520N-GL (61368cd2) reachable; RG501Q-EU unreachable 2026-10-12. Only read-only probes run from /tmp, self-deleted. Nothing deployed.
-
-- T1 DONE_WITH_CONCERNS (proof: .orchestra/scratch/sites-now-live-proof2.txt, -proof3-cgi.txt). Ticks 1.7–2.5 s apart, stop ~11 s after last lease. Conductor fixed concern 1 inline in sites.sh: lease renewed only while enabled; save enabled=false removes the lease.
+RM520N-GL (61368cd2): /usr/bin/qmanager_sites md5 b3b9d002532ad694560bf8ec55709161 and CGI sites.sh md5 d6240f21167c908e40d38f1dd882deb2 deployed 2026-10-12 16:26 under the user's "Yes, deploy and restart" = HEAD = working copy (8e8806ec/33047f70 changed no scripts). qmanager-sites.service active, NRestarts 0. /tmp staging removed. RG501Q-EU not tested (offline).
 
 ## Handoff — NEXT ACTION
-Gate with the user: measured costs (2 s ≈ 25 MB/h + 25% CPU; 30 s HTTPS check adds ~14 MB/h). After approval: EnterWorktree from development, dispatch T1 then T2 (disjoint write sets, may run in parallel).
+Ask the user: merge worktree-wt+sites-now-live into development, keep for PR, or discard. After a merge, re-run tsc / i18n:check / build on development. Release notes not written (v0.1.17 notes are finalized; next version is the user's call).
