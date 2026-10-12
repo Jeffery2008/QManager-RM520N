@@ -1,5 +1,5 @@
 # Run: Alerts page redesign (/monitoring/alerts)
-status: closing
+status: closed
 lane: full
 base: cf2b5c14ff389b3a846b8910b7ff13be6c1d34b7   branch: worktree-wt-alerts-redesign (.claude/worktrees/wt-alerts-redesign)   opened: 2026-10-12   lead: opus
 
@@ -51,11 +51,11 @@ Mid-turn: "Show me your proposed changes on an artifact first before building."
 - Bugs found in recon: ThresholdField rendered 3x for one alert_after_min, hint copy false, UI max 60 vs CGI 1440; Activity prints raw entry.trigger (engine logs connection_lost etc.); header Refresh skips the log; FOOT.PULSE breaks One-Loop Rule.
 - Artifact source: scratchpad alerts-review.src.html (template head + partB.html), finalize.py --shot __SHOT__=before.png.
 
-- B2 notes for docs: /tmp/qmanager_sms_log.json + /tmp/qmanager_discord_log.json seeded root:root 0666 by qmanager_setup (only after a boot; OTA --no-reboot keeps first-writer ownership); trims copy-through; Discord log trimmed to 100 rows every 150 cycles; reboot classification holds below epoch 1700000000; engine config pending until jq; msmtprc timeout 30 only after next email save/refresh.
+- B2 notes for docs: /tmp/qmanager_sms_log.json + /tmp/qmanager_discord_log.json seeded root:root 0666 by qmanager_setup (at boot and on OTA: the installer restarts qmanager-setup, per docs-writer); trims copy-through; Discord log trimmed to 100 rows every 150 cycles; reboot classification holds below epoch 1700000000; engine config pending until jq; msmtprc timeout 30 only after next email save/refresh.
 - R3 deferred (out of scope, for a later run): discord-bot Go: single-slot cmd file (spool), success rows log trigger "alert" not the event, s.Open fatal + StartLimitBurst=5 kills the bot after ~50 s no-internet boot; inline dispatch blocks poller (only msmtp timeout added); error slugs not mapped to t() (toast shows English detail); Discord ID length 17-20 UI vs 15-25 CGI.
 
 ## Device state
 RM520N-GL 61368cd2: read-only probes by R3, B2 (/tmp copies, cleaned), V1 (/tmp copies, cleaned), conductor. B2's sandboxed save runs logged 8 'settings saved' lines to the real /tmp/qmanager.log at 09:09 but wrote no config (sms/routing mtime 2026-09-08, values default, qmanager-discord NRestarts=0). An install of development HEAD at 08:56:27 (web root replaced, services restarted) rewrote discord_bot.json/email_alerts.json with unchanged defaults: not this run (deployed alerts.sh md5 = HEAD c504e7bd). Nothing from this run is deployed.
 
 ## Handoff — NEXT ACTION
-Commit on worktree-wt-alerts-redesign, ExitWorktree keep, fast-forward development (pre-authorised), re-run gates on development, delete the stale untracked ledger copy in the main checkout, set status closed. Not run on hardware beyond read-only probes; the user's tarball run is the proof (panel crossfade unseen in the hidden pane).
+Closed 2026-10-12. dd1cd602 + a9af96f8 fast-forwarded into development (user: "Merge into development once everything passes"); post-merge i18n:check, tsc, eslint green (build green in the worktree on the same tree; skipped in the main checkout because another session's dev server holds .next). Not pushed. Not yet run installed on hardware; the user's tarball run is the proof (watch the channel-panel crossfade). Deferred backend items are listed under Findings (R3 deferred) and in docs/reference/alerts.md Known gaps. Worktree .claude/worktrees/wt-alerts-redesign kept on disk.
