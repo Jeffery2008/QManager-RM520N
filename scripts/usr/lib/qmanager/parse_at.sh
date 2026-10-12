@@ -893,7 +893,8 @@ parse_time_advance() {
     # The query echoes back as +QNWCFG: "lte_time_advance",1,<ta>
     # We want the line with 3+ fields (the one with the actual TA value)
     local lte_ta_line
-    lte_ta_line=$(printf '%s\n' "$raw" | grep '"lte_time_advance"' | awk -F',' 'NF>=3' | head -1)
+    # Anchor on the reply prefix; qcmd's echoed "AT+QNWCFG=..." line also names the key
+    lte_ta_line=$(printf '%s\n' "$raw" | awk -F',' 'index($0,"+QNWCFG:")==1 && index($0,"\"lte_time_advance\"") && NF>=3 {print; exit}')
 
     if [ -n "$lte_ta_line" ]; then
         local ta_val
@@ -907,7 +908,7 @@ parse_time_advance() {
     # NR TA: +QNWCFG: "nr5g_time_advance",<enabled>,<nta>,<extra>
     # Response has 4 fields — TA value is field 3, NOT last field
     local nr_ta_line
-    nr_ta_line=$(printf '%s\n' "$raw" | grep '"nr5g_time_advance"' | awk -F',' 'NF>=3' | head -1)
+    nr_ta_line=$(printf '%s\n' "$raw" | awk -F',' 'index($0,"+QNWCFG:")==1 && index($0,"\"nr5g_time_advance\"") && NF>=3 {print; exit}')
 
     if [ -n "$nr_ta_line" ]; then
         local nta_val
@@ -1143,7 +1144,8 @@ parse_ippt_mpdn_rule() {
     boot_ippt_mode="disabled"
     boot_ippt_mac=""
 
-    rule0=$(printf '%s\n' "$raw" | grep '"MPDN_rule",0,')
+    # Anchor on the reply prefix; only the key's case keeps the "AT+QMAP=" echo out otherwise
+    rule0=$(printf '%s\n' "$raw" | awk 'index($0,"+QMAP:")==1 && index($0,"\"MPDN_rule\",0,") {print; exit}')
     [ -z "$rule0" ] && return 0
 
     # Field 5 = IPPT_mode; +0 avoids BusyBox gsub $N rebuild bug

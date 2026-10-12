@@ -142,6 +142,8 @@ It is **`grep -qx`, line-exact, never a `*OK*` glob.** A `qcmd` response echoes 
 
 Both are fragile in the same way: delete the emptiness half and the failure detection goes with it, silently, with no gate able to see it. `qmanager_band_failover` is the weaker of the two, because all three of its sites are **writes** (`AT+QNWPREFCFG="lte_band"` and friends) and none of them assert the modem's `OK`, so a `qcmd` third-arm pass-through still logs "LTE bands reset OK".
 
+**Parsers must anchor on the reply prefix.** Line 1 of a successful `qcmd` stdout is the echoed command, so a pattern keyed on a name the command also contains (`/IPPT_NAT/`, `"lte_time_advance"`) reads the echo. Match `+PREFIX:` at column 0 (`index($0,"+QMAP:")==1`), or go through `qcmd_exec` / `run_at`, which drop the echo. A census on 2026-10-12 (RM520N-GL, raw-vs-stripped differential over every raw `qcmd` parse in the poller, CGIs, libs and daemons) found no other live case after `ae2fb928`. Run ledger: `.orchestra/runs/2026-10-12-qcmd-echo-parser-census.md`.
+
 **Already correct.** `cgi_at.sh` (`run_at()`), `qmanager_poller` (`qcmd_exec()`), `scenario_mgr.sh`, `bands/lock.sh`, `bands/current.sh`, `frequency/lock.sh`, `tower/lock.sh` and `tower/settings.sh` all test `[ $rc -ne 0 ] || [ -z "$result" ]` before the `case`. Their `*ERROR*` arms are unreachable belt-and-braces, not bugs — **prefer `run_at()` from `cgi_at.sh` in new CGI code** rather than open-coding the check.
 
 **`qmanager_poller` was deliberately excluded from the sweep**, and both of its issues are recorded here rather than fixed:

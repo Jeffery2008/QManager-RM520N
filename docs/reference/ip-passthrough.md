@@ -106,7 +106,7 @@ Measured on the RM520N-GL (serial `61368cd2`, 2026-10-12, no `ippt_config.json`)
 
 - **Config-file-first is unchanged.** Once a POST has written `ippt_config.json`, the poller values are never read.
 - **The fix takes effect at the next boot after the update ships**, because the values are captured once at boot.
-- **`parse_ippt_mpdn_rule` was already safe** and was not changed: it greps `"MPDN_rule",0,`, case-sensitive, and the echo spells it `MPDN_RULE`.
+- **`parse_ippt_mpdn_rule` is anchored on `+QMAP:` too** (2026-10-12). Before that it was safe only because the key is case-sensitive: the reply says `MPDN_rule` and the echo `MPDN_RULE`.
 - **A new boot parser must anchor on the reply prefix.** Any unanchored match on a key that also appears in the issued command reads the echo.
 
 ### The Last applied strip
