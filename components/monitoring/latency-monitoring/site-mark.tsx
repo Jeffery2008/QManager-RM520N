@@ -5,6 +5,7 @@ import type { IconType } from "react-icons";
 import {
   SiCloudflare,
   SiDiscord,
+  SiDota2,
   SiEpicgames,
   SiFacebook,
   SiGithub,
@@ -80,6 +81,8 @@ const SITE_MARKS: Record<string, Mark> = {
   "epicgames.com": [SiEpicgames, null],
   "playstation.com": [SiPlaystation, "#0070D1"],
   "speedtest.net": [SiSpeedtest, null],
+  // Dota's #BF2E1A measures 2.88:1 on the dark tile (4.85:1 light), so it takes ink.
+  "dota2.com": [SiDota2, null],
   // A key with no dot matches the first label: Shopee runs one storefront per country domain.
   shopee: [SiShopee, "#EE4D2D"],
 };

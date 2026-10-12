@@ -11,6 +11,8 @@
 # Raw 24h : /tmp/qmanager_sites_raw.ndjson      (root, trimmed to 24 h)
 # Rollups : /usrdata/qmanager/sites/YYYY-MM-DD.jsonl (append-only, hourly rows)
 # Flag    : /tmp/qmanager_sites_now  (created by www-data; root only tests+rm)
+# Lease   : /tmp/qmanager_sites_live (written by www-data; root only reads it)
+# Live    : /tmp/qmanager_sites_live.json (root, atomic; ~2 s HTTP samples while leased)
 #
 # Test overrides: QM_SITES_TMP_DIR, QM_SITES_DATA_DIR, QM_SITES_CONF,
 # QM_SITES_ONESHOT=1 (one sweep, flush, exit).
@@ -36,12 +38,16 @@ FLUSHED_FILE="$TMP_DIR/qmanager_sites_flushed"
 NOW_FLAG="$TMP_DIR/qmanager_sites_now"
 CHECKING_FILE="$TMP_DIR/qmanager_sites_checking"
 PID_FILE="$TMP_DIR/qmanager_sites.pid"
+LIVE_LEASE="$TMP_DIR/qmanager_sites_live"       # www-data-owned: only ever read here
+LIVE_FILE="$TMP_DIR/qmanager_sites_live.json"
 
 CURL=/usr/bin/curl
 SANE_EPOCH=1700000000       # the device boots at 1970; below this the clock is unset
 BOOT_SETTLE=60              # first sweep waits for uptime >= this (clock step ~24 s, jq mount ~30 s)
 MIN_FLAG_GAP=10             # a spammed check-now flag cannot sweep more often than this
 POLL=5                      # flag poll while waiting
+LIVE_LEASE_SEC=10           # live ticks run while the lease is at most this old
+LIVE_TICK=2                 # target seconds per live tick
 RETAIN_DAYS=90
 DATA_CAP_KB=4096
 MIN_FREE_KB=8192
@@ -55,6 +61,11 @@ cfg_interval=300
 cfg_hosts=""                # newline-separated, validated
 flushed_through=0           # newest raw ts already written to a rollup
 TMPD=""
+live_on="false"
+live_ips=""                 # "host ipv4" lines learned from live probes
+live_ips_for=""             # cfg_hosts the cache was built for
+live_frac=""                # 1 when sleep takes fractional seconds
+CS=0                        # set by mono_cs
 
 # =============================================================================
 # HELPERS
@@ -66,6 +77,15 @@ mono_now() {
     up="${up%%.*}"
     case "$up" in ''|*[!0-9]*) up=0 ;; esac
     echo "$up"
+}
+
+# Uptime in centiseconds -> CS (no fork).
+mono_cs() {
+    local up _
+    read -r up _ < /proc/uptime 2>/dev/null
+    up="${up/./}"
+    case "$up" in ''|*[!0-9]*) up=0 ;; esac
+    CS=$((10#$up))
 }
 
 # Atomic root-side publish: mktemp + 0644 + mv. Reads the body from stdin.
@@ -345,6 +365,118 @@ expire_rollups() {
 }
 
 # =============================================================================
+# LIVE MODE (while a browser holds the lease: ~2 s HTTP probes, latest-only)
+# =============================================================================
+
+# True while the lease holds a recent epoch. The file is www-data's: never
+# trust its content beyond digits, never write it.
+live_fresh() {
+    local v="" now
+    [ "$cfg_enabled" = "false" ] && return 1
+    [ -f "$LIVE_LEASE" ] && [ ! -L "$LIVE_LEASE" ] || return 1
+    { read -r -n 13 v < "$LIVE_LEASE"; } 2>/dev/null
+    case "$v" in ''|*[!0-9]*) return 1 ;; esac
+    [ "${#v}" -le 12 ] || return 1
+    now=$(date +%s)
+    [ $(( now - 10#$v )) -ge 0 ] && [ $(( now - 10#$v )) -le "$LIVE_LEASE_SEC" ]
+}
+
+# $1 = host -> LIP = cached IPv4 or "".
+lookup_ip() {
+    local l
+    LIP=""
+    while IFS= read -r l; do
+        case "$l" in "$1 "*) LIP="${l#* }"; return 0 ;; esac
+    done <<EOF
+$live_ips
+EOF
+    return 0
+}
+
+# Plain HTTP HEAD on :80 (TCP handshake time, no TLS). $1 = result file,
+# $2 = host, $3 = cached IPv4 or "". Writes "s <host> <ms|null> <ipv4|>".
+live_probe() {
+    local out rc d c ip ms=null t res=""
+    [ -n "$3" ] && res="--resolve $2:80:$3"
+    # shellcheck disable=SC2086
+    out=$("$CURL" -s -I $res -o /dev/null --connect-timeout 1.5 --max-time 1.8 \
+        -w '%{time_namelookup} %{time_connect} %{remote_ip}' -- "http://$2/" </dev/null 2>/dev/null)
+    rc=$?
+    d="${out%% *}"; c="${out#* }"; ip="${c#* }"; c="${c%% *}"
+    case "$ip" in ''|*[!0-9.]*) ip="" ;; esac
+    if [ "$rc" -eq 0 ]; then
+        case "$d" in [0-9].[0-9][0-9][0-9][0-9][0-9][0-9]) ;; *) d="" ;; esac
+        case "$c" in [0-9].[0-9][0-9][0-9][0-9][0-9][0-9]) ;; *) c="" ;; esac
+        if [ -n "$d" ] && [ -n "$c" ]; then
+            d=$((10#${d/./})); c=$((10#${c/./}))
+            if [ "$c" -gt 0 ]; then
+                t=$(( (c - d + 50) / 100 ))
+                [ "$t" -lt 0 ] && t=0
+                ms="$((t / 10)).$((t % 10))"
+            fi
+        fi
+    else
+        ip=""
+    fi
+    printf 's %s %s %s\n' "$2" "$ms" "$ip" > "$1"
+}
+
+# One live tick: probe every host in parallel, publish LIVE_FILE, pace to LIVE_TICK.
+live_tick() {
+    local t0 at i=0 h f pids="" tag ms ip lines="" nips="" out rem s
+
+    mono_cs; t0=$CS
+    [ "$live_ips_for" = "$cfg_hosts" ] || { live_ips=""; live_ips_for="$cfg_hosts"; }
+    TMPD=$(mktemp -d "$TMP_DIR/qmanager_sites.XXXXXX") || { qlog_error "mktemp failed"; nap 1; return 1; }
+
+    while IFS= read -r h; do
+        [ -n "$h" ] || continue
+        printf -v f '%s/r%02d' "$TMPD" "$i"
+        lookup_ip "$h"
+        live_probe "$f" "$h" "$LIP" &
+        pids="$pids $!"
+        i=$((i + 1))
+    done <<EOF
+$cfg_hosts
+EOF
+    # shellcheck disable=SC2086
+    wait $pids 2>/dev/null
+
+    at=$(date +%s)
+    for f in "$TMPD"/r*; do
+        [ -f "$f" ] || continue
+        read -r tag h ms ip < "$f"
+        [ -n "$h" ] || continue
+        lines="$lines$tag $h $ms"$'\n'
+        # Cache only a fresh IPv4 from a host name (an IP literal needs no pin).
+        case "$h" in *[!0-9.]*) [ -n "$ip" ] && nips="$nips$h $ip"$'\n' ;; esac
+    done
+    live_ips="$nips"
+    rm -rf "$TMPD"; TMPD=""
+
+    out=$(printf '%s' "$lines" | jq -Rnc --argjson at "$at" '
+        {at: $at,
+         results: [inputs | split(" ")
+                   | {host: .[1], ms: (if .[2] == "null" then null else (.[2] | tonumber) end)}
+                   | .ok = (.ms != null)]}')
+    [ -n "$out" ] && printf '%s\n' "$out" | atomic_put "$LIVE_FILE"
+
+    if [ -z "$live_frac" ]; then
+        if sleep 0.01 </dev/null 2>/dev/null; then live_frac=1; else live_frac=0; fi
+    fi
+    if [ "$live_frac" = "1" ]; then
+        mono_cs
+        rem=$(( LIVE_TICK * 100 - (CS - t0) ))
+        if [ "$rem" -gt 0 ]; then
+            printf -v s '%d.%02d' $((rem / 100)) $((rem % 100))
+            nap "$s"
+        fi
+    else
+        nap 1
+    fi
+}
+
+# =============================================================================
 # LIFECYCLE
 # =============================================================================
 
@@ -389,6 +521,7 @@ main() {
     trap on_term INT TERM
     rm -f "$CHECKING_FILE"
     own_or_rm "$RAW_FILE"; own_or_rm "$FLUSHED_FILE"; own_or_rm "$LATEST_FILE"
+    own_or_rm "$LIVE_FILE"
     load_flushed
 
     qlog_info "QManager Sites daemon starting (PID $$)"
@@ -424,7 +557,17 @@ main() {
             if [ -e "$NOW_FLAG" ] && [ $(( now_mono - last_end )) -ge "$MIN_FLAG_GAP" ]; then
                 break
             fi
-            nap "$POLL"
+            if live_fresh; then
+                if [ "$live_on" != "true" ]; then
+                    live_on="true"; qlog_info "sites: live mode on"
+                fi
+                live_tick
+            else
+                if [ "$live_on" = "true" ]; then
+                    live_on="false"; qlog_info "sites: live mode off"
+                fi
+                nap "$POLL"
+            fi
         done
     done
 }

@@ -45,9 +45,10 @@ import {
 } from "./shapes";
 import { SiteMark } from "./site-mark";
 
-const SITES_RANGES: readonly SitesRange[] = ["1h", "24h", "7d"];
+const SITES_RANGES: readonly SitesRange[] = ["now", "1h", "24h", "7d"];
 
 const RANGE_LABEL_KEY = {
+  now: "latencyMonitor.range.now",
   "1h": "latencyMonitor.range.h1",
   "24h": "latencyMonitor.range.h24",
   "7d": "latencyMonitor.range.d7",
@@ -70,11 +71,13 @@ interface SiteCellProps {
   cuts: Cuts;
   units: UnitLabels;
   checking: boolean;
+  /** "now" data carries no series, so the figure is the live sample itself. */
+  live: boolean;
 }
 
-function SiteCell({ site, index, cuts, units, checking }: SiteCellProps) {
+function SiteCell({ site, index, cuts, units, checking, live }: SiteCellProps) {
   const { t } = useTranslation("dashboard");
-  const avg = siteAverage(site.series);
+  const figure = live ? (site.latest?.ms ?? null) : siteAverage(site.series);
 
   let value: ReactNode;
   if (!site.latest) {
@@ -83,11 +86,11 @@ function SiteCell({ site, index, cuts, units, checking }: SiteCellProps) {
     value = (
       <span className={SITE_INK.bad}>{t("latencyMonitor.now.no_reply")}</span>
     );
-  } else if (avg === null) {
+  } else if (figure === null) {
     value = <span className={SITES.QUIET}>{t("latencyMonitor.unmeasured")}</span>;
   } else {
     value = (
-      <span className={SITE_INK[latencyTone(avg, cuts)]}>{msText(avg, units)}</span>
+      <span className={SITE_INK[latencyTone(figure, cuts)]}>{msText(figure, units)}</span>
     );
   }
 
@@ -141,8 +144,8 @@ export interface SitesCardProps {
 export function SitesCard({ cuts }: SitesCardProps) {
   const { t } = useTranslation("dashboard");
   const intervalLabel = useIntervalLabel();
-  const [range, setRange] = useState<SitesRange>("1h");
-  const { data, isLoading, error, checkPending, refresh, checkNow, save } =
+  const [range, setRange] = useState<SitesRange>("now");
+  const { data, dataRange, isLoading, error, checkPending, refresh, checkNow, save } =
     useSites(range);
 
   const [turningOn, setTurningOn] = useState(false);
@@ -247,6 +250,7 @@ export function SitesCard({ cuts }: SitesCardProps) {
             cuts={cuts}
             units={units}
             checking={checking}
+            live={dataRange === "now"}
           />
         ))}
       </div>

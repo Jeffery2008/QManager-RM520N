@@ -16,6 +16,8 @@ import type {
 const ENDPOINT = "/cgi-bin/quecmanager/monitoring/sites.sh";
 const IDLE_POLL_MS = 30_000;
 const BUSY_POLL_MS = 3_000;
+/** Each "now" read renews the daemon's live lease, so it polls only while the tab is visible. */
+const LIVE_POLL_MS = 2_000;
 /** A check the daemon never picked up stops counting as pending after this. */
 const PENDING_TIMEOUT_MS = 90_000;
 
@@ -27,6 +29,8 @@ interface PendingCheck {
 
 export interface UseSitesReturn {
   data: SitesResponse | null;
+  /** The range `data` was read for; it lags `range` until the new read lands. */
+  dataRange: SitesRange | null;
   isLoading: boolean;
   error: string | null;
   /** True from a successful check-now until the sweep it asked for lands. */
@@ -56,6 +60,7 @@ async function postSites(body: object): Promise<MutationResult> {
 
 export function useSites(range: SitesRange): UseSitesReturn {
   const [data, setData] = useState<SitesResponse | null>(null);
+  const [dataRange, setDataRange] = useState<SitesRange | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkPending, setCheckPending] = useState(false);
@@ -77,6 +82,7 @@ export function useSites(range: SitesRange): UseSitesReturn {
       if (!json.success) throw new Error(json.detail ?? json.error);
 
       setData(json);
+      setDataRange(r);
       setError(null);
       checkedAtRef.current = json.checked_at;
 
@@ -108,17 +114,43 @@ export function useSites(range: SitesRange): UseSitesReturn {
 
   useEffect(() => {
     rangeRef.current = range;
+    // A hidden tab on "now" leaves the first read to the visibility handler, so no lease renews.
+    if (range === "now" && document.visibilityState !== "visible") return;
     void fetchSites(range);
   }, [range, fetchSites]);
 
   const busy = (data?.checking ?? false) || checkPending;
+  const cadence = range === "now" ? "live" : busy ? BUSY_POLL_MS : IDLE_POLL_MS;
   useEffect(() => {
-    const id = window.setInterval(
-      () => void fetchSites(rangeRef.current),
-      busy ? BUSY_POLL_MS : IDLE_POLL_MS,
-    );
-    return () => window.clearInterval(id);
-  }, [busy, fetchSites]);
+    if (cadence !== "live") {
+      const id = window.setInterval(() => void fetchSites(rangeRef.current), cadence);
+      return () => window.clearInterval(id);
+    }
+
+    let id: number | null = null;
+    const stop = () => {
+      if (id !== null) window.clearInterval(id);
+      id = null;
+    };
+    const start = () => {
+      if (id === null) id = window.setInterval(() => void fetchSites("now"), LIVE_POLL_MS);
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void fetchSites("now");
+        start();
+      } else {
+        stop();
+      }
+    };
+
+    if (document.visibilityState === "visible") start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      stop();
+    };
+  }, [cadence, fetchSites]);
 
   const refresh = useCallback(() => {
     void fetchSites(rangeRef.current);
@@ -147,5 +179,5 @@ export function useSites(range: SitesRange): UseSitesReturn {
     [fetchSites],
   );
 
-  return { data, isLoading, error, checkPending, refresh, checkNow, save };
+  return { data, dataRange, isLoading, error, checkPending, refresh, checkNow, save };
 }

@@ -203,6 +203,7 @@
       "error_description": "Try again in a moment."
     },
     "range": {
+      "now": "Now",
       "h1": "1 h",
       "h6": "6 h",
       "h24": "24 h",

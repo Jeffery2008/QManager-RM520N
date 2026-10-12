@@ -1,7 +1,7 @@
 // Sites monitor: the GET/POST contract of the sites CGI (docs/reference/sites-monitor.md).
 
-/** The three ranges the Latency Monitor page reads; the CGI serves more. */
-export type SitesRange = "1h" | "24h" | "7d";
+/** The ranges the Latency Monitor page reads; "now" is live latest-only with an empty series. */
+export type SitesRange = "now" | "1h" | "24h" | "7d";
 
 export interface SiteLatest {
   ts: number;
@@ -37,6 +37,8 @@ export interface SitesResponse {
   enabled: boolean;
   interval_sec: number;
   checked_at: number | null;
+  /** Epoch of the live sample behind `latest`; null outside "now" or before one lands. */
+  live_at: number | null;
   next_check_at: number | null;
   /** A sweep is running or a check-now flag is pending. */
   checking: boolean;

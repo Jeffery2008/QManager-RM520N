@@ -3,7 +3,8 @@
 # =============================================================================
 # sites.sh — CGI Endpoint: Sites monitor (GET + POST)
 # =============================================================================
-# GET  ?range=1h|3h|6h|12h|24h|7d|30d|90d : latest result + history per site.
+# GET  ?range=now|1h|3h|6h|12h|24h|7d|30d|90d : latest result + history per site.
+#      range=now renews the live lease and returns no history (see qmanager_sites).
 # POST {"action":"check_now"}             : raise the sweep flag for the daemon.
 # POST {"action":"save","enabled":b,"interval_sec":n,"sites":[{"host","label"}]}
 #
@@ -11,6 +12,7 @@
 # State  : /tmp/qmanager_sites*.json|ndjson, /usrdata/qmanager/sites/*.jsonl
 #          (all written by the root daemon qmanager_sites; read-only here)
 # Flag   : /tmp/qmanager_sites_now       (created here as www-data)
+# Lease  : /tmp/qmanager_sites_live      (written here as www-data; the daemon only reads)
 #
 # Endpoint: GET/POST /cgi-bin/quecmanager/monitoring/sites.sh
 # =============================================================================
@@ -28,8 +30,11 @@ RAW_FILE="$TMP_DIR/qmanager_sites_raw.ndjson"
 FLUSHED_FILE="$TMP_DIR/qmanager_sites_flushed"
 NOW_FLAG="$TMP_DIR/qmanager_sites_now"
 CHECKING_FILE="$TMP_DIR/qmanager_sites_checking"
+LIVE_LEASE="$TMP_DIR/qmanager_sites_live"
+LIVE_FILE="$TMP_DIR/qmanager_sites_live.json"
 
 SANE_EPOCH=1700000000
+LIVE_MAX_AGE=6             # a live sample older than this is ignored
 DEFAULT_SITES="google.com facebook.com tiktok.com youtube.com roblox.com spotify.com x.com cellmapper.net reddit.com github.com discord.com instagram.com messenger.com"
 
 # Conservative hostname / IPv4 check, no regex (device jq has none).
@@ -133,6 +138,7 @@ def nul: if . == "null" then null else tonumber end;
 | ($all | group_by(.host) | map({key: .[0].host, value: .}) | from_entries) as $byhost
 | ($cfg.sites) as $cs
 | ($latest.results // []) as $lr
+| ($live.results // []) as $lv
 | ([$lr[] | select(.kind == "gateway" or (.host as $h | $cs | any(.host == $h)))]
    + [$cs[] | .host as $h | select($lr | any(.host == $h) | not) | {host: $h, kind: "site", ms: null, ok: false, ts: null, absent: true}]) as $list
 | [$list[] | . as $e
@@ -140,7 +146,11 @@ def nul: if . == "null" then null else tonumber end;
    | {host: $e.host,
       label: ($cl // (if $e.kind == "gateway" then "Gateway" else $e.host end)),
       kind: $e.kind,
-      latest: (if $e.absent then null else {ts: $e.ts, ms: $e.ms, ok: $e.ok, wan: "cellular"} end),
+      latest: (if $e.absent then null
+               elif $live != null and $e.kind == "site" and ($lv | any(.host == $e.host))
+               then ($lv | map(select(.host == $e.host)) | .[0]
+                     | {ts: $live.at, ms, ok, wan: "cellular"})
+               else {ts: $e.ts, ms: $e.ms, ok: $e.ok, wan: "cellular"} end),
       series: (($byhost[$e.host] // [])
         | map({ts, ms: (if .ok > 0 then ((.sum / .ok) | r1) else null end), min, max, n, ok})
         | sort_by(.ts))}] as $sites
@@ -150,6 +160,7 @@ def nul: if . == "null" then null else tonumber end;
    checked_at: ($latest.checked_at // null),
    next_check_at: (if $cfg.enabled then ($latest.next_check_at // null) else null end),
    checking: $checking,
+   live_at: $live.at,
    wans: ["cellular"],
    summary: {answered: ([$sites[] | select(.latest != null and .latest.ok)] | length), total: ($sites | length)},
    sites: $sites}
@@ -157,14 +168,16 @@ def nul: if . == "null" then null else tonumber end;
 
 handle_get() {
     local query range span bucket rawmode now start cfg latest checking flushed
-    local startday startnum f name num files
+    local startday startnum f name num files live live_mode
 
     query="$QUERY_STRING"
     range=24h
     case "&$query" in
         *"&range="*) range="${query#*range=}"; range="${range%%&*}" ;;
     esac
+    live_mode=false
     case "$range" in
+        now) span=0;       bucket=0; live_mode=true ;;
         1h)  span=3600;    bucket=0 ;;
         3h)  span=10800;   bucket=0 ;;
         6h)  span=21600;   bucket=0 ;;
@@ -173,25 +186,42 @@ handle_get() {
         7d)  span=604800;  bucket=7200 ;;
         30d) span=2592000; bucket=28800 ;;
         90d) span=7776000; bucket=86400 ;;
-        *) cgi_error "invalid_range" "range must be 1h, 3h, 6h, 12h, 24h, 7d, 30d or 90d"; exit 0 ;;
+        *) cgi_error "invalid_range" "range must be now, 1h, 3h, 6h, 12h, 24h, 7d, 30d or 90d"; exit 0 ;;
     esac
     rawmode=false
     [ "$span" -le 86400 ] && rawmode=true
 
     now=$(date +%s)
-    if [ "$now" -lt "$SANE_EPOCH" ]; then
+    if [ "$live_mode" = "true" ] || [ "$now" -lt "$SANE_EPOCH" ]; then
         start=0
     else
         start=$((now - span))
     fi
 
     cfg=$(read_config)
+    # Lease renewal only while enabled; a write failure is ignored (the page falls back to sweep data).
+    if [ "$live_mode" = "true" ] && [ "$(printf '%s' "$cfg" | jq -r '.enabled')" = "true" ]; then
+        { printf '%s\n' "$now" > "$LIVE_LEASE"; } 2>/dev/null
+    fi
     latest=$(jq -c . "$LATEST_FILE" 2>/dev/null)
     case "$latest" in '{'*) ;; *) latest=null ;; esac
     checking=false
     { [ -e "$CHECKING_FILE" ] || [ -e "$NOW_FLAG" ]; } && checking=true
-    flushed=$(cat "$FLUSHED_FILE" 2>/dev/null)
-    case "$flushed" in ''|*[!0-9]*) flushed=0 ;; esac
+    flushed=0
+    live=null
+    if [ "$live_mode" = "true" ]; then
+        live=$(jq -c --argjson now "$now" --argjson max "$LIVE_MAX_AGE" '
+            select(type == "object" and (.at | type) == "number" and (.results | type) == "array"
+                   and ($now - .at) >= 0 and ($now - .at) <= $max)
+            | {at: (.at | floor),
+               results: [.results[] | select(type == "object" and (.host | type) == "string")
+                         | {host, ms: (if (.ms | type) == "number" then .ms else null end),
+                            ok: (.ok == true)}]}' "$LIVE_FILE" 2>/dev/null)
+        case "$live" in '{'*) ;; *) live=null ;; esac
+    else
+        flushed=$(cat "$FLUSHED_FILE" 2>/dev/null)
+        case "$flushed" in ''|*[!0-9]*) flushed=0 ;; esac
+    fi
 
     files="/dev/null"
     if [ "$start" -gt 0 ]; then
@@ -211,13 +241,17 @@ handle_get() {
     # aggregates; one small jq pass assembles the response.
     local rawflag=0
     [ "$rawmode" = "true" ] && rawflag=1
-    # shellcheck disable=SC2086
-    grep -hE "$ROW_RE" $files 2>/dev/null \
-        | awk -F'[{}",:]+' -v rawmode="$rawflag" -v start="$start" -v bucket="$bucket" \
-            -v flushed="$flushed" "$AWK_AGG" \
-        | jq -nR \
+    # range=now reads no history: the grep/awk stage is skipped.
+    {
+        if [ "$live_mode" != "true" ]; then
+            # shellcheck disable=SC2086
+            grep -hE "$ROW_RE" $files 2>/dev/null \
+                | awk -F'[{}",:]+' -v rawmode="$rawflag" -v start="$start" -v bucket="$bucket" \
+                    -v flushed="$flushed" "$AWK_AGG"
+        fi
+    } | jq -nR \
             --argjson cfg "$cfg" --argjson latest "$latest" \
-            --argjson checking "$checking" \
+            --argjson checking "$checking" --argjson live "$live" \
             "$JQ_GET"
 }
 
@@ -287,6 +321,8 @@ EOF
     }
     if printf '%s\n' "$new" > "$tmp" && chmod 0644 "$tmp" && mv -f "$tmp" "$CONF_FILE"; then
         [ "$enabled" = "true" ] && : > "$NOW_FLAG" 2>/dev/null
+        # Disabling drops the live lease so the daemon stops live ticks at once.
+        [ "$enabled" = "false" ] && rm -f "$LIVE_LEASE" 2>/dev/null
         qlog_info "Saved sites config ($nsites sites, enabled=$enabled)"
         printf '%s' "$new" | jq '{success: true} + .'
     else

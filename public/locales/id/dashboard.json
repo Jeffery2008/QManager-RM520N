@@ -203,6 +203,7 @@
       "error_description": "Coba lagi sebentar lagi."
     },
     "range": {
+      "now": "Kini",
       "h1": "1 j",
       "h6": "6 j",
       "h24": "24 j",
