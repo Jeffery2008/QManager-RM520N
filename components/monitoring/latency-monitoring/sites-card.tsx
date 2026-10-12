@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { motion } from "motion/react";
 import {
-  CheckIcon,
   GlobeIcon,
   PowerIcon,
   RotateCwIcon,
@@ -142,7 +141,7 @@ export interface SitesCardProps {
 export function SitesCard({ cuts }: SitesCardProps) {
   const { t } = useTranslation("dashboard");
   const intervalLabel = useIntervalLabel();
-  const [range, setRange] = useState<SitesRange>("24h");
+  const [range, setRange] = useState<SitesRange>("1h");
   const { data, isLoading, error, checkPending, refresh, checkNow, save } =
     useSites(range);
 
@@ -273,9 +272,7 @@ export function SitesCard({ cuts }: SitesCardProps) {
               }))}
               ariaLabel={t("latencyMonitor.sites.range_aria")}
               breakpoint="never"
-              glyph={(className) => (
-                <CheckIcon aria-hidden className={cn("size-4", className)} />
-              )}
+              glyph={() => null}
             />
           )}
           <Button type="button" variant="ghost" onClick={openManage} disabled={!data}>

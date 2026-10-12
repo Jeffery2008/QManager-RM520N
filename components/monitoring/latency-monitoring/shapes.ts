@@ -134,6 +134,15 @@ export const STRIP = {
   EMPTY: "bg-surface-container-high h-[3px]",
   MISS: "bg-destructive h-full opacity-85",
   FOOT: "text-on-surface-variant flex justify-between text-[0.71875rem] leading-4 tabular-nums",
+  /** The bars' box anchors the hover readout; it sits above the bars, clamped to the card. */
+  HOVER_ROOT: "relative touch-pan-y",
+  READOUT:
+    "bg-surface-container-high pointer-events-none absolute bottom-full z-10 mb-2 grid min-w-[6.5rem] -translate-x-1/2 gap-0.5 rounded-field px-3 py-2 text-xs leading-5 tabular-nums shadow-lg",
+  READOUT_VALUE: "font-semibold",
+  READOUT_AGE: "text-on-surface-variant",
+  /** Bars other than the hovered one step back, like a chart cursor. */
+  DIM: "opacity-40",
+  BAR_FADE: "transition-[opacity,height,background-color] duration-[var(--duration-standard)] ease-standard",
   FOOT_H: "h-4",
 } as const;
 

@@ -31,6 +31,7 @@
 | Sites | `useSites(range)` | 30 s idle, 3 s busy | `enabled`, `interval_sec`, `checked_at`, `checking`, `sites[].latest`, `sites[].series` |
 
 - **History reads `lat`, never `max` or `avg`.** An archive row's `min` / `avg` / `max` are the poller's rolling statistics over its 60-probe window, so one spike repeats in every row archived while it stays in that window. Worst, Typical and the bucket averages are computed from the per-row `lat` instead; a `null` `lat` is a lost probe.
+- **The strip has a hover readout** (`ProbeStrip` in `now-card.tsx`): the pointer's slot shows its RTT (or No reply) and its age, `(slots − 1 − i) × history_interval_sec`, as Now / N s ago / N min ago; the other bars dim to 40 %. It is pointer-only; the strip's `aria-label` carries the summary.
 - **Right now's 60-probe strip is the live window, not the archive.** It is `connectivity.latency_history` padded on the left with empty slots until the ring fills. Its footer span is `60 × history_interval_sec` (5 s if absent), rounded to minutes.
 - **Right now uses the archive in one place.** When `latency_ms` is `null`, the big figure reads "No reply" and the caption falls back to `lastAnswer()` — the newest archive row with a non-null `lat` — as "Last answer at HH:MM, N ms".
 - **Unreachable** means `useModemStatus` returned an error or the last snapshot's `timestamp` is more than 60 s behind the browser clock (`UNREACHABLE_AGE_SEC`). It never reads `modem_reachable`: the poller sets that false after one failed AT read, and the ping data does not use the AT port. Right now then swaps its body for a destructive `ConditionBlock` with Try again and shows the Unknown chip; History and Sites keep their own states.
@@ -51,7 +52,7 @@ Every tone on the page reads `resolveCuts(connectivity)`: `connectivity.threshol
 
 ## History card
 
-Ranges are `1h` / `6h` / `24h` (`HISTORY_RANGE` in `derive.ts`); the default is `6h`.
+Ranges are `1h` / `6h` / `24h` (`HISTORY_RANGE` in `derive.ts`); the default is `1h`.
 
 | Range | Span | Bucket |
 |-------|------|--------|
@@ -74,7 +75,7 @@ Ranges are `1h` / `6h` / `24h` (`HISTORY_RANGE` in `derive.ts`); the default is 
 
 ## Sites card
 
-Ranges are `1h` / `24h` / `7d` (`SitesRange`; the CGI serves more); the default is `24h`. The range pill is hidden while the monitor is off. There is no Check now button: a successful Manage save with the monitor on calls `checkNow()` without blocking the dialog, and only a failed check toasts (`check_failed`).
+Ranges are `1h` / `24h` / `7d` (`SitesRange`; the CGI serves more); the default is `1h`. The range pill is hidden while the monitor is off. There is no Check now button: a successful Manage save with the monitor on calls `checkNow()` without blocking the dialog, and only a failed check toasts (`check_failed`).
 
 **The value under each logo** is chosen in this order:
 
@@ -108,6 +109,8 @@ Ranges are `1h` / `24h` / `7d` (`SitesRange`; the CGI serves more); the default 
 - **`null` colour means on-surface ink.** Use it for near-black brands (TikTok, X, GitHub) and for any brand colour that fails on the light tile (Snapchat's yellow). Check a new hex on the tile in both themes before adding it.
 - **No mark, a favicon.** An unmapped host loads `https://www.google.com/s2/favicons?domain=<host>&sz=64` (`referrerPolicy="no-referrer"`), crossfading over its monogram once loaded. The browser's HTTP cache keeps it (the service sends `max-age` of 7 days); `faviconSeen` remembers the result for the session so a remount does not flash. The service has no CORS headers, so the image cannot be copied into storage.
 - **Monogram fallback.** A load error (no internet) or an image 16px or smaller (the service's stand-in globe for an unknown domain) shows the first letter of the label (or host).
+
+Both range pickers pass `glyph={() => null}` to `SegmentedField`: the active pill's fill marks it, with no check mark (user decision, 2026-10-12).
 
 ## Toasts
 

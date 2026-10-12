@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import {
@@ -116,6 +117,76 @@ function NowSkeleton() {
   );
 }
 
+interface ProbeStripProps {
+  slots: (number | null | undefined)[];
+  cuts: Cuts;
+  units: UnitLabels;
+  intervalSec: number;
+  ariaLabel: string;
+}
+
+/** The 60-probe strip, with a hover readout of the probe under the pointer. */
+function ProbeStrip({ slots, cuts, units, intervalSec, ariaLabel }: ProbeStripProps) {
+  const { t } = useTranslation("dashboard");
+  const [hover, setHover] = useState<number | null>(null);
+
+  const pick = (e: React.PointerEvent<HTMLDivElement>) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    const i = Math.floor(((e.clientX - box.left) / box.width) * slots.length);
+    const at = Math.max(0, Math.min(slots.length - 1, i));
+    setHover(slots[at] === undefined ? null : at);
+  };
+
+  const probe = hover === null ? undefined : slots[hover];
+  let readout: React.ReactNode = null;
+  if (hover !== null && probe !== undefined) {
+    const age = (slots.length - 1 - hover) * intervalSec;
+    const ageText =
+      age === 0
+        ? t("latencyMonitor.now.strip_end")
+        : age < 60
+          ? t("latencyMonitor.now.probe_seconds", { seconds: age })
+          : t("latencyMonitor.now.strip_start", { minutes: Math.round(age / 60) });
+    // Clamped so the readout never hangs past the card edge.
+    const left = Math.min(88, Math.max(12, ((hover + 0.5) / slots.length) * 100));
+    readout = (
+      <span className={STRIP.READOUT} style={{ left: `${left}%` }}>
+        <span className={cn(STRIP.READOUT_VALUE, FIGURE_INK[probe === null ? "bad" : latencyTone(probe, cuts)])}>
+          {probe === null ? t("latencyMonitor.now.no_reply") : msText(probe, units)}
+        </span>
+        <span className={STRIP.READOUT_AGE}>{ageText}</span>
+      </span>
+    );
+  }
+
+  return (
+    <div
+      className={STRIP.HOVER_ROOT}
+      onPointerMove={pick}
+      onPointerDown={pick}
+      onPointerLeave={() => setHover(null)}
+    >
+      <div className={STRIP.BARS} role="img" aria-label={ariaLabel}>
+        {slots.map((v, i) => {
+          const dim = hover !== null && hover !== i && STRIP.DIM;
+          return v === undefined ? (
+            <span key={i} className={cn(STRIP.BAR, STRIP.EMPTY)} />
+          ) : v === null ? (
+            <span key={i} className={cn(STRIP.BAR, STRIP.MISS, STRIP.BAR_FADE, dim)} />
+          ) : (
+            <span
+              key={i}
+              className={cn(STRIP.BAR, BAR_FILL[latencyTone(v, cuts)], STRIP.BAR_FADE, dim)}
+              style={{ height: barHeight(v, cuts) }}
+            />
+          );
+        })}
+      </div>
+      {readout}
+    </div>
+  );
+}
+
 interface NowBodyProps {
   connectivity: ConnectivityStatus;
   history: PingHistoryEntry[];
@@ -220,34 +291,21 @@ function NowBody({ connectivity, history }: NowBodyProps) {
       </div>
 
       <div className={STRIP.ROOT}>
-        <div
-          className={STRIP.BARS}
-          role="img"
-          aria-label={t("latencyMonitor.now.strip_aria", {
+        <ProbeStrip
+          slots={slots}
+          cuts={cuts}
+          units={units}
+          intervalSec={connectivity.history_interval_sec || 5}
+          ariaLabel={t("latencyMonitor.now.strip_aria", {
             total: probes.length,
             failed,
           })}
-        >
-          {slots.map((v, i) =>
-            v === undefined ? (
-              <span key={i} className={cn(STRIP.BAR, STRIP.EMPTY)} />
-            ) : v === null ? (
-              <span key={i} className={cn(STRIP.BAR, STRIP.MISS)} />
-            ) : (
-              <span
-                key={i}
-                className={cn(STRIP.BAR, BAR_FILL[latencyTone(v, cuts)], TRANSITION_FILL)}
-                style={{ height: barHeight(v, cuts) }}
-              />
-            ),
-          )}
-        </div>
+        />
         <div className={STRIP.FOOT}>
           <span>{t("latencyMonitor.now.strip_start", { minutes: stripMinutes })}</span>
           <span>{t("latencyMonitor.now.strip_end")}</span>
         </div>
       </div>
-
 
       <dl className={ROWS.ROOT}>
         <div className={ROWS.ROW}>

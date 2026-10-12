@@ -168,6 +168,7 @@
       "last_answer": "最後一次回應於 {{time}}，{{value}}",
       "bar_aria": "往返時延與 {{limit}} 上限比較",
       "strip_aria": "{{total}} 次探測，{{failed}} 次無回應",
+      "probe_seconds": "{{seconds}} 秒前",
       "strip_start": "{{minutes}} 分鐘前",
       "strip_end": "現在",
       "jitter": "抖動",

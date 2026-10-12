@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ActivityIcon,
-  CheckIcon,
   RotateCwIcon,
   TriangleAlertIcon,
 } from "lucide-react";
@@ -338,7 +337,7 @@ export function HistoryCard({
   onRetry,
 }: HistoryCardProps) {
   const { t } = useTranslation("dashboard");
-  const [range, setRange] = useState<HistoryRange>("6h");
+  const [range, setRange] = useState<HistoryRange>("1h");
 
   const latencyCut = connectivity?.thresholds?.latency_ms;
   const lossCut = connectivity?.thresholds?.loss_pct;
@@ -404,7 +403,7 @@ export function HistoryCard({
             options={options}
             ariaLabel={t("latencyMonitor.history.range_aria")}
             breakpoint="never"
-            glyph={(className) => <CheckIcon aria-hidden className={cn("size-4", className)} />}
+            glyph={() => null}
           />
         </CardAction>
       </CardHeader>

@@ -168,6 +168,7 @@
       "last_answer": "Balasan terakhir pukul {{time}}, {{value}}",
       "bar_aria": "Round-trip time terhadap batas {{limit}}",
       "strip_aria": "{{total}} probe, {{failed}} tanpa balasan",
+      "probe_seconds": "{{seconds}} detik lalu",
       "strip_start": "{{minutes}} menit lalu",
       "strip_end": "Sekarang",
       "jitter": "Jitter",

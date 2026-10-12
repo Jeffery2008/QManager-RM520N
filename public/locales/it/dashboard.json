@@ -168,6 +168,7 @@
       "last_answer": "Ultima risposta alle {{time}}, {{value}}",
       "bar_aria": "Tempo di andata e ritorno rispetto al limite di {{limit}}",
       "strip_aria": "{{total}} sonde, {{failed}} senza risposta",
+      "probe_seconds": "{{seconds}} s fa",
       "strip_start": "{{minutes}} min fa",
       "strip_end": "Ora",
       "jitter": "Jitter",
