@@ -184,6 +184,7 @@
       "description": "Le letture dal vivo tornano appena risponde."
     },
     "history": {
+      "attention": "Richiede attenzione",
       "title": "Cronologia",
       "description": "Tempo medio di andata e ritorno nell'intervallo.",
       "range_aria": "Intervallo della cronologia",
@@ -211,7 +212,6 @@
       "description": "Quanto risponde in fretta ogni sito sul collegamento cellulare.",
       "range_aria": "Intervallo dei siti",
       "manage": "Gestisci",
-      "check_now": "Controlla ora",
       "not_checked": "Non ancora controllato",
       "off_title": "Il monitoraggio dei siti è spento",
       "off_description": "Accendilo per misurare ogni sito ogni {{interval}}.",
@@ -247,7 +247,6 @@
       "hours": "{{n}} h"
     },
     "toast": {
-      "check_ok": "Controllo di tutti i siti avviato.",
       "check_failed": "Impossibile avviare il controllo.",
       "save_ok": "Siti salvati.",
       "save_failed": "Impossibile salvare i siti.",

@@ -184,6 +184,7 @@
       "description": "Data langsung kembali begitu modem menjawab."
     },
     "history": {
+      "attention": "Perlu perhatian",
       "title": "Riwayat",
       "description": "Rata-rata round-trip time selama rentang ini.",
       "range_aria": "Rentang riwayat",
@@ -211,7 +212,6 @@
       "description": "Seberapa cepat tiap situs menjawab lewat jaringan seluler.",
       "range_aria": "Rentang situs",
       "manage": "Kelola",
-      "check_now": "Periksa sekarang",
       "not_checked": "Belum diperiksa",
       "off_title": "Monitor situs mati",
       "off_description": "Nyalakan untuk mengukur tiap situs setiap {{interval}}.",
@@ -247,7 +247,6 @@
       "hours": "{{n}} j"
     },
     "toast": {
-      "check_ok": "Memeriksa semua situs sekarang.",
       "check_failed": "Tidak dapat memulai pemeriksaan.",
       "save_ok": "Situs disimpan.",
       "save_failed": "Tidak dapat menyimpan situs.",

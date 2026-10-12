@@ -184,6 +184,7 @@
       "description": "调制解调器一旦响应，实时读数就会恢复。"
     },
     "history": {
+      "attention": "需要注意",
       "title": "历史",
       "description": "所选时段内的平均往返时延。",
       "range_aria": "历史时段",
@@ -211,7 +212,6 @@
       "description": "各网站通过蜂窝链路响应有多快。",
       "range_aria": "网站时段",
       "manage": "管理",
-      "check_now": "立即检测",
       "not_checked": "尚未检测",
       "off_title": "网站监控已关闭",
       "off_description": "开启后每 {{interval}} 测量一次各网站。",
@@ -247,7 +247,6 @@
       "hours": "{{n}} 小时"
     },
     "toast": {
-      "check_ok": "正在检测所有网站。",
       "check_failed": "无法开始检测。",
       "save_ok": "网站已保存。",
       "save_failed": "无法保存网站。",

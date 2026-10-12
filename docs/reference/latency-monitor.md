@@ -15,8 +15,8 @@
 | History | `history-card.tsx` — `GET /cgi-bin/quecmanager/at_cmd/fetch_ping_history.sh` every 30 s (`/tmp/qmanager_ping_history.json`, `PING_HISTORY_MAX=8640` rows, RAM) |
 | Sites | `sites-card.tsx` + `manage-sites-dialog.tsx` — `hooks/use-sites.ts` → `GET/POST /cgi-bin/quecmanager/monitoring/sites.sh` |
 | Derivations | `derive.ts` — `resolveCuts` / `cutsFrom`, `latencyTone`, `lossTone`, `deriveHistory`, `siteAverage`, `normalizeHost`, `hostError`, `MAX_SITES` |
-| Geometry and tone maps | `shapes.ts` — `PAIR`, `FIGURE_INK`, `SITE_INK`, `BAR_FILL`, `STATUS_VARIANT`, `SITES`, `DIALOG` |
-| Brand marks | `site-mark.tsx` — `SITE_MARKS`, `markFor`, `SiteMark` |
+| Geometry and tone maps | `shapes.ts` — `PAIR`, `FIGURE_INK`, `ALERT_INK`, `SITE_INK`, `BAR_FILL`, `STATUS_VARIANT`, `SITES`, `DIALOG` |
+| Brand marks | `site-mark.tsx` — `SITE_MARKS`, `markFor`, `SiteMark`, favicon fallback |
 | Empty / error / off states | `condition-block.tsx` — `ConditionBlock` (`muted` or `destructive`) |
 | Sites types | `types/sites.ts` — `SitesResponse`, `SiteEntry`, `SiteBucket`, `SitesConfig`, `SitesRange` |
 | Limits | `connectivity.thresholds.latency_ms` / `.loss_pct`; fallback **250 ms / 30 %** |
@@ -44,7 +44,7 @@ Every tone on the page reads `resolveCuts(connectivity)`: `connectivity.threshol
 | `latencyTone(ms)` | over the latency cut | over twice the cut |
 | `lossTone(pct)` | any loss above 0 | at or over the loss cut |
 
-- **A healthy figure is plain ink** (`FIGURE_INK.ok` = `text-on-surface`) on Right now and History. Only a Sites value is green when healthy (`SITE_INK`), because there it reads as a per-site verdict against the limit.
+- **A healthy figure is plain ink** (`FIGURE_INK.ok` = `text-on-surface`) on Right now. History's three figures are always plain ink; a figure past a cut gets an 18px `TriangleAlertIcon` before it, inked by `ALERT_INK` (amber or red) and labelled `latencyMonitor.history.attention`. Only a Sites value is green when healthy (`SITE_INK`), because there it reads as a per-site verdict against the limit.
 - Sites compares a **TCP connect time** against the same latency cut as the ICMP probe. The cut is the user's one latency limit, not a site-specific number.
 - Right now's RTT bar and the strip's bar heights scale to **twice** the latency cut, with a tick at the cut; strip bars are floored at 12 % so a fast probe stays visible, and a lost probe is a full-height red bar.
 - The Limits row links to `/system-settings/connection-quality/`, where the cuts are set.
@@ -74,7 +74,7 @@ Ranges are `1h` / `6h` / `24h` (`HISTORY_RANGE` in `derive.ts`); the default is 
 
 ## Sites card
 
-Ranges are `1h` / `24h` / `7d` (`SitesRange`; the CGI serves more); the default is `24h`. The range pill and Check now are hidden while the monitor is off.
+Ranges are `1h` / `24h` / `7d` (`SitesRange`; the CGI serves more); the default is `24h`. The range pill is hidden while the monitor is off. There is no Check now button: a successful Manage save with the monitor on calls `checkNow()` without blocking the dialog, and only a failed check toasts (`check_failed`).
 
 **The value under each logo** is chosen in this order:
 
@@ -89,8 +89,8 @@ Ranges are `1h` / `24h` / `7d` (`SitesRange`; the CGI serves more); the default 
 
 **Polling (`hooks/use-sites.ts`).**
 
-- 30 s while idle; 3 s while the response says `checking: true` or a Check now is pending.
-- A Check now stays pending until a response shows `checking: false` after either having seen `checking: true` or a `checked_at` different from the one before the click. A pending check the daemon never picks up stops counting after 90 s.
+- 30 s while idle; 3 s while the response says `checking: true` or a check is pending.
+- A check stays pending until a response shows `checking: false` after either having seen `checking: true` or a `checked_at` different from the one before the click. A pending check the daemon never picks up stops counting after 90 s.
 - Every fetch carries a sequence number and only the newest may land, so a slow `7d` read cannot overwrite a newer `1h` one after a range switch.
 
 **Manage dialog (`manage-sites-dialog.tsx`).** On / Off, a sweep interval (60 s, 5 min, 15 min, 1 h, plus the saved value if it is none of those — shown as itself, never rounded), and the site list. Add normalises the input with `normalizeHost` (lower-case; strips scheme, credentials, path, query, port — **not** `www.`) and rejects it with `hostError`: `invalid` (the daemon's host check, mirrored), `duplicate`, or `full` at `MAX_SITES = 32`. The draft re-seeds from the last response on every open (`formKey`), so a cancelled edit never lingers.
@@ -106,7 +106,8 @@ Ranges are `1h` / `24h` / `7d` (`SitesRange`; the CGI serves more); the default 
 - `markFor()` strips a leading `www.` and matches the exact domain or any subdomain of it; any `shopee.*` host gets the Shopee mark. Add a brand by adding one row, nowhere else.
 - **Brand hex is allowed here.** A logo is content, like the RAT marks on the dashboard, so it keeps its brand colour; the label under it carries identity.
 - **`null` colour means on-surface ink.** Use it for near-black brands (TikTok, X, GitHub) and for any brand colour that fails on the light tile (Snapchat's yellow). Check a new hex on the tile in both themes before adding it.
-- **No mark, a monogram.** An unmapped host draws the first letter of its label (or host) on the same tile. `cellmapper.net`, one of the 13 defaults, has no `react-icons/si` glyph and always shows a monogram.
+- **No mark, a favicon.** An unmapped host loads `https://www.google.com/s2/favicons?domain=<host>&sz=64` (`referrerPolicy="no-referrer"`), crossfading over its monogram once loaded. The browser's HTTP cache keeps it (the service sends `max-age` of 7 days); `faviconSeen` remembers the result for the session so a remount does not flash. The service has no CORS headers, so the image cannot be copied into storage.
+- **Monogram fallback.** A load error (no internet) or an image 16px or smaller (the service's stand-in globe for an unknown domain) shows the first letter of the label (or host).
 
 ## Toasts
 
@@ -114,7 +115,7 @@ Each Sites mutation fires one sonner toast at the handler's end; the failure toa
 
 | Action | Success key | Failure key |
 |--------|-------------|-------------|
-| Check now | `latencyMonitor.toast.check_ok` | `latencyMonitor.toast.check_failed` |
+| Check after save | — (the save toast covers it) | `latencyMonitor.toast.check_failed` |
 | Turn on (monitor-off block) | `latencyMonitor.toast.turn_on_ok` | `latencyMonitor.toast.turn_on_failed` |
 | Save (Manage dialog) | `latencyMonitor.toast.save_ok` | `latencyMonitor.toast.save_failed` |
 

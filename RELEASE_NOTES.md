@@ -6,7 +6,7 @@ Every settings card in the app now saves from the same place — a row along the
 
 ## ✨ New Features
 
-- **Sites monitor.** A new **Sites** card at the bottom of **Monitoring → Latency Monitor** shows each site's logo, name and average response time over the last hour, day or week, with **Check now** and a **Manage** dialog to turn it on or off, change how often it checks, and add or remove up to 32 sites. It checks 13 popular sites (Google, YouTube, Discord and others) every 5 minutes by default and keeps up to 90 days of history. (New `qmanager_sites` service; the number is the TCP connect time, so DNS is not counted.)
+- **Sites monitor.** A new **Sites** card at the bottom of **Monitoring → Latency Monitor** shows each site's logo, name and average response time over the last hour, day or week, with a **Manage** dialog to turn it on or off, change how often it checks, and add or remove up to 32 sites; saving runs a check straight away. It checks 13 popular sites (Google, YouTube, Discord and others) every 5 minutes by default and keeps up to 90 days of history. (New `qmanager_sites` service; the number is the TCP connect time, so DNS is not counted. A site without a built-in logo loads its icon from Google's favicon service and shows its first letter when offline.)
 - **DNS lookup time is measured.** QManager now times a name lookup against your carrier's DNS server once a minute and right after a drop, and shows it as the **DNS lookup** row on the dashboard's Connection Quality card. (`connectivity.dns_lookup_ms` in the status data; the row shows an empty bar while lookups fail.)
 
 ## 🛠️ Improvements

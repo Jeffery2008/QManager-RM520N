@@ -184,6 +184,7 @@
       "description": "Live readings return as soon as it answers."
     },
     "history": {
+      "attention": "Needs attention",
       "title": "History",
       "description": "Average round-trip time over the range.",
       "range_aria": "History range",
@@ -211,7 +212,6 @@
       "description": "How fast each site answers over the cellular link.",
       "range_aria": "Sites range",
       "manage": "Manage",
-      "check_now": "Check now",
       "not_checked": "Not checked yet",
       "off_title": "Sites monitor is off",
       "off_description": "Turn it on to time each site every {{interval}}.",
@@ -247,7 +247,6 @@
       "hours": "{{n}} h"
     },
     "toast": {
-      "check_ok": "Checking all sites now.",
       "check_failed": "Couldn't start a check.",
       "save_ok": "Sites saved.",
       "save_failed": "Couldn't save the sites.",

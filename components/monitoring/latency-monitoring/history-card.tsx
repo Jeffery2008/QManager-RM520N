@@ -63,6 +63,7 @@ import {
   type HistoryPoint,
   type HistoryRange,
   type HistoryView,
+  type Tone,
   type UnitLabels,
 } from "./derive";
 import {
@@ -77,11 +78,10 @@ import {
   EYEBROW,
   EYEBROW_H,
   FIGS,
-  FIGURE_INK,
+  ALERT_INK,
   HEADER_ACTIONS,
   NOTICE,
   NOTICE_GLYPH,
-  TRANSITION_INK,
 } from "./shapes";
 
 const RANGE_LABEL_KEY = {
@@ -149,16 +149,26 @@ interface FigureProps {
   label: string;
   value: string;
   unit: string;
-  ink: string;
+  tone: Tone;
 }
 
-function Figure({ label, value, unit, ink }: FigureProps) {
+function Figure({ label, value, unit, tone }: FigureProps) {
+  const { t } = useTranslation("dashboard");
   return (
     <div className={FIGS.FIG}>
       <span className={cn(EYEBROW, EYEBROW_H)}>{label}</span>
-      <span className={cn(FIGS.VALUE, FIGS.VALUE_H, ink, TRANSITION_INK)}>
-        {value}
-        {unit ? <small className={FIGS.UNIT}>{unit}</small> : null}
+      <span className={cn(FIGS.VALUE, FIGS.VALUE_H)}>
+        {tone !== "ok" ? (
+          <TriangleAlertIcon
+            role="img"
+            aria-label={t("latencyMonitor.history.attention")}
+            className={cn(FIGS.ALERT, ALERT_INK[tone])}
+          />
+        ) : null}
+        <span className="truncate">
+          {value}
+          {unit ? <small className={FIGS.UNIT}>{unit}</small> : null}
+        </span>
       </span>
     </div>
   );
@@ -199,19 +209,19 @@ function HistoryPlot({ view, cuts, range, units }: HistoryPlotProps) {
           label={t("latencyMonitor.history.typical")}
           value={typical?.value ?? dash}
           unit={typical ? units[typical.unit] : ""}
-          ink={FIGURE_INK[view.typical === null ? "ok" : latencyTone(view.typical, cuts)]}
+          tone={view.typical === null ? "ok" : latencyTone(view.typical, cuts)}
         />
         <Figure
           label={t("latencyMonitor.history.worst")}
           value={worst?.value ?? dash}
           unit={worst ? units[worst.unit] : ""}
-          ink={FIGURE_INK[view.worst === null ? "ok" : latencyTone(view.worst, cuts)]}
+          tone={view.worst === null ? "ok" : latencyTone(view.worst, cuts)}
         />
         <Figure
           label={t("latencyMonitor.history.loss")}
           value={formatPct(view.lossPct)}
           unit={t("latencyMonitor.unit_pct")}
-          ink={FIGURE_INK[lossTone(view.lossPct, cuts)]}
+          tone={lossTone(view.lossPct, cuts)}
         />
       </div>
 

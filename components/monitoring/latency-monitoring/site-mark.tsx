@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { IconType } from "react-icons";
 import {
   SiCloudflare,
@@ -93,6 +94,20 @@ export function markFor(host: string): Mark | null {
   return null;
 }
 
+// Unmapped hosts load a favicon; the browser's HTTP cache keeps it (7 days upstream).
+const FAVICON_PX = 64;
+/** The service answers an unknown domain with a 16px globe, so 16px or less is "no icon". */
+const FAVICON_MIN_PX = 17;
+
+function faviconUrl(host: string): string {
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=${FAVICON_PX}`;
+}
+
+type FaviconState = "loading" | "ready" | "none";
+
+/** Per-session result, so a remount (range switch, dialog open) does not flash the monogram. */
+const faviconSeen = new Map<string, FaviconState>();
+
 export interface SiteMarkProps {
   host: string;
   label: string;
@@ -104,11 +119,44 @@ export function SiteMark({ host, label, size }: SiteMarkProps) {
   const mark = markFor(host);
   const cell = size === "cell";
   const plate = cell ? SITES.TILE : DIALOG.LOGO;
+  const key = host.toLowerCase();
+  const [favicon, setFavicon] = useState<FaviconState>(
+    () => faviconSeen.get(key) ?? "loading",
+  );
 
   if (!mark) {
+    const settle = (next: FaviconState) => {
+      faviconSeen.set(key, next);
+      setFavicon(next);
+    };
     return (
-      <span aria-hidden className={plate}>
-        <span className={cell ? SITES.MONOGRAM : DIALOG.LOGO_MONOGRAM}>
+      <span aria-hidden className={cn(plate, SITES.STACK)}>
+        {favicon !== "none" ? (
+          // eslint-disable-next-line @next/next/no-img-element -- static export, external favicon
+          <img
+            key={key}
+            src={faviconUrl(key)}
+            alt=""
+            referrerPolicy="no-referrer"
+            decoding="async"
+            onLoad={(e) =>
+              settle(e.currentTarget.naturalWidth >= FAVICON_MIN_PX ? "ready" : "none")
+            }
+            onError={() => settle("none")}
+            className={cn(
+              cell ? SITES.FAVICON : DIALOG.LOGO_FAVICON,
+              SITES.FADE,
+              favicon === "ready" ? "opacity-100" : "opacity-0",
+            )}
+          />
+        ) : null}
+        <span
+          className={cn(
+            cell ? SITES.MONOGRAM : DIALOG.LOGO_MONOGRAM,
+            SITES.FADE,
+            favicon === "ready" ? "opacity-0" : "opacity-100",
+          )}
+        >
           {(label || host).charAt(0).toUpperCase()}
         </span>
       </span>

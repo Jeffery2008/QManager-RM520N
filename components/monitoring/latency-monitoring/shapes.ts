@@ -68,6 +68,12 @@ export const FIGURE_INK = {
   bad: "text-destructive-on-surface",
 } as const satisfies Record<Tone, string>;
 
+/** The History figures stay plain ink; the alert glyph carries the verdict. */
+export const ALERT_INK = {
+  warn: "text-warning-on-surface",
+  bad: "text-destructive-on-surface",
+} as const satisfies Record<Exclude<Tone, "ok">, string>;
+
 /** A site's latency: it reads as a verdict against the limit, so healthy is green. */
 export const SITE_INK = {
   ok: "text-success-on-surface",
@@ -131,16 +137,14 @@ export const STRIP = {
   FOOT_H: "h-4",
 } as const;
 
-export const RULE = "bg-border h-px";
-
-/** Receipt rows: key on the left edge, value on the right, one pinned height. */
+/** Receipt rows as pills on surface-container, restated from Cellular Information. */
 export const ROWS = {
-  ROOT: "mt-auto flex flex-col gap-1.5",
-  ROW: "flex h-7 items-center justify-between gap-4 text-sm",
+  ROOT: "mt-auto flex flex-col gap-[0.3125rem]",
+  ROW: "flex h-[2.625rem] items-center justify-between gap-4 rounded-pill bg-surface-container px-4 text-[0.8125rem] leading-5 font-semibold",
   KEY: "text-on-surface-variant truncate",
-  VALUE: "flex min-w-0 items-center gap-2 font-medium tabular-nums",
+  VALUE: "flex min-w-0 items-center gap-2 tabular-nums",
   QUIET: "text-on-surface-variant font-normal",
-  MONO: "truncate font-mono text-[0.8125rem] font-medium",
+  MONO: "truncate font-mono text-[0.8125rem] font-semibold",
   /** The inline 56px loss lane beside its figure. */
   LANE: "relative h-2 w-14 flex-none rounded-pill bg-surface-container-high",
   LINK: "text-primary-on-surface inline-flex items-center gap-1 font-semibold hover:underline",
@@ -156,8 +160,10 @@ export const FIGS = {
   ROOT: "grid grid-cols-3 gap-4",
   FIG: "flex min-w-0 flex-col gap-1.5",
   VALUE:
-    "truncate text-[1.375rem] leading-7 font-bold tracking-[-0.01em] tabular-nums",
+    "text-on-surface flex min-w-0 items-center gap-1.5 text-[1.375rem] leading-7 font-bold tracking-[-0.01em] tabular-nums",
   VALUE_H: "h-7",
+  /** A notch under the 22px figure, centred on its line box. */
+  ALERT: "size-[1.125rem] flex-none",
   UNIT: "text-on-surface-variant ml-0.5 text-[0.8125rem] font-semibold tracking-normal",
 } as const;
 
@@ -193,6 +199,10 @@ export const SITES = {
   TILE: "bg-surface-container-high mb-1 grid size-14 flex-none place-items-center rounded-tile",
   MARK: "size-7",
   MONOGRAM: "text-on-surface-variant text-xl leading-none font-bold",
+  /** Favicon and monogram share the plate's one grid cell and crossfade. */
+  STACK: "*:col-start-1 *:row-start-1",
+  FAVICON: "size-7 rounded-inline object-contain",
+  FADE: "transition-opacity duration-[var(--duration-standard)] ease-standard",
   LABEL: "max-w-full truncate text-[0.8125rem] leading-5 font-medium",
   LABEL_H: "h-5",
   VALUE: "text-[0.8125rem] leading-5 font-semibold tabular-nums",
@@ -217,6 +227,7 @@ export const DIALOG = {
   ITEM: "grid min-h-12 grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 py-1.5 pr-2 pl-3.5",
   LOGO: "bg-surface-container-high grid size-8 flex-none place-items-center rounded-inline",
   LOGO_MARK: "size-4",
+  LOGO_FAVICON: "size-4 rounded-[2px] object-contain",
   LOGO_MONOGRAM: "text-on-surface-variant text-[0.8125rem] leading-none font-bold",
   HOST: "font-mono text-[0.78125rem] leading-5 font-medium [overflow-wrap:anywhere]",
   EMPTY: "text-on-surface-variant px-3.5 py-3 text-sm",

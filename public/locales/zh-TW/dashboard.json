@@ -184,6 +184,7 @@
       "description": "調變解調器一回應，即時讀數就會恢復。"
     },
     "history": {
+      "attention": "需要注意",
       "title": "歷史",
       "description": "所選時段內的平均往返時延。",
       "range_aria": "歷史時段",
@@ -211,7 +212,6 @@
       "description": "各網站透過行動網路回應有多快。",
       "range_aria": "網站時段",
       "manage": "管理",
-      "check_now": "立即檢測",
       "not_checked": "尚未檢測",
       "off_title": "網站監控已關閉",
       "off_description": "開啟後每 {{interval}} 量測一次各網站。",
@@ -247,7 +247,6 @@
       "hours": "{{n}} 小時"
     },
     "toast": {
-      "check_ok": "正在檢測所有網站。",
       "check_failed": "無法開始檢測。",
       "save_ok": "網站已儲存。",
       "save_failed": "無法儲存網站。",

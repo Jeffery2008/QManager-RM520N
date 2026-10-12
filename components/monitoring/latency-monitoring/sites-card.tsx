@@ -8,7 +8,6 @@ import {
   CheckIcon,
   GlobeIcon,
   PowerIcon,
-  RefreshCcwIcon,
   RotateCwIcon,
   SlidersHorizontalIcon,
   TriangleAlertIcon,
@@ -147,7 +146,6 @@ export function SitesCard({ cuts }: SitesCardProps) {
   const { data, isLoading, error, checkPending, refresh, checkNow, save } =
     useSites(range);
 
-  const [requesting, setRequesting] = useState(false);
   const [turningOn, setTurningOn] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
@@ -159,19 +157,20 @@ export function SitesCard({ cuts }: SitesCardProps) {
 
   const off = data !== null && !data.enabled;
   const checking = (data?.checking ?? false) || checkPending;
-  const busy = checking || requesting;
 
-  const handleCheck = async () => {
-    setRequesting(true);
-    const result = await checkNow();
-    setRequesting(false);
-    if (result.ok) {
-      toast.success(t("latencyMonitor.toast.check_ok"));
-    } else {
-      toast.error(t("latencyMonitor.toast.check_failed"), {
-        description: result.error ?? undefined,
+  // A saved list is checked at once, so new sites show a value without waiting a sweep.
+  const handleSave = async (config: SitesConfig) => {
+    const result = await save(config);
+    if (result.ok && config.enabled) {
+      void checkNow().then((check) => {
+        if (!check.ok) {
+          toast.error(t("latencyMonitor.toast.check_failed"), {
+            description: check.error ?? undefined,
+          });
+        }
       });
     }
+    return result;
   };
 
   const handleTurnOn = async () => {
@@ -283,20 +282,6 @@ export function SitesCard({ cuts }: SitesCardProps) {
             <SlidersHorizontalIcon aria-hidden />
             {t("latencyMonitor.sites.manage")}
           </Button>
-          {off ? null : (
-            <Button
-              type="button"
-              variant="tonal"
-              onClick={handleCheck}
-              disabled={!data || busy}
-            >
-              <RefreshCcwIcon
-                aria-hidden
-                className={cn(busy && "motion-safe:animate-spin")}
-              />
-              {t("latencyMonitor.sites.check_now")}
-            </Button>
-          )}
         </CardAction>
       </CardHeader>
 
@@ -315,7 +300,7 @@ export function SitesCard({ cuts }: SitesCardProps) {
         onOpenChange={setManageOpen}
         formKey={formKey}
         seed={data ? configOf(data) : null}
-        onSave={save}
+        onSave={handleSave}
       />
     </Card>
   );

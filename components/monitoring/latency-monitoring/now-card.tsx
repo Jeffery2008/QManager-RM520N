@@ -59,7 +59,6 @@ import {
   FIGURE_INK,
   NOW,
   ROWS,
-  RULE,
   STATUS_LABEL_KEY,
   STATUS_VARIANT,
   STRIP,
@@ -105,12 +104,11 @@ function NowSkeleton() {
           <Skeleton className={cn(STRIP.FOOT_H, "w-8 rounded-inline")} />
         </div>
       </div>
-      <div className={RULE} />
       <div className={ROWS.ROOT} aria-hidden>
         {Array.from({ length: ROWS.COUNT }).map((_, i) => (
           <div key={i} className={ROWS.ROW}>
-            <Skeleton className="h-3.5 w-24 rounded-inline" />
-            <Skeleton className="h-3.5 w-20 rounded-inline" />
+            <Skeleton className="h-[0.8125rem] w-20 rounded-inline" />
+            <Skeleton className="h-[0.8125rem] w-16 rounded-inline" />
           </div>
         ))}
       </div>
@@ -250,7 +248,6 @@ function NowBody({ connectivity, history }: NowBodyProps) {
         </div>
       </div>
 
-      <div className={RULE} />
 
       <dl className={ROWS.ROOT}>
         <div className={ROWS.ROW}>
