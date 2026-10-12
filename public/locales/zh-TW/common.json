@@ -489,101 +489,74 @@
     "header": {
       "refresh": "重新整理"
     },
-    "strip": {
+    "status": {
       "label": "上次套用",
-      "state_router": "路由模式",
-      "state_passthrough": "直通中"
-    },
-    "tiles": {
-      "mode": {
-        "label": "模式",
-        "value_disabled": "已停用",
-        "value_eth": "乙太網路",
-        "value_usb": "USB 介面",
-        "caption_disabled": "數據機為區域網路做路由",
-        "caption_eth": "設定為將 WAN IP 交給 eth0",
-        "caption_usb": "設定為將 WAN IP 交給 USB 裝置"
+      "mode_title": {
+        "disabled": "路由模式",
+        "eth": "乙太網路直通",
+        "usb": "USB 直通"
       },
-      "target": {
-        "label": "目標裝置",
-        "caption_manual": "依 MAC 位址固定",
-        "caption_automatic": "第一台連線的裝置",
-        "caption_none": "未選擇裝置"
+      "blurb": {
+        "disabled": "數據機為區域網路做路由",
+        "eth": "設定為將 WAN IP 交給乙太網路裝置",
+        "usb": "設定為將 WAN IP 交給 USB 裝置"
       },
-      "nat": {
-        "label": "NAT 轉換",
-        "value_on": "開啟",
-        "value_off": "關閉",
-        "caption_on": "已依建議值儲存",
-        "caption_off": "由目標裝置自行處理公網定址"
-      },
-      "dns": {
-        "label": "DNS 代理",
-        "value_on": "開啟",
-        "value_off": "關閉",
-        "caption_on": "由數據機為目標裝置回應 DHCP DNS",
-        "caption_off": "目標裝置使用自己的解析器"
-      }
+      "no_target": "未選擇裝置",
+      "gateway": "區域網路閘道",
+      "gateway_served": "提供服務",
+      "gateway_not_served": "不提供服務"
     },
     "card": {
       "title": "直通設定",
-      "description": "這裡的每一項設定都會在下次開機時生效。套用會重啟數據機。",
+      "description": "套用會寫入所有設定並重啟數據機。",
       "apply": "套用並重啟",
       "discard": "捨棄變更",
-      "provenance_dirty": "{{count}} 項未儲存的變更",
-      "delta_automatic": "自動",
-      "delta_unset": "未設定",
+      "unsaved_one": "{{count}} 項未儲存的變更",
+      "unsaved_other": "{{count}} 項未儲存的變更",
       "mac_label": "目標 MAC 位址",
       "mac_placeholder": "XX:XX:XX:XX:XX:XX"
     },
+    "groups": {
+      "passthrough": "直通",
+      "network": "網路"
+    },
     "rows": {
       "mode": {
-        "label": "模式",
-        "consequence": "選擇乙太網路或 USB 會把 WAN IP 交給一台裝置。兩種情況下，數據機都無法再從區域網路閘道位址連上 — 請保留 Tailscale 或其他連入方式。"
+        "label": "模式"
       },
       "target": {
         "label": "目標裝置",
-        "consequence": "自動模式會採用第一台連線的裝置；手動模式則固定一個 MAC 位址。",
-        "consequence_disabled": "請先選擇模式。"
+        "pick_mode": "請先選擇模式。"
       },
       "nat": {
         "label": "NAT 轉換",
-        "consequence": "幾乎所有情境都應該啟用 NAT。不啟用時，目標裝置必須自行處理公網定址。"
+        "hint": "幾乎所有情境都適合啟用 NAT。",
+        "hint_label": "關於 NAT"
       },
       "usb": {
-        "label": "USB 連線模式",
-        "consequence": "僅用於 USB 直通。ECM 相容性最好；RNDIS 適用於較舊的 Windows。"
+        "label": "USB 連線"
       },
       "dns": {
         "label": "DNS 代理",
-        "consequence": "開啟後，數據機會為目標裝置回應 DHCP DNS 查詢。除非該裝置自己無法連到解析器，否則請保持關閉。"
+        "hint": "開啟後，由數據機為目標裝置回應 DHCP DNS。",
+        "hint_label": "關於 DNS 代理"
       }
     },
     "options": {
-      "placeholder": "尚未讀取",
-      "mode_disabled": "停用 — 路由模式",
-      "mode_eth": "乙太網路直通",
-      "mode_usb": "USB 直通",
-      "target_automatic": "自動 — 第一台連線的裝置",
-      "target_manual": "輸入 MAC 位址",
-      "nat_on": "啟用 NAT（建議）",
+      "mode_disabled": "路由",
+      "mode_eth": "乙太網路",
+      "mode_usb": "USB",
+      "target_automatic": "自動",
+      "target_manual": "依 MAC",
+      "nat_on": "啟用 NAT",
       "nat_off": "不啟用 NAT",
-      "usb_rmnet": "RMNET（QMI）",
-      "usb_ecm": "ECM（通用）",
-      "usb_mbim": "MBIM（Windows）",
-      "usb_rndis": "RNDIS（舊裝置）",
-      "dns_off": "關閉 — 裝置使用自己的解析器",
-      "dns_on": "開啟 — 由數據機回應 DHCP DNS"
+      "dns_off": "關閉",
+      "dns_on": "開啟"
     },
-    "banners": {
-      "reboot": {
-        "title": "套用會重啟數據機，目前的瀏覽器分頁將失去連線",
-        "body": "重啟後區域網路閘道將不再回應。請透過 Tailscale、直通裝置本身或序列埠連上數據機。此設定會在後續重啟後繼續保留。"
-      },
-      "active": {
-        "title": "本頁面能開啟，是因為您不是那台直通裝置",
-        "body": "數據機的區域網路閘道位址已不再提供給 {{mac}}。若失去目前的連入路徑，Tailscale 或序列主控台就是回來的方法。"
-      }
+    "mode_note": {
+      "rest": "乙太網路或 USB 會把 WAN IP 交給一台裝置，數據機將不再於其區域網路閘道位址回應。請保留 Tailscale 或其他連入方式。",
+      "to_passthrough": "套用會重啟數據機，此分頁將與其斷線。之後區域網路閘道不再回應，請保留 Tailscale 或其他連入方式。",
+      "to_router": "套用會重啟數據機，此分頁將與其斷線。重啟後區域網路閘道會恢復回應。"
     },
     "dialog": {
       "title": "現在套用並重啟？",
@@ -599,7 +572,7 @@
       "read_body": "未做任何變更。請再試一次，或確認數據機是否有回應。",
       "retry": "重試",
       "card_unread": "數據機尚未回應，在首次讀取完成前沒有可變更的內容。",
-      "mac_invalid": "請輸入完整的 MAC 位址 — 六組十六進位數字。",
+      "mac_invalid": "請輸入完整的 MAC 位址，即六組十六進位數字。",
       "no_changes": "尚未有任何變更。"
     }
   },

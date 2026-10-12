@@ -489,101 +489,74 @@
     "header": {
       "refresh": "刷新"
     },
-    "strip": {
+    "status": {
       "label": "上次应用",
-      "state_router": "路由模式",
-      "state_passthrough": "正在直通"
-    },
-    "tiles": {
-      "mode": {
-        "label": "模式",
-        "value_disabled": "已禁用",
-        "value_eth": "以太网",
-        "value_usb": "USB 接口",
-        "caption_disabled": "调制解调器为局域网做路由",
-        "caption_eth": "设置为将 WAN IP 交给 eth0",
-        "caption_usb": "设置为将 WAN IP 交给 USB 设备"
+      "mode_title": {
+        "disabled": "路由模式",
+        "eth": "以太网直通",
+        "usb": "USB 直通"
       },
-      "target": {
-        "label": "目标设备",
-        "caption_manual": "按 MAC 地址固定",
-        "caption_automatic": "第一台连接的设备",
-        "caption_none": "未选择设备"
+      "blurb": {
+        "disabled": "调制解调器为局域网做路由",
+        "eth": "设置为将 WAN IP 交给以太网设备",
+        "usb": "设置为将 WAN IP 交给 USB 设备"
       },
-      "nat": {
-        "label": "NAT 转换",
-        "value_on": "开启",
-        "value_off": "关闭",
-        "caption_on": "已按推荐值保存",
-        "caption_off": "由目标设备自行处理公网寻址"
-      },
-      "dns": {
-        "label": "DNS 代理",
-        "value_on": "开启",
-        "value_off": "关闭",
-        "caption_on": "由调制解调器为目标设备应答 DHCP DNS",
-        "caption_off": "目标设备使用自己的解析器"
-      }
+      "no_target": "未选择设备",
+      "gateway": "局域网网关",
+      "gateway_served": "提供服务",
+      "gateway_not_served": "不提供服务"
     },
     "card": {
       "title": "直通配置",
-      "description": "这里的每一项设置都在下次开机时生效。应用会重启调制解调器。",
+      "description": "应用会写入所有设置并重启调制解调器。",
       "apply": "应用并重启",
       "discard": "放弃更改",
-      "provenance_dirty": "{{count}} 项未保存的更改",
-      "delta_automatic": "自动",
-      "delta_unset": "未设置",
+      "unsaved_one": "{{count}} 项未保存的更改",
+      "unsaved_other": "{{count}} 项未保存的更改",
       "mac_label": "目标 MAC 地址",
       "mac_placeholder": "XX:XX:XX:XX:XX:XX"
     },
+    "groups": {
+      "passthrough": "直通",
+      "network": "网络"
+    },
     "rows": {
       "mode": {
-        "label": "模式",
-        "consequence": "选择以太网或 USB 会把 WAN IP 交给一台设备。两种情况下，调制解调器都不再能通过局域网网关地址访问 — 请保留 Tailscale 或其他登入方式。"
+        "label": "模式"
       },
       "target": {
         "label": "目标设备",
-        "consequence": "自动模式接受第一台连接的设备；手动模式固定一个 MAC 地址。",
-        "consequence_disabled": "请先选择模式。"
+        "pick_mode": "请先选择模式。"
       },
       "nat": {
         "label": "NAT 转换",
-        "consequence": "几乎所有场景都应该启用 NAT。不启用时，目标设备必须自行处理公网寻址。"
+        "hint": "几乎所有场景都适合启用 NAT。",
+        "hint_label": "关于 NAT"
       },
       "usb": {
-        "label": "USB 连接模式",
-        "consequence": "仅用于 USB 直通。ECM 通用性最好；RNDIS 适用于较旧的 Windows。"
+        "label": "USB 连接"
       },
       "dns": {
         "label": "DNS 代理",
-        "consequence": "开启后，调制解调器会为目标设备应答 DHCP DNS 查询。除非该设备自己无法访问解析器，否则保持关闭。"
+        "hint": "开启后，由调制解调器为目标设备应答 DHCP DNS。",
+        "hint_label": "关于 DNS 代理"
       }
     },
     "options": {
-      "placeholder": "尚未读取",
-      "mode_disabled": "禁用 — 路由模式",
-      "mode_eth": "以太网直通",
-      "mode_usb": "USB 直通",
-      "target_automatic": "自动 — 第一台连接的设备",
-      "target_manual": "输入 MAC 地址",
-      "nat_on": "启用 NAT（推荐）",
+      "mode_disabled": "路由",
+      "mode_eth": "以太网",
+      "mode_usb": "USB",
+      "target_automatic": "自动",
+      "target_manual": "按 MAC",
+      "nat_on": "启用 NAT",
       "nat_off": "不启用 NAT",
-      "usb_rmnet": "RMNET（QMI）",
-      "usb_ecm": "ECM（通用）",
-      "usb_mbim": "MBIM（Windows）",
-      "usb_rndis": "RNDIS（旧设备）",
-      "dns_off": "关闭 — 设备使用自己的解析器",
-      "dns_on": "开启 — 由调制解调器应答 DHCP DNS"
+      "dns_off": "关闭",
+      "dns_on": "开启"
     },
-    "banners": {
-      "reboot": {
-        "title": "应用会重启调制解调器，当前浏览器标签页将失去连接",
-        "body": "重启后局域网网关将不再应答。请通过 Tailscale、直通设备本身或串口访问调制解调器。该设置会在后续重启后继续保持。"
-      },
-      "active": {
-        "title": "本页面能打开，是因为你不是那台直通设备",
-        "body": "调制解调器的局域网网关地址已不再提供给 {{mac}}。如果失去当前的访问路径，Tailscale 或串口控制台就是回来的方法。"
-      }
+    "mode_note": {
+      "rest": "以太网或 USB 会把 WAN IP 交给一台设备，调制解调器将不再在其局域网网关地址上响应。请保留 Tailscale 或其他登入方式。",
+      "to_passthrough": "应用会重启调制解调器，此标签页将与其断开。之后局域网网关不再响应，请保留 Tailscale 或其他登入方式。",
+      "to_router": "应用会重启调制解调器，此标签页将与其断开。重启后局域网网关会恢复响应。"
     },
     "dialog": {
       "title": "现在应用并重启？",
@@ -599,7 +572,7 @@
       "read_body": "未做任何更改。请重试，或检查调制解调器是否在响应。",
       "retry": "重试",
       "card_unread": "调制解调器尚未响应，在首次读取完成前没有可更改的内容。",
-      "mac_invalid": "请输入完整的 MAC 地址 — 六组十六进制数字。",
+      "mac_invalid": "请输入完整的 MAC 地址，即六组十六进制数字。",
       "no_changes": "尚未有任何更改。"
     }
   },

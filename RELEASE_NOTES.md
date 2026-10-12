@@ -33,6 +33,7 @@ Every settings card in the app now saves from the same place — a row along the
 - **Cell Scanner and Neighboring Cells have a new layout.** Both pages start as a compact launch bar and show results as one summary card (the total, then a row per carrier with your SIM's first, or per neighbour type) above a table sorted strongest signal first, with **Download CSV** beside the filter. The sweep shows an estimated progress bar, and **Lock to this cell** is greyed out, with the reason, for cells on another carrier. (The bar is an estimate: the modem reports nothing until the sweep ends.)
 - **Cards no longer show file paths.** The "Read back from: /etc/qmanager/…" and "Saved to the modem" lines are gone from **Ethernet**, **IP Passthrough**, **TTL & MTU** and **Custom DNS**, so the pages read as a finished product instead of a debug build. (Six `provenance` keys removed from all five language packs.)
 - **Animations are consistent across the app.** The **Animations** setting in the sidebar account menu (Full / Reduced / System) now applies on every page, and transitions share one timing and style throughout.
+- **A compact IP Passthrough page.** The **IP Passthrough** page (**Local Network → Settings**) now opens with one Last applied card showing the saved mode, target device, NAT, USB connection, DNS proxy and whether the LAN gateway is served, above one settings card where every choice is a pill. The lockout warning sits under **Mode** and turns red with what Apply will do once you change the mode, instead of banners that pushed the card down. (Passthrough and Network settings sit side by side on wide screens; the page is about 40% shorter at 1440px.)
 
 ## 🐛 Fixes
 
@@ -49,6 +50,7 @@ Every settings card in the app now saves from the same place — a row along the
 - **The Discord bot recovers after booting without internet.** If the modem starts with no connection, the bot keeps trying and connects once the internet is back, instead of giving up for an hour; alerts raised in the meantime are sent when it connects. (Retries every 10 s, backing off to 5 minutes; a rejected token still stops it, and saving **Monitoring → Alerts** clears that state.)
 - **Discord tests show as tests in Activity.** On **Monitoring → Alerts**, a Discord test now appears as a test in Activity, and Discord alert rows name the event that triggered them instead of a generic "alert".
 - **Alerts errors are in your language.** A failed save or test on **Monitoring → Alerts** now explains what went wrong in the language you chose, instead of an English message, and the Discord ID field accepts the same 15 to 25 digits the device does.
+- **IP Passthrough shows your modem's real NAT, USB and DNS settings.** On a modem where passthrough had never been applied from QManager, the **IP Passthrough** page showed NAT off, USB RMNET and DNS proxy off whatever the modem was set to, and applying a new mode would have written those wrong values back. (The boot read parsed the echoed AT command instead of the modem's reply; correct from the first boot after updating.)
 
 ## 📥 Installation
 

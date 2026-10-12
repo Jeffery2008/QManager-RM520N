@@ -37,7 +37,7 @@ This file is the **router**. One row per reference doc, and each row lists only 
 | [data-usage-counter.md](data-usage-counter.md) | `/proc/net/dev` counters, the schema-v5 usage store, the static SoC-based orientation map, the data-usage cards | RM520N |
 | [dpi.md](dpi.md) | `/local-network/traffic-engine`, `dpi_build_args()`, `dpi_state.sh`, `qmanager_dpi_run --clear`, `--rule-up`/`--rule-down`, `dpi_listener_present`, `svc_reset_failed`, tpws, `full_bypass`, `save_hostlist`, `sni_domain`, `components/local-network/traffic-engine/shapes.ts` | RM520N |
 | [ethernet.md](ethernet.md) | `/local-network/ethernet`, `eth0`, `ethtool`, `qmanager_ethernet_apply`, `qmanager-ethernet.service`, `interface_present`, `components/local-network/ethernet/shapes.ts` | RM520N |
-| [ip-passthrough.md](ip-passthrough.md) | `/local-network/ip-passthrough`, `AT+QMAP="MPDN_rule"` / `IPPT_NAT` / `DHCPV4DNS`, `AT+QCFG="usbnet"`, `ippt_config.json`, `qm_rebooting`, `components/local-network/ip-passthrough/shapes.ts` | RM520N |
+| [ip-passthrough.md](ip-passthrough.md) | `/local-network/ip-passthrough`, `AT+QMAP="MPDN_rule"` / `IPPT_NAT` / `DHCPV4DNS`, `AT+QCFG="usbnet"`, `ippt_config.json`, `.device.ippt_*`, `parse_ippt_*` (`parse_at.sh`), `qm_rebooting`, `components/local-network/ip-passthrough/**` (`status-strip.tsx`, `shapes.ts`) | RM520N |
 | [lan-gateway-ip.md](lan-gateway-ip.md) | The unbuilt LAN gateway-IP editor — `/etc/data/mobileap_cfg.xml`, `APIPAddr`, `StartIP` / `EndIP`, `GatewayURL`, xmlstarlet | Both |
 | [ttl-mtu.md](ttl-mtu.md) | `/local-network/ttl-settings`, `ttl.sh`, `mtu.sh`, `ttl_state.sh`, `/etc/qmanager/ttl_state`, the `rmnet+` mangle rules, `autostart`, `components/local-network/ttl-mtu-settings/shapes.ts` | RM520N |
 

@@ -489,101 +489,74 @@
     "header": {
       "refresh": "Refresh"
     },
-    "strip": {
+    "status": {
       "label": "Last applied",
-      "state_router": "Router mode",
-      "state_passthrough": "Passing through"
-    },
-    "tiles": {
-      "mode": {
-        "label": "Mode",
-        "value_disabled": "Disabled",
-        "value_eth": "Ethernet",
-        "value_usb": "USB",
-        "caption_disabled": "Modem routes for the LAN",
-        "caption_eth": "Set to hand the WAN IP to eth0",
-        "caption_usb": "Set to hand the WAN IP to the USB device"
+      "mode_title": {
+        "disabled": "Router mode",
+        "eth": "Ethernet passthrough",
+        "usb": "USB passthrough"
       },
-      "target": {
-        "label": "Target device",
-        "caption_manual": "Pinned by MAC",
-        "caption_automatic": "First device to connect",
-        "caption_none": "No device selected"
+      "blurb": {
+        "disabled": "Modem routes for the LAN",
+        "eth": "Set to hand the WAN IP to the Ethernet device",
+        "usb": "Set to hand the WAN IP to the USB device"
       },
-      "nat": {
-        "label": "NAT",
-        "value_on": "On",
-        "value_off": "Off",
-        "caption_on": "Saved as recommended",
-        "caption_off": "The target device handles its own public addressing"
-      },
-      "dns": {
-        "label": "DNS proxy",
-        "value_on": "On",
-        "value_off": "Off",
-        "caption_on": "The modem answers DHCP DNS for the target device",
-        "caption_off": "The target device uses its own resolver"
-      }
+      "no_target": "No device selected",
+      "gateway": "LAN gateway",
+      "gateway_served": "Served",
+      "gateway_not_served": "Not served"
     },
     "card": {
       "title": "Passthrough configuration",
-      "description": "Every setting here takes effect on the next boot. Applying reboots the modem.",
+      "description": "Applying writes every setting and reboots the modem.",
       "apply": "Apply and reboot",
       "discard": "Discard changes",
-      "provenance_dirty": "{{count}} unsaved changes",
-      "delta_automatic": "Automatic",
-      "delta_unset": "Not set",
+      "unsaved_one": "{{count}} unsaved change",
+      "unsaved_other": "{{count}} unsaved changes",
       "mac_label": "Target MAC address",
       "mac_placeholder": "XX:XX:XX:XX:XX:XX"
     },
+    "groups": {
+      "passthrough": "Passthrough",
+      "network": "Network"
+    },
     "rows": {
       "mode": {
-        "label": "Mode",
-        "consequence": "Ethernet or USB hands the WAN IP to one device. In either, the modem stops being reachable at its LAN gateway address — keep Tailscale or another way in."
+        "label": "Mode"
       },
       "target": {
         "label": "Target device",
-        "consequence": "Automatic takes the first device that connects; manual pins one MAC address.",
-        "consequence_disabled": "Pick a mode first."
+        "pick_mode": "Pick a mode first."
       },
       "nat": {
         "label": "NAT",
-        "consequence": "With NAT is right for almost every setup. Without it the target device must handle its own public addressing."
+        "hint": "With NAT suits almost every setup.",
+        "hint_label": "About NAT"
       },
       "usb": {
-        "label": "USB connection mode",
-        "consequence": "Only used by USB passthrough. ECM works everywhere; RNDIS is for older Windows."
+        "label": "USB connection"
       },
       "dns": {
         "label": "DNS proxy",
-        "consequence": "On, the modem answers DHCP DNS queries for the target device. Leave off unless the device cannot reach a resolver itself."
+        "hint": "On, the modem answers DHCP DNS for the target device.",
+        "hint_label": "About DNS proxy"
       }
     },
     "options": {
-      "placeholder": "Not read yet",
-      "mode_disabled": "Disabled — router mode",
-      "mode_eth": "Ethernet passthrough",
-      "mode_usb": "USB passthrough",
-      "target_automatic": "Automatic — first device to connect",
-      "target_manual": "Enter a MAC address",
-      "nat_on": "With NAT (recommended)",
+      "mode_disabled": "Router",
+      "mode_eth": "Ethernet",
+      "mode_usb": "USB",
+      "target_automatic": "Automatic",
+      "target_manual": "By MAC",
+      "nat_on": "With NAT",
       "nat_off": "Without NAT",
-      "usb_rmnet": "RMNET (QMI)",
-      "usb_ecm": "ECM (universal)",
-      "usb_mbim": "MBIM (Windows)",
-      "usb_rndis": "RNDIS (legacy)",
-      "dns_off": "Off — the device uses its own resolver",
-      "dns_on": "On — the modem answers DHCP DNS"
+      "dns_off": "Off",
+      "dns_on": "On"
     },
-    "banners": {
-      "reboot": {
-        "title": "Applying reboots the modem, and this browser tab will lose it",
-        "body": "After the reboot the LAN gateway stops answering. Reach the modem over Tailscale, from the passthrough device itself, or over serial. The setting persists across further reboots."
-      },
-      "active": {
-        "title": "This page is reachable because you are not the passthrough device",
-        "body": "The modem's LAN gateway address is no longer served to {{mac}}. If you lose your current route in, Tailscale or a serial console is the way back."
-      }
+    "mode_note": {
+      "rest": "Ethernet or USB hands the WAN IP to one device, and the modem stops answering at its LAN gateway. Keep Tailscale or another way in.",
+      "to_passthrough": "Applying reboots the modem and this tab loses it. Afterwards the LAN gateway stops answering, so keep Tailscale or another way in.",
+      "to_router": "Applying reboots the modem and this tab loses it. The LAN gateway answers again after the reboot."
     },
     "dialog": {
       "title": "Apply and reboot now?",
@@ -599,7 +572,7 @@
       "read_body": "Nothing has been changed. Try again, or check that the modem is answering.",
       "retry": "Retry",
       "card_unread": "The modem hasn't answered yet, so there is nothing to change until the first read lands.",
-      "mac_invalid": "Enter a full MAC address — six pairs of hex digits.",
+      "mac_invalid": "Enter a full MAC address, six pairs of hex digits.",
       "no_changes": "Nothing has changed yet."
     }
   },

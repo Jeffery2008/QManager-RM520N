@@ -489,101 +489,74 @@
     "header": {
       "refresh": "Aggiorna"
     },
-    "strip": {
+    "status": {
       "label": "Ultima applicazione",
-      "state_router": "Modalità router",
-      "state_passthrough": "Passthrough attivo"
-    },
-    "tiles": {
-      "mode": {
-        "label": "Modalità",
-        "value_disabled": "Disattivato",
-        "value_eth": "Via Ethernet",
-        "value_usb": "Via USB",
-        "caption_disabled": "Il modem instrada per la LAN",
-        "caption_eth": "Impostato per assegnare l'IP WAN a eth0",
-        "caption_usb": "Impostato per assegnare l'IP WAN al dispositivo USB"
+      "mode_title": {
+        "disabled": "Modalità router",
+        "eth": "Passthrough Ethernet",
+        "usb": "Passthrough USB"
       },
-      "target": {
-        "label": "Dispositivo di destinazione",
-        "caption_manual": "Fissato per MAC",
-        "caption_automatic": "Primo dispositivo che si collega",
-        "caption_none": "Nessun dispositivo selezionato"
+      "blurb": {
+        "disabled": "Il modem instrada per la LAN",
+        "eth": "Impostato per assegnare l'IP WAN al dispositivo Ethernet",
+        "usb": "Impostato per assegnare l'IP WAN al dispositivo USB"
       },
-      "nat": {
-        "label": "NAT",
-        "value_on": "Attivo",
-        "value_off": "Disattivo",
-        "caption_on": "Salvato come consigliato",
-        "caption_off": "Il dispositivo di destinazione gestisce da sé l'indirizzamento pubblico"
-      },
-      "dns": {
-        "label": "Proxy DNS",
-        "value_on": "Attivo",
-        "value_off": "Disattivo",
-        "caption_on": "Il modem risponde al DNS via DHCP per il dispositivo di destinazione",
-        "caption_off": "Il dispositivo di destinazione usa il proprio resolver"
-      }
+      "no_target": "Nessun dispositivo selezionato",
+      "gateway": "Gateway LAN",
+      "gateway_served": "Servito",
+      "gateway_not_served": "Non servito"
     },
     "card": {
       "title": "Configurazione del passthrough",
-      "description": "Ogni impostazione qui ha effetto al prossimo avvio. Applicare riavvia il modem.",
+      "description": "Applicare scrive tutte le impostazioni e riavvia il modem.",
       "apply": "Applica e riavvia",
       "discard": "Scarta le modifiche",
-      "provenance_dirty": "{{count}} modifiche non salvate",
-      "delta_automatic": "Automatico",
-      "delta_unset": "Non impostato",
+      "unsaved_one": "{{count}} modifica non salvata",
+      "unsaved_other": "{{count}} modifiche non salvate",
       "mac_label": "Indirizzo MAC di destinazione",
       "mac_placeholder": "XX:XX:XX:XX:XX:XX"
     },
+    "groups": {
+      "passthrough": "Passthrough",
+      "network": "Rete"
+    },
     "rows": {
       "mode": {
-        "label": "Modalità",
-        "consequence": "Ethernet o USB assegnano l'IP WAN a un solo dispositivo. In entrambi i casi il modem smette di essere raggiungibile al suo indirizzo di gateway sulla LAN: tieni pronto Tailscale o un altro modo per entrare."
+        "label": "Modalità"
       },
       "target": {
         "label": "Dispositivo di destinazione",
-        "consequence": "In automatico viene preso il primo dispositivo che si collega; in manuale si fissa un indirizzo MAC.",
-        "consequence_disabled": "Scegli prima una modalità."
+        "pick_mode": "Scegli prima una modalità."
       },
       "nat": {
         "label": "NAT",
-        "consequence": "Con il NAT è la scelta giusta per quasi tutte le configurazioni. Senza, il dispositivo di destinazione deve gestire da sé l'indirizzamento pubblico."
+        "hint": "Con NAT va bene per quasi ogni configurazione.",
+        "hint_label": "Informazioni sul NAT"
       },
       "usb": {
-        "label": "Modalità di connessione USB",
-        "consequence": "Usata solo dal passthrough USB. ECM funziona ovunque; RNDIS serve per le versioni di Windows più vecchie."
+        "label": "Connessione USB"
       },
       "dns": {
         "label": "Proxy DNS",
-        "consequence": "Se attivo, il modem risponde alle richieste DNS via DHCP per il dispositivo di destinazione. Lascialo disattivo, a meno che il dispositivo non riesca a raggiungere un resolver da solo."
+        "hint": "Attivo, il modem risponde al DNS via DHCP per il dispositivo di destinazione.",
+        "hint_label": "Informazioni sul proxy DNS"
       }
     },
     "options": {
-      "placeholder": "Non ancora letto",
-      "mode_disabled": "Disattivato — modalità router",
-      "mode_eth": "Passthrough Ethernet",
-      "mode_usb": "Passthrough USB",
-      "target_automatic": "Automatico — primo dispositivo che si collega",
-      "target_manual": "Inserisci un indirizzo MAC",
-      "nat_on": "Con NAT (consigliato)",
+      "mode_disabled": "Router",
+      "mode_eth": "Ethernet",
+      "mode_usb": "USB",
+      "target_automatic": "Automatico",
+      "target_manual": "Per MAC",
+      "nat_on": "Con NAT",
       "nat_off": "Senza NAT",
-      "usb_rmnet": "RMNET (QMI)",
-      "usb_ecm": "ECM (universale)",
-      "usb_mbim": "MBIM (per Windows)",
-      "usb_rndis": "RNDIS (obsoleto)",
-      "dns_off": "Disattivo — il dispositivo usa il proprio resolver",
-      "dns_on": "Attivo — il modem risponde al DNS via DHCP"
+      "dns_off": "Disattivo",
+      "dns_on": "Attivo"
     },
-    "banners": {
-      "reboot": {
-        "title": "Applicare riavvia il modem, e questa scheda del browser lo perderà",
-        "body": "Dopo il riavvio il gateway sulla LAN smette di rispondere. Raggiungi il modem via Tailscale, dal dispositivo in passthrough stesso oppure via seriale. L'impostazione resta anche ai riavvii successivi."
-      },
-      "active": {
-        "title": "Questa pagina è raggiungibile perché non sei tu il dispositivo in passthrough",
-        "body": "L'indirizzo di gateway sulla LAN del modem non viene più servito a {{mac}}. Se perdi la strada che stai usando ora, Tailscale o una console seriale sono il modo per rientrare."
-      }
+    "mode_note": {
+      "rest": "Ethernet o USB assegnano l'IP WAN a un solo dispositivo, e il modem smette di rispondere al suo gateway LAN. Tieni pronto Tailscale o un altro modo per entrare.",
+      "to_passthrough": "Applicare riavvia il modem e questa scheda lo perde. Dopo, il gateway LAN smette di rispondere, quindi tieni pronto Tailscale o un altro modo per entrare.",
+      "to_router": "Applicare riavvia il modem e questa scheda lo perde. Il gateway LAN torna a rispondere dopo il riavvio."
     },
     "dialog": {
       "title": "Applicare e riavviare adesso?",
@@ -599,7 +572,7 @@
       "read_body": "Non è stato modificato nulla. Riprova, oppure controlla che il modem stia rispondendo.",
       "retry": "Riprova",
       "card_unread": "Il modem non ha ancora risposto, quindi non c'è nulla da modificare finché non arriva la prima lettura.",
-      "mac_invalid": "Inserisci un indirizzo MAC completo — sei coppie di cifre esadecimali.",
+      "mac_invalid": "Inserisci un indirizzo MAC completo, sei coppie di cifre esadecimali.",
       "no_changes": "Non è ancora cambiato nulla."
     }
   },

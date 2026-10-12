@@ -1169,7 +1169,8 @@ parse_ippt_nat() {
 
     boot_ippt_nat="1"
 
-    nat_val=$(printf '%s\n' "$raw" | awk -F',' '/IPPT_NAT/{print $2+0; exit}')
+    # Match the "+QMAP:" reply line only; qcmd's echoed "AT+QMAP=..." line also names IPPT_NAT
+    nat_val=$(printf '%s\n' "$raw" | awk -F',' 'index($0,"+QMAP:")==1 && index($0,"\"IPPT_NAT\"") {print $2+0; exit}')
     case "$nat_val" in
         0|1) boot_ippt_nat="$nat_val" ;;
     esac
@@ -1184,7 +1185,8 @@ parse_ippt_usbnet() {
 
     boot_ippt_usbnet="1"
 
-    usb_val=$(printf '%s\n' "$raw" | awk -F',' '/usbnet/{print $2+0; exit}')
+    # Reply line "+QCFG:" only, not the echoed "AT+QCFG=..." command
+    usb_val=$(printf '%s\n' "$raw" | awk -F',' 'index($0,"+QCFG:")==1 && index($0,"\"usbnet\"") {print $2+0; exit}')
     case "$usb_val" in
         0|1|2|3) boot_ippt_usbnet="$usb_val" ;;
     esac
@@ -1199,7 +1201,8 @@ parse_ippt_dhcpv4dns() {
 
     boot_ippt_dhcpv4dns="disabled"
 
-    dns_val=$(printf '%s\n' "$raw" | awk -F'"' '/DHCPV4DNS/{print $4; exit}')
+    # Reply line "+QMAP:" only, not the echoed "AT+QMAP=..." command
+    dns_val=$(printf '%s\n' "$raw" | awk -F'"' 'index($0,"+QMAP:")==1 && index($0,"\"DHCPV4DNS\"") {print $4; exit}')
     case "$dns_val" in
         enable) boot_ippt_dhcpv4dns="enabled" ;;
     esac

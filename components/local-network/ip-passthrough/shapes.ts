@@ -1,349 +1,178 @@
-// =============================================================================
-// IP Passthrough — shared geometry and tone contract
-// =============================================================================
-// The `/local-network/ip-passthrough` family's first shapes module, and the
-// THIRD under `/local-network/` — `ethernet/shapes.ts` (2511953) and
-// `traffic-engine/shapes.ts` (0fdfc65) landed first, so the convention here is
-// inherited rather than invented.
-//
-// What this module prevents, on this route specifically: the retired card
-// restated its own page grid, its own header type, five bare `SelectTrigger`s
-// and a nine-`Skeleton` loading state that mirrored nothing. Not one number in
-// it was the system's.
-//
-// -----------------------------------------------------------------------------
-// WHY THE GEOMETRY IS RESTATED RATHER THAN IMPORTED
-// -----------------------------------------------------------------------------
-// `components/cellular/tile-shape.ts` holds the identical tile box, and the two
-// sibling `/local-network/` modules hold it again. This file deliberately
-// imports none of them. `/local-network/` must not reach into
-// `components/cellular/`, and a sibling family's module is not a shared library
-// — what is shared is the SYSTEM's numbers, not a module. The values below are
-// those numbers, verbatim:
-//
-//   104px pinned tile   12px radius   52px disc   42px control   16px card
-//
-// -----------------------------------------------------------------------------
-// THE BAND ON THIS PAGE REPORTS CONFIGURATION, NOT A MEASUREMENT
-// -----------------------------------------------------------------------------
-// This is the one place this family departs from its two siblings, and it is a
-// COPY rule rather than a geometry rule, recorded here because it is the thing
-// most likely to be quietly broken by a later edit.
-//
-// `ip_passthrough.sh` (GET) reads `/etc/qmanager/ippt_config.json` first — a
-// file written by our own POST — and falls back to poller fields
-// (`device.ippt_*`) captured once at boot. No AT command is issued on GET. So
-// Band A reports WHAT QMANAGER LAST APPLIED, not what the modem is doing right
-// now, and every string on it is written in the language of configuration:
-// "Set to…", "Pinned by…", "Saved as…". Never "currently", "live", "on the
-// wire", "verified". The band's own label is "Last applied" for the same
-// reason. A band that reads as a measurement while sourcing a config file is
-// the State-Honesty Rule broken in the one direction a user cannot detect.
-//
-// -----------------------------------------------------------------------------
-// COLOUR: NEUTRAL BODIES, AND ONLY THE MODE DISC MOVES
-// -----------------------------------------------------------------------------
-// Every tile body is `TILE.BODY` and there is no `tone` prop to override it.
-// Colour lives on the 52px disc, and only the MODE disc picks a tone at
-// runtime, because passthrough-vs-router is the only thing on this strip with a
-// functional state. NAT and DNS proxy are saved settings, and the target MAC is
-// an identifier; none of the three has a healthy or degraded reading to report,
-// so all three take `DISC_TONE.neutral` under The Neutral-Default Rule. A
-// colour that never changes encodes nothing.
-//
-// -----------------------------------------------------------------------------
-// RADIUS MAPPING
-// -----------------------------------------------------------------------------
-// The role scale, mapped by SHAPE ROLE rather than by nearest number:
-//
-//   16px  card shell    -> `rounded-card` — a PEER card; the band is the anchor
-//   12px  tile, group   -> `rounded-tile`
-//   10px  row, fields   -> `rounded-field`
-//   999px chips         -> `rounded-pill`
-//
-// `rounded-hero` is "the ONE card that anchors a surface". The anchor here is
-// Band A, so the single write card is a peer.
-// =============================================================================
+// IP Passthrough: this family's geometry, imported by the loaded views and their skeletons.
+// Restated from the Watchdog and Latency Monitor families, never imported across families.
 
-import type { BadgeVariant } from "@/components/ui/badge";
+/** `FF:FF:FF:FF:FF:FF` is the backend's sentinel for "first device to connect". */
+export const AUTOMATIC_MAC = "FF:FF:FF:FF:FF:FF";
 
 // -----------------------------------------------------------------------------
 // Page shell
 // -----------------------------------------------------------------------------
 
 /** The route wrapper. Container queries key off `@container/main`. */
-export const PAGE_ROOT = "@container/main mx-auto flex flex-col gap-5 p-2";
+export const PAGE_ROOT = "@container/main flex flex-col gap-5 px-4 pb-6 lg:px-6";
 
-/**
- * The page header.
- *
- * The retired shell wrote `text-3xl font-bold mb-2`, which is missing the
- * `tracking-[-0.02em]` the Display step specifies, so the title rendered
- * fractionally wider than every migrated surface. The spacing moves to the flex
- * `gap` rather than a trailing margin, so the header composes instead of
- * pushing.
- */
 export const PAGE_HEAD = {
   ROOT: "flex flex-col gap-5 @3xl/main:flex-row @3xl/main:items-end",
-  TITLES: "flex max-w-[41rem] flex-col gap-1.5",
+  TITLES: "flex max-w-[41rem] min-w-0 flex-col gap-1.5",
   TITLE: "text-3xl font-bold tracking-[-0.02em]",
   DESC: "text-on-surface-variant text-sm leading-relaxed text-pretty",
   ACTIONS: "flex flex-wrap items-center gap-2.5 @3xl/main:ml-auto",
 } as const;
 
-// -----------------------------------------------------------------------------
-// Band A — what was last applied
-// -----------------------------------------------------------------------------
+/** The rest tone for a ghost pill in the page header. */
+export const HEADER_PILL =
+  "bg-surface-container text-on-surface-variant hover:bg-surface-container-high";
 
-/**
- * The band header: label left, the state chip pushed right by `mr-auto`.
- *
- * `min-h` matches the chip's own 22px box so the band cannot breathe when the
- * chip appears on the first successful read — the same reserve-don't-animate
- * trade `DELTA` makes for its delta chip.
- */
-export const BAND = {
-  HEAD: "flex min-h-[1.375rem] items-center gap-3 px-1 pb-0.5",
-  /** "Last applied" — see the header note on why it is not "In force". */
-  LABEL: "text-on-surface-variant mr-auto text-xs font-semibold",
-  /** The glyph inside the header chip, sized to its 12px text. */
-  GLYPH: "size-3",
-} as const;
-
-/**
- * The tile box.
- *
- * `ROOT` is PINNED at 104px rather than floored, and `HEIGHT` is what the
- * skeleton imports so it mirrors the pin BY REFERENCE rather than by a restated
- * number (The Skeleton-Mirror Rule). A floor cannot be a mirror: the tile
- * resolves to whatever its content needs and the skeleton→content handoff jumps
- * by the difference. Nothing clips at the pin, because the eyebrow, value and
- * caption all truncate.
- *
- * `BODY` is the ONLY body fill and there is no `tone` prop anywhere to override
- * it. Making the wrong thing unreachable is cheaper than a comment asking
- * nobody to do it.
- */
-export const TILE = {
-  /** Container queries, never viewport breakpoints. */
-  GRID: "grid grid-cols-1 gap-3.5 @xl/main:grid-cols-2 @5xl/main:grid-cols-4",
-  ROOT: "flex h-[6.5rem] items-center gap-3.5 rounded-tile px-5 py-4",
-  /** Mirrors ROOT's pinned height, for the skeleton. */
-  HEIGHT: "h-[6.5rem]",
-  BODY: "bg-surface-container text-on-surface",
-  DISC: "grid size-[3.25rem] flex-none place-items-center rounded-pill",
-  /** The lucide glyph inside DISC — 26px, half the disc. */
-  GLYPH: "size-[1.625rem]",
-  TEXT: "flex min-w-0 flex-1 flex-col gap-[3px]",
-  EYEBROW:
-    "text-on-surface-variant truncate text-[0.6875rem] font-semibold tracking-[0.02em]",
-  /**
-   * The figure. `tabular-nums` in the UI face; the ONE value on this band that
-   * takes `font-mono` is the target MAC, and that voice is written at its call
-   * site beside the only string it is ever true of (The Machine-Voice Rule).
-   */
-  VALUE:
-    "flex min-w-0 items-center gap-2 text-[1.375rem] font-bold leading-[1.1] tracking-[-0.015em] tabular-nums",
-  VALUE_TEXT: "truncate",
-  /** The MAC's machine voice, and a step down so 17 characters still fit. */
-  VALUE_MONO: "truncate font-mono text-[1.0625rem] tracking-[-0.01em]",
-  CAPTION: "text-on-surface-variant truncate text-xs",
-  /** A figure with no reading. An em dash reads as an absence in all five locales. */
-  NONE: "—",
-} as const;
-
-/**
- * Disc fills, and the ONLY colour on this band.
- *
- * Each is a FILL pair (`bg-X` + `text-X-foreground`), never a container pair —
- * the disc is the one element small enough to want a strong fill, and the pair
- * is never crossed (The Three-Layer Rule). This is also the layer that survives
- * simulation: pale identity containers separate in 2 of 10 pairs under
- * deuteranopia, fills in 10 of 10.
- *
- * Keyed by TONE rather than by mode, so the map does not have to be rewritten
- * when a fourth passthrough mode appears.
- */
-export const DISC_TONE = {
-  primary: "bg-primary text-primary-foreground",
-  success: "bg-success text-success-foreground",
-  warning: "bg-warning text-warning-foreground",
-  destructive: "bg-destructive text-destructive-foreground",
-  neutral: "bg-surface-container-high text-on-surface-variant",
-} as const;
-
-export type DiscTone = keyof typeof DISC_TONE;
-
-/**
- * The tone transition for the ONE disc that changes at runtime.
- *
- * Scoped to two properties, never `transition-all` — a bare `transition-all`
- * silently inherits Tailwind's 150ms, which is off the scale and will not
- * retune with it. Every arbitrary custom property takes `var()`: Tailwind v4
- * dropped the bare-var bracket shorthand — the custom property written
- * directly in the brackets with no `var()` wrapper — and that spelling
- * now compiles to a declaration whose value is the property NAME rather than
- * its value — a declaration that parses, so nothing warns, and that the browser discards, so it ships as NO
- * transition rather than an off-scale one. The class is still generated, so
- * grepping the class name finds it and tsc / eslint / next build all pass; only
- * the emitted value tells.
- */
-export const DISC_TRANSITION =
-  "transition-[background-color,color] duration-[var(--duration-standard)] ease-[var(--ease-standard)]";
-
-/**
- * The band's failure state: ONE tile spanning the grid, never four shimmering
- * ones.
- *
- * Four identical "couldn't read" tiles would be one message repeated four
- * times, and a skeleton is a promise that data is on its way — holding one over
- * a dead poll is the misstatement this re-authoring exists to remove. The band
- * keeps the family box and goes neutral, and it carries the retry, because a
- * failed read with no way out is a permanent shimmer.
- */
-export const NOTICE_SPAN = "@xl/main:col-span-2 @5xl/main:col-span-4";
-export const NOTICE_TITLE = "truncate text-lg font-semibold";
-export const NOTICE_ACTION =
-  "h-9 flex-none gap-2 px-4 text-[0.8125rem] font-semibold";
-
-/**
- * Status-chip tones for the band header, keyed onto the exported `BadgeVariant`
- * type rather than onto a class string.
- *
- * That is the whole point of the annotation: a new band state without a
- * matching role fails the BUILD, where a `Record<string, string>` would render
- * an untinted chip and ship. `muted` is the correct role for Router mode — it
- * is a deliberate choice, not a failure — and `info` resolves to the brand ramp
- * per The Info-Is-Brand Rule.
- *
- * The two states take DIFFERENT glyphs at the call site, and must keep doing
- * so: `success-container` and `warning-container` measure 1.03:1 apart and are
- * identical under deuteranopia, so on a chip the glyph is the channel that
- * actually carries the state.
- */
-export type IpptBandState = "router" | "passthrough";
-
-export const STATE_BADGE: Record<IpptBandState, BadgeVariant> = {
-  router: "muted",
-  passthrough: "info",
-};
+/** The lucide glyph inside a pill. */
+export const PILL_GLYPH = "size-4";
 
 // -----------------------------------------------------------------------------
-// Band B — the write card
+// Card shells
 // -----------------------------------------------------------------------------
 
-/** Card padding: 28px, matching every sibling surface. */
-export const CARD_PAD = "px-7";
+/** The important marker is required: twMerge reads an arbitrary shadow as a colour. */
+export const CARD_SHELL =
+  "@container/card gap-5 rounded-card border-0 bg-card py-6 shadow-[var(--shadow-whisper)]!";
 
-/**
- * The card's title. `CardTitle` ships only `leading-none font-semibold` and
- * takes its size from the call site, so an unsized one inherits 16px and
- * flattens the surface's type ramp. It WRAPS rather than truncating — a card
- * title that silently loses its last word is worse than a two-line one — which
- * is why `leading-none` has to go with it.
- */
+/** The anchor: the Last applied strip. */
+export const HERO_SHELL =
+  "@container/card gap-0 rounded-hero border-0 bg-card py-6 shadow-[var(--shadow-whisper)]!";
+
+export const CARD_PAD = "px-6";
+export const HERO_PAD = "px-6 @[40rem]/main:px-7";
+
 export const CARD_TITLE = "min-w-0 text-lg leading-tight";
 
-/**
- * The card. A PEER, not the anchor: `rounded-card` (16px) and the whisper
- * shadow, which is the only card lift in the vocabulary and is never
- * load-bearing. `border-0` is explicit — a tonal surface never also carries a
- * hairline (The No-Hairline-On-Fill Rule).
- *
- * THE WHISPER IS IMPORTANT-MARKED, AND IT HAS TO BE. `card.tsx` ships
- * `shadow-sm`, and `cn()` does NOT dedupe it against this one: `tailwind-merge`
- * cannot tell whether an arbitrary `shadow-` value is a box-shadow or a shadow
- * COLOUR, so an unresolvable `var()` lands in the colour group and both classes
- * survive the merge. Tailwind then compiles both to `--tw-shadow` and the
- * winner is emission order, which is its deterministic name sort — `shadow-[`
- * sorts before `shadow-s`, so the primitive's default is emitted LAST and wins.
- * Measured on the sibling surface as Tailwind's two-layer `shadow-sm` against a
- * call site asking for the whisper. The marker makes it win by construction.
- */
-export const CARD_SHELL = "@container/card gap-5 rounded-card border-0 bg-surface py-6 shadow-[var(--shadow-whisper)]!";
+/** `CardDescription` hardcodes a retired ink token, so every call site re-inks it. */
+export const CARD_DESC = "text-on-surface-variant text-sm";
 
-/** One tonal group holding the card's setting rows. Host + 1 above the card. */
-export const ROW_GROUP =
-  "flex flex-col gap-0.5 rounded-tile bg-surface-container p-1.5";
+const EYEBROW_LH = "leading-[0.875rem]";
+export const EYEBROW = `text-on-surface-variant text-[0.6875rem] ${EYEBROW_LH} font-semibold tracking-[0.06em] uppercase`;
 
-/**
- * One setting row.
- *
- * A `min-h` FLOOR here, not a pin, and the distinction is the opposite of the
- * tile's: a tile has a skeleton mirroring it, so it must be a pin; a row's
- * consequence sentence wraps to two or three lines on a narrow container, where
- * a fixed height would clip it. `HEIGHT` is the floor's resolved value and is
- * what the card's skeleton mirrors — the skeleton is a stack of five boxes at
- * the row's own resting height, not a guess.
- */
-export const ROW = {
-  ROOT: "flex min-h-[5.5rem] flex-col gap-3 rounded-field px-4 py-4 @2xl/card:flex-row @2xl/card:items-center @2xl/card:gap-4 @2xl/card:pl-[1.125rem]",
-  /** Mirrors ROOT's resolved floor, for the skeleton. */
-  HEIGHT: "h-[5.5rem]",
-  /**
-   * A row whose control cannot currently do anything — the target-device row
-   * while the mode is Disabled. Dimmed rather than hidden: a row that vanishes
-   * takes its consequence sentence with it, and the sentence is the thing that
-   * says why it is unavailable.
-   */
-  DIMMED: "opacity-55",
-  /**
-   * The label + consequence column.
-   *
-   * `flex-1` is load-bearing rather than cosmetic. With `min-w-0` alone this
-   * column shrinks to zero against a `flex-none` control and the consequence
-   * wraps to one word per line — a ~500px tall row that only appears once the
-   * control happens to be wide, so the layout looks fine right up until it does
-   * not.
-   */
-  TEXT: "flex min-w-0 flex-1 flex-col gap-1",
-  /** The label's own line, carrying the delta chip beside it. */
-  LABEL_ROW: "flex min-h-[1.375rem] min-w-0 items-center gap-2",
-  LABEL: "text-[0.9375rem] font-semibold",
-  /**
-   * The consequence sentence. REQUIRED on every row, not optional — it is what
-   * makes a settings row a decision rather than a field. On this surface it is
-   * also where the riskiest sentence in the product now lives: applying a
-   * passthrough mode stops the modem answering at its LAN gateway, and the app
-   * the user is reading runs ON that modem. That sentence used to be visible
-   * only inside the confirm dialog, i.e. after Apply had been pressed (Product
-   * Principle 6: make the dangerous obvious, before the decision).
-   */
-  CONSEQUENCE:
-    "text-on-surface-variant text-[0.78125rem] leading-relaxed text-pretty",
-  /** The control cluster. `@2xl/card:ml-auto` right-aligns only once side by side. */
-  CONTROL: "flex w-full flex-none flex-col gap-2 @2xl/card:ml-auto @2xl/card:w-auto",
-  /** The inline validation message under a field that will not be accepted. */
-  ERROR: "text-destructive text-[0.75rem] leading-snug",
+// -----------------------------------------------------------------------------
+// The Last applied strip
+// -----------------------------------------------------------------------------
+
+/** The disc carries the mode colour; the card body stays neutral. */
+export const DISC_TONE = {
+  neutral: "bg-surface-container-high text-on-surface-variant",
+  info: "bg-primary text-primary-foreground",
 } as const;
 
-/**
- * The "before → after" chip, and the line it rides.
- *
- * THE LINE IS RESERVED. `CLEAN` keeps the element mounted and drops it to
- * `invisible`, so promoting a row moves NOTHING — no reflow of the group, no
- * jump of the five rows below it. `LABEL_ROW`'s own `min-h` matches the chip's
- * height for the same reason.
- *
- * Machine voice: the chip's two halves are literal setting values the device
- * round-trips, so `font-mono` is correct here and nowhere else in the row.
- * `flex-none` so the chip is never the thing that shrinks — a half-width
- * "Disabled → Ether…" states the wrong pending value.
- */
-export const DELTA = {
-  CHIP: "inline-flex h-[1.375rem] w-fit flex-none items-center gap-1 rounded-pill bg-primary px-2.5 font-mono text-[0.6875rem] font-semibold text-primary-foreground",
-  CLEAN: "invisible",
+/** Scoped to two properties, and every custom property takes `var()`. */
+export const DISC_TRANSITION =
+  "transition-[background-color,color] duration-[var(--duration-standard)] ease-[var(--ease-standard)] motion-reduce:transition-none";
+
+const STATUS_LINE = {
+  TITLE: "leading-6",
+  BLURB: "leading-5",
 } as const;
 
-/** The Select triggers. They sit on `ROW_GROUP` (`surface-container`), so each call site passes `host="container"`. */
-export const FIELD =
-  "w-full text-[0.84375rem] font-medium @2xl/card:w-auto @2xl/card:min-w-[15rem]";
+/** Phase on the left edge, figures on the right edge; one line from a 64rem card. */
+export const STATUS = {
+  BODY: "flex flex-wrap items-center gap-x-10 gap-y-[1.125rem]",
+  PHASE: "flex min-w-0 flex-[1_1_16rem] items-center gap-3.5",
+  DISC: "grid size-11 flex-none place-items-center rounded-pill",
+  GLYPH: "size-[1.375rem]",
+  TEXT: "flex min-w-0 flex-col gap-0.5",
+  TITLE: `text-xl ${STATUS_LINE.TITLE} font-bold tracking-[-0.01em]`,
+  BLURB: `text-on-surface-variant text-[0.8125rem] ${STATUS_LINE.BLURB} text-pretty`,
+} as const;
 
-/** The manual MAC entry: a raw `<input>` on `fieldVariants`, so `Input`'s `md:text-sm` cannot override the row's type. */
-export const MAC_FIELD = `${FIELD} h-[2.625rem] px-3.5 font-mono uppercase placeholder:normal-case placeholder:font-sans`;
+const FIG_PILL_H = "h-[2.625rem]";
+const FIG_KEY_LH = "leading-5 @[48rem]/card:leading-[0.875rem]";
+const FIG_VALUE_LH = "leading-5 @[48rem]/card:leading-[1.625rem]";
 
-/** The glyph riding inside a trigger or an action pill. */
-export const FIELD_GLYPH = "size-3.5";
+/** Below a 48rem card each figure is a receipt pill (Cellular Information's row); above it, a stacked figure. */
+export const FIGS = {
+  COUNT: 5,
+  ROOT: "grid flex-[1_1_100%] grid-cols-1 gap-[0.3125rem] @[48rem]/card:flex @[48rem]/card:flex-wrap @[48rem]/card:justify-between @[48rem]/card:gap-x-7 @[48rem]/card:gap-y-3 @5xl/card:flex-[0_1_auto]",
+  FIG: `flex ${FIG_PILL_H} min-w-0 items-center justify-between gap-4 rounded-pill bg-surface-container px-4 @[48rem]/card:h-auto @[48rem]/card:flex-col @[48rem]/card:items-start @[48rem]/card:justify-start @[48rem]/card:gap-0.5 @[48rem]/card:min-w-max @[48rem]/card:rounded-none @[48rem]/card:bg-transparent @[48rem]/card:px-0`,
+  KEY: `text-on-surface-variant min-w-0 truncate text-[0.8125rem] ${FIG_KEY_LH} font-semibold @[48rem]/card:text-[0.6875rem] @[48rem]/card:tracking-[0.06em] @[48rem]/card:uppercase`,
+  VALUE: `inline-flex flex-none items-center gap-1.5 text-[0.8125rem] ${FIG_VALUE_LH} font-semibold whitespace-nowrap tabular-nums @[48rem]/card:text-lg @[48rem]/card:font-bold @[48rem]/card:tracking-[-0.01em]`,
+  QUIET: "text-on-surface-variant font-medium @[48rem]/card:font-semibold",
+  /** The MAC: an opaque string, never truncated. */
+  MONO: "font-mono @[48rem]/card:text-[0.9375rem] @[48rem]/card:font-semibold @[48rem]/card:tracking-normal",
+  /** Beside "Not served"; the figure itself stays plain ink. */
+  ALERT: "text-warning-on-surface size-3.5 flex-none",
+} as const;
 
-/** The footer status line: the unsaved count while the draft is dirty, empty otherwise. */
-export const PROVENANCE = "text-on-surface-variant text-xs";
+/** A failed read: one horizontal block in place of the strip's body. */
+export const CONDITION = {
+  ROOT: "flex flex-wrap items-center gap-x-3.5 gap-y-3 rounded-tile bg-surface-container px-4 py-3.5 text-on-surface",
+  DISC: "grid size-11 flex-none place-items-center rounded-pill bg-surface-container-high text-on-surface-variant",
+  GLYPH: "size-[1.375rem]",
+  TEXT: "flex min-w-0 flex-[1_1_14rem] flex-col gap-0.5",
+  TITLE: "text-[0.9375rem] font-semibold",
+  BODY: "text-on-surface-variant text-[0.8125rem] text-pretty",
+  ACTION: "ml-auto h-9 bg-on-surface/10 px-4 text-on-surface hover:bg-on-surface/15",
+} as const;
+
+// -----------------------------------------------------------------------------
+// The settings card
+// -----------------------------------------------------------------------------
+
+const ROW_MIN_H = "min-h-[2.625rem]";
+/** A SegmentedField track: 34px segments in a 4px-padded pill. */
+const PILL_H = "h-[2.625rem]";
+const KEY_LH = "leading-5";
+
+/** Two groups side by side from a 56rem card, stacked below it. */
+export const SETTING = {
+  BODY: "grid grid-cols-1 items-start gap-x-10 gap-y-7 @4xl/card:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
+  GROUP: "flex min-w-0 flex-col gap-3.5",
+  LABEL: EYEBROW,
+  /** Key left, control right; on a narrow card the control wraps, still right-aligned. */
+  ROW: `flex ${ROW_MIN_H} flex-wrap items-center justify-between gap-x-4 gap-y-2`,
+  KEY: "flex min-w-0 flex-col gap-px",
+  KEY_LINE: `inline-flex items-center gap-1.5 text-sm ${KEY_LH} font-medium`,
+  KEY_SUB: "text-on-surface-variant text-xs",
+  /** A held row dims its text; the disabled control dims itself, so the two never compound. */
+  HELD: "opacity-55",
+  CONTROL: "ml-auto flex max-w-full flex-col items-end gap-1.5",
+  /** USB: a Select on its own line below a 32rem card, the pill beside the key above it. */
+  CONTROL_WIDE: "flex basis-full flex-col items-end gap-1.5 @lg/card:ml-auto @lg/card:basis-auto",
+  /** The dirty marker is reserved on every row and fades in on the quick token. */
+  DOT: "size-[7px] flex-none rounded-pill bg-primary transition-[opacity,transform] duration-[var(--duration-quick)] ease-[var(--ease-standard)] motion-reduce:transition-none",
+  DOT_OFF: "scale-[0.6] opacity-0",
+  DOT_ON: "scale-100 opacity-100",
+  UNREAD: "text-on-surface-variant py-2.5 text-[0.8125rem]",
+} as const;
+
+/** The lockout note on Mode; promoted in place (Highlight-by-Container) while Mode is dirty. */
+export const MODE_NOTE = {
+  ROOT: "flex items-start gap-2 rounded-field text-[0.78125rem] leading-[1.5] text-pretty transition-[background-color,color] duration-[var(--duration-standard)] ease-[var(--ease-standard)] motion-reduce:transition-none",
+  REST: "text-on-surface-variant",
+  DIRTY: "bg-destructive-container text-on-destructive-container px-3.5 py-[0.5625rem] font-medium",
+  GLYPH: "mt-0.5 size-3.5 flex-none",
+  GLYPH_REST: "text-warning-on-surface",
+} as const;
+
+/** The manual MAC entry: 42px, machine voice, on `fieldVariants`. */
+export const MAC_FIELD = {
+  WRAP: "flex w-60 max-w-full flex-col items-end gap-1.5",
+  INPUT: `${PILL_H} px-3.5 font-mono text-[0.84375rem] font-medium uppercase placeholder:font-sans placeholder:normal-case`,
+  ERROR: "text-destructive-on-surface text-right text-xs leading-[1.5]",
+} as const;
+
+export const FOOT = {
+  LINE: "flex min-w-0 items-center gap-2",
+  DOT: "size-[7px] flex-none rounded-pill bg-primary",
+} as const;
+
+// -----------------------------------------------------------------------------
+// Skeletons
+// -----------------------------------------------------------------------------
+
+/** Every box reads the loaded view's own line box. */
+export const SKELETON = {
+  EYEBROW: `h-3.5 w-24 rounded-inline`,
+  TITLE: `h-6 w-40 rounded-inline`,
+  BLURB: `h-5 w-52 max-w-full rounded-inline`,
+  FIG_KEY: "h-3.5 w-20 rounded-inline",
+  FIG_VALUE: "h-5 w-16 rounded-inline @[48rem]/card:h-[1.625rem]",
+  ROW_KEY: `h-5 w-24 rounded-inline`,
+  /** One line of the Mode note (12.5px at leading 1.5). */
+  NOTE_LINE: "h-[1.171875rem] rounded-inline",
+  PILL: `${PILL_H} rounded-pill`,
+} as const;

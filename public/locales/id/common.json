@@ -489,101 +489,74 @@
     "header": {
       "refresh": "Segarkan"
     },
-    "strip": {
+    "status": {
       "label": "Terakhir diterapkan",
-      "state_router": "Mode router",
-      "state_passthrough": "Sedang diteruskan"
-    },
-    "tiles": {
-      "mode": {
-        "label": "Mode passthrough",
-        "value_disabled": "Nonaktif",
-        "value_eth": "Lewat Ethernet",
-        "value_usb": "Lewat USB",
-        "caption_disabled": "Modem merutekan untuk LAN",
-        "caption_eth": "Disetel untuk menyerahkan IP WAN ke eth0",
-        "caption_usb": "Disetel untuk menyerahkan IP WAN ke perangkat USB"
+      "mode_title": {
+        "disabled": "Mode router",
+        "eth": "Passthrough Ethernet",
+        "usb": "Passthrough USB"
       },
-      "target": {
-        "label": "Perangkat target",
-        "caption_manual": "Dipatok berdasarkan MAC",
-        "caption_automatic": "Perangkat pertama yang terhubung",
-        "caption_none": "Tidak ada perangkat dipilih"
+      "blurb": {
+        "disabled": "Modem merutekan untuk LAN",
+        "eth": "Disetel untuk menyerahkan IP WAN ke perangkat Ethernet",
+        "usb": "Disetel untuk menyerahkan IP WAN ke perangkat USB"
       },
-      "nat": {
-        "label": "NAT",
-        "value_on": "Aktif",
-        "value_off": "Nonaktif",
-        "caption_on": "Disimpan sesuai anjuran",
-        "caption_off": "Perangkat target menangani pengalamatan publiknya sendiri"
-      },
-      "dns": {
-        "label": "Proxy DNS",
-        "value_on": "Aktif",
-        "value_off": "Nonaktif",
-        "caption_on": "Modem menjawab DNS lewat DHCP untuk perangkat target",
-        "caption_off": "Perangkat target memakai resolver-nya sendiri"
-      }
+      "no_target": "Tidak ada perangkat dipilih",
+      "gateway": "Gateway LAN",
+      "gateway_served": "Dilayani",
+      "gateway_not_served": "Tidak dilayani"
     },
     "card": {
       "title": "Konfigurasi passthrough",
-      "description": "Setiap pengaturan di sini berlaku pada boot berikutnya. Menerapkannya akan me-reboot modem.",
+      "description": "Menerapkan akan menulis semua pengaturan dan me-reboot modem.",
       "apply": "Terapkan dan reboot",
       "discard": "Buang perubahan",
-      "provenance_dirty": "{{count}} perubahan belum tersimpan",
-      "delta_automatic": "Otomatis",
-      "delta_unset": "Belum diatur",
+      "unsaved_one": "{{count}} perubahan belum tersimpan",
+      "unsaved_other": "{{count}} perubahan belum tersimpan",
       "mac_label": "Alamat MAC target",
       "mac_placeholder": "XX:XX:XX:XX:XX:XX"
     },
+    "groups": {
+      "passthrough": "Passthrough",
+      "network": "Jaringan"
+    },
     "rows": {
       "mode": {
-        "label": "Mode passthrough",
-        "consequence": "Ethernet atau USB menyerahkan IP WAN ke satu perangkat. Pada keduanya, modem tidak lagi bisa dijangkau di alamat gateway LAN-nya — siapkan Tailscale atau jalan masuk lain."
+        "label": "Mode"
       },
       "target": {
         "label": "Perangkat target",
-        "consequence": "Otomatis mengambil perangkat pertama yang terhubung; manual mematok satu alamat MAC.",
-        "consequence_disabled": "Pilih mode terlebih dahulu."
+        "pick_mode": "Pilih mode terlebih dahulu."
       },
       "nat": {
         "label": "NAT",
-        "consequence": "Dengan NAT cocok untuk hampir semua penyiapan. Tanpa NAT, perangkat target harus menangani pengalamatan publiknya sendiri."
+        "hint": "Dengan NAT cocok untuk hampir semua pengaturan.",
+        "hint_label": "Tentang NAT"
       },
       "usb": {
-        "label": "Mode koneksi USB",
-        "consequence": "Hanya dipakai oleh passthrough USB. ECM bekerja di mana saja; RNDIS untuk Windows lawas."
+        "label": "Koneksi USB"
       },
       "dns": {
         "label": "Proxy DNS",
-        "consequence": "Jika aktif, modem menjawab kueri DNS lewat DHCP untuk perangkat target. Biarkan nonaktif kecuali perangkat itu tidak bisa menjangkau resolver sendiri."
+        "hint": "Aktif, modem menjawab DNS lewat DHCP untuk perangkat target.",
+        "hint_label": "Tentang proxy DNS"
       }
     },
     "options": {
-      "placeholder": "Belum dibaca",
-      "mode_disabled": "Nonaktif — mode router",
-      "mode_eth": "Passthrough Ethernet",
-      "mode_usb": "Passthrough USB",
-      "target_automatic": "Otomatis — perangkat pertama yang terhubung",
-      "target_manual": "Masukkan alamat MAC",
-      "nat_on": "Dengan NAT (disarankan)",
+      "mode_disabled": "Router",
+      "mode_eth": "Ethernet",
+      "mode_usb": "USB",
+      "target_automatic": "Otomatis",
+      "target_manual": "Lewat MAC",
+      "nat_on": "Dengan NAT",
       "nat_off": "Tanpa NAT",
-      "usb_rmnet": "RMNET (QMI)",
-      "usb_ecm": "ECM (umum)",
-      "usb_mbim": "MBIM (untuk Windows)",
-      "usb_rndis": "RNDIS (lawas)",
-      "dns_off": "Nonaktif — perangkat memakai resolver sendiri",
-      "dns_on": "Aktif — modem menjawab DNS lewat DHCP"
+      "dns_off": "Nonaktif",
+      "dns_on": "Aktif"
     },
-    "banners": {
-      "reboot": {
-        "title": "Menerapkan akan me-reboot modem, dan tab peramban ini akan kehilangan koneksinya",
-        "body": "Setelah reboot, gateway LAN berhenti menjawab. Jangkau modem lewat Tailscale, dari perangkat passthrough itu sendiri, atau lewat serial. Pengaturan ini bertahan pada reboot berikutnya."
-      },
-      "active": {
-        "title": "Halaman ini bisa dibuka karena Anda bukan perangkat passthrough-nya",
-        "body": "Alamat gateway LAN modem tidak lagi diberikan ke {{mac}}. Jika Anda kehilangan jalur yang dipakai sekarang, Tailscale atau konsol serial adalah jalan kembali."
-      }
+    "mode_note": {
+      "rest": "Ethernet atau USB menyerahkan IP WAN ke satu perangkat, dan modem berhenti menjawab di gateway LAN-nya. Siapkan Tailscale atau jalan masuk lain.",
+      "to_passthrough": "Menerapkan akan me-reboot modem dan tab ini kehilangan koneksinya. Setelah itu gateway LAN berhenti menjawab, jadi siapkan Tailscale atau jalan masuk lain.",
+      "to_router": "Menerapkan akan me-reboot modem dan tab ini kehilangan koneksinya. Gateway LAN kembali menjawab setelah reboot."
     },
     "dialog": {
       "title": "Terapkan dan reboot sekarang?",
@@ -599,7 +572,7 @@
       "read_body": "Tidak ada yang diubah. Coba lagi, atau periksa apakah modem menjawab.",
       "retry": "Coba lagi",
       "card_unread": "Modem belum menjawab, jadi tidak ada yang dapat diubah sampai pembacaan pertama masuk.",
-      "mac_invalid": "Masukkan alamat MAC lengkap — enam pasang digit heksadesimal.",
+      "mac_invalid": "Masukkan alamat MAC lengkap, enam pasang digit heksadesimal.",
       "no_changes": "Belum ada yang berubah."
     }
   },
