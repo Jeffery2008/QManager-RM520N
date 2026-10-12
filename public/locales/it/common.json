@@ -923,7 +923,7 @@
     "channels": {
       "description": "Configura come ciascuno ti raggiunge.",
       "discord": {
-        "id_error": "Inserisci un ID utente Discord numerico da 17 a 20 cifre.",
+        "id_error": "Inserisci un ID utente Discord numerico da 15 a 25 cifre.",
         "id_hint": "Attiva la Modalità sviluppatore, fai clic destro sul tuo nome, poi scegli Copia ID utente.",
         "id_label": "ID Discord del proprietario",
         "id_missing": "È necessario l'ID Discord del proprietario.",
@@ -983,7 +983,19 @@
         "dirty": "Modifiche non salvate",
         "discard": "Scarta",
         "failed": "Non è stato possibile salvare le impostazioni.",
-        "succeeded": "Impostazioni di avviso salvate"
+        "succeeded": "Impostazioni di avviso salvate",
+        "errors": {
+          "invalid_threshold": "Inserisci un'attesa da 1 a 1440 minuti.",
+          "invalid_phone": "Inserisci un numero di telefono da 7 a 15 cifre che inizi con il prefisso internazionale.",
+          "invalid_email": "Inserisci indirizzi email validi per mittente e destinatario.",
+          "missing_app_password": "Inserisci la password per le app dell'email.",
+          "invalid_discord_id": "Inserisci un ID utente Discord da 15 a 25 cifre.",
+          "missing_bot_token": "Inserisci il token del bot Discord.",
+          "invalid_secret": "La password per le app o il token del bot contiene caratteri non consentiti.",
+          "partial": "La password o il token sono stati salvati, ma le impostazioni non sono state aggiornate del tutto: salva di nuovo.",
+          "service_restart_failed": "Impostazioni salvate, ma non è stato possibile riavviare il bot Discord.",
+          "service_enable_failed": "Impostazioni salvate, ma non è stato possibile avviare automaticamente il bot Discord all'accensione."
+        }
       },
       "secret_saved": "Salvato",
       "sms": {
@@ -1011,7 +1023,16 @@
         "blocked_offline": "Il bot Discord non è ancora connesso.",
         "failed": "Non è stato possibile inviare il test.",
         "sending": "Invio in corso",
-        "succeeded": "Test {{channel}} inviato"
+        "succeeded": "Test {{channel}} inviato",
+        "errors": {
+          "library_missing": "Questo canale non può inviare avvisi su questo dispositivo.",
+          "not_configured": "Attiva questo canale e completane la configurazione prima di inviare un test.",
+          "bot_not_running": "Il bot Discord è offline, quindi il test non è stato inviato.",
+          "msmtp_missing": "Il programma di posta non è installato, quindi l'email di test non è stata inviata.",
+          "send_failed_sms": "L'SMS di test non è stato inviato: controlla il segnale, il credito della SIM e il numero.",
+          "send_failed_email": "L'email di test non è stata inviata: controlla gli indirizzi, la password per le app e la connessione.",
+          "send_failed_discord": "Il messaggio di test non ha raggiunto il bot Discord: riprova."
+        }
       },
       "threshold_error": "Inserisci un numero intero di minuti da 1 a 1440.",
       "threshold_hint": "Le interruzioni più brevi vengono registrate, non inviate.",

@@ -9,6 +9,8 @@
 // hard-codes which cells are possible.
 // =============================================================================
 
+import type { MutationResult } from "@/types/mutation-result";
+
 export type AlertChannel = "sms" | "email" | "discord";
 
 /** The trigger events a channel can be routed to. Extensible by design — new
@@ -139,6 +141,13 @@ export interface AlertLogEntry {
   status: "sent" | "failed";
   recipient: string;
   channel: AlertChannel;
+}
+
+// ─── Save / test outcome ─────────────────────────────────────────────────────
+
+/** A save or test outcome; `code` is the CGI error slug, null on success or a transport failure. */
+export interface AlertsMutationResult extends MutationResult {
+  code: string | null;
 }
 
 // ─── msmtp install lifecycle (generic, previously @/types/video-optimizer) ───

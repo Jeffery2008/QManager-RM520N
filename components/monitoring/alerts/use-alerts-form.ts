@@ -24,8 +24,8 @@ import { ALERT_EVENT_ORDER, ALERT_CHANNEL_ORDER } from "@/types/alerts";
 // E.164-ish: optional leading +, first digit 1–9, total 7–15 digits.
 const PHONE_REGEX = /^\+?[1-9]\d{6,14}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// Discord snowflake IDs are 17–20 digit numeric strings.
-const DISCORD_ID_REGEX = /^\d{17,20}$/;
+// Matches the save endpoint's 15–25 digit check, which is the authority.
+const DISCORD_ID_REGEX = /^\d{15,25}$/;
 
 const THRESHOLD_MIN = 1;
 const THRESHOLD_MAX = 1440;

@@ -923,7 +923,7 @@
     "channels": {
       "description": "Atur bagaimana masing-masing menjangkau Anda.",
       "discord": {
-        "id_error": "Masukkan ID pengguna Discord berupa angka 17 hingga 20 digit.",
+        "id_error": "Masukkan ID pengguna Discord berupa angka 15 hingga 25 digit.",
         "id_hint": "Aktifkan Developer Mode, klik kanan nama Anda, lalu pilih Copy User ID.",
         "id_label": "ID Discord pemilik",
         "id_missing": "ID Discord pemilik diperlukan.",
@@ -983,7 +983,19 @@
         "dirty": "Perubahan belum tersimpan",
         "discard": "Buang",
         "failed": "Pengaturan tidak dapat disimpan.",
-        "succeeded": "Pengaturan peringatan tersimpan"
+        "succeeded": "Pengaturan peringatan tersimpan",
+        "errors": {
+          "invalid_threshold": "Masukkan waktu tunggu 1 hingga 1440 menit.",
+          "invalid_phone": "Masukkan nomor telepon 7 hingga 15 digit yang diawali kode negara.",
+          "invalid_email": "Masukkan alamat email pengirim dan penerima yang valid.",
+          "missing_app_password": "Masukkan sandi aplikasi email.",
+          "invalid_discord_id": "Masukkan ID pengguna Discord berupa 15 hingga 25 digit.",
+          "missing_bot_token": "Masukkan token bot Discord.",
+          "invalid_secret": "Sandi aplikasi atau token bot berisi karakter yang tidak diizinkan.",
+          "partial": "Sandi atau token sudah disimpan, tetapi pengaturan belum selesai diperbarui, jadi simpan lagi.",
+          "service_restart_failed": "Pengaturan disimpan, tetapi bot Discord tidak dapat dimulai ulang.",
+          "service_enable_failed": "Pengaturan disimpan, tetapi bot Discord tidak dapat diatur untuk berjalan saat perangkat menyala."
+        }
       },
       "secret_saved": "Tersimpan",
       "sms": {
@@ -1011,7 +1023,16 @@
         "blocked_offline": "Bot Discord belum terhubung.",
         "failed": "Tes tidak dapat dikirim.",
         "sending": "Mengirim…",
-        "succeeded": "Tes {{channel}} terkirim"
+        "succeeded": "Tes {{channel}} terkirim",
+        "errors": {
+          "library_missing": "Saluran ini tidak dapat mengirim peringatan di perangkat ini.",
+          "not_configured": "Aktifkan saluran ini dan selesaikan pengaturannya sebelum mengirim tes.",
+          "bot_not_running": "Bot Discord sedang offline, jadi tes tidak terkirim.",
+          "msmtp_missing": "Pengirim email belum terpasang, jadi email tes tidak terkirim.",
+          "send_failed_sms": "SMS tes tidak terkirim, jadi periksa sinyal, pulsa SIM, dan nomornya.",
+          "send_failed_email": "Email tes tidak terkirim, jadi periksa alamat, sandi aplikasi, dan koneksinya.",
+          "send_failed_discord": "Pesan tes tidak sampai ke bot Discord, jadi coba lagi."
+        }
       },
       "threshold_error": "Masukkan jumlah menit bulat dari 1 sampai 1440.",
       "threshold_hint": "Gangguan yang lebih singkat dicatat, tidak dikirim.",

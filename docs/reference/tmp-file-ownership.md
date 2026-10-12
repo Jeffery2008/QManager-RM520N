@@ -36,6 +36,7 @@ QManager runs as two different users. Root owns the daemons (`qmanager_poller`, 
 | Seeded shared files | `/tmp/qmanager.log`, `/tmp/qmanager_events.json`, `/tmp/qmanager_profile_state.json`, `/tmp/qmanager_profile_apply.pid`, `/tmp/qmanager_tower_write_inflight`, `/tmp/qmanager_sms_log.json`, `/tmp/qmanager_discord_log.json` |
 | `/tmp/qmanager_sms_log.json` | `root:root` `0666`. **Writers:** `sms_alerts.sh` from the poller's alert engine (root) and from the CGI's SMS test send (www-data). Trimmed to 100 rows by copy-through; see [The alert channel logs](#the-alert-channel-logs) |
 | `/tmp/qmanager_discord_log.json` | `root:root` `0666`. **Writers:** `qmanager_discord` and the alert engine (root), the CGI's Discord test-failure row (www-data). The engine trims it to 100 rows by copy-through |
+| `/tmp/qmanager_discord_spool/` | Directory, `root:root` `1777`. **Writers:** the alert engine (root) and the CGI's Discord test (www-data), one new file per DM. **Remover:** `qmanager_discord` (root). See [The Discord spool directory](#the-discord-spool-directory) |
 | `/tmp/qmanager_email_log.json` | **Not seeded.** Every writer is root (the engine, and `qmanager_email_send` for test sends); www-data only reads it |
 | `/tmp/qmanager_tower_write_inflight` | `root:root` `0666`. **Writers:** `tower/lock.sh` (www-data, via `tower_write_begin`) and `qmanager_tower_schedule` (root). **Reader:** `qmanager_tower_failover` (root). Content-bearing — a UNIX deadline, not a flag — so it **is** seeded; see [The tower-lock in-flight marker](#the-tower-lock-in-flight-marker) |
 | Seeded www-data-only files | `/tmp/qmanager_at.lock`, `/tmp/qmanager_at.pid` (root opens these **read-only**, `9<`) |
@@ -215,6 +216,16 @@ Before the seed, whichever UID wrote first after a boot owned the log for that u
 `/tmp/qmanager_email_log.json` is **deliberately not seeded**: since the [secrets relocation](alerts.md#qmanager_email_send--why-a-second-helper-exists) the test send runs inside the root helper `qmanager_email_send`, so every writer is root and www-data only reads it. Do not add it to the seed list unless a www-data writer appears.
 
 > ℹ️ NOTE: The seed lands whenever `qmanager_setup` runs: at boot, and during an install or OTA, whose `start_services()` runs `systemctl restart qmanager-setup` (OTA calls the installer with `--no-reboot`, not `--no-start`). An existing www-data-owned log is re-chowned in place, so its rows survive.
+
+### The Discord spool directory
+
+`/tmp/qmanager_discord_spool/` is the one shared alert **directory**. Root (the poller's engine) and www-data (the CGI's Discord test) both create entry files in it, and root (`qmanager_discord`) reads and removes them. `qmanager_setup` seeds it `root:root 1777` with `install -d`, the same sticky world-writable mode as `/tmp` itself:
+
+- Each writer creates a fresh file (dot-temp, then `ln` to a new name), so `protected_regular` never applies: it guards opening an *existing* file, not creating one.
+- Sticky bit: a UID can rename or remove only its own entries. That is enough, because the only remover is the root daemon.
+- If the seed is missing, `discord_dispatch_message` creates the directory (`mkdir` + `chmod 1777`) and the daemon does the same at its watcher start. Whichever UID wins owns it, but mode 1777 lets both write either way.
+
+Contract and naming: [alerts.md → Spool directory](alerts.md#spool-directory-tmpqmanager_discord_spool).
 
 ## Evidence: three bugs this protocol fixes
 

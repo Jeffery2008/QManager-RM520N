@@ -1,6 +1,6 @@
 # Discord Bot
 
-> **Applies to:** RM520N-GL (SDX65) · verified 2026-08
+> **Applies to:** RM520N-GL (SDX65) · verified 2026-08; the connect retry and spool drain (2026-10-12) are not yet run on hardware
 > **RG501Q-EU (SDX55):** unverified — see [`platform-matrix.md`](./platform-matrix.md)
 
 > User-installed Discord bot that exposes modem status and control via slash commands, deployed as a systemd service on the RM520N-GL.
@@ -18,6 +18,34 @@ Source directory: `discord-bot/`, deployed as `/usr/bin/qmanager_discord`.
   Go-side timer was one of the three clocks that consolidation removed — see
   [alerts.md](alerts.md). Slash commands are unaffected.
 - **Binary is UPX-LZMA compressed**: `build-discord-bot.sh` runs `upx --lzma --best` after the Go build, cutting the binary from ~7.1 MB to ~2.0 MB (-72%). Validated on RM520N-GL hardware: slash commands, AT-command path (`/lock-band`, `/network-mode`), and DM notifications all work; clean stop/start/reboot cycles produce no segfaults. **This is the opposite of the `atcli_smd11` rule** — the Rust binary segfaults on exit when UPX-packed; the Go runtime does not. Set `UPX_COMPRESS=0` to skip compression for debugging (uncompressed binaries are easier to inspect with `strings`/`objdump`). Build silently falls back to uncompressed if `upx` isn't on PATH, with a warning.
+
+---
+
+## Lifecycle and restart behaviour
+
+`qmanager-discord.service` is `Type=simple`, `Restart=on-failure`, `RestartSec=10s`, with `StartLimitBurst=5` / `StartLimitIntervalSec=3600` in `[Unit]`. `main()` runs in this order:
+
+1. Load `/etc/qmanager/discord_bot.json`. `enabled: false` exits 0; an empty `owner_discord_id` is fatal.
+2. Read the token from the root-only secret file. Missing → status `missing_token`, fatal.
+3. Write status `starting`, then `connectWithRetry` (`session.go`).
+4. After the first connect: register slash commands, resolve the DM channel, and start the spool drain (`runCmdWatcher`, `spool.go`), the test-DM watcher and the 30 s status writer.
+
+**`connectWithRetry` never exits on a network failure.** Each attempt builds a fresh session and runs `s.Open()` in a goroutine. A failed open writes status `"error": "connecting"`, waits, and tries again: 10 s, doubling to a 300 s ceiling (`connectBackoffMin` / `connectBackoffMax`). SIGINT/SIGTERM during an attempt or a wait returns at once and the process exits 0, so `systemctl stop` is not held up by a dial timeout.
+
+| Open result | Status `error` | Process |
+|-------------|----------------|---------|
+| Success | (cleared by the `Ready` handler, `connected: true`) | continues to step 4 |
+| Gateway close **4004** (token rejected, `isAuthFailure`) | `invalid_token` | `log.Fatalf` → exit 1 → systemd restarts it |
+| Any other error (no route, DNS, TLS, timeout) | `connecting` | stays up, retries |
+| Signal | `""` | exits 0 |
+
+Why it matters: a failed `Open` used to be fatal. A boot without internet then exited every 10 s and hit the start limit in about 50 s, and the bot stayed down for the hour. Now the process stays running through the outage, so it uses no start attempts and connects on its own when the link comes up. Only a bad token still burns through the limit; the Alerts save path clears it with `svc_reset_failed` before restarting ([alerts.md](alerts.md#post--dispatched-on-action)).
+
+> ⚠️ WARNING: Do not make a non-4004 `Open` error fatal again, and do not treat 4004 as retryable. Retrying a rejected token every 300 s forever hides a configuration fault behind a status the page cannot show.
+
+> ℹ️ NOTE: While the daemon is backing off, `pgrep` and `svc_is_running` both report it running, so `discord_dispatch_message` accepts alerts into the spool. They deliver after the first connect ([alerts.md → Spool directory](alerts.md#spool-directory-tmpqmanager_discord_spool)). Between attempts the status file is not rewritten, so it ages past the CGI's 90 s freshness limit and the page reads "not connected".
+
+discordgo reconnects a dropped gateway by itself after the first connect; `connectWithRetry` covers only the first one.
 
 ---
 
@@ -111,6 +139,9 @@ These two log lines are load-bearing for debugging — leave them in unless repl
 | File | Purpose |
 |------|---------|
 | `main.go` | Boot + handler registration |
+| `session.go` | `connectWithRetry` (first-connect backoff), session construction, DM channel open |
+| `spool.go` | Spool drain (`runCmdWatcher`) and the NDJSON result log (`appendDiscordLog`) |
+| `config.go` | Config load, token read, status file writer, path constants |
 | `handlers.go` | Slash-command dispatch + per-command handlers + response helpers |
 | `commands.go` | Slash-command catalog |
 | `cache.go` | Status/events readers + `ModemStatus` shape |

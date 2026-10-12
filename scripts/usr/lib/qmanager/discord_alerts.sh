@@ -47,48 +47,62 @@ da_bot_status_json() {
 }
 
 # =============================================================================
-# discord_dispatch_message — Hand a message off to the qmanager_discord
-# daemon for delivery (used by alert_engine.sh and the CGI's send_test)
+# discord_dispatch_message <message> [trigger] [recipient]
 # =============================================================================
-# Fire-and-forget: atomically writes the command file the daemon polls, then
-# returns. The daemon (not this shell code) performs the actual Discord API
-# call and, on success, appends the NDJSON log entry itself — this function
-# only reports whether the hand-off reached a running daemon, so a caller
-# whose write fails (or who finds no daemon running) can log a "failed"
-# attempt of its own, since nothing else ever will.
-# Returns: 0 = daemon running and command file written; 1 = otherwise.
-_DA_CMD_FILE="/tmp/qmanager_discord_cmd"
-_DA_CMD_WAIT_SECS=3   # the daemon polls the command file on a 1 s ticker
+# Fire-and-forget: drops one JSON file into the spool dir the daemon drains in
+# name order, then returns. The daemon performs the Discord call and appends
+# the NDJSON log row itself, so a caller logs only its own hand-off failure.
+# Returns: 0 = daemon running and entry spooled; 1 = otherwise.
+_DA_SPOOL="${_DA_SPOOL:-/tmp/qmanager_discord_spool}"
+_DA_SPOOL_MAX=50
+_DA_SEQ=0
 
 discord_dispatch_message() {
-    local message="$1" tmp waited=0
+    local message="$1" trigger="${2:-alert}" recipient="${3:-discord}"
+    local f n=0 tmp name
 
     if ! da_is_running; then
         qlog_warn "Discord alerts: dispatch skipped — qmanager_discord is not running"
         return 1
     fi
 
-    # The daemon holds one command at a time: wait for the previous one to be consumed
-    # rather than overwrite it. The caller logs the failed row.
-    while [ -e "$_DA_CMD_FILE" ] && [ "$waited" -lt "$_DA_CMD_WAIT_SECS" ]; do
-        sleep 1
-        waited=$((waited + 1))
+    if [ ! -d "$_DA_SPOOL" ]; then
+        mkdir "$_DA_SPOOL" 2>/dev/null && chmod 1777 "$_DA_SPOOL" 2>/dev/null
+        if [ ! -d "$_DA_SPOOL" ]; then
+            qlog_error "Discord alerts: cannot create spool dir $_DA_SPOOL"
+            return 1
+        fi
+    fi
+
+    for f in "$_DA_SPOOL"/*.json; do
+        [ -e "$f" ] && n=$((n + 1))
     done
-    if [ -e "$_DA_CMD_FILE" ]; then
-        qlog_warn "Discord alerts: dispatch skipped — previous command not consumed after ${_DA_CMD_WAIT_SECS}s"
+    if [ "$n" -ge "$_DA_SPOOL_MAX" ]; then
+        qlog_warn "Discord alerts: dispatch refused — spool holds $n entries (daemon not draining)"
         return 1
     fi
 
-    tmp="${_DA_CMD_FILE}.tmp.$$"
-    if ! jq -n --arg message "$message" '{message:$message}' > "$tmp" 2>/dev/null; then
+    _DA_SEQ=$((_DA_SEQ + 1))
+    tmp="$_DA_SPOOL/.tmp.$$.$_DA_SEQ"
+    if ! jq -n --arg message "$message" --arg trigger "$trigger" --arg recipient "$recipient" \
+        '{message:$message, trigger:$trigger, recipient:$recipient}' > "$tmp" 2>/dev/null; then
         rm -f "$tmp"
-        qlog_error "Discord alerts: failed to build command payload"
+        qlog_error "Discord alerts: failed to build spool payload"
         return 1
     fi
-    if ! mv "$tmp" "$_DA_CMD_FILE" 2>/dev/null; then
-        rm -f "$tmp"
-        qlog_error "Discord alerts: failed to write command file $_DA_CMD_FILE"
-        return 1
-    fi
-    return 0
+    # ln fails if the name exists (a subshell shares $$ and _DA_SEQ), so bump and retry.
+    # Zero-padded epoch keeps lexical order = send order, even at 1970 boot-time clocks.
+    n=0
+    while [ "$n" -lt 20 ]; do
+        n=$((n + 1))
+        name=$(printf '%010d-%s-%04d.json' "$(date +%s)" "$$" "$_DA_SEQ")
+        if ln "$tmp" "$_DA_SPOOL/$name" 2>/dev/null; then
+            rm -f "$tmp"
+            return 0
+        fi
+        _DA_SEQ=$((_DA_SEQ + 1))
+    done
+    rm -f "$tmp"
+    qlog_error "Discord alerts: failed to write spool entry in $_DA_SPOOL"
+    return 1
 }

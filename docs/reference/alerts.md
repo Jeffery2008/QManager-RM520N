@@ -1,6 +1,6 @@
 # Centralized Alerts
 
-> **Applies to:** RM520N-GL (SDX65) · verified 2026-08; the 2026-10-12 backend fixes were run on RM520N-GL `61368cd2`
+> **Applies to:** RM520N-GL (SDX65) · verified 2026-08; the 2026-10-12 backend fixes were run on RM520N-GL `61368cd2`; of the later Discord spool change, only the shell enqueue side has run there (the daemon's drain and connect retry have not)
 > **RG501Q-EU (SDX55):** unverified — see [`platform-matrix.md`](./platform-matrix.md)
 
 The Alerts subsystem consolidates the three previously-independent notification channels — **SMS**, **Email**, and **Discord** — behind ONE page, ONE CGI endpoint, and ONE backend state machine. It exists to answer a single question every poll cycle: *"the internet just went down / came back / the device just rebooted — which enabled, routed, and physically-capable channel(s) should fire?"* Before this rework each channel carried its own downtime timer, its own threshold, and (for Discord) its own autonomous Go-side timer — three clocks that could drift apart and double-send. Now a single monotonic timer in `alert_engine.sh` drives all dispatch, and each channel library (`email_alerts.sh`, `sms_alerts.sh`, `discord_alerts.sh`) is reduced to a pure *transport* that only knows how to SEND, never *when*.
@@ -20,6 +20,7 @@ The Alerts subsystem consolidates the three previously-independent notification 
 | Alert engine | `/usr/lib/qmanager/alert_engine.sh` (sourced by `qmanager_poller`) |
 | Channel transports | `/usr/lib/qmanager/{email_alerts,sms_alerts,discord_alerts}.sh` |
 | Discord daemon | `/usr/bin/qmanager_discord` (source: `discord-bot/`) |
+| Discord hand-off | `/tmp/qmanager_discord_spool/` (`root:root 1777`, one `<epoch>-<pid>-<seq>.json` per DM) — see [Spool directory](#spool-directory-tmpqmanager_discord_spool) |
 | Reboot breadcrumb helper | `/usr/bin/qmanager_crash_log_append` (sudoers-gated root helper) |
 | Routing config | `/etc/qmanager/alert_routing.json` (**persistent**, version 1) |
 | Channel configs | `/etc/qmanager/{sms_alerts,email_alerts,discord_bot}.json` (**persistent**, **no secrets**) |
@@ -398,20 +399,35 @@ Reboot alerts are delivered **post-recovery** (once the device is back online), 
 
 ## Discord IPC contract
 
-The Discord daemon (`/usr/bin/qmanager_discord`) is now a **pure DM transport**. Its old autonomous downtime timer is gated off by default; the shell alert engine owns all timing and drives the daemon over a filesystem command channel.
+The Discord daemon (`/usr/bin/qmanager_discord`) is now a **pure DM transport**. Its old autonomous downtime timer is gated off by default; the shell alert engine owns all timing and drives the daemon through a spool directory.
 
-### Command file (`/tmp/qmanager_discord_cmd`)
+### Spool directory (`/tmp/qmanager_discord_spool`)
 
-`discord_dispatch_message` (in `discord_alerts.sh`) is fire-and-forget:
+One JSON file per DM. `qmanager_setup` seeds the directory `root:root` mode **1777** (`install -d -o root -g root -m 1777`), because the root poller and the www-data CGI test both enqueue and only the root daemon removes.
 
-1. Verifies the daemon is running (see `da_is_running` below). If not, returns 1 — the caller logs its own `failed` entry, since nothing else will.
-2. **Waits for the slot.** While `/tmp/qmanager_discord_cmd` still exists, it sleeps 1 s at a time, up to `_DA_CMD_WAIT_SECS=3`. If the previous command is still unconsumed after that, it logs `previous command not consumed` and returns 1 (the caller logs the `failed` row).
-3. Atomically writes `{"message":"..."}` to `/tmp/qmanager_discord_cmd` (temp file + `mv`).
-4. Returns 0 the instant the hand-off lands. It does **not** wait for delivery.
+`discord_dispatch_message <message> [trigger] [recipient]` (in `discord_alerts.sh`) is fire-and-forget and never sleeps:
 
-The daemon's `runCmdWatcher` goroutine polls that path on a 1s ticker: stat → read → remove → `ChannelMessageSend` to the owner DM channel → append its own NDJSON result line (`sent`/`failed`) to `/tmp/qmanager_discord_log.json`. Because the daemon logs success itself, the shell side logs *only* the "never reached the daemon" failure case (`_ae_log_discord_failed`) — otherwise a success would be double-logged.
+1. Verifies the daemon is running (see `da_is_running` below). If not, returns 1.
+2. Creates the directory (`mkdir` + `chmod 1777`) if the seed is missing; returns 1 if it still is not there.
+3. Counts `*.json` entries. At `_DA_SPOOL_MAX=50` or more it logs `dispatch refused — spool holds N entries` and returns 1.
+4. Writes the payload to a dot-temp in the same directory (`.tmp.<pid>.<seq>`), then hard-links it (`ln`, which fails if the name exists) to `<epoch %010d>-<pid>-<seq %04d>.json`, for example `1760266800-4123-0001.json`, and removes the temp. On a name clash it bumps the seq and retries (up to 20 times): a subshell shares `$$` and the seq counter, and `mv` would silently overwrite the earlier entry.
+5. Returns 0. It does **not** wait for delivery.
 
-> ⚠️ WARNING: **The command file holds one message.** Two dispatches inside one daemon tick used to overwrite each other, so the first of two back-to-back alerts was lost with no log row. The bounded wait in step 2 is what prevents that; never replace it with an unconditional `mv`. The wait blocks the caller — the poller, inline — for up to 3 s.
+Payload, built with `jq -n --arg` (defaults when the argument is omitted: `trigger` = `alert`, `recipient` = `discord`):
+
+```json
+{ "message": "[QManager] ...", "trigger": "connection_restored", "recipient": "discord:123456789012345678" }
+```
+
+The engine passes its event key and `discord:<owner id>`; the CGI test passes `test` and the same recipient. On return 1 the caller logs its own `failed` row (`_ae_log_discord_failed`, or the CGI's test-failure row), since nothing else will.
+
+The daemon side is `discord-bot/spool.go`. `runCmdWatcher` drains the directory every 1 s in name order (`os.ReadDir` sorts by name): it skips dotfiles and anything not ending `.json`, removes a non-regular entry (symlink, FIFO) without reading it, reads at most 16 KB (`maxSpoolEntryBytes`), removes the file, then sends. It appends one NDJSON row per entry to `/tmp/qmanager_discord_log.json` with the payload's `trigger` and `recipient` (empty fields fall back to `alert` / `discord`). Because the daemon logs success itself, the shell side logs *only* the hand-off failure — otherwise a success would be double-logged. At start the daemon also removes the retired single-slot file `/tmp/qmanager_discord_cmd`.
+
+- **Order.** Entries from one process deliver in exact order (the per-process `_DA_SEQ` counter). Two processes enqueueing in the same second sort by PID, which is arbitrary. The zero-padded epoch keeps the lexical order correct across the 1970 boot clock.
+- **Late delivery is by design.** The watcher starts only after the daemon's first gateway connect. While it is still in its [connect backoff](discord-bot.md#lifecycle-and-restart-behaviour) the process is running, so `da_is_running` passes and entries queue; they deliver, oldest first, once it connects. A `reboot` or `connection_restored` DM can therefore arrive minutes after the event.
+- **Leftover dot-temps.** A writer killed between step 4's write and `ln` leaves a `.tmp.*` file. The daemon never reads or removes it, and it does not count toward the cap; it goes away with `/tmp` at reboot.
+
+> ⚠️ WARNING: Do not go back to a single command file. Two alerts inside one daemon tick overwrote each other there, and the wait that prevented it blocked the poller for up to 3 s. Keep the write as temp + `ln` inside the spool directory: the daemon reads any `*.json` it sees, so a direct `>` into a `.json` name can be read half-written.
 
 **Log trim.** The daemon only appends, so the root engine trims `/tmp/qmanager_discord_log.json` to the newest `_AE_MAX_DISCORD_LOG=100` rows. `_ae_trim_discord_log` checks the size once every `_AE_DISCORD_TRIM_EVERY=150` cycles (~10 min at ~4 s/cycle) and copies through the seeded inode (`cat tmp > log`), never `mv` ([tmp-file-ownership.md](tmp-file-ownership.md#the-alert-channel-logs)).
 
@@ -493,11 +509,12 @@ The handler reads each channel config with one `jq` (`cfg_json`, which yields `{
   The page sends `alert_after_min` **only when the user edited the wait** and never sends a per-channel `threshold_minutes`. That is the fix for the stale-wait bug: the old page posted all three per-channel values from its form, so a form seeded before another tab or the Connection Quality page changed the wait wrote the old value back on an unrelated save.
 - SMS phone (when enabled): 7–15 digits, optional leading `+`, must start with a country code (not `0`).
 - Email (when enabled): valid sender + recipient addresses; **control-character gate first** (a newline in any field templated into `msmtprc` would inject arbitrary msmtp directives — config-injection defense); a password is required only when `app_password_set` is not already `true`. The gate can check only a *newly typed* password — an already-stored one was validated by the helper when it was set, and this process can no longer read it. `qmanager_secret_set` re-validates the password and `sender_email` itself before templating, so nothing reaches `msmtprc` unchecked.
-- Discord (when enabled): numeric snowflake owner id (15–25 digits); a bot token is required only when `token_set` is not already `true`.
+- Discord (when enabled): numeric snowflake owner id (15–25 digits; the form's `DISCORD_ID_REGEX` in `use-alerts-form.ts` matches it); a bot token is required only when `token_set` is not already `true`.
 - **Marker carry-forward (replaces the old secret preservation):** the CGI can no longer read a stored secret, so an omitted/empty `app_password` or `bot_token` carries the existing `*_set` marker forward and leaves the credential untouched at its root-only path. The client still sends a secret only when the user typed a new one; the error slugs (`missing_app_password` / `missing_bot_token`) are unchanged so the frontend's handling and i18n still fire.
 - **Routing clamp:** the submitted routing is merged over the default (`$def * $usr`), then `connection_lost.email` and `connection_lost.discord` are hard-set to `false` — server-authoritative, mirroring `_ae_capable`.
-- **Discord service state.** The daemon caches token, owner and DM channel in memory at startup, so a *restart* (not start) is what picks up a change — but only when one is needed. With Discord enabled, `svc_enable qmanager_discord` always runs; `svc_restart` runs only if Discord was previously disabled, the owner id changed, a new token was stored this save, or `svc_is_running` says the daemon is down. An unrelated save (an SMS number, a routing tick) leaves the bot connected; the old code restarted it on every save, dropping its Gateway session each time. With Discord disabled, the CGI runs `svc_stop` then `svc_disable` (a disable failure is only logged).
+- **Discord service state.** The daemon caches token, owner and DM channel in memory at startup, so a *restart* (not start) is what picks up a change — but only when one is needed. With Discord enabled, `svc_enable qmanager_discord` always runs; `svc_reset_failed` then `svc_restart` run only if Discord was previously disabled, the owner id changed, a new token was stored this save, or `svc_is_running` says the daemon is down. An unrelated save (an SMS number, a routing tick) leaves the bot connected; the old code restarted it on every save, dropping its Gateway session each time. With Discord disabled, the CGI runs `svc_stop` then `svc_disable` (a disable failure is only logged).
 - **Restart failure is reported, after the save.** If `svc_restart` fails, every config is already written and the reload flags touched; the response is then `{ "success": false, "error": "service_restart_failed", "detail": "Discord alert settings were saved, but the Discord service could not be restarted" }`. It takes precedence over `service_enable_failed`. Because a failed response can still mean "saved", `useAlerts.saveSettings` re-reads the state (`fetchState(true)`) on every failed save.
+- **Why `svc_reset_failed` comes first.** `qmanager-discord.service` has `StartLimitBurst=5` / `StartLimitIntervalSec=3600`; once the daemon has exited non-zero five times (a rejected token does that), systemd refuses every start for the hour and the save would return `service_restart_failed`. Clearing the failed state lets a save that the user asked for start the bot again. It runs only on this user-initiated path, never from the poller, so a daemon that keeps crashing is still held down by the limit.
 - **Reload signalling:** touches the four alert reload flags (`sms`, `email`, `discord`, `routing`) plus `/tmp/qmanager_events_reload`, so the poller picks up the new config and wait on its next cycle.
 
 **Error shape** (all failures): `{ "success": false, "error": "<code>", "detail"?: "<human message>" }`.
@@ -517,7 +534,7 @@ jq -R -n -c --arg sms "$SMS_LOG" --arg email "$EMAIL_LOG" '
 - `timestamp` is a local `"YYYY-MM-DD HH:MM:SS"` string, so a 1970-stamped row sorts oldest and never displaces a real row from the cap.
 - No logs, or a `jq` failure, returns `{"success":true,"entries":[],"total":0}`.
 
-**Log `trigger` values.** An engine row carries the event key (`connection_lost`, `connection_restored`, `reboot`). Every test send — SMS and email from their libraries, the CGI's own SMS and Discord-failure rows — logs `"trigger": "test"` (it used to log free text such as `"Test SMS"`). The Discord daemon logs its own success and failure rows as `"alert"`. `alerts-log-card.tsx` names the three event keys plus `test` and `alert` (`TRIGGER_KEY` → `alerts.activity.trigger.*`) and prints anything else verbatim.
+**Log `trigger` values.** An engine row carries the event key (`connection_lost`, `connection_restored`, `reboot`). Every test send — SMS and email from their libraries, the CGI's own SMS and Discord-failure rows, and the Discord daemon's row for a spooled test — logs `"trigger": "test"` (it used to log free text such as `"Test SMS"`). The Discord daemon logs the `trigger` and `recipient` it was handed in the [spool payload](#spool-directory-tmpqmanager_discord_spool), so its rows read `connection_restored` / `reboot` / `test` with recipient `discord:<owner id>`; `"alert"` and `"discord"` appear only when a payload left them empty. `alerts-log-card.tsx` names the three event keys plus `test` and `alert` (`TRIGGER_KEY` → `alerts.activity.trigger.*`) and prints anything else verbatim.
 
 ### Email save & msmtp
 
@@ -540,7 +557,7 @@ A helper failure surfaces as a normal `cgi_error`, reusing the helper's own slug
 
 - **SMS** — bypasses the registration guard for this one call (the CGI context has no poller globals to satisfy it, and the user explicitly asked to test), then calls `sms_alert_send`.
 - **Email** — the *only* branch that cannot do the work itself. It shells out to `sudo qmanager_email_send test` and returns whatever the helper says; the whole send, including its NDJSON log entry, happens root-side. No precondition is duplicated in the CGI on purpose — the helper's `_ea_read_config` is the single authority on whether email is configured, and two checks that can disagree are worse than one that cannot. The error slugs (`library_missing` / `not_configured` / `msmtp_missing` / `send_failed`) come straight back from the helper, so the frontend is unchanged.
-- **Discord** — requires the daemon running (`da_is_running`), then `discord_dispatch_message`. Success is NOT logged by the CGI — the daemon logs it once it completes the API call (fire-and-forget hand-off).
+- **Discord** — requires the daemon running (`da_is_running`), reads `owner_discord_id` from `discord_bot.json`, then calls `discord_dispatch_message "<text>" "test" "discord:<owner id>"`. Success is NOT logged by the CGI — the daemon logs it, as `test`, once it completes the API call. A refused hand-off logs one `failed` row with the same recipient and returns `send_failed`.
 
 ---
 
@@ -551,7 +568,7 @@ Page: `/monitoring/alerts` — `components/monitoring/alerts/alerts.tsx`. Re-aut
 - **`useAlerts`** (`hooks/use-alerts.ts`) — the whole settings surface: fetches `{alert_after_min, channels, routing, capabilities, reboots}`, saves it in one atomic POST, runs per-channel tests, and drives the msmtp install lifecycle. Exposes `saveSettings`, `sendTest`, `runInstall`, `refresh`.
 - **`useAlertsLog`** (`hooks/use-alerts-log.ts`) — the merged activity log (`get_log`).
 
-> ⚠️ WARNING: **`useAlerts().error` is load failures only.** `saveSettings` and `sendTest` no longer set it; each returns `{ ok, error }`, and the caller toasts from that result ([toast-confirmation.md](toast-confirmation.md)). The page passes `error` to the Coverage card as "the last read failed": with state in hand it adds a "Showing the settings we last read from the device" notice, and with none it renders the read-failure block. A failed save or test that wrote `error` would put that notice over correct data. Keep mutation failures out of it.
+> ⚠️ WARNING: **`useAlerts().error` is load failures only.** `saveSettings` and `sendTest` no longer set it; each returns an `AlertsMutationResult` (`{ ok, error, code }`), and the caller toasts from that result ([toast-confirmation.md](toast-confirmation.md)). The page passes `error` to the Coverage card as "the last read failed": with state in hand it adds a "Showing the settings we last read from the device" notice, and with none it renders the read-failure block. A failed save or test that wrote `error` would put that notice over correct data. Keep mutation failures out of it.
 
 ### Layout
 
@@ -580,6 +597,17 @@ Removed 2026-10-12, do not restore: `alerts-status-card.tsx` (the three-tile sta
 ### The one wait
 
 `WaitRow` edits the single wait (`form.threshold`, validated 1–1440 to match the CGI). `buildPayload` adds a top-level `alert_after_min` **only when the field differs from the saved wait** and never sends a per-channel `threshold_minutes`, so a form that loaded before the wait changed elsewhere cannot write the old value back. The saved wait is `state.alert_after_min`, falling back to `channels.sms.threshold_minutes` for an older backend (`savedWait`).
+
+### Failure copy: CGI slug → `t()` key
+
+A failed save or test toasts translated copy, never the CGI's English `detail`. `useAlerts` returns the `error` slug as `code` (`null` on success or a transport failure), and `alerts-settings-card.tsx` passes it through two helpers in `constants.tsx`:
+
+| Helper | Map | Fallback |
+|--------|-----|----------|
+| `saveErrorKey(code)` | `SAVE_ERROR_KEY` → `alerts.channels.save.errors.*`. `invalid_sender` shares `invalid_email`; `empty_value` / `invalid_value` / `value_too_long` (from `qmanager_secret_set`) share `invalid_secret`; `marker_write_failed` → `partial` | `alerts.channels.save.failed` |
+| `testErrorKey(channel, code)` | `send_failed` → `send_failed_{sms,email,discord}` (it means a different thing per channel); otherwise `TEST_ERROR_KEY` → `alerts.channels.test.errors.*` | `alerts.channels.test.failed` |
+
+An unknown or missing slug gets the generic fallback. A new `cgi_error` slug on either path needs a map row and a key in all five catalogs, or it toasts the generic line.
 
 ### Form re-seeding, and why the secret inputs are cleared on save
 
@@ -618,14 +646,11 @@ The alert engine *reads* the link verdict indirectly (via `ev_link_state` from `
 
 ## Known gaps
 
-Found by the 2026-10-12 backend audit and deliberately left for a later change:
+Left open on purpose:
 
-- **The Discord command file is single-slot.** `qmanager_discord` reads one `/tmp/qmanager_discord_cmd` per tick; the shell's 3 s [bounded wait](#command-file-tmpqmanager_discord_cmd) avoids overwrites, but drops the message (logged `failed`) whenever the daemon has not taken the previous one within 3 s. A spool directory in the daemon (`discord-bot/`) is the real fix.
-- **The daemon logs every row as `"alert"`.** `appendDiscordLog("alert", …)` in `discord-bot/main.go` does not know which event it sent, so Discord rows in Activity read as a generic alert, and a Discord test success reads as an alert, not a test.
-- **The Discord bot can stay down after a no-internet boot.** A failed `s.Open` is `log.Fatalf` in the daemon, and `qmanager-discord.service` restarts every 10 s with `StartLimitBurst=5` / `StartLimitIntervalSec=3600`, so a boot without internet trips the start limit in ~50 s. The bot then stays down: the save path never calls `svc_reset_failed`, so an Alerts save's restart is refused (`service_restart_failed`) until the hour-long window passes.
-- **Dispatch is inline in the poller and only time-capped.** An SMS, email or Discord send blocks the poll cycle; only email has an explicit cap (`timeout 30` in `msmtprc`) and Discord's hand-off waits up to 3 s.
-- **CGI error slugs are not mapped to `t()`.** A failed save or test toasts the CGI's English `detail` in every language.
-- **Discord owner-ID length disagrees.** The form accepts 17–20 digits (`DISCORD_ID_REGEX` in `use-alerts-form.ts`); the CGI accepts 15–25. The CGI is the authority.
+- **SMS and email send inline in the poll cycle, only time-capped.** An SMS or email send blocks the poller for its duration; email is capped by `timeout 30` in `msmtprc`. Moving them off the cycle was declined in favour of timeouts. Discord no longer blocks: its hand-off is a [spool write](#spool-directory-tmpqmanager_discord_spool).
+- **Spooled Discord DMs deliver late while the daemon is connecting.** Entries queued during the daemon's connect backoff wait until it connects (up to 300 s between attempts), then go out oldest first. By design: dropping them would lose the alert.
+- **The Discord status file can go stale during a long backoff.** The daemon writes `"error": "connecting"` once per failed attempt, so between attempts 300 s apart the file is older than 90 s. The `GET` reads only `.connected` and treats a file over `DISCORD_STATUS_MAX_AGE=90` s as disconnected, so the page shows "not connected", which is correct; the `error` string is not shown.
 
 ---
 

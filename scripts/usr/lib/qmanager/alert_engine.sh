@@ -421,7 +421,7 @@ _ae_dispatch() {
         discord)
             recipient="discord:${_ae_discord_owner_id:-unknown}"
             if command -v discord_dispatch_message >/dev/null 2>&1; then
-                discord_dispatch_message "$message"
+                discord_dispatch_message "$message" "$trigger" "$recipient"
                 rc=$?
             fi
             [ "$rc" -ne 0 ] && _ae_log_discord_failed "$trigger" "$recipient"

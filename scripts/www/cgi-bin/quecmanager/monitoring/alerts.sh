@@ -594,6 +594,7 @@ EOF
                 || [ "$discord_owner_in" != "$_existing_discord_owner" ] \
                 || [ "$_discord_token_new" = "1" ] \
                 || ! svc_is_running qmanager_discord; then
+                svc_reset_failed qmanager_discord
                 if ! svc_restart qmanager_discord; then
                     _discord_restart_err="Discord alert settings were saved, but the Discord service could not be restarted"
                     qlog_warn "svc_restart qmanager_discord failed"
@@ -697,15 +698,17 @@ EOF
                     cgi_error "bot_not_running" "Discord bot service is not running"
                     exit 0
                 fi
-                if discord_dispatch_message "[QManager] Test alert - your Discord alert configuration is working."; then
+                _d_owner=$(jq -r '.owner_discord_id // ""' "$DISCORD_CONFIG" 2>/dev/null)
+                _d_recipient="discord:${_d_owner:-unknown}"
+                if discord_dispatch_message "[QManager] Test alert - your Discord alert configuration is working." "test" "$_d_recipient"; then
                     # Success is NOT logged here — the daemon logs it once it
                     # actually completes the Discord API call (fire-and-forget
                     # hand-off, see discord_alerts.sh).
                     cgi_success
                 else
                     _ts=$(date "+%Y-%m-%d %H:%M:%S")
-                    jq -n -c --arg ts "$_ts" \
-                        '{timestamp:$ts, trigger:"test", status:"failed", recipient:"discord"}' \
+                    jq -n -c --arg ts "$_ts" --arg rcpt "$_d_recipient" \
+                        '{timestamp:$ts, trigger:"test", status:"failed", recipient:$rcpt}' \
                         >> "$DISCORD_LOG" 2>/dev/null
                     cgi_error "send_failed" "Failed to hand off the test message to the Discord bot"
                 fi

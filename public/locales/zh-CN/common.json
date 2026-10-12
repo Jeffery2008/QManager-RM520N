@@ -923,7 +923,7 @@
     "channels": {
       "description": "设置每种渠道如何联系到你。",
       "discord": {
-        "id_error": "请输入 17 到 20 位数字的 Discord 用户 ID。",
+        "id_error": "请输入 15 到 25 位数字的 Discord 用户 ID。",
         "id_hint": "开启开发者模式，右键点击你的用户名，然后选择“复制用户 ID”。",
         "id_label": "所有者 Discord ID",
         "id_missing": "需要填写所有者 Discord ID。",
@@ -983,7 +983,19 @@
         "dirty": "未保存的更改",
         "discard": "放弃",
         "failed": "设置未能保存。",
-        "succeeded": "提醒设置已保存"
+        "succeeded": "提醒设置已保存",
+        "errors": {
+          "invalid_threshold": "请输入 1 到 1440 分钟的等待时间。",
+          "invalid_phone": "请输入以国家代码开头的 7 到 15 位电话号码。",
+          "invalid_email": "请输入有效的发件人和收件人电子邮件地址。",
+          "missing_app_password": "请输入电子邮件应用专用密码。",
+          "invalid_discord_id": "请输入 15 到 25 位数字的 Discord 用户 ID。",
+          "missing_bot_token": "请输入 Discord 机器人令牌。",
+          "invalid_secret": "应用专用密码或机器人令牌包含不允许的字符。",
+          "partial": "密码或令牌已保存，但设置未能完成更新，请再次保存。",
+          "service_restart_failed": "设置已保存，但 Discord 机器人未能重新启动。",
+          "service_enable_failed": "设置已保存，但未能将 Discord 机器人设为开机启动。"
+        }
       },
       "secret_saved": "已保存",
       "sms": {
@@ -1011,7 +1023,16 @@
         "blocked_offline": "Discord 机器人尚未连接。",
         "failed": "测试未能发送。",
         "sending": "发送中…",
-        "succeeded": "测试 {{channel}} 已发送"
+        "succeeded": "测试 {{channel}} 已发送",
+        "errors": {
+          "library_missing": "此渠道无法在本设备上发送提醒。",
+          "not_configured": "请先开启此渠道并完成设置，再发送测试。",
+          "bot_not_running": "Discord 机器人处于离线状态，测试未发送。",
+          "msmtp_missing": "邮件程序尚未安装，测试邮件未发送。",
+          "send_failed_sms": "测试短信未发送，请检查信号、SIM 卡余额和号码。",
+          "send_failed_email": "测试邮件未发送，请检查邮件地址、应用专用密码和网络连接。",
+          "send_failed_discord": "测试消息未能送达 Discord 机器人，请重试。"
+        }
       },
       "threshold_error": "请输入 1 到 1440 之间的整数分钟。",
       "threshold_hint": "较短的断网只记录，不发送。",

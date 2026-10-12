@@ -954,7 +954,7 @@
       "discord": {
         "id_label": "Owner Discord ID",
         "id_hint": "Turn on Developer Mode, right-click your name, then choose Copy User ID.",
-        "id_error": "Enter a numeric Discord user ID of 17 to 20 digits.",
+        "id_error": "Enter a numeric Discord user ID of 15 to 25 digits.",
         "id_missing": "An owner Discord ID is required.",
         "token_label": "Bot token",
         "token_hint": "Create a bot and copy its token in the Discord Developer Portal.",
@@ -982,7 +982,16 @@
         "blocked_mailer": "Install the msmtp mailer to send a test email.",
         "blocked_offline": "The Discord bot is not connected yet.",
         "blocked_dirty": "Save your changes first. A test runs against the saved settings.",
-        "blocked_busy": "Another test is still running."
+        "blocked_busy": "Another test is still running.",
+        "errors": {
+          "library_missing": "This channel cannot send alerts on this device.",
+          "not_configured": "Turn this channel on and finish setting it up before sending a test.",
+          "bot_not_running": "The Discord bot is offline, so the test was not sent.",
+          "msmtp_missing": "The mailer is not installed, so the test email was not sent.",
+          "send_failed_sms": "The test SMS was not sent, so check the signal, SIM credit and number.",
+          "send_failed_email": "The test email was not sent, so check the addresses, app password and connection.",
+          "send_failed_discord": "The test message did not reach the Discord bot, so try again."
+        }
       },
       "save": {
         "clean": "All changes saved",
@@ -992,7 +1001,19 @@
         "discard": "Discard",
         "action": "Save settings",
         "succeeded": "Alert settings saved",
-        "failed": "The settings could not be saved."
+        "failed": "The settings could not be saved.",
+        "errors": {
+          "invalid_threshold": "Enter a wait of 1 to 1440 minutes.",
+          "invalid_phone": "Enter a phone number of 7 to 15 digits that starts with its country code.",
+          "invalid_email": "Enter a valid sender and recipient email address.",
+          "missing_app_password": "Enter the email app password.",
+          "invalid_discord_id": "Enter a Discord user ID of 15 to 25 digits.",
+          "missing_bot_token": "Enter the Discord bot token.",
+          "invalid_secret": "The app password or bot token contains characters that are not allowed.",
+          "partial": "The password or token was saved, but the settings did not finish updating, so save again.",
+          "service_restart_failed": "Settings saved, but the Discord bot could not be restarted.",
+          "service_enable_failed": "Settings saved, but the Discord bot could not be set to start on boot."
+        }
       },
       "empty": {
         "title": "No channels reported",

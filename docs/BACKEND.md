@@ -1273,7 +1273,7 @@ Cleared on every reboot (tmpfs). Files pre-created by `qmanager_setup` are marke
 | `/tmp/qmanager_sms_reload` | www-data | monitoring/alerts.sh | Reload flag for SMS config (consumed by alert_engine.sh) |
 | `/tmp/qmanager_discord_reload` | www-data | monitoring/alerts.sh | Reload flag for Discord config (consumed by alert_engine.sh) |
 | `/tmp/qmanager_alert_routing_reload` | www-data | monitoring/alerts.sh | Reload flag for routing matrix (consumed by alert_engine.sh) |
-| `/tmp/qmanager_discord_cmd` | www-data / root | alert_engine.sh, monitoring/alerts.sh | DM-send command file polled by the `qmanager_discord` daemon |
+| `/tmp/qmanager_discord_spool/` | root:root 1777 (entries www-data / root) | alert_engine.sh, monitoring/alerts.sh | DM spool, one JSON file per DM, drained in name order by the `qmanager_discord` daemon |
 | `/tmp/qmanager_update.json` | root | qmanager_update | OTA update status (idle/downloading/verifying/ready/installing/rebooting/error) |
 | `/tmp/qmanager_update.pid` | root | qmanager_update | Update worker PID |
 | `/tmp/qmanager_update.log` | root | qmanager_update | Update worker log |

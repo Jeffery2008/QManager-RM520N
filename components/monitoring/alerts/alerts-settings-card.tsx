@@ -46,7 +46,7 @@ import {
   ChannelSecretField,
 } from "./channel-field";
 import { ChannelRail, panelId, tabId, type ChannelRailItem } from "./channel-rail";
-import { eventNameKey, reasonKey } from "./constants";
+import { eventNameKey, reasonKey, saveErrorKey, testErrorKey } from "./constants";
 import { confirmedInput, deriveCoverage, readCapability } from "./derive";
 import {
   CARD_DESC,
@@ -121,7 +121,7 @@ export function AlertsSettingsCard({ state, hook, onTested }: AlertsSettingsCard
     setFault(null);
     const result = await hook.saveSettings(form.buildPayload());
     if (!result.ok) {
-      const message = result.error || t("alerts.channels.save.failed");
+      const message = t(saveErrorKey(result.code));
       setFault({ scope: "save", message });
       toast.error(message);
       return;
@@ -140,7 +140,7 @@ export function AlertsSettingsCard({ state, hook, onTested }: AlertsSettingsCard
     if (result.ok) {
       toast.success(t("alerts.channels.test.succeeded", { channel: channelName[ch] }));
     } else {
-      const message = result.error || t("alerts.channels.test.failed");
+      const message = t(testErrorKey(ch, result.code));
       setFault({ scope: "test", channel: ch, message });
       toast.error(message);
     }

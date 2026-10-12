@@ -923,7 +923,7 @@
     "channels": {
       "description": "設定每種管道如何通知您。",
       "discord": {
-        "id_error": "請輸入 17 到 20 位數字的 Discord 使用者 ID。",
+        "id_error": "請輸入 15 到 25 位數字的 Discord 使用者 ID。",
         "id_hint": "開啟開發者模式，在您的名稱上按右鍵，再選擇「複製使用者 ID」。",
         "id_label": "擁有者 Discord ID",
         "id_missing": "需要填寫擁有者 Discord ID。",
@@ -983,7 +983,19 @@
         "dirty": "未儲存的變更",
         "discard": "捨棄",
         "failed": "設定無法儲存。",
-        "succeeded": "警示設定已儲存"
+        "succeeded": "警示設定已儲存",
+        "errors": {
+          "invalid_threshold": "請輸入 1 到 1440 分鐘的等待時間。",
+          "invalid_phone": "請輸入以國碼開頭的 7 到 15 位電話號碼。",
+          "invalid_email": "請輸入有效的寄件者和收件者電子郵件地址。",
+          "missing_app_password": "請輸入電子郵件應用程式密碼。",
+          "invalid_discord_id": "請輸入 15 到 25 位數字的 Discord 使用者 ID。",
+          "missing_bot_token": "請輸入 Discord 機器人權杖。",
+          "invalid_secret": "應用程式密碼或機器人權杖包含不允許的字元。",
+          "partial": "密碼或權杖已儲存，但設定未能完成更新，請再儲存一次。",
+          "service_restart_failed": "設定已儲存，但 Discord 機器人無法重新啟動。",
+          "service_enable_failed": "設定已儲存，但無法將 Discord 機器人設為開機自動啟動。"
+        }
       },
       "secret_saved": "已儲存",
       "sms": {
@@ -1011,7 +1023,16 @@
         "blocked_offline": "Discord 機器人尚未連線。",
         "failed": "測試無法傳送。",
         "sending": "傳送中",
-        "succeeded": "測試 {{channel}} 已傳送"
+        "succeeded": "測試 {{channel}} 已傳送",
+        "errors": {
+          "library_missing": "此管道無法在這部裝置上傳送警示。",
+          "not_configured": "請先開啟此管道並完成設定，再傳送測試。",
+          "bot_not_running": "Discord 機器人目前離線，測試未傳送。",
+          "msmtp_missing": "郵件程式尚未安裝，測試郵件未傳送。",
+          "send_failed_sms": "測試簡訊未傳送，請檢查訊號、SIM 卡餘額和號碼。",
+          "send_failed_email": "測試郵件未傳送，請檢查電子郵件地址、應用程式密碼和網路連線。",
+          "send_failed_discord": "測試訊息未能送達 Discord 機器人，請再試一次。"
+        }
       },
       "threshold_error": "請輸入 1 到 1440 之間的整數分鐘。",
       "threshold_hint": "較短的斷線只記錄，不傳送。",
