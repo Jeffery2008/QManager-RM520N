@@ -95,7 +95,6 @@
       "row_label": "速度限制",
       "placeholder": "选择速度",
       "applying": "正在应用…",
-      "saved": "已保存",
       "group_label": "速度限制",
       "option_auto": "自动（最大）",
       "option_10": "10 Mbps",
@@ -107,7 +106,6 @@
       "consequence_unresponsive": "调制解调器已停止响应，因此在下一次成功读取前锁定此控件。",
       "consequence_unread": "调制解调器尚未响应，在首次读取完成前没有可更改的内容。",
       "consequence_absent": "此设备上没有可配置的以太网端口。",
-      "provenance": "已保存到调制解调器。读取自：",
       "toast_success": "链路速度已更新",
       "toast_error": "设置链路速度失败",
       "toast_confirm_error": "无法确认新速度。请检查链路。"
@@ -335,13 +333,11 @@
     "cards": {
       "ttl": {
         "title": "TTL 与跳数限制",
-        "description": "应用于蜂窝接口上的出站数据包。",
-        "provenance": "读取自实时数据包规则，开机时重放自"
+        "description": "应用于蜂窝接口上的出站数据包。"
       },
       "mtu": {
         "title": "最大传输单元",
-        "description": "蜂窝接口在不分片的情况下能发送的最大数据包。",
-        "provenance": "应用于所有匹配以下模式的接口"
+        "description": "蜂窝接口在不分片的情况下能发送的最大数据包。"
       }
     },
     "rows": {
@@ -455,8 +451,6 @@
       "description": "最多四个。dnsmasq 会原地重新加载 — 无需重启，链路不中断。",
       "save": "保存并应用",
       "add": "添加解析器",
-      "provenance": "已使用 {{used}} / {{max}} · 读取自",
-      "provenance_corrupt": "已使用 {{used}} / {{max}} · 无法完整读取自",
       "blocked_unavailable": "dnsmasq 不在转发路径上，这样做不会有任何效果。"
     },
     "rows": {
@@ -495,102 +489,74 @@
     "header": {
       "refresh": "刷新"
     },
-    "strip": {
+    "status": {
       "label": "上次应用",
-      "state_router": "路由模式",
-      "state_passthrough": "正在直通"
-    },
-    "tiles": {
-      "mode": {
-        "label": "模式",
-        "value_disabled": "已禁用",
-        "value_eth": "以太网",
-        "value_usb": "USB 接口",
-        "caption_disabled": "调制解调器为局域网做路由",
-        "caption_eth": "设置为将 WAN IP 交给 eth0",
-        "caption_usb": "设置为将 WAN IP 交给 USB 设备"
+      "mode_title": {
+        "disabled": "路由模式",
+        "eth": "以太网直通",
+        "usb": "USB 直通"
       },
-      "target": {
-        "label": "目标设备",
-        "caption_manual": "按 MAC 地址固定",
-        "caption_automatic": "第一台连接的设备",
-        "caption_none": "未选择设备"
+      "blurb": {
+        "disabled": "调制解调器为局域网提供路由",
+        "eth": "已设置为将 WAN IP 交给以太网设备",
+        "usb": "已设置为将 WAN IP 交给 USB 设备"
       },
-      "nat": {
-        "label": "NAT 转换",
-        "value_on": "开启",
-        "value_off": "关闭",
-        "caption_on": "已按推荐值保存",
-        "caption_off": "由目标设备自行处理公网寻址"
-      },
-      "dns": {
-        "label": "DNS 代理",
-        "value_on": "开启",
-        "value_off": "关闭",
-        "caption_on": "由调制解调器为目标设备应答 DHCP DNS",
-        "caption_off": "目标设备使用自己的解析器"
-      }
+      "no_target": "未选择设备",
+      "gateway": "局域网网关",
+      "gateway_served": "提供服务",
+      "gateway_not_served": "不提供服务"
     },
     "card": {
       "title": "直通配置",
-      "description": "这里的每一项设置都在下次开机时生效。应用会重启调制解调器。",
+      "description": "应用会写入全部设置并重启调制解调器。",
       "apply": "应用并重启",
       "discard": "放弃更改",
-      "provenance": "读取自：",
-      "provenance_dirty": "{{count}} 项未保存的更改",
-      "delta_automatic": "自动",
-      "delta_unset": "未设置",
+      "unsaved_one": "{{count}} 项未保存的更改",
+      "unsaved_other": "{{count}} 项未保存的更改",
       "mac_label": "目标 MAC 地址",
       "mac_placeholder": "XX:XX:XX:XX:XX:XX"
     },
+    "groups": {
+      "passthrough": "直通",
+      "network": "网络"
+    },
     "rows": {
       "mode": {
-        "label": "模式",
-        "consequence": "选择以太网或 USB 会把 WAN IP 交给一台设备。两种情况下，调制解调器都不再能通过局域网网关地址访问 — 请保留 Tailscale 或其他登入方式。"
+        "label": "模式"
       },
       "target": {
         "label": "目标设备",
-        "consequence": "自动模式接受第一台连接的设备；手动模式固定一个 MAC 地址。",
-        "consequence_disabled": "请先选择模式。"
+        "pick_mode": "请先选择模式。"
       },
       "nat": {
         "label": "NAT 转换",
-        "consequence": "几乎所有场景都应该启用 NAT。不启用时，目标设备必须自行处理公网寻址。"
+        "hint": "启用 NAT 适用于几乎所有配置。",
+        "hint_label": "关于 NAT"
       },
       "usb": {
-        "label": "USB 连接模式",
-        "consequence": "仅用于 USB 直通。ECM 通用性最好；RNDIS 适用于较旧的 Windows。"
+        "label": "USB 连接"
       },
       "dns": {
         "label": "DNS 代理",
-        "consequence": "开启后，调制解调器会为目标设备应答 DHCP DNS 查询。除非该设备自己无法访问解析器，否则保持关闭。"
+        "hint": "开启后，调制解调器为目标设备提供 DHCP DNS 应答。",
+        "hint_label": "关于 DNS 代理"
       }
     },
     "options": {
-      "placeholder": "尚未读取",
-      "mode_disabled": "禁用 — 路由模式",
-      "mode_eth": "以太网直通",
-      "mode_usb": "USB 直通",
-      "target_automatic": "自动 — 第一台连接的设备",
-      "target_manual": "输入 MAC 地址",
-      "nat_on": "启用 NAT（推荐）",
+      "mode_disabled": "路由",
+      "mode_eth": "以太网",
+      "mode_usb": "USB",
+      "target_automatic": "自动",
+      "target_manual": "按 MAC 地址",
+      "nat_on": "启用 NAT",
       "nat_off": "不启用 NAT",
-      "usb_rmnet": "RMNET（QMI）",
-      "usb_ecm": "ECM（通用）",
-      "usb_mbim": "MBIM（Windows）",
-      "usb_rndis": "RNDIS（旧设备）",
-      "dns_off": "关闭 — 设备使用自己的解析器",
-      "dns_on": "开启 — 由调制解调器应答 DHCP DNS"
+      "dns_off": "关闭",
+      "dns_on": "开启"
     },
-    "banners": {
-      "reboot": {
-        "title": "应用会重启调制解调器，当前浏览器标签页将失去连接",
-        "body": "重启后局域网网关将不再应答。请通过 Tailscale、直通设备本身或串口访问调制解调器。该设置会在后续重启后继续保持。"
-      },
-      "active": {
-        "title": "本页面能打开，是因为你不是那台直通设备",
-        "body": "调制解调器的局域网网关地址已不再提供给 {{mac}}。如果失去当前的访问路径，Tailscale 或串口控制台就是回来的方法。"
-      }
+    "mode_note": {
+      "rest": "以太网或 USB 直通会将 WAN IP 交给一台设备，调制解调器将不再通过局域网网关响应。请保留 Tailscale 或其他访问方式。",
+      "to_passthrough": "应用会重启调制解调器，此标签页将失去连接。之后局域网网关将停止响应，请保留 Tailscale 或其他访问方式。",
+      "to_router": "应用会重启调制解调器，此标签页将失去连接。重启后局域网网关会恢复响应。"
     },
     "dialog": {
       "title": "现在应用并重启？",
@@ -606,7 +572,7 @@
       "read_body": "未做任何更改。请重试，或检查调制解调器是否在响应。",
       "retry": "重试",
       "card_unread": "调制解调器尚未响应，在首次读取完成前没有可更改的内容。",
-      "mac_invalid": "请输入完整的 MAC 地址 — 六组十六进制数字。",
+      "mac_invalid": "请输入完整的 MAC 地址，即六组两位十六进制数字。",
       "no_changes": "尚未有任何更改。"
     }
   },
@@ -725,18 +691,18 @@
       "restore_failed": "无法恢复出厂列表"
     },
     "verify": {
-      "title": "测试绕过效果",
-      "description": "运行两阶段测速（先关闭引擎，再开启引擎），并附 speedtest.net 参考值，用于区分 CDN 限速与网络本身较慢。",
+      "title": "绕过效果测试",
+      "description": "测量在当前连接上绕过 DPI 是否能加快受限视频 CDN，并与未受限参考进行比较。测试使用临时代理，因此不会检查你当前运行的引擎。",
       "run": "运行测试",
       "run_again": "重新测试",
       "idle_heading": "尚未进行测试",
       "needs_binary_heading": "引擎尚未安装",
       "running": "测试中…",
-      "progress": "正在下载同一个文件两次：一次直连，一次经由引擎。需要几分钟。",
+      "progress": "正在下载同一个文件两次：一次直连，一次通过临时代理，另加一次参考样本。需要几分钟。",
       "timeout": "测试未在限定时间内完成。",
       "error": "无法启动测试",
       "needs_binary": "请先安装引擎程序。",
-      "headline_sub": "开启绕过后的提速倍数",
+      "headline_sub": "本次测试中绕过后的提速倍数",
       "without": "未绕过",
       "with": "已绕过",
       "line_speed": "线路速度",
@@ -745,6 +711,7 @@
       "source_cloudflare": "Cloudflare",
       "throttled": "受限速",
       "unthrottled": "未受限速",
+      "scope": "此测试测量的是连接本身，不是正在运行的引擎。请查看上方的实时状态。",
       "footnote": "线路速度是参照值：三项都慢说明线路本身慢，而不是被限速。"
     },
     "forceTcp": {
@@ -779,34 +746,63 @@
   "networkEvents": {
     "page": {
       "title": "网络事件",
-      "description": "轮询服务观察到的所有无线电与链路变化，最新优先。"
+      "description": "无线电和连接的变化，最新优先。"
     },
     "actions": {
-      "auto_refresh_on": "自动刷新已开",
-      "auto_refresh_off": "自动刷新已关",
-      "refresh": "刷新"
+      "refresh": "刷新",
+      "updates_aria": "更新",
+      "live": "实时",
+      "paused": "已暂停"
     },
-    "band": {
-      "ongoing": {
-        "eyebrow": "进行中",
-        "caption_clear": "没有仍未解决的事件",
-        "caption_oldest": "最早：{{label}}，{{age}}"
-      },
-      "last24": {
-        "eyebrow": "近 24 小时",
-        "caption": "{{loud}} 项需要关注"
-      },
-      "retained": {
-        "eyebrow": "已保留",
-        "caption": "最早 {{age}}，设备保留 {{cap}} 条",
-        "caption_empty": "设备最多保留 {{cap}} 条"
-      }
+    "now": {
+      "title": "当前",
+      "description": "仍在持续的问题，以及反复出现的事件。",
+      "ongoing_one": "{{count}} 个问题正在持续",
+      "ongoing_other": "{{count}} 个问题正在持续",
+      "oldest_started": "最早的问题开始于 {{age}}",
+      "clear": "当前没有持续中的问题",
+      "last_problem": "上个问题 {{age}}",
+      "no_problems": "暂无问题记录",
+      "no_events": "暂无事件记录",
+      "repeating": "重复中",
+      "repeat_meta_one": "{{span}} 内有 {{count}} 次变化",
+      "repeat_meta_other": "{{span}} 内有 {{count}} 次变化",
+      "nothing_repeating": "没有重复中的事件。"
+    },
+    "activity": {
+      "title": "活动",
+      "window_last_one": "最近 {{count}} 个事件，覆盖 {{span}}。",
+      "window_last_other": "最近 {{count}} 个事件，覆盖 {{span}}。",
+      "window_all_one": "自调制解调器启动以来有 {{count}} 个事件。",
+      "window_all_other": "自调制解调器启动以来有 {{count}} 个事件。",
+      "window_empty": "自调制解调器启动以来没有事件。",
+      "chart_aria": "随时间变化的事件",
+      "column_one": "{{from}} 至 {{to}}：{{count}} 个事件",
+      "column_other": "{{from}} 至 {{to}}：{{count}} 个事件",
+      "now": "现在",
+      "problems": "问题",
+      "recoveries": "恢复",
+      "routine": "常规"
+    },
+    "span": {
+      "minutes_one": "{{count}} 分钟",
+      "minutes_other": "{{count}} 分钟",
+      "hours_one": "{{count}} 小时",
+      "hours_other": "{{count}} 小时"
     },
     "log": {
       "title": "事件日志",
-      "description_loading": "正在读取调制解调器的事件环形缓冲区。",
+      "description_loading": "正在加载事件。",
       "description_unreadable": "日志无法读取时不显示计数。",
-      "description": "显示 {{shown}} 条，共提供 {{held}} 条，调制解调器内存中最多保留 {{cap}} 条。"
+      "description": "重复事件已合并；打开一项查看每个事件。",
+      "scroll_aria": "事件"
+    },
+    "run": {
+      "title": "{{label}} 持续变化",
+      "meta_one": "{{span}} 内有 {{count}} 个事件",
+      "meta_other": "{{span}} 内有 {{count}} 个事件",
+      "show": "显示 {{count}} 项",
+      "hide": "隐藏"
     },
     "filters": {
       "all": "全部",
@@ -828,9 +824,9 @@
     },
     "empty": {
       "title": "暂无事件",
-      "description": "日志保存在内存中，调制解调器重启后重新开始。轮询服务发现事件后会显示在这里。",
+      "description": "日志会在调制解调器重启后重新开始。事件发生后会显示在这里。",
       "filtered_title": "此视图中没有内容",
-      "filtered_description": "当前日志中没有此类事件。选择“全部”可查看轮询服务记录的所有内容。"
+      "filtered_description": "当前日志中没有此类事件。"
     },
     "error": {
       "title": "无法加载事件",
@@ -842,87 +838,40 @@
     }
   },
   "alerts": {
-    "band": {
-      "armedEyebrow": "布防",
-      "armedValue": "{{covered}} / {{total}}",
-      "armedSilent": "没有渠道可以发送任何内容",
-      "armedGap": "并非所有事件都已覆盖",
-      "armedIncomplete": "{{channels}} 仍需设置",
-      "armedAll": "每个事件都已配置渠道",
-      "outageEyebrow": "断网保障",
-      "outageNone": "无",
-      "outageCovered": "断网期间仍能联系到你",
-      "outageGap": "断网将不会被察觉",
-      "lastEyebrow": "最近一次提醒",
-      "lastNever": "从未",
-      "lastNeverCaption": "尚未发送过任何内容",
-      "lastSentCaption": "{{trigger}}，通过 {{channel}}",
-      "lastFailedCaption": "{{trigger}} 在 {{channel}} 上发送失败",
-      "justNow": "刚刚",
-      "minutesAgo": "{{n}} 分钟前",
-      "hoursAgo": "{{n}} 小时前",
-      "daysAgo": "{{n}} 天前",
-      "lastUnknown": "未知",
-      "lastUnknownCaption": "无法读取活动记录",
-      "lastLoading": "正在加载最近一次提醒"
-    },
     "coverage": {
       "title": "覆盖范围",
-      "description": "实际会触发的内容。只有当渠道已开启、已完成设置，且能够发送该事件时，对应单元格才会生效。",
+      "description": "根据已保存的设置，哪些内容会送达你。",
       "loading": "正在加载覆盖范围",
-      "channel": {
-        "sms": "SMS",
-        "email": "Email",
-        "discord": "Discord"
-      },
-      "channelStatus": {
-        "ready": "已就绪",
-        "incomplete": "需要设置",
-        "unused": "未使用",
-        "off": "已关闭"
-      },
       "event": {
         "connection_lost": {
-          "name": "连接中断",
-          "desc": "网络中断期间"
+          "name": "连接中断"
         },
         "connection_restored": {
-          "name": "连接恢复",
-          "desc": "链路恢复后"
+          "name": "连接恢复"
         },
         "reboot": {
-          "name": "调制解调器已重启",
-          "desc": "重启后发送，并附带原因"
+          "name": "调制解调器已重启"
         }
       },
-      "cell": {
-        "fires": "发送",
-        "quiet": "已静音",
-        "quietNote": "渠道已关闭",
-        "unrouted": "不发送",
-        "incapable": "不支持",
-        "pendingNote": "待保存",
-        "attempt": "将尝试",
-        "attemptNote": "渠道尚未设置完成",
-        "unroutedNote": "未勾选此事件"
-      },
-      "cellAction": "{{channel}} 的 {{event}}：{{state}}",
       "reason": {
         "email_needs_internet": "需要网络",
         "discord_needs_internet": "需要网络",
         "not_supported": "此渠道无法发送该事件"
       },
-      "silentNotice": "不会发送任何内容。此矩阵中没有生效的单元格。",
-      "outageNoticeWith": "断网将不会被察觉。启用 {{channels}} 才能收到提醒。",
-      "outageNoticeNone": "断网将不会被察觉。此设备上没有渠道可以报告断网。",
       "staleNotice": "显示我们上一次从设备读取到的设置。",
       "errorTitle": "无法加载覆盖范围",
       "errorDesc": "设备没有应答，因此无法显示将会触发的内容。",
       "errorRetry": "重试",
       "emptyTitle": "没有可路由的内容",
       "emptyDesc": "此设备未上报任何提醒能力，因此这里没有可开启的内容。",
-      "unsavedNotice": "这些勾选尚未保存，请在下方的渠道中保存。",
-      "blockedNotice": "在修正 {{channels}} 中的错误之前，这里的任何内容都无法保存。"
+      "verdict": {
+        "all": "全部已覆盖",
+        "outage": "中断未覆盖",
+        "partial": "已覆盖 {{covered}}/{{total}}",
+        "none": "不会发送任何通知"
+      },
+      "needsSetup": "{{channel}} 需要设置",
+      "notSent": "未发送"
     },
     "channels": {
       "title": "渠道",
@@ -943,19 +892,15 @@
         "needs_fixing": "存在未保存的错误"
       },
       "sms": {
-        "switch_title": "发送 SMS 提醒",
-        "switch_on": "通过蜂窝网络以短信发送，因此断网期间仍可送达。",
-        "switch_off": "SMS 提醒已关闭。",
         "phone_label": "收件人手机号码",
         "phone_hint": "请包含国家/地区代码，并以加号开头。",
         "phone_error": "请输入包含国家/地区代码的号码，例如 +14155551234。",
         "phone_missing": "需要填写收件人手机号码。",
-        "test": "发送测试 SMS"
+        "test": "发送测试 SMS",
+        "title": "短信提醒",
+        "sub": "即使发生中断也能收到。"
       },
       "email": {
-        "switch_title": "发送 Email 提醒",
-        "switch_on": "连接恢复后，通过 Gmail 发送提醒邮件。",
-        "switch_off": "Email 提醒已关闭。",
         "sender_label": "发件人邮箱",
         "sender_hint": "发送提醒所使用的 Gmail 账号。",
         "sender_missing": "需要填写发件人地址。",
@@ -975,15 +920,14 @@
         "mailer_install": "安装 msmtp",
         "mailer_installing": "正在安装…",
         "mailer_recheck": "重新检查",
-        "test": "发送测试 Email"
+        "test": "发送测试 Email",
+        "title": "邮件提醒",
+        "sub": "连接恢复后通过 Gmail 发送。"
       },
       "discord": {
-        "switch_title": "发送 Discord 提醒",
-        "switch_on": "连接恢复后，由你的机器人以私信形式发送。",
-        "switch_off": "Discord 提醒已关闭。",
         "id_label": "所有者 Discord ID",
         "id_hint": "开启开发者模式，右键点击你的用户名，然后选择“复制用户 ID”。",
-        "id_error": "请输入 17 到 20 位数字的 Discord 用户 ID。",
+        "id_error": "请输入 15 到 25 位数字的 Discord 用户 ID。",
         "id_missing": "需要填写所有者 Discord ID。",
         "token_label": "机器人令牌",
         "token_hint": "在 Discord 开发者门户中创建一个机器人，并复制其令牌。",
@@ -993,15 +937,17 @@
         "token_missing": "需要机器人令牌才能发送 Discord 提醒。",
         "token_show": "显示机器人令牌",
         "token_hide": "隐藏机器人令牌",
-        "test": "发送测试消息"
+        "test": "发送测试消息",
+        "title": "Discord 提醒",
+        "sub": "由你的机器人发送私信。",
+        "id_hint_label": "如何查找 Discord ID"
       },
       "threshold_label": "提醒前等待时间",
-      "threshold_hint": "只有当整次断网时长达到该等待时间时，此渠道才会发送。所有渠道都针对同一次断网，分别按各自的等待时间计算。",
-      "threshold_error": "请输入 1 到 60 之间的整数分钟数。",
+      "threshold_hint": "较短的中断会记录，但不会发送。",
+      "threshold_error": "请输入 1 到 1440 之间的整数分钟数。",
       "threshold_unit": "分钟",
       "test": {
         "sending": "发送中…",
-        "sent": "已发送",
         "succeeded": "测试 {{channel}} 已发送",
         "failed": "测试未能发送。",
         "blocked_off": "请先开启此渠道并保存，才能发送测试。",
@@ -1009,32 +955,53 @@
         "blocked_mailer": "安装 msmtp 邮件程序才能发送测试邮件。",
         "blocked_offline": "Discord 机器人尚未连接。",
         "blocked_dirty": "请先保存更改。测试将基于已保存的设置运行。",
-        "blocked_busy": "另一项测试仍在进行中。"
+        "blocked_busy": "另一项测试仍在进行中。",
+        "errors": {
+          "library_missing": "此设备无法通过该渠道发送提醒。",
+          "not_configured": "请开启此渠道并完成设置后再发送测试。",
+          "bot_not_running": "Discord 机器人处于离线状态，因此测试未发送。",
+          "msmtp_missing": "邮件程序未安装，因此测试邮件未发送。",
+          "send_failed_sms": "测试短信未发送，请检查信号、SIM 卡余额和号码。",
+          "send_failed_email": "测试邮件未发送，请检查地址、应用专用密码和连接。",
+          "send_failed_discord": "测试消息未到达 Discord 机器人，请重试。"
+        }
       },
       "save": {
         "clean": "所有更改已保存",
         "dirty": "未保存的更改",
-        "saved": "已保存",
         "blocked": "请修正高亮的字段",
         "blocked_in": "修正 {{channels}} 中的错误",
         "discard": "放弃",
         "action": "保存设置",
         "succeeded": "提醒设置已保存",
-        "failed": "设置未能保存。"
+        "failed": "设置未能保存。",
+        "errors": {
+          "invalid_threshold": "请输入 1 到 1440 分钟的等待时间。",
+          "invalid_phone": "请输入以国家/地区代码开头、包含 7 到 15 位数字的电话号码。",
+          "invalid_email": "请输入有效的发件人和收件人邮箱地址。",
+          "missing_app_password": "请输入邮箱应用专用密码。",
+          "invalid_discord_id": "请输入 15 到 25 位数字的 Discord 用户 ID。",
+          "missing_bot_token": "请输入 Discord 机器人令牌。",
+          "invalid_secret": "应用专用密码或机器人令牌包含不允许的字符。",
+          "partial": "密码或令牌已保存，但设置未完成更新，请再次保存。",
+          "service_restart_failed": "设置已保存，但 Discord 机器人无法重启。",
+          "service_enable_failed": "设置已保存，但 Discord 机器人无法设置为开机启动。"
+        }
       },
       "empty": {
         "title": "未上报任何渠道",
         "description": "此设备未返回任何提醒渠道，因此暂时没有可配置的内容。"
       },
+      "sends_for": "提醒事件",
       "error": {
         "title": "无法加载渠道",
+        "description": "设备没有响应，请稍后重试。",
         "retry": "重试"
       }
     },
     "activity": {
       "title": "活动记录",
-      "description": "已发送的提醒和已记录的重启，最新优先。",
-      "refresh": "刷新活动记录",
+      "description": "已发送的提醒和重启，最新优先。",
       "event": {
         "reboot": "调制解调器已重启"
       },
@@ -1075,12 +1042,17 @@
       },
       "error": {
         "title": "无法加载活动记录",
+        "description": "设备没有响应，请稍后重试。",
         "retry": "重试"
       },
       "notice": {
-        "stale": "显示我们最后成功读取到的活动记录。{{message}}"
+        "stale": "显示上次成功读取的活动记录。"
       },
-      "transcript_label": "提醒与重启记录"
+      "transcript_label": "提醒与重启记录",
+      "trigger": {
+        "test": "测试提醒",
+        "alert": "提醒"
+      }
     },
     "page": {
       "title": "提醒",
@@ -1258,17 +1230,18 @@
       "retry": "重试"
     },
     "band": {
-      "state": "状态",
       "checks": "失败检测",
       "recoveries": "恢复",
       "reboots": "重启",
       "absent": "未上报",
       "checksCaption": "开始恢复前",
       "cooldownCaption": "{{seconds}} 秒后重新检测",
-      "recoveriesLast": "上次：{{tier}}，{{ago}}",
+      "recoveriesLast": "第 {{tier}} 步，{{ago}}",
       "recoveriesNone": "尚无记录",
-      "rebootsCaption": "安全上限，自看门狗启动起计数",
-      "rebootsOff": "重启步骤已关闭，因此该上限不会触发"
+      "rebootsCaption": "自看门狗启动以来",
+      "rebootsOff": "重启步骤已关闭",
+      "aria": "看门狗状态",
+      "cooldownStep": "第 {{tier}} 步已运行，将在 {{seconds}} 秒后重新检查。"
     },
     "phase": {
       "off": {
@@ -1289,7 +1262,7 @@
       },
       "auto_disabled": {
         "label": "已自动关闭",
-        "blurb": "已达到重启次数上限，看门狗因此自动关闭。"
+        "blurb": "已达到重启次数上限。连接稳定后请重新开启。"
       },
       "monitor": {
         "label": "监控中",
@@ -1317,77 +1290,73 @@
       }
     },
     "master": {
-      "title": "连接看门狗",
-      "description": "监控链路并自动恢复连接。保存后生效。",
       "aria": "启用连接看门狗"
     },
     "ladder": {
       "title": "恢复阶梯",
-      "description": "按顺序依次尝试，从最温和的方式开始。只有在上一步未能恢复连接时，才会执行下一步。",
+      "description": "按顺序依次尝试，从最温和的方式开始。",
       "aria": "恢复阶梯",
       "status": {
-        "on": "开",
-        "off": "关",
         "blocked": "需要插槽",
-        "running": "正在运行",
-        "inactive": "看门狗已关闭"
+        "running": "正在运行"
       },
       "tier1": {
         "name": "重新注册到网络",
-        "effect": "从运营商分离后再重新附着。",
-        "consequence": "链路会中断几秒钟，不会影响其他功能。"
+        "consequence": "链路会中断几秒钟。"
       },
       "tier2": {
         "name": "重启无线电",
-        "effect": "关闭无线电后再重新开启。",
-        "consequence": "锁定基站时会自动跳过此步骤，以确保锁定的基站不受影响。"
+        "consequence": "锁定基站时跳过。"
       },
       "tier3": {
         "name": "切换到备用 SIM 卡",
-        "effect": "故障转移到另一插槽的 SIM 卡，并使用该卡运行。",
-        "consequence": "若未设置备用插槽，恢复流程将止步于此，不会进入重启步骤。",
+        "consequence": "使用备用插槽，直到你切回。",
         "slotLabel": "备用 SIM 卡插槽",
-        "slotPlaceholder": "选择插槽",
-        "slot": "插槽 {{slot}}",
-        "slotHint": "看门狗切换到的插槽。主 SIM 卡仍留在另一个插槽中。"
+        "slot": "插槽 {{slot}}"
       },
       "tier4": {
         "name": "重启设备",
-        "effect": "作为最后手段重启调制解调器。",
-        "consequence": "此页面会消失约一分钟，等待调制解调器恢复。",
+        "consequence": "离线约一分钟。",
         "capLabel": "每小时最大重启次数",
-        "capHint": "一小时内允许的重启次数。达到上限后，看门狗会自行关闭。"
+        "capLead": "最多",
+        "capUnit": "每小时"
       },
-      "unsaved": "未保存",
       "tierAria": "启用此恢复步骤：{{name}}"
     },
     "detection": {
       "title": "检测",
       "description": "静默链路多久后会被判定为断网。",
       "probe": {
-        "label": "探测间隔",
-        "placeholder": "选择间隔",
-        "option_one": "{{count}} 秒",
-        "option_other": "{{count}} 秒",
-        "hint": "调制解调器探测互联网连通性的频率。"
+        "label": "每隔多久探测",
+        "short": "{{seconds}} 秒"
       },
       "threshold": {
-        "label": "失败阈值",
-        "hint": "连续多少次探测失败后开始执行恢复。"
+        "label": "连续失败后判定为中断",
+        "unit": "次探测失败"
       },
       "cooldown": {
-        "label": "冷却时间（秒）",
-        "hint": "每次恢复步骤后，等待多久再重新检测连接。"
+        "label": "步骤之间的等待时间",
+        "unit": "秒"
       },
-      "derived": {
-        "ready": "约 {{seconds}} 秒的探测失败后，将判定连接已断开。",
-        "unavailable": "输入有效的检测数值，即可预览连接何时会被判定为断开。"
+      "timeline": {
+        "eyebrow": "如果连接中断",
+        "declaredStep": "已确认中断，第 {{tier}} 步",
+        "declaredReboot": "已确认中断，第 4 步，重启",
+        "step": "第 {{tier}} 步",
+        "reboot": "第 4 步，重启",
+        "about": "约 {{time}}",
+        "seconds": "{{s}} 秒",
+        "minutes": "{{m}} 分钟",
+        "minutesSeconds": "{{m}} 分钟 {{s}} 秒",
+        "off": "看门狗已关闭，因此不会运行任何操作。",
+        "none": "没有启用任何步骤，因此不会运行。",
+        "invalid": "输入有效的检测值以预览时间线。",
+        "stopped": "第 3 步没有可用插槽，因此流程会在此停止。"
       }
     },
     "activity": {
       "title": "恢复活动",
       "description": "看门狗执行过的操作，最新优先。",
-      "refresh": "刷新",
       "type": {
         "recovery": "恢复",
         "failover": "SIM 卡故障转移"
@@ -1413,21 +1382,20 @@
         "title": "无法加载恢复活动",
         "retry": "重试"
       },
-      "refreshAria": "刷新恢复活动"
+      "allEvents": "全部事件"
     },
     "save": {
       "discard": "放弃",
       "action": "保存",
       "clean": "所有更改已保存",
-      "dirty": "您有未保存的更改",
-      "saved": "已保存",
+      "dirty": "未保存的更改",
       "blockedIn": "保存前请检查 {{fields}}",
       "toastOk": "看门狗设置已保存",
       "toastFail": "无法保存看门狗设置",
       "confirmReboot": {
         "title": "允许看门狗重启调制解调器？",
-        "body": "保存后，当所有更温和的步骤都失败时，看门狗可以自行重启调制解调器。",
-        "cap": "每小时最多重启 {{cap}} 次。达到上限后，看门狗会整个关闭（包括监控），直到您重新开启。",
+        "body": "保存后，当所有更温和的步骤都失败时，看门狗可以自行重启调制解调器。此页面会消失约一分钟，等待调制解调器恢复。",
+        "cap": "每小时最多重启 {{cap}} 次。达到上限后，看门狗会自行关闭，直到你重新开启。",
         "cancel": "取消",
         "action": "允许重启"
       }
@@ -1438,10 +1406,6 @@
       "cooldown": "必须介于 10 到 300 秒之间",
       "maxReboots": "必须介于 1 到 10 之间",
       "backupSim": "选择备用 SIM 卡插槽以启用故障转移"
-    },
-    "autoDisabled": {
-      "title": "看门狗已自动关闭",
-      "description": "已达到本小时的重启上限。请在连接稳定后重新启用。"
     },
     "failover": {
       "title": "正在使用备用 SIM 卡",
@@ -1455,6 +1419,15 @@
       "confirm": "恢复 SIM 卡",
       "requested": "已请求恢复 SIM 卡。看门狗将很快处理。",
       "failed": "无法请求恢复 SIM 卡"
+    },
+    "strip": {
+      "title": "探测",
+      "noReply": "{{n}} 次无响应",
+      "average": "平均 {{ms}} 毫秒",
+      "ago": "{{minutes}} 分钟前",
+      "now": "现在",
+      "empty": "调制解调器暂无探测数据",
+      "aria": "{{total}} 次探测，其中 {{missed}} 次无响应"
     }
   },
   "aboutDevice": {

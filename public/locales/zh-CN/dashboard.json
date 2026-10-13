@@ -47,7 +47,7 @@
     "no_carrier": "无运营商",
     "internet_tooltip": {
       "no_reply": "连通性 ping 未收到响应。部分运营商会屏蔽此类探测，因此连接可能仍然正常。",
-      "degraded": "Ping 能够送达，但至少十分之一的探测丢失。连接处于在线但不可靠的状态。",
+      "degraded": "Ping 能够送达，但丢包已达到连接质量中设置的丢包阈值。",
       "recovery": "连接看门狗正在恢复链路。在其完成之前，读数仍不可靠。",
       "unknown": "连通性探测未上报数据，因此目前无法得知互联网的可达性。"
     }
@@ -147,95 +147,118 @@
     "error_title": "无法获取信号历史",
     "error_description": "无法加载信号历史：{{message}}"
   },
-  "latency": {
-    "description": "最近十次探测的往返延迟与丢包率，以及最近一次测速结果。",
-    "title": "实时延迟",
-    "chart_latency": "延迟",
-    "chart_packetloss": "丢包率",
-    "current_label": "当前延迟",
-    "unit_ms": "毫秒",
-    "no_reading": "无读数",
-    "empty_description": "正在等待首批延迟采样。"
-  },
   "latencyMonitor": {
     "page": {
       "title": "延迟监控",
-      "description": "往返时延（RTT）、抖动与丢包率，由调制解调器自身的探测测得。"
+      "description": "蜂窝链路对你的探测目标和常用站点的响应速度。"
     },
     "status": {
-      "aria": "连接状态",
       "connected": "已连接",
       "degraded": "不稳定",
       "disconnected": "已断开",
       "recovery": "恢复中",
       "unknown": "未上报"
     },
-    "band": {
-      "average_eyebrow": "平均 RTT",
-      "average_min": "最小 {{value}}",
-      "average_max": "最大 {{value}}",
-      "average_unmeasured": "没有可用于平均的窗口",
-      "jitter_eyebrow": "抖动",
-      "jitter_samples_one": "窗口内 {{count}} 个样本",
-      "jitter_samples_other": "窗口内 {{count}} 个样本",
-      "jitter_unmeasured": "窗口太短",
-      "loss_eyebrow": "丢包率",
-      "loss_counted": "丢失 {{lost}}（共 {{total}}）",
-      "loss_unmeasured": "窗口太短",
-      "target_eyebrow": "探测目标",
-      "target_unknown": "未报告目标"
+    "now": {
+      "title": "当前",
+      "description": "最近 5 分钟的探测结果。",
+      "eyebrow": "往返时间",
+      "caption": "平均 {{average}}，最差 {{worst}}",
+      "no_reply": "无响应",
+      "last_answer": "最近响应于 {{time}}，{{value}}",
+      "bar_aria": "相对于 {{limit}} 限值的往返时间",
+      "strip_aria": "{{total}} 次探测，其中 {{failed}} 次无响应",
+      "probe_seconds": "{{seconds}} 秒前",
+      "strip_start": "{{minutes}} 分钟前",
+      "strip_end": "现在",
+      "jitter": "抖动",
+      "loss": "丢包",
+      "target": "探测目标",
+      "family_ipv4": "IPv4",
+      "family_ipv6": "IPv6",
+      "limits": "限值",
+      "limits_value": "{{latency}}，丢包 {{loss}}",
+      "collecting": "正在收集，已完成 {{done}}/{{total}}"
+    },
+    "unreachable": {
+      "title": "无法连接到调制解调器",
+      "description": "调制解调器响应后会恢复实时读数。"
+    },
+    "history": {
+      "attention": "需要关注",
+      "title": "历史记录",
+      "description": "该时间范围内的平均往返时间。",
+      "range_aria": "历史范围",
+      "typical": "典型",
+      "worst": "最差",
+      "loss": "丢包",
+      "average": "平均",
+      "loss_count": "{{lost}}/{{total}}",
+      "legend_average": "平均",
+      "legend_limit": "限值",
+      "chart_aria": "最近 {{range}} 的平均往返时间",
+      "empty_title": "暂无历史记录",
+      "empty_description": "调制解调器测量链路后，读数会显示在这里。",
+      "error_title": "无法读取历史记录",
+      "error_description": "请稍后重试。"
     },
     "range": {
-      "aria": "时间范围",
-      "realtime": "实时",
-      "hourly": "每小时",
-      "twelvehour": "12 小时",
-      "daily": "每日"
+      "now": "当前",
+      "h1": "1 小时",
+      "h6": "6 小时",
+      "h24": "24 小时",
+      "d7": "7 天"
     },
-    "chart": {
-      "title": "往返时延",
-      "legend_latency": "往返时延",
-      "legend_loss": "丢包率",
-      "legend_spread": "最小至最大",
-      "legend_threshold": "良好，至多 {{value}}",
-      "loss_label": "丢包率",
-      "description_realtime": "最近 {{count}} 次探测，间隔 {{seconds}} 秒。",
-      "description_hourly": "每小时平均值，{{count}} 个区间，自 {{from}} 至 {{to}}。",
-      "description_twelvehour": "12 小时平均值，{{count}} 个区间，自 {{from}} 至 {{to}}。",
-      "description_daily": "每日平均值，{{count}} 个区间，自 {{from}} 至 {{to}}。",
-      "description_loading": "正在读取探测历史记录。",
-      "description_unreadable": "历史记录无法读取，暂无窗口可供描述。",
-      "description_empty": "此范围内尚无测量数据。"
+    "sites": {
+      "title": "站点",
+      "description": "各站点通过蜂窝网络响应的速度。",
+      "range_aria": "站点范围",
+      "manage": "管理",
+      "not_checked": "尚未检查",
+      "off_title": "站点监测已关闭",
+      "off_description": "开启后每隔 {{interval}} 测量各站点的响应时间。",
+      "turn_on": "开启",
+      "empty_title": "暂无站点",
+      "empty_description": "添加你使用的站点，查看每个站点的响应速度。",
+      "error_title": "无法读取站点",
+      "error_description": "请稍后重试。"
     },
-    "samples": {
-      "title": "样本",
-      "description": "此窗口内显示 {{shown}} / {{total}}。",
-      "description_loading": "正在读取探测历史记录。",
-      "description_unreadable": "历史记录无法读取，暂无样本可供统计。",
-      "col_time": "时间",
-      "col_rtt": "RTT",
-      "col_jitter": "抖动",
-      "col_loss": "丢包",
-      "timeout": "超时",
-      "sort_label": "排序方式",
-      "sort_newest": "最新优先",
-      "sort_oldest": "最早优先",
-      "day_today": "今天",
-      "day_yesterday": "昨天"
+    "manage": {
+      "title": "管理站点",
+      "description": "最多 {{max}} 个站点，通过蜂窝网络测量响应时间。",
+      "monitor": "监测",
+      "on": "开启",
+      "off": "关闭",
+      "interval": "检查间隔",
+      "list_aria": "站点",
+      "remove": "移除 {{host}}",
+      "add_placeholder": "添加站点，例如 netflix.com",
+      "add_label": "站点地址",
+      "add": "添加",
+      "error_invalid": "请输入类似 netflix.com 的站点名称。",
+      "error_duplicate": "该站点已在列表中。",
+      "error_full": "列表最多容纳 {{max}} 个站点。",
+      "count": "{{n}}/{{max}}",
+      "cancel": "取消",
+      "save": "保存",
+      "empty": "列表中没有站点。"
     },
-    "empty": {
-      "title": "暂无样本",
-      "description": "调制解调器测量链路后，探测历史记录会逐步填充。此范围内尚无记录。"
+    "interval": {
+      "seconds": "{{n}} 秒",
+      "minutes": "{{n}} 分钟",
+      "hours": "{{n}} 小时"
     },
-    "error": {
-      "title": "无法读取探测历史记录",
-      "description": "{{message}}",
-      "retry": "重试"
+    "toast": {
+      "check_failed": "无法开始检查。",
+      "save_ok": "站点已保存。",
+      "save_failed": "无法保存站点。",
+      "turn_on_ok": "站点监测已开启。",
+      "turn_on_failed": "无法开启站点监测。"
     },
-    "notice": {
-      "stale": "正在显示我们成功读取到的最后样本。{{message}}"
-    },
+    "notice_stale": "数据未更新，显示的是上次读数。",
+    "retry": "重试",
     "unit_ms": "ms",
+    "unit_s": "秒",
     "unit_pct": "%",
     "unmeasured": "—"
   },
@@ -373,5 +396,38 @@
       "profile_deactivated": "配置文件已停用",
       "tower_failover": "基站锁定故障切换"
     }
+  },
+  "connection_quality": {
+    "title": "连接质量",
+    "description": "过去半小时的连接稳定性，以及最近的测速结果。",
+    "internet": "互联网",
+    "dns": "DNS 查询",
+    "unit_ms": "毫秒",
+    "unit_pct": "%",
+    "probing": "探测中",
+    "reach_label": "可达性",
+    "reach_responsive": "正常响应",
+    "reach_degraded": "已降级",
+    "reach_unreachable": "不可达",
+    "reach_no_ping_reply": "无 Ping 响应",
+    "reach_unknown": "未测量",
+    "reach_aria": "可达性，{{minutes}} 分钟，按时间从早到晚",
+    "jitter_label": "抖动",
+    "jitter_now": "当前 {{value}} 毫秒",
+    "jitter_no_reading": "暂无读数",
+    "jitter_aria": "抖动，{{minutes}} 分钟，按时间从早到晚",
+    "axis_now": "现在",
+    "axis_reach_one": "{{count}} 分钟前",
+    "axis_reach_other": "{{count}} 分钟前",
+    "axis_reach_none": "暂无历史记录",
+    "axis_reach_sub_minute": "< 1 分钟",
+    "footer_typical": "典型",
+    "footer_worst": "最差",
+    "footer_loss": "丢包",
+    "empty_title": "当前没有运行探测",
+    "empty_description": "连接探测未运行，因此没有可报告的延迟、抖动或丢包。",
+    "empty_action": "打开连接质量",
+    "error_title": "无法连接到调制解调器",
+    "error_description": "无法读取调制解调器状态，因此没有可显示的质量读数。"
   }
 }

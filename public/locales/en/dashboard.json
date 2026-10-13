@@ -47,7 +47,7 @@
     "no_carrier": "No Carrier",
     "internet_tooltip": {
       "no_reply": "No reply to the connectivity ping. Some carriers block these probes, so the connection may still be working.",
-      "degraded": "Pings are getting through, but at least one in ten is being lost. The connection is up and unreliable.",
+      "degraded": "Pings are getting through, but packet loss has reached the loss threshold set in Connection Quality.",
       "recovery": "The connection watchdog is restoring the link. Readings stay unreliable until it finishes.",
       "unknown": "The connectivity probe is not reporting, so nothing is known about internet reachability right now."
     }
@@ -147,95 +147,118 @@
     "error_title": "Signal history unavailable",
     "error_description": "Couldn't load signal history: {{message}}"
   },
-  "latency": {
-    "description": "Round-trip latency and packet loss over the last ten probes, plus the most recent speed test.",
-    "title": "Live Latency",
-    "chart_latency": "Latency",
-    "chart_packetloss": "Packetloss",
-    "current_label": "Current latency",
-    "unit_ms": "ms",
-    "no_reading": "No reading",
-    "empty_description": "Waiting for the first latency samples."
-  },
   "latencyMonitor": {
     "page": {
       "title": "Latency Monitor",
-      "description": "Round-trip time, jitter and packet loss, measured by the modem's own probes."
+      "description": "How fast the cellular link answers, to your probe target and to the sites you use."
     },
     "status": {
-      "aria": "Connection status",
       "connected": "Connected",
       "degraded": "Degraded",
       "disconnected": "Disconnected",
       "recovery": "Recovering",
       "unknown": "Not reporting"
     },
-    "band": {
-      "average_eyebrow": "Average RTT",
-      "average_min": "Min {{value}}",
-      "average_max": "Max {{value}}",
-      "average_unmeasured": "No window to average",
-      "jitter_eyebrow": "Jitter",
-      "jitter_samples_one": "{{count}} sample in the window",
-      "jitter_samples_other": "{{count}} samples in the window",
-      "jitter_unmeasured": "Window too short",
-      "loss_eyebrow": "Packet loss",
-      "loss_counted": "{{lost}} of {{total}} lost",
-      "loss_unmeasured": "Window too short",
-      "target_eyebrow": "Probe target",
-      "target_unknown": "No target reported"
+    "now": {
+      "title": "Right now",
+      "description": "The last 5 minutes of probes.",
+      "eyebrow": "Round-trip time",
+      "caption": "Average {{average}}, worst {{worst}}",
+      "no_reply": "No reply",
+      "last_answer": "Last answer at {{time}}, {{value}}",
+      "bar_aria": "Round-trip time against the {{limit}} limit",
+      "strip_aria": "{{total}} probes, {{failed}} without a reply",
+      "probe_seconds": "{{seconds}} s ago",
+      "strip_start": "{{minutes}} min ago",
+      "strip_end": "Now",
+      "jitter": "Jitter",
+      "loss": "Packet loss",
+      "target": "Probe target",
+      "family_ipv4": "IPv4",
+      "family_ipv6": "IPv6",
+      "limits": "Limits",
+      "limits_value": "{{latency}}, {{loss}} loss",
+      "collecting": "Collecting, {{done}} of {{total}}"
+    },
+    "unreachable": {
+      "title": "Can't reach the modem",
+      "description": "Live readings return as soon as it answers."
+    },
+    "history": {
+      "attention": "Needs attention",
+      "title": "History",
+      "description": "Average round-trip time over the range.",
+      "range_aria": "History range",
+      "typical": "Typical",
+      "worst": "Worst",
+      "loss": "Loss",
+      "average": "Average",
+      "loss_count": "{{lost}} of {{total}}",
+      "legend_average": "Average",
+      "legend_limit": "Limit",
+      "chart_aria": "Average round-trip time over the last {{range}}",
+      "empty_title": "No history yet",
+      "empty_description": "Readings appear here as the modem measures the link.",
+      "error_title": "Couldn't read the history",
+      "error_description": "Try again in a moment."
     },
     "range": {
-      "aria": "Time range",
-      "realtime": "Live",
-      "hourly": "Hourly",
-      "twelvehour": "12 h",
-      "daily": "Daily"
+      "now": "Now",
+      "h1": "1 h",
+      "h6": "6 h",
+      "h24": "24 h",
+      "d7": "7 d"
     },
-    "chart": {
-      "title": "Round-trip time",
-      "legend_latency": "Round-trip time",
-      "legend_loss": "Packet loss",
-      "legend_spread": "Min to max",
-      "legend_threshold": "Good, up to {{value}}",
-      "loss_label": "Packet loss",
-      "description_realtime": "The last {{count}} probes, {{seconds}} s apart.",
-      "description_hourly": "Hourly averages, {{count}} buckets from {{from}} to {{to}}.",
-      "description_twelvehour": "12-hour averages, {{count}} buckets from {{from}} to {{to}}.",
-      "description_daily": "Daily averages, {{count}} buckets from {{from}} to {{to}}.",
-      "description_loading": "Reading the probe history.",
-      "description_unreadable": "No window to describe while the history cannot be read.",
-      "description_empty": "Nothing measured in this range yet."
+    "sites": {
+      "title": "Sites",
+      "description": "How fast each site answers over the cellular link.",
+      "range_aria": "Sites range",
+      "manage": "Manage",
+      "not_checked": "Not checked yet",
+      "off_title": "Sites monitor is off",
+      "off_description": "Turn it on to time each site every {{interval}}.",
+      "turn_on": "Turn on",
+      "empty_title": "No sites yet",
+      "empty_description": "Add the sites you use to see how fast each one answers.",
+      "error_title": "Couldn't read the sites",
+      "error_description": "Try again in a moment."
     },
-    "samples": {
-      "title": "Samples",
-      "description": "Showing {{shown}} of {{total}} in this window.",
-      "description_loading": "Reading the probe history.",
-      "description_unreadable": "No samples to count while the history cannot be read.",
-      "col_time": "Time",
-      "col_rtt": "RTT",
-      "col_jitter": "Jitter",
-      "col_loss": "Loss",
-      "timeout": "Timeout",
-      "sort_label": "Sort by",
-      "sort_newest": "Newest first",
-      "sort_oldest": "Oldest first",
-      "day_today": "Today",
-      "day_yesterday": "Yesterday"
+    "manage": {
+      "title": "Manage sites",
+      "description": "Up to {{max}} sites, timed over the cellular link.",
+      "monitor": "Monitor",
+      "on": "On",
+      "off": "Off",
+      "interval": "Check every",
+      "list_aria": "Sites",
+      "remove": "Remove {{host}}",
+      "add_placeholder": "Add a site, like netflix.com",
+      "add_label": "Site address",
+      "add": "Add",
+      "error_invalid": "Enter a site name like netflix.com.",
+      "error_duplicate": "That site is already on the list.",
+      "error_full": "The list holds up to {{max}} sites.",
+      "count": "{{n}} of {{max}}",
+      "cancel": "Cancel",
+      "save": "Save",
+      "empty": "No sites on the list."
     },
-    "empty": {
-      "title": "No samples yet",
-      "description": "The probe history fills as the modem measures the link. Nothing has been recorded for this range."
+    "interval": {
+      "seconds": "{{n}} s",
+      "minutes": "{{n}} min",
+      "hours": "{{n}} h"
     },
-    "error": {
-      "title": "Could not read the probe history",
-      "description": "{{message}}",
-      "retry": "Try again"
+    "toast": {
+      "check_failed": "Couldn't start a check.",
+      "save_ok": "Sites saved.",
+      "save_failed": "Couldn't save the sites.",
+      "turn_on_ok": "Sites monitor turned on.",
+      "turn_on_failed": "Couldn't turn the sites monitor on."
     },
-    "notice": {
-      "stale": "Showing the last samples we managed to read. {{message}}"
-    },
+    "notice_stale": "Not updating. Showing the last readings.",
+    "retry": "Try again",
     "unit_ms": "ms",
+    "unit_s": "s",
     "unit_pct": "%",
     "unmeasured": "—"
   },
@@ -373,5 +396,38 @@
       "profile_deactivated": "Profile Deactivated",
       "tower_failover": "Tower Lock Failover"
     }
+  },
+  "connection_quality": {
+    "title": "Connection Quality",
+    "description": "How steady the link has been over the last half hour, plus the latest speed test.",
+    "internet": "Internet",
+    "dns": "DNS lookup",
+    "unit_ms": "ms",
+    "unit_pct": "%",
+    "probing": "Probing",
+    "reach_label": "Reachability",
+    "reach_responsive": "Responsive",
+    "reach_degraded": "Degraded",
+    "reach_unreachable": "Unreachable",
+    "reach_no_ping_reply": "No ping reply",
+    "reach_unknown": "Not measured",
+    "reach_aria": "Reachability, {{minutes}} minutes, oldest first",
+    "jitter_label": "Jitter",
+    "jitter_now": "{{value}} ms now",
+    "jitter_no_reading": "No reading",
+    "jitter_aria": "Jitter, {{minutes}} minutes, oldest first",
+    "axis_now": "Now",
+    "axis_reach_one": "{{count}} min ago",
+    "axis_reach_other": "{{count}} min ago",
+    "axis_reach_none": "No history yet",
+    "axis_reach_sub_minute": "< 1 min",
+    "footer_typical": "Typical",
+    "footer_worst": "Worst",
+    "footer_loss": "Loss",
+    "empty_title": "Nothing is probing",
+    "empty_description": "Connection probing isn't running, so there is no latency, jitter or loss to report.",
+    "empty_action": "Open Connection Quality",
+    "error_title": "Can't reach the modem",
+    "error_description": "The modem's status couldn't be read, so there is no quality reading to show."
   }
 }

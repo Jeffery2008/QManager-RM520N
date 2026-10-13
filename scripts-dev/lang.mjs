@@ -90,6 +90,23 @@ function compareCounts(expected, actual) {
   return { missing, extra };
 }
 
+function compareTranslationTokens(english, chinese) {
+  const placeholders = (value) => countTokens(
+    value,
+    /\{\{\s*([^}]+?)\s*\}\}/g,
+    (match) => match[1].split(",")[0].trim(),
+  );
+  const tags = (value) => countTokens(
+    value,
+    /<\/?[a-zA-Z][^>]*>/g,
+    (match) => match[0].toLowerCase().replace(/\s+/g, " "),
+  );
+  return {
+    placeholders: compareCounts(placeholders(english), placeholders(chinese)),
+    tags: compareCounts(tags(english), tags(chinese)),
+  };
+}
+
 function validateNamespace(namespace, english, chinese, errors, stats) {
   if (!isRecord(english) || !isRecord(chinese)) {
     errors.push(`${namespace}: namespace root must be a JSON object`);
@@ -129,34 +146,13 @@ function validateNamespace(namespace, english, chinese, errors, stats) {
     }
     stats.translated += 1;
 
-    const englishPlaceholders = countTokens(
-      englishLeaf.value,
-      /\{\{\s*([^}]+?)\s*\}\}/g,
-      (match) => match[1].split(",")[0].trim(),
-    );
-    const chinesePlaceholders = countTokens(
-      chineseValue,
-      /\{\{\s*([^}]+?)\s*\}\}/g,
-      (match) => match[1].split(",")[0].trim(),
-    );
-    const placeholderDiff = compareCounts(englishPlaceholders, chinesePlaceholders);
+    const { placeholders: placeholderDiff, tags: tagDiff } = compareTranslationTokens(englishLeaf.value, chineseValue);
     if (placeholderDiff.missing.length || placeholderDiff.extra.length) {
       errors.push(
         `${namespace}/${key}: placeholder mismatch (missing: ${placeholderDiff.missing.join(", ") || "none"}; extra: ${placeholderDiff.extra.join(", ") || "none"})`,
       );
     }
 
-    const englishTags = countTokens(
-      englishLeaf.value,
-      /<\/?[a-zA-Z][^>]*>/g,
-      (match) => match[0].toLowerCase().replace(/\s+/g, " "),
-    );
-    const chineseTags = countTokens(
-      chineseValue,
-      /<\/?[a-zA-Z][^>]*>/g,
-      (match) => match[0].toLowerCase().replace(/\s+/g, " "),
-    );
-    const tagDiff = compareCounts(englishTags, chineseTags);
     if (tagDiff.missing.length || tagDiff.extra.length) {
       errors.push(
         `${namespace}/${key}: HTML tag mismatch (missing: ${tagDiff.missing.join(", ") || "none"}; extra: ${tagDiff.extra.join(", ") || "none"})`,
@@ -269,6 +265,13 @@ export function mergeTranslation(english, previous, context, path = "") {
     const oldEnglish = context.oldEnglish?.get(path);
     if (oldEnglish !== undefined && oldEnglish !== english) {
       context.changedSources.push(`${context.namespace}/${path}: ${JSON.stringify(oldEnglish)} -> ${JSON.stringify(english)}`);
+      if (typeof previous === "string" && previous.trim() !== "") {
+        const { placeholders, tags } = compareTranslationTokens(english, previous);
+        if (placeholders.missing.length || placeholders.extra.length || tags.missing.length || tags.extra.length) {
+          (context.invalidatedTranslations ??= []).push(`${context.namespace}/${path}`);
+          return "";
+        }
+      }
     }
     if (oldEnglish === undefined) context.newKeys.push(`${context.namespace}/${path}`);
     return typeof previous === "string" ? previous : "";
@@ -311,6 +314,7 @@ export function syncLocales({ root = ROOT, ref = "development", logger = console
   const oldEnglish = loadLocalEnglish(englishDir);
   const newKeys = [];
   const changedSources = [];
+  const invalidatedTranslations = [];
 
   mkdirSync(englishDir, { recursive: true });
   mkdirSync(chineseDir, { recursive: true });
@@ -326,6 +330,7 @@ export function syncLocales({ root = ROOT, ref = "development", logger = console
       oldEnglish: oldEnglishLeaves,
       newKeys,
       changedSources,
+      invalidatedTranslations,
     });
     writeJson(englishPath, english);
     writeJson(chinesePath, mergedChinese);
@@ -354,10 +359,13 @@ export function syncLocales({ root = ROOT, ref = "development", logger = console
   if (changedSources.length) {
     logger.log(`English source changed; review these translations (${changedSources.length}):\n${changedSources.map((line) => `  - ${line}`).join("\n")}`);
   }
+  if (invalidatedTranslations.length) {
+    logger.log(`Translations cleared after placeholder or HTML tag changes (${invalidatedTranslations.length}):\n${invalidatedTranslations.map((key) => `  - ${key}`).join("\n")}`);
+  }
 
   const report = checkLocales({ englishDir, chineseDir, logger });
   if (!report.ok) throw new Error("sync produced an invalid locale tree");
-  return { ...upstream, newKeys, changedSources, report };
+  return { ...upstream, newKeys, changedSources, invalidatedTranslations, report };
 }
 
 async function main() {

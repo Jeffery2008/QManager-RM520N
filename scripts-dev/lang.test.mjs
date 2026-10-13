@@ -179,3 +179,61 @@ test("syncLocales preserves translations and is idempotent", () => {
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("syncLocales clears incompatible translations when upstream tokens change", () => {
+  const root = makeTempRoot();
+  try {
+    const localeRoot = join(root, "public", "locales");
+    writeJson(join(localeRoot, "en", "demo.json"), {
+      log: "Showing {{shown}} of {{held}}, limit {{cap}}.",
+      stale: "Last activity. {{message}}",
+      renamed: "Hello {{name}}",
+      added: "Total",
+      markup: "<strong>Hello</strong>",
+      compatible: "Count {{n}}",
+      unchanged: "Title",
+    });
+    writeJson(join(localeRoot, "zh-CN", "demo.json"), {
+      log: "已显示 {{shown}} 条，共 {{held}} 条，上限 {{cap}}。",
+      stale: "上次活动。{{message}}",
+      renamed: "你好 {{name}}",
+      added: "总计",
+      markup: "<strong>你好</strong>",
+      compatible: "总数 {{n}}",
+      unchanged: "标题",
+    });
+    const english = {
+      log: "Repeats are grouped; open one to see each event.",
+      stale: "Last activity.",
+      renamed: "Hello {{user}}",
+      added: "Total {{total}}",
+      markup: "<em>Hello</em>",
+      compatible: "Total {{n}}",
+      unchanged: "Title",
+    };
+    const fetcher = () => ({ commit: "changed-tokens", version: "development", english: new Map([["demo.json", english]]) });
+
+    const first = syncLocales({ root, logger: quietLogger, fetcher });
+    assert.equal(first.report.ok, true);
+    assert.equal(first.report.missing, 5);
+    assert.deepEqual(first.invalidatedTranslations, ["demo/log", "demo/stale", "demo/renamed", "demo/added", "demo/markup"]);
+    assert.deepEqual(readJson(join(localeRoot, "zh-CN", "demo.json")), {
+      log: "",
+      stale: "",
+      renamed: "",
+      added: "",
+      markup: "",
+      compatible: "总数 {{n}}",
+      unchanged: "标题",
+    });
+    const beforeSecondSync = snapshotTree(root);
+    const second = syncLocales({ root, logger: quietLogger, fetcher });
+    assert.deepEqual(second.invalidatedTranslations, []);
+    assert.deepEqual(snapshotTree(root), beforeSecondSync);
+
+    writeJson(join(localeRoot, "zh-CN", "demo.json"), { ...english, renamed: "你好 {{name}}" });
+    assert.throws(() => syncLocales({ root, logger: quietLogger, fetcher }), /invalid locale tree/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

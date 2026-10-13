@@ -295,6 +295,18 @@
     },
     "run": {
       "title": "全网络扫描",
+      "link_neighbour_short": "邻区",
+      "progress_label": "预计扫描进度",
+      "ledger": {
+        "col_carrier": "运营商",
+        "col_cells": "小区",
+        "col_bands": "频段",
+        "col_best": "最佳信号",
+        "your_sim": "当前 SIM",
+        "cells_unit_one": "小区",
+        "cells_unit_other": "小区",
+        "dbm_unit": "dBm"
+      },
       "description": "在模块支持的每个频段上各扫描一遍。",
       "start": "扫描全部频段",
       "rerun": "重新扫描",
@@ -304,8 +316,6 @@
       "link_blocked": "扫描结束后可用。",
       "summary_empty": "本次扫描结束时未列出任何小区，因此没有可分析的内容。",
       "summary_provider_unknown": "未命名运营商",
-      "summary_best": "最佳 {{value}} dBm",
-      "summary_no_reading": "未报告信号",
       "summary_others_one": "另有 1 家运营商",
       "summary_others_other": "另有 {{count}} 家运营商",
       "verdict_all_good_one": "唯一报告了电平的小区结果为良好。扫描是在没有服务小区协助的情况下测量的，因此达到该电平的读数是确实很强的候选。",
@@ -320,7 +330,6 @@
       "scanning_title": "正在逐个频段调谐",
       "scanning_body": "请保持此标签页打开——模块完成后结果会显示在这里。",
       "complete_title": "扫描完成",
-      "summary_total_cells": "小区总数",
       "failed_title": "扫描失败",
       "failed_body": "模块可能正忙或无法访问。请检查连接后重新扫描。"
     },
@@ -342,7 +351,7 @@
       "error_title": "扫描失败",
       "error_body": "模块可能正忙或无法访问。请检查连接后重新扫描。",
       "error_retry": "重新扫描",
-      "note_lock": "锁定某一行会把它的频段、频点与 PCI 复制到基站锁定，模块随后会一直驻留在该小区，直到你解除锁定。",
+      "note_lock": "锁定某一行会立即将调制解调器锁定到该小区，并一直保持在那里，直到你在基站锁定中解除锁定。",
       "tally_rows_one": "1 行",
       "tally_rows_other": "{{count}} 行",
       "tally_good_one": "1 个良好",
@@ -376,7 +385,8 @@
       "none": "无数据"
     },
     "actions": {
-      "lock_cell": "锁定到此小区"
+      "lock_cell": "锁定到此小区",
+      "lock_other_network": "非当前 SIM 的网络"
     },
     "a11y": {
       "network_codes": "网络代码",
@@ -418,6 +428,10 @@
       },
       "run": {
         "title": "邻区扫描",
+        "ledger": {
+          "figure_unit_one": "邻区",
+          "figure_unit_other": "邻区"
+        },
         "description": "请求服务小区已经跟踪的邻区，无需扫描额外的频段。",
         "start": "读取邻区",
         "rerun": "重新读取",
@@ -425,11 +439,6 @@
         "link_sweep": "小区扫描",
         "link_blocked": "本次读取结束后可用。",
         "summary_empty": "本次读取结束时未列出任何邻区，因此没有可分析的内容。",
-        "summary_measured_label": "有测量值",
-        "available_bands_one": "1 个可用频段",
-        "available_bands_other": "{{count}} 个可用频段",
-        "verdict_channel_only_one": "1 个邻区仅返回了信道：服务小区知道它存在，但没有对它的当前测量值，因此它不带质量信息，也无法锁定。",
-        "verdict_channel_only_other": "{{count}} 个邻区仅返回了信道：服务小区知道它们存在，但没有对它们的当前测量值，因此它们不带质量信息，也无法锁定。",
         "idle_title": "尚未读取",
         "idle_body": "本页加载后尚未读取。读取会列出服务小区正在测量的邻区。",
         "scanning_title": "正在询问服务小区",
@@ -446,13 +455,11 @@
         "empty_body": "执行一次读取，即可列出服务基站正在测量的小区及其信道和信号。",
         "error_title": "读取失败",
         "error_retry": "重新读取",
-        "note_channel_only": "仅以信道形式报告的邻区背后没有测量值，因此它不带质量信息，其锁定操作保持禁用。锁定一个有测量值的 LTE 行会把它的信道与 PCI 复制到基站锁定。",
+        "note_channel_only": "仅以信道形式报告的邻区背后没有测量值，因此它不带质量信息，其锁定操作保持禁用。锁定一个有测量值的 LTE 行会立即将调制解调器锁定到该小区，直到你在基站锁定中解除锁定。",
         "tally_measured_one": "1 个有测量值",
         "tally_measured_other": "{{count}} 个有测量值",
         "tally_channel_only_one": "1 个仅信道",
-        "tally_channel_only_other": "{{count}} 个仅信道",
-        "tally_bands_one": "1 个频段",
-        "tally_bands_other": "{{count}} 个频段"
+        "tally_channel_only_other": "{{count}} 个仅信道"
       },
       "columns": {
         "cell_type": "关系",
@@ -504,7 +511,7 @@
         "label_auto": "E/ARFCN 值",
         "label_lte": "E-ARFCN",
         "label_nr": "NR-ARFCN",
-        "placeholder": "输入信道号",
+        "placeholder": "例如 1350 或 627264",
         "submit": "计算"
       },
       "error": {
@@ -524,21 +531,18 @@
         "bands_title": "可能的工作频段",
         "band_lte": "频段 {{band}}",
         "band_nr": "n{{band}}",
-        "duplex": "双工模式",
-        "downlink_range": "下行范围",
-        "uplink_range": "上行范围",
-        "earfcn_range": "EARFCN 范围",
-        "nrarfcn_range": "NR-ARFCN 范围",
-        "dl_frequency": "下行频率",
-        "ul_frequency": "上行频率",
-        "ul_earfcn": "上行 EARFCN",
-        "downlink_only": "仅下行",
+        "downlink": "下行",
+        "uplink": "上行",
+        "range_mhz_label": "范围",
+        "in_band": "频段内",
+        "of_range": "{{low}} - {{high}}",
+        "tdd_uplink": "上行与下行共用同一载波（TDD）。",
+        "sdl_uplink": "仅下行。此频段不承载上行。",
+        "position_aria": "位于该频段的 {{pct}}%",
         "method": "依据 {{spec}} 计算。",
-        "bands_description": "信道范围包含该数值的所有频段，以及各自对上行的影响。",
+        "bands_description": "显示信道范围包含该数值的所有频段。",
         "bands_empty_title": "暂无频段",
         "bands_empty_body": "计算一个信道号，能够承载它的频段就会列在这里。",
-        "bands_failed_title": "没有可列出的频段",
-        "bands_failed_body": "上面的信道号未能解析，因此没有可匹配的对象。",
         "bands_agree_one": "有 {{count}} 个频段与该信道匹配。",
         "bands_agree_other": "有 {{count}} 个频段共用该信道号，且双工模式一致，因此上面的上行信息对它们都适用。",
         "bands_conflict_one": "有 {{count}} 个频段与该信道匹配。",
@@ -556,21 +560,29 @@
         "clear": "清空",
         "empty_title": "暂无计算记录",
         "empty_body": "计算一个信道号后就会显示在这里，方便对比而不必重新输入。",
-        "bands": "频段",
         "band_lte": "B{{band}}",
         "band_nr": "n{{band}}",
-        "no_timestamp": "无时间戳"
+        "no_timestamp": "无时间戳",
+        "time_now": "刚刚",
+        "time_minutes_one": "{{count}} 分钟前",
+        "time_minutes_other": "{{count}} 分钟前",
+        "time_hours_one": "{{count}} 小时前",
+        "time_hours_other": "{{count}} 小时前",
+        "time_yesterday": "昨天",
+        "time_days_one": "{{count}} 天前",
+        "time_days_other": "{{count}} 天前"
       },
       "a11y": {
-        "delete_entry": "删除这条历史记录"
+        "delete_entry": "删除这条历史记录",
+        "recall_entry": "载入 {{value}}"
       },
       "readout": {
         "idle_title": "尚无信道",
-        "idle_body": "输入 EARFCN 或 NR-ARFCN，其频率会显示在这里，并列出所有能够承载它的频段。",
+        "idle_body": "频率和频段会显示在这里。",
         "failed_title": "无内容可显示",
         "failed_body": "修正信道号后重新计算。",
-        "channel_lte": "EARFCN {{value}}",
-        "channel_nr": "NR-ARFCN {{value}}",
+        "channel_lte": "EARFCN {{value}} · 下行",
+        "channel_nr": "NR-ARFCN {{value}} · 下行",
         "several_bands_one": "有 {{count}} 个频段可以承载该信道。",
         "several_bands_other": "有 {{count}} 个频段可以承载该信道。"
       }
@@ -796,6 +808,10 @@
         "discard": "放弃",
         "save": "保存设置",
         "failed": "无法应用 {{fields}}。您的其他更改已保存。"
+      },
+      "toast": {
+        "saved": "设置已应用。",
+        "save_failed": "无法应用设置。"
       },
       "apply": {
         "writing": "正在写入调制解调器",
