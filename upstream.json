@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/dr-dolomite/QManager-RM520N.git",
   "branch": "development",
-  "commit": "a05c4e92488b68a1849df8081ae20b024dca1478",
-  "version": "development",
-  "synced_at": "2026-10-13"
+  "commit": "b2607f95ec29e10256205bc5027c6cab083ac96f",
+  "version": "pre-restructure-2026-11",
+  "synced_at": "2026-11-14"
 }
