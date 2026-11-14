@@ -185,68 +185,6 @@
       "scenario_note": "Switch to the Balanced scenario to take manual control.",
       "profile_note": "The active scenario is scheduled to change at {{time}}."
     },
-    "live": {
-      "title": "Live configuration",
-      "eyebrow": "Lock posture",
-      "rail_subtitle_unknown": "Not reported yet",
-      "rail_subtitle_unavailable": "Band configuration couldn't be read",
-      "rail_subtitle_none": "No band restrictions in place",
-      "rail_subtitle_all": "All three radios are restricted",
-      "rail_subtitle_partial": "{{count}} of {{total}} radios restricted",
-      "rail_ratio": "{{count}} of {{total}} bands allowed",
-      "rail_unavailable": "Couldn't read this radio's bands",
-      "rail_status_locked": "Locked",
-      "rail_status_unrestricted": "Unrestricted",
-      "rail_status_unknown": "Not reported",
-      "rail_status_unavailable": "Unavailable",
-      "on_air": "On air now",
-      "on_air_summary_one": "{{count}} carrier · {{mhz}} MHz",
-      "on_air_summary_other": "{{count}} carriers · {{mhz}} MHz",
-      "on_air_empty_title": "No carrier on air",
-      "on_air_empty_body": "The modem is not camped on any cell right now. Locks below still apply once it attaches.",
-      "absent_nr_title": "No 5G carrier",
-      "absent_nr_body": "The modem is on LTE alone. No NR cell is in range right now.",
-      "absent_lte_title": "No LTE anchor",
-      "absent_lte_body": "The modem is on 5G standalone. No LTE carrier is in use.",
-      "tile_tech_LTE": "LTE",
-      "tile_tech_NR": "5G NR",
-      "tile_earfcn": "EARFCN",
-      "tile_rsrp": "{{value}} dBm",
-      "tile_rsrq": "{{value}} dB",
-      "tile_sinr": "{{value}} dB",
-      "tile_no_value": "—",
-      "failover_label": "Band failover",
-      "failover_help_label": "About band failover",
-      "failover_help": "When enabled, the modem returns to its default bands automatically if the locked bands stay unavailable for about 30 seconds.",
-      "failover_state": {
-        "disabled": "Disabled",
-        "fallback": "Fallback active",
-        "monitoring": "Monitoring",
-        "ready": "Ready"
-      },
-      "failover_toast_enabled": "Band failover enabled",
-      "failover_toast_disabled": "Band failover disabled",
-      "failover_toast_error": "Couldn't update band failover"
-    },
-    "categories": {
-      "lte": {
-        "title": "LTE",
-        "description": "Bands the modem may use for its 4G connection."
-      },
-      "nsa_nr5g": {
-        "title": "5G NSA",
-        "description": "5G bands used alongside an LTE anchor."
-      },
-      "sa_nr5g": {
-        "title": "5G SA",
-        "description": "5G bands used standalone, without an LTE anchor."
-      }
-    },
-    "short": {
-      "lte": "LTE",
-      "nsa_nr5g": "5G NSA",
-      "sa_nr5g": "5G SA"
-    },
     "card": {
       "status_scenario": "Scenario controlled",
       "status_unrestricted": "All bands",
@@ -259,10 +197,6 @@
       "legend_live": "Currently locked",
       "empty_title": "Nothing to lock here",
       "empty_body": "The modem reports no supported bands in this category."
-    },
-    "states": {
-      "read_error_title": "Couldn't read the band configuration",
-      "read_error_body": "The modem didn't answer, so this page can't show which bands are currently locked. Try again in a moment. {{reason}}"
     },
     "actions": {
       "lock_selected": "Lock Selected Bands",
@@ -277,7 +211,9 @@
       "lock_error": "Couldn't apply the {{category}} band lock",
       "unlock_error": "Couldn't restore {{category}} bands",
       "refresh_error": "Couldn't refresh the band configuration",
-      "none_selected": "Select at least one band to lock"
+      "none_selected": "Select at least one band to lock",
+      "locked_success": "{{category_label}} bands locked successfully",
+      "unlocked_success": "{{category_label}} bands unlocked"
     },
     "a11y": {
       "applying": "Applying the {{category}} band lock…",
@@ -286,6 +222,109 @@
       "band_selected": "{{band}}, selected",
       "band_unselected": "{{band}}, not selected",
       "band_live": "{{band}}, selected and active on the modem"
+    },
+    "settings_card": {
+      "band_failover_label": "Band Failover",
+      "band_failover_tooltip": "If the locked bands find no signal within about 30 seconds, the modem returns to all supported bands.",
+      "band_failover_info_aria": "Band failover info",
+      "status": {
+        "disabled": "Disabled",
+        "ready": "Ready",
+        "fallback": "Fallback active",
+        "monitoring": "Checking"
+      },
+      "toast": {
+        "failover_enabled": "Band failover enabled",
+        "failover_disabled": "Band failover disabled"
+      }
+    },
+    "cards": {
+      "lte": {
+        "title": "LTE Band Locking",
+        "description": "Select the LTE bands to lock for your device."
+      },
+      "nsa_nr5g": {
+        "title": "NSA Band Locking",
+        "description": "Select the 5G NSA bands to lock (5G via LTE anchor)."
+      },
+      "sa_nr5g": {
+        "title": "SA Band Locking",
+        "description": "Select the 5G SA bands to lock (standalone 5G)."
+      }
+    },
+    "card_badges": {
+      "bands_locked": "{{locked}} / {{total}} Bands",
+      "scenario": "Scenario controlled",
+      "unrestricted": "All bands",
+      "unavailable": "Not readable",
+      "unknown": "Not reported",
+      "profile": "Profile controlled"
+    },
+    "card_empty": "No supported bands reported by the modem for this category.",
+    "card_buttons": {
+      "lock_selected": "Lock Selected Bands",
+      "select_all": "Select All",
+      "deselect_all": "Deselect All",
+      "unlock_all": "Unlock all"
+    },
+    "card_live_region": "Applying {{category_label}} band lock…",
+    "card_category_label": {
+      "lte": "LTE",
+      "nsa_nr5g": "NSA",
+      "sa_nr5g": "SA"
+    },
+    "scenario_gate_title": "The {{scenario}} scenario manages your bands",
+    "scenario_gate_action": "Open scenarios",
+    "scenario_gate_note": "Switch to the Balanced scenario to lock bands by hand.",
+    "read_error_title": "Couldn't read the band configuration",
+    "refresh_blocked_watcher": "Wait for the failover check to finish",
+    "refreshing": "Reading the band configuration…",
+    "legend": {
+      "selected": "Selected",
+      "live": "Currently locked"
+    },
+    "errors": {
+      "read_failed": "The modem didn't answer with its band configuration. Try again in a moment.",
+      "no_bands": "Select at least one band to lock.",
+      "no_supported": "The modem hasn't reported its supported bands yet.",
+      "lock_failed": "Couldn't apply the band lock.",
+      "failover_failed": "Couldn't update band failover."
+    },
+    "status": {
+      "title": "Band status",
+      "on_air": "On air now",
+      "on_air_summary_one": "{{count}} carrier ({{mhz}} MHz)",
+      "on_air_summary_other": "{{count}} carriers ({{mhz}} MHz)",
+      "on_air_empty_title": "No carriers on air",
+      "on_air_empty_body": "The modem isn't connected to a cell right now.",
+      "tile_aria": "{{tech}} carrier, {{role}}",
+      "tech_lte": "LTE",
+      "tech_nr": "5G NR",
+      "mhz": "{{value}} MHz",
+      "earfcn": "EARFCN {{value}}",
+      "pci": "PCI {{value}}",
+      "dbm": "{{value}} dBm",
+      "rsrp": "RSRP",
+      "no_value": "–",
+      "quality": {
+        "excellent": "Excellent signal",
+        "good": "Good signal",
+        "fair": "Fair signal",
+        "poor": "Poor signal",
+        "none": "No reading"
+      },
+      "posture": "Lock posture",
+      "subtitle_locked": "{{count}} of {{total}} categories locked",
+      "subtitle_unrestricted": "Every category uses all bands",
+      "subtitle_unknown": "The modem hasn't reported its bands",
+      "subtitle_unavailable": "Band configuration unreadable",
+      "ratio": "{{count}} of {{total}} bands",
+      "ratio_unavailable": "Not readable",
+      "rail_locked": "Locked",
+      "rail_unrestricted": "All bands",
+      "rail_unknown": "Not reported",
+      "rail_unavailable": "Unknown",
+      "rail_aria": "{{category}}: {{ratio}} ({{status}})"
     }
   },
   "cell_scanner": {
@@ -376,6 +415,7 @@
     },
     "cells": {
       "bandwidth": "{{value}} MHz",
+      "bandwidth_prb": "{{value}} PRB",
       "signal": "{{value}} dBm"
     },
     "signal": {
@@ -618,7 +658,9 @@
         "save_error": "Failed to save APN settings",
         "deactivated": "Reverted to carrier default APN",
         "deactivate_error": "Failed to revert to carrier default",
-        "reconciling": "Verifying the connection came back…"
+        "reconciling": "Verifying the connection came back…",
+        "saved_not_persisted": "APN applied, but it couldn't be saved, so it may not survive a reboot.",
+        "deactivated_not_persisted": "Reverted to the carrier default APN, but the change couldn't be saved."
       },
       "controls_label": "APN configuration",
       "managed_by_profile_fallback": "active Custom SIM Profile",
@@ -627,7 +669,12 @@
           "apn": {
             "label": "APN *",
             "placeholder": "fast.t-mobile.com",
-            "error_required": "APN is required"
+            "error_required": "APN is required",
+            "presets": {
+              "trigger": "Show suggested APNs",
+              "group_network": "Suggested for this SIM",
+              "group_mvno": "Other brands on this network"
+            }
           },
           "pdp_type": {
             "label": "PDP Type",
@@ -698,7 +745,13 @@
         "source_negotiated": "Negotiated with the network",
         "stale": "Readings frozen",
         "stale_body": "The modem status feed has not reported recently. The values above may no longer be true.",
-        "reread": "Re-read from modem"
+        "reread": "Re-read from modem",
+        "mode_label": "Mode",
+        "custom": "Custom APN",
+        "context_label": "Data context",
+        "not_connected": "Not connected",
+        "matches": "Matches the saved APN",
+        "not_live_note": "The network is using a different APN than the one saved."
       },
       "mbn": {
         "title": "Carrier Profile (MBN)",
@@ -717,8 +770,11 @@
         },
         "error_title": "Failed to load carrier profiles",
         "toast": {
-          "applied": "Carrier profile updated — reboot required",
-          "error": "Failed to apply carrier profile"
+          "error": "Failed to apply carrier profile",
+          "auto_enabled": "Auto-select enabled — reboot required",
+          "auto_disabled": "Auto-select disabled — reboot required",
+          "profile_applied": "Carrier profile applied — reboot required",
+          "reboot_error": "Reboot failed — restart the device manually"
         },
         "reboot": {
           "title": "Reboot required",
@@ -726,7 +782,24 @@
           "later": "Reboot later",
           "now": "Reboot now",
           "rebooting": "Rebooting…"
+        },
+        "errors": {
+          "load_failed": "The modem didn't answer with its carrier profiles. Try again in a moment.",
+          "save_failed": "Couldn't apply the carrier profile setting.",
+          "autosel_failed": "The modem didn't accept the automatic selection change.",
+          "deactivate_failed": "The modem couldn't release the current carrier profile.",
+          "select_failed": "The modem didn't accept that carrier profile."
         }
+      },
+      "status": {
+        "carrier_default": "Carrier default",
+        "network_using_label": "Network is using",
+        "not_live": "Not live"
+      },
+      "errors": {
+        "load_failed": "The modem didn't answer with its APN settings. Try again in a moment.",
+        "save_failed": "Couldn't save the APN.",
+        "deactivate_failed": "Couldn't switch to the carrier default APN."
       }
     },
     "basic": {
@@ -819,8 +892,7 @@
         "verifying": "Confirming what the modem applied"
       },
       "footer": {
-        "reread": "Re-read from modem",
-        "in_sync": "Saved settings match the modem."
+        "refresh": "Refresh"
       },
       "strip": {
         "label": "Live state",
@@ -958,17 +1030,13 @@
           "description": "The IMEI is stored, but the modem keeps presenting the old one until it restarts. Restarting drops the connection for about a minute.",
           "now": "Reboot now",
           "later": "Reboot later"
-        }
+        },
+        "toast_failed": "Couldn't start the reboot. It is still pending, so you can retry from the banner."
       },
       "device": {
         "title": "Device IMEI",
         "description": "What the modem reports now, and what it will report after the next boot.",
         "rows": {
-          "current": {
-            "label": "Current",
-            "consequence": "Read from the modem, not from storage.",
-            "unavailable": "Not reported yet"
-          },
           "write": {
             "label": "Write new IMEI",
             "consequence": "15 digits. Takes effect only after a reboot.",
@@ -982,12 +1050,13 @@
         "status": {
           "empty": "Nothing to write. The field is empty.",
           "unchanged": "This is already the IMEI on the modem.",
-          "ready": "Ready to write. The modem keeps its current identity until it reboots."
+          "ready": "Ready to write. The modem keeps its current identity until it reboots.",
+          "unchanged_tip_label": "About the check mark"
         },
         "actions": {
           "write": "Write IMEI",
           "reset": "Reset to the IMEI on the modem",
-          "copy": "Copy the current IMEI"
+          "reset_short": "Reset"
         },
         "toasts": {
           "saved": "IMEI written. It applies at the next reboot.",
@@ -1122,28 +1191,20 @@
   "custom_profiles": {
     "suggestions": {
       "badge": "Suggested",
-      "bands_nsa": "5G NSA {{bands}}",
-      "bands_sa": "5G SA {{bands}}",
-      "bands_nsa_auto": "5G NSA Auto",
-      "bands_sa_auto": "5G SA Auto",
-      "not_saved_yet": "Not saved yet",
       "create": "Create",
       "creating": "Creating",
       "create_aria": "Create the {{name}} profile",
       "rationale_bands": "The band lock keeps the modem on the carrier's main 5G bands, which usually improves stability. It can also reduce coverage where only other bands reach you. Bands the modem does not report as supported are left out, and deactivating the profile removes the lock.",
-      "rationale_ttl": "TTL and hop limit are set to 64 so traffic from devices behind the modem leaves with the same value as traffic from the modem itself. Deactivating the profile restores the previous values.",
-      "will_bind": "Will bind: {{scenario}}"
+      "rationale_ttl": "TTL and hop limit are set to 64 so traffic from devices behind the modem leaves with the same value as traffic from the modem itself. Deactivating the profile restores the previous values."
     },
     "page": {
       "title": "Custom SIM Profile",
       "description": "A profile carries identity: APN, TTL and hop limit, and an optional IMEI. It binds a connection scenario, which owns the radio. Activating one reconfigures a live modem.",
       "new_profile": "New profile",
-      "new_scenario": "New scenario",
-      "error_load_failed": "Could not load profiles. Check the connection and try again."
+      "new_scenario": "New scenario"
     },
     "hero": {
       "eyebrow": "IN FORCE NOW",
-      "unknown_operator": "Unknown operator",
       "iccid": "ICCID {{value}}",
       "edit": "Edit",
       "deactivate": "Deactivate",
@@ -1172,8 +1233,7 @@
       },
       "scenario": {
         "unknown": "Unknown scenario",
-        "next_change": "{{name}} takes over at {{time}}",
-        "no_next_change": "No further changes today"
+        "next_change": "{{name}} takes over at {{time}}"
       },
       "ribbon": {
         "title": "Today's schedule",
@@ -1210,8 +1270,6 @@
       "subtitle": "Activate, edit, or remove the cellular profiles on this device.",
       "none_saved_yet": "No profiles saved yet. Start from a recommendation below, or create your own.",
       "activating": "Activating",
-      "schedule_live_one": "{{scenario}} now, {{count}} block scheduled",
-      "schedule_live_other": "{{scenario}} now, {{count}} blocks scheduled",
       "scenario_always_on": "{{scenario}}, always on",
       "delete_description": "This removes the profile from the device. Any schedule bound to it is cleared. This cannot be undone.",
       "delete_keep": "Keep profile",
@@ -1220,24 +1278,25 @@
         "deactivated": "{{name}} deactivated",
         "deactivate_error": "Failed to deactivate profile",
         "deleted": "{{name}} deleted",
-        "delete_error": "Failed to delete profile"
+        "delete_error": "Failed to delete profile",
+        "activated": "{{name}} is active",
+        "activated_partial": "{{name}} is active with some steps skipped",
+        "activate_error": "Couldn't activate the profile."
       },
       "delete_title": "Delete “{{name}}”?",
-      "audit": {
-        "applied": "Applied at {{time}}",
-        "partial": "Partial apply at {{time}}",
-        "failed": "Apply failed at {{time}}"
-      },
-      "locks_bands": "Locks bands",
       "row_menu_aria": "Actions for {{name}}",
       "reapply": "Reapply profile",
-      "reapply_hint": "Reapplying runs all four steps again — APN, TTL and hop limit, scenario, and IMEI."
+      "mismatch_confirm": {
+        "title": "Apply “{{name}}” to this SIM?",
+        "description": "This profile is bound to a different SIM. Its settings apply to the SIM in the modem now and turn off at the next restart or SIM change.",
+        "confirm": "Apply to this SIM"
+      },
+      "scenario_scheduled": "{{scenario}} on a daily schedule"
     },
     "table": {
       "headers": {
         "profile": "Profile",
         "status": "Status",
-        "last_updated": "Last Updated",
         "actions": ""
       },
       "status_badge": {
@@ -1248,7 +1307,6 @@
       "pagination": {
         "total_one": "{{count}} profile total",
         "total_other": "{{count}} profiles total",
-        "page_info": "Page {{current}} of {{total}}",
         "previous": "Previous",
         "next": "Next"
       },
@@ -1464,11 +1522,6 @@
         "dual": "IPv4 & IPv6"
       }
     },
-    "activate_dialog": {
-      "title": "Activate Profile",
-      "description": "Apply \"{{name}}\" to the modem? This will update APN, TTL/HL, and IMEI settings as configured in the profile. Unchanged settings will be skipped.",
-      "confirm": "Activate"
-    },
     "deactivate_dialog": {
       "title": "Deactivate Profile",
       "working_title": "Deactivating Profile",
@@ -1525,7 +1578,12 @@
       "failed_notice_title": "The profile was not applied",
       "reapply_notice": "Reapplying runs the whole sequence again from the start — the modem has no way to retry a single step.",
       "reapply_action": "Reapply profile",
-      "reboot_notice_deferred": "This profile writes an IMEI, which needs a reboot. Nothing reboots now — you will get a banner when it is ready."
+      "reboot_notice_deferred": "This profile writes an IMEI, so the modem reboots to apply it. The connection drops for a moment.",
+      "step_state_unchanged": "Unchanged",
+      "errors": {
+        "start_failed": "Could not start the profile apply.",
+        "not_started": "The profile apply did not start. Please try again."
+      }
     },
     "empty_state": {
       "refresh": "Refresh",
@@ -1544,21 +1602,15 @@
       "cid": "CID {{cid}}",
       "ttl": "TTL {{value}}",
       "hl": "HL {{value}}",
-      "imei_override": "IMEI override"
-    },
-    "list": {
-      "new_button": "New",
-      "bound_sim": "Bound to SIM {{iccid}}",
-      "detail_unavailable": "Could not load this profile’s settings.",
-      "only_active_hint": "Your only profile is the active one. Create another to switch between setups."
-    },
-    "edit": {
-      "not_found_title": "Profile not found",
-      "not_found_desc": "This profile may have been deleted. Return to your saved profiles."
+      "imei_override": "IMEI override",
+      "apn_prefix": "APN ",
+      "other_sim": "Other SIM"
     },
     "card": {
-      "label_iccid": "SIM",
       "label_updated": "Updated"
+    },
+    "registry": {
+      "error_title": "Couldn't load your profiles"
     }
   },
   "frequency_locking": {
@@ -1578,7 +1630,8 @@
       "compare_hint": "A tower lock already pins a channel and a cell. A frequency lock is the looser option: same channel, any cell.",
       "compare_hint_unknown": "The tower lock state could not be read. A frequency lock is refused while a tower lock is active, so nothing here can be applied until that read succeeds.",
       "add_blocked": "Adding is disabled until the tower lock is released.",
-      "add_blocked_unknown": "Adding is disabled until the tower lock state can be read."
+      "add_blocked_unknown": "Adding is disabled until the tower lock state can be read.",
+      "outside_list": "Outlined carriers are on air outside your channel list."
     },
     "verdict": {
       "unlocked_title": "All channels allowed",
@@ -1623,7 +1676,8 @@
       "blocked_body": "Release the tower lock to edit this list.",
       "scs_warning": "A wrong spacing looks like a valid entry, but the modem never uses it. The value is copied from the carrier when you add it from above.",
       "no_pci_note": "A frequency lock never pins the cell. The modem keeps reselecting inside the channels you allow.",
-      "count": "{{used}} of {{max}}"
+      "count": "{{used}} of {{max}}",
+      "unused": "Outlined channels are locked, but the radio is not on them."
     },
     "blocked": {
       "tower_lock_active": "A tower lock is holding this radio. Release it before locking a frequency.",
@@ -1641,7 +1695,8 @@
       "staged": "Staged",
       "in_list": "In list",
       "remove": "Remove entry",
-      "staged_count": "{{count}} of {{max}} entries staged. Nothing is on the modem yet."
+      "staged_count": "{{count}} of {{max}} entries staged. Nothing is on the modem yet.",
+      "on_air": "On air"
     },
     "actions": {
       "use_current": "Use current",
@@ -1706,7 +1761,8 @@
       "unsupported_confirm": "Lock anyway",
       "cancel": "Cancel",
       "confirm_lock": "Lock channels",
-      "confirm_unlock": "Clear lock"
+      "confirm_unlock": "Clear lock",
+      "no_recovery": "Frequency locking has no failover watcher. Unlike band and tower locking, nothing restores service on its own if these channels lose coverage."
     },
     "bands": {
       "possible": "Possible bands:",
@@ -1791,8 +1847,6 @@
     "tiles": {
       "network": {
         "label": "Network type",
-        "mark_5g": "5G",
-        "mark_4g": "4G",
         "caption_nsa": "Non-standalone, anchored on LTE",
         "caption_sa": "Standalone 5G core",
         "caption_lte": "No 5G leg attached",
@@ -2024,8 +2078,6 @@
         "optimization_label": "Optimization Label",
         "optimization_placeholder": "e.g., Latency, Throughput, Custom",
         "icon_label": "Icon",
-        "preview_label": "Preview",
-        "preview_name_fallback": "Scenario Name",
         "preview_description_fallback": "Custom configuration"
       },
       "buttons": {
@@ -2033,7 +2085,9 @@
         "creating": "Creating…",
         "save_changes": "Save Changes",
         "saving": "Saving…"
-      }
+      },
+      "description": "Leave a band field empty to let the modem choose.",
+      "name_required": "Give the scenario a name."
     },
     "active_config": {
       "title": "{{name}} Configuration",
@@ -2045,33 +2099,27 @@
       "activate": "Activate",
       "edit_aria": "Edit scenario settings",
       "disabled_tooltip": "Scenario activation is managed by the {{profile}} Custom SIM Profile.",
-      "disabled_tooltip_next": " Next change at {{time}}.",
       "rows": {
         "network_mode": "Network Mode",
         "optimization": "Optimization",
         "lte_bands": "LTE Bands",
         "nr_sa_bands": "NR5G-SA Bands",
         "nr_nsa_bands": "NR5G-NSA Bands"
-      }
+      },
+      "edit": "Edit",
+      "show_details": "Show details",
+      "hide_details": "Hide details"
     },
     "tile": {
       "in_force": "In force",
-      "caption_in_force": "In force now",
       "caption_next": "Next at {{time}}",
-      "caption_unscheduled": "Not scheduled",
-      "band_count_nr": "{{bands}} NR",
-      "band_count_lte": "{{bands}} LTE",
-      "custom_tag": "Custom",
-      "bands_auto": "Bands auto",
-      "delete_aria": "Delete {{name}} scenario",
       "delete_dialog": {
         "title": "Delete Scenario",
         "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
         "confirm": "Delete"
       },
       "add": {
-        "title": "New scenario",
-        "description": "Pick a mode and bands"
+        "title": "New scenario"
       }
     },
     "redirect": {
@@ -2089,182 +2137,62 @@
       "throughput": "Throughput",
       "custom": "Custom"
     },
-    "bands_auto": "Auto"
+    "bands_auto": "Auto",
+    "schedule_lock": {
+      "badge": "Scheduled",
+      "next_change": "Next change at {{time}}"
+    },
+    "scenario_item": {
+      "band_lock": "Band lock"
+    },
+    "errors": {
+      "load_failed": "The modem didn't answer with your scenarios. Try again in a moment.",
+      "activate_failed": "Couldn't activate the scenario.",
+      "save_failed": "Couldn't save the scenario.",
+      "delete_failed": "Couldn't delete the scenario."
+    }
   },
   "sms": {
     "page": {
       "title": "SMS Center",
-      "description": "View, manage, and send SMS messages from your modem.",
-      "forwarding": "Forwarding"
+      "description": "View, manage, and send SMS messages from your modem."
     },
     "inbox": {
-      "title": "Inbox",
-      "description": "View and manage your SMS messages",
-      "storage_suffix": " — {{used}}/{{total}} messages stored",
-      "tabs": {
-        "all": "All",
-        "unread": "Unread",
-        "read": "Read"
-      },
-      "unread_aria": "Unread",
-      "table": {
-        "headers": {
-          "from": "From",
-          "message": "Message",
-          "date": "Date"
-        },
-        "actions": {
-          "open_menu": "Open menu",
-          "view": "View",
-          "delete": "Delete"
-        },
-        "empty_row": "No messages found.",
-        "empty_unread": "No unread messages.",
-        "empty_read": "No read messages.",
-        "select_all_aria": "Select all",
-        "select_row_aria": "Select row",
-        "sim_badge": "SIM",
-        "empty_search": "No messages match your search.",
-        "unread_sr": "Unread"
-      },
-      "empty_state": {
-        "title": "No messages",
-        "description": "Your inbox is empty. Send a new message to get started."
-      },
       "buttons": {
-        "refresh_aria": "Refresh inbox",
-        "delete_selected": "Delete ({{count}})",
-        "delete_selected_aria": "Delete {{count}} selected",
-        "delete_all": "Delete All",
-        "delete_all_aria": "Delete all messages",
-        "new_message": "New Message",
-        "mark_all_read": "Mark all read",
-        "mark_all_read_aria": "Mark all as read",
-        "prev": "Prev",
-        "next": "Next",
-        "first_page": "First page",
-        "prev_page": "Previous page",
-        "next_page": "Next page",
-        "last_page": "Last page",
-        "delete_selected_short": "Delete selected"
-      },
-      "pagination": {
-        "total_one": "{{count}} message",
-        "total_other": "{{count}} messages",
-        "page_info": "{{current}} / {{total}}",
-        "rows_per_page": "Rows per page",
-        "page_label": "Page {{current}} of {{total}}",
-        "selected_info": "{{selected}} of {{total}} selected"
-      },
-      "error": {
-        "title": "Failed to load messages",
-        "description_prefix": "Couldn't load your SMS inbox",
-        "body_stale": "Another AT consumer is probably holding the modem lock; it usually clears within a cycle. The messages below are the last successful read and are no longer live.",
-        "body_empty": "Nothing has been read from the modem yet."
-      },
-      "view_dialog": {
-        "title": "Message from {{sender}}",
-        "timestamp_aria": "{{timestamp}}",
-        "slot": "{{storage}} slot {{slots}}",
-        "slots": "{{storage}} slots {{slots}}",
-        "copy": "Copy text",
-        "copied": "Copied",
-        "copy_error": "Couldn't copy — the browser blocked clipboard access on this connection.",
-        "reply": "Reply",
-        "no_reply_hint": "This sender is an alphanumeric ID rather than a number, so it cannot be replied to.",
-        "close": "Close"
+        "delete_all": "Delete all"
       },
       "delete_single_confirm": {
-        "title": "Delete Message",
-        "description": "Are you sure you want to delete this message from {{sender}}? This action cannot be undone.",
-        "confirm": "Delete",
         "deleting": "Deleting…"
       },
       "delete_all_confirm": {
-        "title": "Delete all {{count}} messages?",
-        "description": "This removes {{me}} from the modem memory and {{sm}} from the SIM. Deleted messages cannot be recovered, and the modem is not rebooted.",
-        "confirm": "Delete All",
+        "title": "Delete all messages",
+        "description": "Every stored message and conversation will be permanently deleted. This action cannot be undone.",
+        "confirm": "Delete all",
         "cancel": "Keep messages",
-        "deleting": "Deleting all…",
-        "progress_title": "Deleting all messages",
-        "progress_note": "One delete per memory, serialized behind the shared AT lock."
-      },
-      "delete_selected_confirm": {
-        "title": "Delete Selected Messages",
-        "description_one": "Are you sure you want to delete {{count}} selected message? This action cannot be undone.",
-        "description_other": "Are you sure you want to delete {{count}} selected messages? This action cannot be undone.",
-        "confirm": "Delete ({{count}})",
-        "deleting": "Deleting…",
-        "progress_title_one": "Deleting {{count}} message",
-        "progress_title_other": "Deleting {{count}} messages"
+        "deleting": "Deleting all…"
       },
       "toast": {
-        "delete_success": "Message deleted",
-        "delete_error": "Failed to delete message",
-        "delete_all_success": "All messages deleted",
-        "delete_all_error": "Failed to delete messages",
-        "delete_selected_success_one": "{{count}} message deleted",
-        "delete_selected_success_other": "{{count}} messages deleted",
-        "delete_selected_error": "Failed to delete selected messages",
-        "mark_all_read_success": "All messages marked as read",
-        "delete_memory_error": "Couldn't clear {{memory}}"
-      },
-      "search": {
-        "placeholder": "Search messages…",
-        "aria": "Search messages"
-      },
-      "sort": {
-        "label": "Sort by",
-        "newest": "Newest",
-        "oldest": "Oldest",
-        "aria": "Sort messages"
-      },
-      "description_loading": "Reading messages from both memories.",
-      "description_split": "Messages read from both memories. {{me}}/{{meTotal}} in modem memory, {{sm}}/{{smTotal}} on the SIM.",
-      "description_combined": "Messages read from both memories. {{used}} slots used across both.",
-      "description_unknown": "Slot usage is unknown until the next successful read.",
-      "stale_chip": "Stale, {{time}}",
-      "selection": {
-        "label": "selected",
-        "clear_aria": "Clear selection"
-      },
-      "memory": {
-        "me": "Modem memory",
-        "sm": "SIM memory"
-      },
-      "delete_progress": {
-        "pending": "{{memory}} queued",
-        "running": "Clearing {{memory}}",
-        "done": "{{memory}} cleared",
-        "failed": "{{memory}} failed",
-        "count_pending_one": "{{count}} to remove",
-        "count_pending_other": "{{count}} to remove",
-        "count_done_one": "{{count}} removed",
-        "count_done_other": "{{count}} removed"
+        "delete_all_success": "All messages deleted"
       }
     },
     "compose": {
-      "title": "New Message",
+      "title": "New message",
       "description": "Compose and send an SMS message.",
       "fields": {
-        "phone_label": "Phone Number",
+        "phone_label": "Phone number",
         "phone_placeholder": "+1234567890",
         "message_label": "Message",
-        "message_placeholder": "Type your message...",
-        "char_counter": "{{count}}/{{max}}"
+        "message_placeholder": "Type your message..."
       },
-      "unicode_indicator": " (Unicode)",
-      "limit_warning": "Message exceeds single SMS limit. It will be sent as multiple parts.",
       "buttons": {
         "send": "Send",
         "sending": "Sending…"
       },
       "toast": {
         "success": "SMS sent successfully",
-        "error": "Failed to send SMS"
+        "partial": "Only {{sent}} of {{parts}} parts were sent; sending again repeats them."
       },
-      "sending_note": "Waiting on the AT lock, then sending",
-      "encoding_hint": "A non-ASCII character switches the message to UCS-2 and caps a single part at 70 characters.",
+      "encoding_hint": "A character outside the GSM alphabet switches the message to UCS-2 and caps a single part at 70 characters.",
       "encoding": {
         "gsm7": "GSM 7 bit",
         "ucs2": "UCS-2"
@@ -2272,108 +2200,258 @@
     },
     "forwarding": {
       "page": {
-        "title": "SMS Forwarding",
+        "title": "Forwarding",
         "description": "Relay every incoming message to another number, and watch whether the relay is actually getting through."
       },
-      "card": {
-        "relay": {
-          "title": "Forwarding Relay",
-          "description": "Turn the relay on and choose where messages go."
-        },
-        "health": {
-          "title": "Delivery Health",
-          "description": "Live relay state, a recipient preview, and any failed sends."
-        }
-      },
-      "fields": {
-        "enabled_label": "Enable forwarding",
-        "target_label": "Forward to",
-        "target_placeholder": "+15551234567",
-        "target_hint": "Include the country code. Every message that arrives on this modem is relayed to this number.",
-        "target_invalid": "Enter a valid phone number, including the country code — for example +15551234567."
-      },
-      "buttons": {
-        "save": "Save forwarding",
-        "send_test": "Send test",
-        "sending": "Sending…",
-        "clear_failures": "Clear failures",
-        "clearing": "Clearing…"
-      },
       "health": {
-        "forwarding_to": "Forwarding to",
-        "active": {
-          "label": "Forwarding active"
-        },
-        "issue": {
-          "label": "Delivery issues"
-        },
-        "unconfigured": {
-          "label": "No destination set",
-          "description": "Forwarding is on, but there is nowhere to send to yet. Add a number to start relaying."
-        },
-        "off": {
-          "label": "Forwarding off",
-          "description": "Incoming messages stay in the modem inbox and are not relayed anywhere."
-        }
+        "toast_test_success": "Test message sent to your forwarding number.",
+        "toast_clear_success": "Cleared.",
+        "card_title": "Delivery & Health",
+        "card_description": "Whether incoming messages are reaching your number.",
+        "state_active": "Active",
+        "state_issue": "Delivering with issues",
+        "state_unconfigured": "No destination set",
+        "state_off": "Forwarding is off",
+        "destination_label": "Sending to",
+        "destination_none": "Turn on forwarding and save a number to start relaying messages.",
+        "state_unconfigured_description": "Forwarding is on, but there is nowhere to send to yet. Add a number to start relaying.",
+        "preview_label": "Recipient sees",
+        "preview_hint_label": "About this preview",
+        "preview_hint": "The number in the From line is an example sender. Your saved number receives this message; it doesn't send it.",
+        "preview_from": "From {{sender}}:",
+        "preview_sample_body": "Hi, are we still on for 3pm?",
+        "failures_title_one": "{{count}} message couldn't be forwarded",
+        "failures_title_other": "{{count}} messages couldn't be forwarded",
+        "failures_description": "Forwarding is still on for new messages. These were dropped after 3 failed attempts:",
+        "failures_unknown_sender": "Unknown sender",
+        "clear_button": "Clear alerts",
+        "failures_empty": "No delivery problems.",
+        "test_hint": "Sends a test to your saved number.",
+        "test_disabled_hint": "Turn on forwarding and save a number to send a test.",
+        "test_sending": "Sending…",
+        "test_button": "Send test"
       },
-      "preview": {
-        "eyebrow": "Recipient sees",
-        "from": "From {{sender}}:",
-        "sample_body": "Your verification code is 123456.",
-        "note": "The number in the From line is an example of an incoming sender. Your saved number is the one receiving this message, not sending it."
+      "sms": {
+        "loading_label": "Loading forwarding settings",
+        "error_load": "Couldn't load forwarding settings",
+        "validation_phone": "Enter a valid phone number (e.g. +15551234567).",
+        "toast_save_success": "Forwarding settings saved.",
+        "card_title": "SMS Forwarding",
+        "card_description": "Automatically resend each incoming text to a number you choose.",
+        "enable_label": "Forward incoming messages",
+        "target_label": "Forward to",
+        "target_hint_label": "About forwarded messages",
+        "target_description": "Each new message is resent here as \"From <sender>: <message>\".",
+        "target_placeholder": "+15551234567"
       },
-      "test": {
-        "hint_ready": "Sends a test message to the saved number, so it checks the relay path that is actually running.",
-        "hint_blocked": "Turn forwarding on and save a destination number first — the test always runs against saved settings, never against unsaved edits."
-      },
-      "failures": {
-        "title_one": "{{value}} delivery failure",
-        "title_other": "{{value}} delivery failures",
-        "description": "The relay retried each of these three times and then gave up, so the message stayed in the inbox. Forwarding is still running.",
-        "unknown_sender": "Unknown sender"
-      },
-      "empty": {
-        "failures": {
-          "title": "No delivery failures",
-          "description": "Every message the relay has picked up so far reached its destination."
-        }
-      },
-      "states": {
-        "loading_sr": "Loading SMS forwarding settings",
-        "retry": "Retry",
-        "error": {
-          "title": "Couldn't load forwarding settings",
-          "description": "The modem didn't answer, so the current relay settings are unknown."
-        }
-      },
-      "toast": {
-        "save_success": "Forwarding settings saved",
-        "save_error": "Failed to save forwarding settings",
-        "test_success": "Test message sent to the saved number",
-        "test_error": "Failed to send the test message",
-        "clear_success": "Delivery failures cleared",
-        "clear_error": "Failed to clear delivery failures"
+      "errors": {
+        "load_failed": "The modem didn't answer with the forwarding settings. Try again in a moment.",
+        "save_failed": "Couldn't save forwarding settings.",
+        "test_failed": "Couldn't send the test message.",
+        "clear_failed": "Couldn't clear the alerts."
       }
     },
-    "tiles": {
-      "loading_sr": "Loading inbox summary",
-      "capacity_unknown": "Not reported",
-      "unread": {
-        "label": "Unread",
-        "of": "of {{total}}",
-        "caption_newest": "Newest {{timestamp}}",
-        "caption_none": "Nothing received yet"
+    "center": {
+      "toast": {
+        "message_marked_unread": "Marked as unread",
+        "mark_unread_failed": "Couldn't mark the message as unread",
+        "thread_marked_read": "Marked as read",
+        "message_deleted": "Message deleted",
+        "message_delete_failed": "Couldn't delete the message",
+        "thread_deleted": "Conversation deleted",
+        "thread_delete_failed": "Couldn't delete the conversation",
+        "address_copied": "Sender address copied",
+        "copy_failed": "Couldn't copy. The browser blocked clipboard access on this connection.",
+        "message_copied": "Message copied"
       },
-      "me": {
-        "label": "Modem Memory"
+      "header": {
+        "synced": "Synced {{seconds}}s ago",
+        "refresh_failed": "Couldn't refresh"
       },
-      "sm": {
-        "label": "SIM Memory"
+      "actions": {
+        "refresh": "Refresh",
+        "more": "More options",
+        "back": "Back to all messages",
+        "copy_address": "Copy sender address",
+        "thread_options": "Conversation options",
+        "mark_read": "Mark all as read",
+        "delete_thread": "Delete conversation",
+        "copy_text": "Copy text",
+        "forward": "Forward…",
+        "mark_unread": "Mark as unread",
+        "details": "Details…",
+        "delete_message": "Delete",
+        "compose": "New message"
       },
-      "combined": {
+      "states": {
+        "missing": {
+          "title": "That conversation is gone",
+          "description": "It is no longer stored. It may have been deleted since this link was made.",
+          "action": "Back to all messages"
+        },
+        "no_selection": {
+          "title": "Pick a conversation",
+          "description": "Choose a thread on the left, or start a new message."
+        },
+        "loading_thread_sr": "Loading conversation",
+        "thread_empty": {
+          "title": "Nothing here yet",
+          "description": "This conversation has no stored messages. Send one to start it."
+        },
+        "loading_sr": "Loading conversations",
+        "error": {
+          "title": "Couldn't load messages",
+          "description": "Your stored messages are safe. Try again in a moment.",
+          "retry": "Try again"
+        },
+        "no_matches": {
+          "title": "No matches",
+          "description": "No conversation matches that search. Try a name, a number, or a word from the message."
+        },
+        "no_unread": {
+          "title": "Nothing unread",
+          "description": "Every stored message has been opened in this browser."
+        },
+        "empty": {
+          "title": "No messages",
+          "description": "Messages you receive will appear here.",
+          "action": "Write a message"
+        }
+      },
+      "delete_thread": {
+        "title": "Delete this conversation?",
+        "description": "Every message stored for {{contact}} is removed. This cannot be undone.",
+        "confirm": "Delete conversation"
+      },
+      "delete_message": {
+        "title": "Delete this message?",
+        "description": "It is permanently removed and cannot be undone.",
+        "confirm": "Delete message"
+      },
+      "composer": {
+        "segments_one": "{{count}} SMS",
+        "segments_other": "{{count}} SMS",
+        "aria": "Reply to {{contact}}",
+        "placeholder": "Text message",
+        "remaining_one": "{{count}} character left",
+        "remaining_other": "{{count}} characters left",
+        "send": "Send message",
+        "no_reply": "This sender is a name, not a number, so it can't be replied to."
+      },
+      "identity": {
+        "matched": "Matched"
+      },
+      "time": {
+        "today": "Today",
+        "yesterday": "Yesterday"
+      },
+      "send": {
+        "sending": "Sending…",
+        "failed": "Couldn't send",
+        "retry": "Retry",
+        "discard": "Discard",
+        "sent_at": "Sent {{time}}"
+      },
+      "phishing": {
+        "with_logo": "Contains a link. Sender names can be faked, so {{name}} may not have sent this.",
+        "generic": "Contains a link. Only open it if you expected this message."
+      },
+      "code": {
+        "copied": "Copied",
+        "copy": "Copy code"
+      },
+      "forward": {
+        "prefix": "From {{addr}}:",
+        "title": "Forward message",
+        "description": "Sends a new text from this modem. The original stays where it is.",
+        "to_label": "To",
+        "alpha_disabled": "Sender names cannot receive texts",
+        "include_sender": "Include original sender",
+        "include_sender_hint": "Adds a \"From {{addr}}:\" line to the top",
+        "submit": "Forward"
+      },
+      "details": {
+        "kind": {
+          "msisdn": "Phone number",
+          "shortcode": "Short code",
+          "alphanumeric": "Sender name"
+        },
+        "title": "Message details",
+        "description": "Everything QManager knows about this message.",
+        "to": "To",
+        "from": "From",
+        "sender_type": "Sender type",
+        "sent_at": "Sent",
+        "received_at": "Received",
+        "length": "Length",
+        "length_value_one": "{{count}} character",
+        "length_value_other": "{{count}} characters",
+        "close": "Close"
+      },
+      "storage": {
+        "unknown": "Not reported",
         "label": "Message storage",
-        "caption": "Slots used across both memories"
+        "modem": "Modem Memory",
+        "sim": "SIM Memory",
+        "combined_caption": "Slots used across both memories"
+      },
+      "search": {
+        "aria": "Search messages",
+        "placeholder": "Search messages"
+      },
+      "filters": {
+        "all": "All",
+        "unread": "Unread"
+      },
+      "sort": {
+        "to_oldest": "Sort oldest first",
+        "to_newest": "Sort newest first"
+      },
+      "preview": {
+        "you": "You:"
+      },
+      "a11y": {
+        "unread_count_one": "{{count}} unread message",
+        "unread_count_other": "{{count}} unread messages"
       }
+    },
+    "errors": {
+      "delete_all": "Failed to delete messages",
+      "send": "Failed to send SMS",
+      "fetch": "Failed to load messages"
+    },
+    "settings": {
+      "title": "SMS settings",
+      "description": "Choose how this modem sends and stores text messages.",
+      "smsc": {
+        "toast_saved": "Provider number saved.",
+        "save_failed": "Couldn't save the provider number.",
+        "title": "Provider number",
+        "hint_label": "About the provider number",
+        "hint": "Also called the SMS service center (SMSC). Your carrier sets it, so change it only if messages stop sending.",
+        "description": "The carrier number that routes your outgoing messages.",
+        "placeholder": "e.g. +639180000101",
+        "invalid": "Enter 3 to 20 digits, with an optional leading +.",
+        "unreadable": "The current number couldn't be read. You can still set one."
+      }
+    },
+    "storage": {
+      "full": "Full",
+      "nearly_full": "Nearly full",
+      "card_title": "Message storage",
+      "card_description": "Where new messages are saved. Existing messages stay where they are.",
+      "load_failed": "Couldn't read message storage.",
+      "toast_saved": "Message storage saved.",
+      "field_label": "Save new messages to",
+      "hint_label": "About message storage",
+      "hint": "The modem holds more messages. Messages on the SIM go with it to another device.",
+      "option_modem": "Modem",
+      "option_sim": "SIM",
+      "row_modem": "Modem",
+      "row_sim": "SIM",
+      "used_of_total": "{{used}} of {{total}}",
+      "unavailable": "Unavailable",
+      "save_failed": "Couldn't save message storage."
     }
   },
   "tower_locking": {
@@ -2383,10 +2461,8 @@
     },
     "live": {
       "title": "Right now",
-      "camped_on": "Camped on now",
       "camped_empty_title": "No carrier on air",
       "camped_empty_body": "The modem is not camped on any cell right now. A lock still applies once it attaches.",
-      "note_hint": "Add copies this cell into the form below. A tower lock pins the channel and its PCI together, so the modem holds this exact cell.",
       "absent_nr_title": "No 5G carrier",
       "absent_lte_title": "No LTE anchor",
       "tile_tech_LTE": "LTE",
@@ -2396,14 +2472,9 @@
       "tile_arfcn": "ARFCN",
       "tile_rsrp": "{{value}} dBm",
       "tile_no_value": "—",
-      "tile_use": "Use this cell",
-      "tile_use_a11y": "Use band {{band}}, PCI {{pci}} as the {{leg}} lock target",
-      "tile_locked_a11y": "Band {{band}}, PCI {{pci}} is the current lock target",
       "tile_blocked_nsa": "5G locking needs standalone mode",
       "tile_blocked_lte_only": "No 5G connection to lock",
       "tile_blocked_slots_full": "All three LTE cells are set",
-      "tile_band_channel": "{{band}} – {{channel}}",
-      "rail_target_pair": "{{channel}}, PCI {{pci}}",
       "refresh": "Re-read lock state from the modem",
       "persist_label": "Keep lock after reboot",
       "persist_help": "Stores the lock on the modem itself, so it is restored automatically after a restart.",
@@ -2414,29 +2485,17 @@
       "persist_split_help": "The modem reports this saved for one radio but not the other. Switch it off and on again to rewrite both.",
       "persist_toast_enabled": "Lock will be kept after reboot",
       "persist_toast_disabled": "Lock will not be kept after reboot",
-      "persist_toast_error": "Couldn't update the reboot setting",
       "failover_label": "Signal failover",
       "failover_help_label": "About signal failover",
       "failover_help": "Releases the tower lock automatically if signal quality stays below the threshold, so a bad cell cannot strand the connection. It releases both radios, not just the weak one.",
       "failover_state_disabled": "Disabled",
-      "failover_state_standby": "No lock to guard",
-      "failover_state_armed": "Watching",
       "failover_state_stalled": "Not guarding",
       "failover_state_unknown": "Not reported",
-      "failover_state_fallback": "Released — weak signal",
-      "failover_toast_enabled": "Signal failover enabled",
-      "failover_toast_disabled": "Signal failover disabled",
-      "failover_toast_error": "Couldn't update signal failover",
       "threshold_label": "Release below",
       "threshold_invalid": "Enter a value between 0 and 100",
       "threshold_unread": "Not read from the modem yet.",
-      "threshold_toast_saved": "Failover threshold updated",
-      "threshold_toast_error": "Couldn't update the threshold",
-      "quality_label": "Signal quality now",
       "quality_value": "{{value}}%",
       "quality_unknown": "Not reported",
-      "tile_rsrq": "{{value}} dB",
-      "tile_sinr": "{{value}} dB",
       "verdict_on_target_title": "On target",
       "verdict_on_target_body": "The radio is camped on a cell you locked.",
       "verdict_off_target_title": "Not on target",
@@ -2447,11 +2506,32 @@
       "verdict_unlocked_body": "The modem picks its own cell and reselects freely.",
       "verdict_unknown_title": "Not read yet",
       "verdict_unknown_body": "The lock state has not been read back from the modem.",
-      "target_serving": "Serving"
+      "target_serving": "Serving",
+      "band_channel": "{{band}} ({{channel}})",
+      "target_pair": "{{channel}}, PCI {{pci}}",
+      "tile_add": "Add band {{band}}, PCI {{pci}} to the lock",
+      "tile_lock": "Lock to band {{band}}, PCI {{pci}}",
+      "tile_replace": "Lock to band {{band}}, PCI {{pci}} instead",
+      "tile_unlock": "Remove band {{band}}, PCI {{pci}} from the lock"
     },
     "automation": {
       "title": "While nobody is watching",
-      "description": "What the lock does across a reboot, in bad signal, and on a timer."
+      "description": "What the lock does across a reboot, in bad signal, and on a timer.",
+      "failover_help": "Releases the tower lock if signal quality stays below the threshold, so a bad cell cannot strand the connection. It releases both radios, not just the weak one.",
+      "failover_help_label": "About signal failover",
+      "failover_hint": "A lock is set, but failover is off. Locking never turns it on.",
+      "failover_label": "Signal failover",
+      "failover_state_disabled": "Off",
+      "failover_state_ready": "Ready",
+      "failover_state_released": "Released (weak signal)",
+      "failover_state_stalled": "Not guarding",
+      "failover_state_unknown": "Not reported",
+      "failover_state_watching": "Watching",
+      "quality_unknown": "Signal quality now: not reported",
+      "quality_value": "Signal quality now: {{value}}%",
+      "threshold_invalid": "Enter a value between 0 and 100",
+      "threshold_label": "Release below",
+      "threshold_unread": "The threshold could not be read."
     },
     "legs": {
       "lte": {
@@ -2476,24 +2556,25 @@
       "slot": "Cell {{index}}",
       "slot_clear": "Clear cell {{index}}",
       "scs_guess": "Filled from the band {{band}} default. Verify it against your tower if the lock fails.",
-      "scs_from_serving": "Read from the cell the modem is camped on.",
       "pick_placeholder": "Pick a carrier on air",
       "slot_in_use": "In cell {{index}}"
     },
     "card": {
-      "status_locked": "Locked",
-      "status_unlocked": "Unlocked",
-      "status_unknown": "Not reported",
-      "readback_label": "Modem reports",
-      "status_gated_nsa": "SA mode required",
-      "status_gated_lte": "No 5G signal",
+      "persist_label": "Keep after reboot",
+      "persist_aria": "Keep {{leg}} lock after reboot",
       "gate_nsa_title": "Not available in 5G NSA",
       "gate_nsa_body": "Standalone locking needs the modem in SA mode. It is currently using 5G anchored to an LTE cell.",
       "gate_lte_title": "No 5G connection",
       "gate_lte_body": "The modem is on LTE only, so there is no NR cell to pin.",
       "empty_title": "No cell targets yet",
       "empty_body": "Pick a cell from the list above, or type a channel and PCI.",
-      "simple_mode": "Pick from carriers on air"
+      "simple_mode": "Pick from carriers on air",
+      "input_mode": "Enter cells by",
+      "mode_pick": "Detected",
+      "mode_type": "Manual",
+      "unread_note": "The modem did not report its lock state.",
+      "unused_lte": "Outlined cells are locked, but the modem is not using them.",
+      "unused_nr": "Locked, but the modem is not using this cell."
     },
     "schedule": {
       "title": "Lock schedule",
@@ -2516,16 +2597,18 @@
       "status_inactive": "Inactive",
       "toast_saved": "Schedule updated",
       "toast_error": "Couldn't save the schedule",
-      "toast_no_targets": "Set a lock target before scheduling",
       "arm_warning": "Saved, but the schedule isn't armed: {{reason}}",
       "arm_reason_unit_absent": "the scheduling service isn't installed on this device yet — update to the latest firmware to enable it",
       "arm_reason_unknown": "reason unknown",
-      "no_days": "Pick at least one day"
+      "no_days": "Pick at least one day",
+      "toast_disabled": "Lock schedule turned off",
+      "toast_enabled": "Lock schedule turned on"
     },
     "actions": {
       "lock": "Lock Tower",
       "unlock": "Remove Lock",
-      "clear_fields": "Clear fields"
+      "clear_fields": "Clear fields",
+      "refresh": "Refresh"
     },
     "dialog": {
       "lock_lte_title": "Lock LTE to this cell?",
@@ -2537,17 +2620,23 @@
       "unlock_body": "The radio goes back to choosing its own cell. The connection drops briefly while it reattaches."
     },
     "toast": {
+      "persist_enabled": "{{leg}} lock will be kept after reboot",
+      "persist_disabled": "{{leg}} lock will not be kept after reboot",
       "locked": "{{leg}} tower lock applied",
       "unlocked": "{{leg}} tower lock cleared",
-      "lock_error": "Couldn't apply the {{leg}} tower lock",
-      "unlock_error": "Couldn't remove the {{leg}} tower lock",
       "incomplete": "Fill in every field before locking",
-      "no_targets": "Enter a channel and cell ID first",
       "filled": "Filled {{leg}} from band {{band}}, PCI {{pci}}",
-      "slots_full": "All three LTE cells are already set"
+      "slots_full": "All three LTE cells are already set",
+      "cell_added": "Cell added to the {{leg}} lock",
+      "cell_exists": "That cell is already added",
+      "cell_removed": "Cell removed from the {{leg}} lock",
+      "failover_disabled": "Signal failover turned off",
+      "failover_enabled": "Signal failover turned on",
+      "refresh_error": "Couldn't refresh the lock state",
+      "threshold_saved": "Failover threshold updated"
     },
     "warning": {
-      "service_enable_failed": "The lock is active now, but it will not survive a reboot — the modem rejected the save command.",
+      "service_enable_failed": "The lock is active now, but it could not be set to start on boot, so it will not survive a reboot.",
       "service_disable_failed": "The lock is released, but it could not be removed from startup — it may come back after a reboot.",
       "persist_command_failed": "\"Keep lock after reboot\" did not take. The modem rejected the save command.",
       "dismiss": "Dismiss"
@@ -2556,23 +2645,29 @@
       "title": "Couldn't read tower lock state",
       "body": "The modem did not answer after three attempts. Nothing below reflects the radio's real lock state until this succeeds.",
       "retry": "Try again",
-      "retrying": "Retrying…",
-      "retry_tip": "Ask the modem for its lock state again."
+      "retrying": "Retrying…"
     },
     "blocked": {
       "lock_empty_lte": "Enter a channel and PCI, or pick a cell from the tiles above.",
       "lock_incomplete_lte": "Every slot you have started needs both a channel and a PCI.",
       "lock_empty_nr": "Enter a channel, PCI, spacing and band, or pick a cell from the tiles above.",
       "lock_incomplete_nr": "All four fields are needed before this cell can be locked.",
-      "lock_unchanged": "The radio is already locked to exactly these targets, so there is nothing left to write.",
       "lock_gated_nsa": "The modem is on 5G NSA, where the 5G leg has no standalone cell to lock.",
       "lock_gated_lte_only": "The modem has no 5G carrier on air, so there is nothing to lock it to.",
-      "threshold_empty": "Enter a percentage between 0 and 100.",
-      "refresh_in_flight": "Already re-reading the modem. This can take a few seconds."
+      "refresh_writing": "A tower change is being applied."
     },
     "a11y": {
       "applying": "Applying the {{leg}} tower lock…",
       "refreshing": "Re-reading tower lock state…"
+    },
+    "errors": {
+      "in_flight": "Another tower change is still being applied.",
+      "lock_failed": "Couldn't apply the tower lock.",
+      "no_cells": "Enter at least one channel and PCI first.",
+      "read_failed": "The modem did not report its tower lock state.",
+      "schedule_failed": "Couldn't save the lock schedule.",
+      "settings_failed": "Couldn't save the tower settings.",
+      "unlock_failed": "Couldn't remove the tower lock."
     }
   }
 }

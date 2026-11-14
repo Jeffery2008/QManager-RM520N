@@ -175,5 +175,14 @@
       "label": "配置",
       "description": "QManager 配置文件与轮询缓存的新鲜度"
     }
+  },
+  "diagnostics": {
+    "card_title": "",
+    "card_description": "",
+    "body": "",
+    "button_capture": "",
+    "button_capturing": "",
+    "toast_success": "",
+    "toast_failed": ""
   }
 }

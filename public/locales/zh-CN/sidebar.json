@@ -38,9 +38,12 @@
     "tailscale": "Tailscale VPN",
     "system_settings": "系统设置",
     "logs": "日志",
+    "config_backup": "",
     "system_health_check": "系统健康检查",
     "connection_quality": "连接质量",
     "languages": "语言",
+    "device_access": "",
+    "adaptive_polling": "",
     "software_update": "软件更新",
     "terminals": "终端",
     "at_terminal": "AT 终端",
@@ -48,7 +51,14 @@
     "about_device": "关于设备",
     "support": "支持",
     "donate": "捐赠项目",
-    "traffic_engine": "流量引擎"
+    "traffic_engine": "流量引擎",
+    "cellular_overview": "",
+    "sms_inbox": "",
+    "band_locking_bands": "",
+    "cell_scanner_full_scan": "",
+    "cellular_settings_general": "",
+    "connection_quality_overview": "",
+    "system_settings_general": ""
   },
   "header": {
     "role": "管理员"
@@ -57,12 +67,19 @@
     "signed_in": "已登录"
   },
   "actions": {
-    "toggle_section": "展开/收起 {{section}} 分区"
+    "toggle_section": "展开/收起 {{section}} 分区",
+    "toggle_sidebar": "",
+    "skip_to_content": ""
   },
   "status": {
     "watchdog_acting": "处理中",
     "watchdog_acting_detail": "看门狗正在恢复连接（第 {{tier}} 级）。",
     "watchdog_settling": "观察中",
     "watchdog_settling_detail": "看门狗正在确认恢复后连接是否稳定。"
-  }
+  },
+  "mobile": {
+    "title": "",
+    "description": ""
+  },
+  "breadcrumb": ""
 }
