@@ -1,10 +1,18 @@
 {
   "known_sims": {
-    "row_label": "Known SIMs",
-    "info_aria": "Known SIMs info",
-    "tooltip": "QManager remembers the SIMs it has seen, so it only alerts you when a genuinely new SIM is inserted. Clearing forgets every SIM except the one currently inserted.",
-    "remembered_count_one": "{{count}} SIM",
-    "remembered_count_other": "{{count}} SIMs",
+    "section": "Tracked SIMs",
+    "rows": {
+      "count": {
+        "consequence": "QManager remembers the SIMs it has seen, so it only alerts you when a genuinely new SIM is inserted. Clearing forgets every SIM except the one currently inserted.",
+        "label": "SIMs remembered"
+      }
+    },
+    "states": {
+      "empty_title": "No SIMs tracked yet",
+      "empty_description": "QManager records each SIM the first time it is inserted. Insert a SIM to start the list.",
+      "error_title": "Couldn't read the tracked SIMs",
+      "error_description": "The device didn't answer. Nothing has been forgotten; this is a read failure and the count is still on the modem."
+    },
     "clear_button": "Clear",
     "clear_dialog_title": "Clear known SIMs?",
     "clear_dialog_description": "This forgets every SIM QManager has seen, except the one currently inserted — so your active SIM won't be flagged as new. Previously-used SIMs will alert again the next time they are inserted.",
@@ -12,67 +20,12 @@
     "clear_dialog_clearing": "Clearing…",
     "toast_cleared": "Known SIMs cleared",
     "toast_clear_failed": "Failed to clear known SIMs",
-    "remembered_unknown": "Couldn't read the remembered count"
-  },
-  "sim_registry": {
-    "title": "Tracked SIMs",
-    "description": "Every SIM QManager has seen, and whether it still raises a new-SIM alert.",
-    "carrier_unknown": "Unknown carrier",
-    "no_phone_number": "No number provisioned",
-    "added_on": "Added {{date}}",
-    "added_unknown": "Added before tracking began",
-    "badge_active": "Active",
-    "badge_alerts_on": "Alerts on",
-    "badge_alerts_off": "Alerts off",
-    "show_alert": "Show Alert",
-    "restoring": "Turning on…",
-    "retry": "Retry",
-    "stale_notice": "Showing the last successful read. The device didn't answer the latest refresh.",
-    "empty_title": "No SIMs tracked yet",
-    "empty_description": "QManager records each SIM the first time it is inserted. Insert a SIM to start the list.",
-    "toast_restored": "Alert turned back on",
-    "toast_restored_detail": "QManager will alert again when the {{carrier}} SIM is inserted.",
-    "toast_restore_failed": "Couldn't turn the alert back on",
-    "remembered_count_one": "{{count}} SIM remembered",
-    "remembered_count_other": "{{count}} SIMs remembered",
-    "toast_cleared_partial": "Cleared, but the list may be stale",
-    "toast_cleared_partial_detail": "The device forgot the SIMs but couldn't update this list. Reload the page to check.",
-    "error_title": "Couldn't read the tracked SIMs",
-    "error_description": "The device didn't answer. Nothing has been forgotten — this is a read failure, and the list is still on the modem."
-  },
-  "ssh": {
-    "card": {
-      "title": "SSH Access",
-      "description": "The root password for SSH sessions into this modem. It is separate from the password you sign in to QManager with.",
-      "save": "Update SSH Password"
-    },
-    "fields": {
-      "current": {
-        "label": "Your QManager password",
-        "consequence": "Proves it is you. This is the web password you signed in with, not the SSH one."
-      },
-      "new": {
-        "label": "New SSH password",
-        "consequence": "At least six characters. Takes effect immediately — existing SSH sessions stay open."
-      },
-      "confirm": {
-        "label": "Confirm new password"
-      }
-    },
-    "toggle": {
-      "show": "Show password",
-      "hide": "Hide password"
-    },
-    "errors": {
-      "too_short": "SSH password must be at least 6 characters.",
-      "mismatch": "Passwords do not match.",
-      "failed": "SSH password change failed."
-    },
-    "toast_saved": "SSH password updated successfully."
+    "toast_cleared_partial": "Known SIMs cleared, but not completely",
+    "toast_cleared_partial_detail": "The device forgot the SIMs but couldn't update its per-SIM records. Reload the page to check."
   },
   "page": {
     "title": "System Settings",
-    "description": "How this device keeps time, who can reach it, and which SIMs it remembers.",
+    "description": "How this device keeps time, when it restarts, and which SIMs it remembers.",
     "refresh": "Refresh"
   },
   "band": {
@@ -98,16 +51,16 @@
     "sims": {
       "eyebrow": "Tracked SIMs",
       "caption_none": "Nothing recorded yet",
-      "caption_all_alerting": "All raising new-SIM alerts",
-      "caption_muted_one": "{{count}} muted from new-SIM alerts",
-      "caption_muted_other": "{{count}} muted from new-SIM alerts"
+      "caption_known": "Only a new SIM raises an alert",
+      "caption_unread": "Could not read the count"
     },
     "stale": "Last confirmed read"
   },
   "preferences": {
+    "section": "Time & Units",
     "card": {
-      "title": "Time & Units",
-      "description": "How this modem keeps time, and the units every reading is shown in.",
+      "title": "Device & Units",
+      "description": "How this modem keeps time, the units readings use, and the SIMs it remembers.",
       "save": "Save Preferences"
     },
     "rows": {
@@ -142,7 +95,8 @@
     },
     "toast": {
       "saved": "Preferences saved",
-      "failed": "Couldn't save preferences"
+      "failed": "Couldn't save preferences",
+      "tz_not_applied": "Preferences saved, but the time zone hasn't reached the device clock yet"
     }
   },
   "reboot": {
@@ -166,6 +120,12 @@
         "label": "Repeat on",
         "consequence": "With no day selected the schedule never fires.",
         "rail": "Reboot days of the week"
+      },
+      "clock": {
+        "label": "Modem time",
+        "consequence": "The date and time the schedule runs on, in the time zone set under Device & Units.",
+        "unsynced": "Not set yet",
+        "unsynced_consequence": "The modem hasn't set its clock from the network yet, so a scheduled reboot can't fire until it does."
       }
     },
     "days": {
@@ -202,7 +162,9 @@
       "rejected": {
         "no_days": "Pick at least one day, or turn the schedule off.",
         "invalid_time": "That time isn't valid. Use a 24-hour HH:MM time.",
-        "network": "Couldn't reach the device to save. Check the connection and try again."
+        "network": "Couldn't reach the device to save. Check the connection and try again.",
+        "invalid_day": "One of the selected days isn't valid. Pick days from Sunday to Saturday.",
+        "missing_enabled": "The device didn't receive the on/off setting. Try again."
       }
     }
   },
@@ -211,7 +173,8 @@
       "title": "System Logs",
       "description": "QManager keeps its log in memory on the modem, so it starts empty after every reboot and never wears the flash. Filter it here to see what each component has been doing.",
       "refresh": "Refresh",
-      "clear": "Clear log"
+      "clear": "Clear log",
+      "copy": "Copy"
     },
     "band": {
       "head": "Log health",
@@ -316,7 +279,9 @@
     "toast": {
       "cleared": "System log cleared",
       "clear_failed": "Couldn't clear the system log",
-      "refresh_failed": "Couldn't read the system log"
+      "refresh_failed": "Couldn't read the system log",
+      "copied": "Log copied to the clipboard",
+      "copy_failed": "Couldn't copy the log"
     }
   },
   "languages": {
@@ -466,6 +431,7 @@
       "unsaved": "Unsaved",
       "save": "Save Probe Targets",
       "save_failed": "Couldn't save the probe targets",
+      "cadence_clear_failed": "Couldn't reset the probe interval",
       "leg": {
         "host_1": "Hostname leg 1",
         "host_2": "Hostname leg 2",
@@ -483,7 +449,8 @@
         "action": "Restore defaults"
       },
       "toast": {
-        "saved": "Probe targets saved"
+        "saved": "Probe targets saved",
+        "cadence_cleared": "Probe interval now follows the profile"
       },
       "validation": {
         "empty": "Enter a target.",
@@ -502,15 +469,24 @@
       },
       "group": {
         "hostnames": "Hostnames",
-        "fallback": "IPv4 fallback"
+        "fallback": "IPv4 fallback",
+        "sensitivity": "Sensitivity"
       },
       "fallback_hint": "No DNS needed, so a resolver fault is not read as an outage.",
       "fallback_hint_label": "About IPv4 fallback",
       "interval": {
         "label": "Probe interval",
-        "value": "Every {{seconds}} s"
+        "value": "Every {{seconds}} s",
+        "override": "Every {{seconds}} s (Watchdog)",
+        "use_profile": "Use profile cadence"
       },
-      "failed": "Couldn't save"
+      "failed": "Couldn't save",
+      "profile": {
+        "sensitive": "Sensitive",
+        "regular": "Regular",
+        "relaxed": "Relaxed",
+        "quiet": "Quiet"
+      }
     },
     "thresholds": {
       "title": "Quality Thresholds",
@@ -524,7 +500,8 @@
       "preset": {
         "standard": "Standard",
         "tolerant": "Tolerant",
-        "very_tolerant": "Very tolerant"
+        "very_tolerant": "Very tolerant",
+        "custom": "Custom"
       },
       "unsaved": "Unsaved",
       "save": "Save Thresholds",
@@ -539,13 +516,15 @@
       },
       "row": {
         "flags": "Flags after",
-        "now": "Right now"
+        "now": "Right now",
+        "limit": "Limit"
       },
       "flags": {
         "latency_one": "{{count}} sample over {{ms}} ms",
         "latency_other": "{{count}} samples over {{ms}} ms",
         "loss_one": "{{count}} sample at {{pct}}% or more",
-        "loss_other": "{{count}} samples at {{pct}}% or more"
+        "loss_other": "{{count}} samples at {{pct}}% or more",
+        "pending": "Enter a limit"
       },
       "now": {
         "latency": "{{ms}} ms",
@@ -556,7 +535,14 @@
         "over_loss": "Over the {{pct}}% limit"
       },
       "default_chip": "Built-in defaults",
-      "failed": "Couldn't save"
+      "failed": "Couldn't save",
+      "unit": {
+        "latency": "ms",
+        "loss": "%"
+      },
+      "validation": {
+        "range": "Enter a whole number from {{min}} to {{max}}."
+      }
     }
   },
   "software_update": {
@@ -577,7 +563,8 @@
       "read_full_notes": "Read the full notes",
       "rebooting": "Restarting...",
       "verifying": "Verifying...",
-      "retry_download": "Try download again"
+      "retry_download": "Try download again",
+      "reboot_now": "Restart now"
     },
     "band": {
       "head": "Update status",
@@ -712,7 +699,8 @@
       "failed_check": "QManager couldn't read the release list. The build on this modem is untouched, so this is a read failure and not a loss.",
       "failed_download": "The download didn't finish, so nothing has been installed. The build already on the modem is untouched.",
       "versions": "Every option here restarts the modem, and an older build can undo settings a newer one introduced.",
-      "failed_install": "The install did not finish, so the modem may be running a mixed set of files. Installing again puts it back on a known build."
+      "failed_install": "The install did not finish, so the modem may be running a mixed set of files. Installing again puts it back on a known build.",
+      "stalled": "The installer has gone quiet for two minutes. If it does not recover, restart the modem to finish or undo the install."
     },
     "notes": {
       "title": "What changed",
@@ -789,6 +777,12 @@
       "auto_on": "Automatic updates enabled",
       "auto_off": "Automatic updates disabled",
       "save_failed": "Couldn't save that preference"
+    },
+    "stall_dialog": {
+      "title": "Restart the modem now?",
+      "description": "The install looks stuck. Restarting interrupts it and drops this session; the modem comes back on its own.",
+      "cancel": "Keep waiting",
+      "confirm": "Restart now"
     }
   },
   "at_terminal": {
@@ -831,6 +825,7 @@
       "cancel": "Cancel"
     },
     "rules": {
+      "not_at": "Only AT commands can be sent here. Start the line with AT, for example AT+CSQ.",
       "qscanfreq": "Frequency scans are refused here. They hold the radio off the air for minutes with nothing to show while they run — use the Cell Scanner page, which reports progress and can be stopped.",
       "qscan": "Network scans are refused here. They hold the radio off the air for minutes with nothing to show while they run — use the Cell Scanner page, which reports progress and can be stopped.",
       "resetfactory": "A factory reset is refused here. It clears every setting on the modem at once, including the ones QManager needs to reach it, and nothing on this page can undo it.",
@@ -973,5 +968,269 @@
         "description": "The shell on the modem exited, so this terminal is closed. Nothing was lost — start a new session whenever you need one."
       }
     }
+  },
+  "passwords": {
+    "card": {
+      "title": "Passwords",
+      "description": "Change the password you sign in to QManager with, or the root password for SSH. Each asks for its current password first."
+    },
+    "tabs": {
+      "aria": "Password to change",
+      "web": "Web Password",
+      "ssh": "SSH Password"
+    },
+    "web": {
+      "label": "Current web password",
+      "consequence": "The password you sign in to QManager with.",
+      "dialog_title": "Change web password",
+      "dialog_description": "You will be signed out after changing it."
+    },
+    "ssh": {
+      "label": "Current SSH password",
+      "consequence": "The root password for SSH sessions into this modem.",
+      "dialog_title": "Change SSH password",
+      "dialog_description": "Takes effect immediately; existing SSH sessions stay open.",
+      "toast_saved": "SSH password updated successfully."
+    },
+    "continue": "Continue",
+    "toggle": {
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "dialog": {
+      "new_label": "New password",
+      "confirm_label": "Confirm new password",
+      "match": "Passwords match",
+      "mismatch": "Passwords don't match",
+      "cancel": "Cancel",
+      "save": "Save password"
+    },
+    "errors": {
+      "too_short": "Password must be at least {{min}} characters.",
+      "weak": "Password must be at least {{min}} characters and include uppercase, lowercase, and a number.",
+      "verify_failed": "Couldn't check the password. Try again.",
+      "change_failed": "Couldn't change the password. Try again.",
+      "invalid_password_one": "Incorrect password. {{count}} attempt left before sign-in is locked for a while.",
+      "invalid_password_other": "Incorrect password. {{count}} attempts left before sign-in is locked for a while.",
+      "rate_limited_one": "Too many wrong attempts. Try again in {{count}} second.",
+      "rate_limited_other": "Too many wrong attempts. Try again in {{count}} seconds."
+    }
+  },
+  "device_access": {
+    "page": {
+      "title": "Device Access",
+      "description": "The password and ports used to reach this modem."
+    }
+  },
+  "config_backup": {
+    "page_title": "Configuration Backup",
+    "page_description": "Save QManager's settings to an encrypted file, or restore them from one.",
+    "excluded": "Passwords, tokens, the web port, SIM history, logs and usage counters are never included.",
+    "not_supported_here": "Not supported here",
+    "mutex_parent_on": "Set by {{parent}}, which is selected.",
+    "mutex_member_on": "Clear {{members}} to include this.",
+    "group_count": "{{on}} of {{total}}",
+    "reboot_failed_toast": "Couldn't start the reboot. It's still waiting in the banner.",
+    "reboot_now_button": "Reboot now",
+    "groups": {
+      "connection": "Connection",
+      "local_network": "Local network",
+      "monitoring": "Monitoring and alerts",
+      "system": "System"
+    },
+    "sections": {
+      "network_mode": "Network mode",
+      "bands": "LTE/5G bands",
+      "apn": "APN",
+      "tower_lock": "Tower lock",
+      "ttl_mtu": "TTL & MTU",
+      "imei": "IMEI",
+      "profiles": "Custom SIM profiles",
+      "scenarios": "Connection scenarios",
+      "ip_passthrough": "IP Passthrough",
+      "sms": "SMS settings",
+      "lan": "LAN & DHCP",
+      "custom_dns": "Custom DNS",
+      "ethernet": "Ethernet",
+      "traffic_engine": "Traffic Engine",
+      "watchdog": "Watchdog",
+      "quality": "Connection quality",
+      "sites": "Latency monitor sites",
+      "alerts": "Alerts",
+      "adaptive_polling": "Adaptive polling",
+      "system": "System settings"
+    },
+    "create": {
+      "card_title": "Create backup",
+      "card_description": "Pick what to save. The file is encrypted in your browser.",
+      "group_encryption": "Encryption",
+      "passphrase_label": "Passphrase",
+      "warning": "At least {{min}} characters. Without it the backup can't be restored.",
+      "passphrase_too_short": "Use at least {{min}} characters.",
+      "confirm_label": "Confirm passphrase",
+      "confirm_match": "Passphrases match",
+      "confirm_mismatch": "Passphrases don't match",
+      "passphrase_show_aria": "Show passphrase",
+      "passphrase_hide_aria": "Hide passphrase",
+      "selected_count_one": "{{count}} section selected",
+      "selected_count_other": "{{count}} sections selected",
+      "stage_collecting": "Reading settings…",
+      "stage_encrypting": "Encrypting…",
+      "stage_downloading": "Saving file…",
+      "button_default": "Download backup",
+      "toast_success": "Backup downloaded.",
+      "toast_unavailable_one": "Backup downloaded, but {{count}} section couldn't be read.",
+      "toast_unavailable_other": "Backup downloaded, but {{count}} sections couldn't be read.",
+      "toast_failed": "Couldn't create the backup.",
+      "load_failed_title": "Couldn't load backup options",
+      "load_failed_description": "The modem didn't say which settings it can back up.",
+      "empty_title": "Nothing to back up",
+      "empty_description": "This QManager build has no settings it can back up."
+    },
+    "restore": {
+      "card_title": "Restore from file",
+      "card_description": "Open a backup file and choose what to restore.",
+      "idle_title": "No backup open",
+      "reading_title": "Reading file…",
+      "idle_description": "Choose a .qmbackup file. You'll need the passphrase it was saved with.",
+      "upload_button": "Choose file",
+      "button_choose_another": "Choose another file",
+      "read_failed": "Couldn't read this file.",
+      "receipt_model": "Made on",
+      "receipt_created": "Created",
+      "passphrase_label": "Passphrase",
+      "passphrase_consequence": "The passphrase set when this backup was made.",
+      "password_incorrect": "Wrong passphrase, or the file was changed.",
+      "button_unlock": "Unlock",
+      "model_warning": "This backup is from {{from}} and this modem is {{to}}. Settings it can't use are skipped.",
+      "backup_first": "Restoring replaces your current settings. Download a backup of them first.",
+      "backup_first_action": "Back up first",
+      "overwrite_label": "Replaces your current settings",
+      "note_reboot": "Needs a reboot.",
+      "note_lan": "Can change the address you use to reach QManager. Needs a reboot.",
+      "note_profiles_imei": "Needs a reboot. Profiles whose IMEI differs from this modem's lose that IMEI unless you keep it below.",
+      "profiles_imei_confirm_one": "{{count}} profile sets a different IMEI when activated. Keep it.",
+      "profiles_imei_confirm_other": "{{count}} profiles set a different IMEI when activated. Keep them.",
+      "imei_confirm": "Write IMEI {{backup}} over this modem's {{current}}.",
+      "selected_count_one": "{{count}} section to restore",
+      "selected_count_other": "{{count}} sections to restore",
+      "button_apply": "Restore",
+      "toast_success": "Settings restored.",
+      "toast_partial_one": "Restore finished, but {{count}} section failed.",
+      "toast_partial_other": "Restore finished, but {{count}} sections failed.",
+      "toast_cancelled_one": "Restore stopped after {{count}} section.",
+      "toast_cancelled_other": "Restore stopped after {{count}} sections.",
+      "toast_crashed": "The restore stopped unexpectedly.",
+      "toast_failed": "Couldn't start the restore.",
+      "toast_stop_failed": "Couldn't stop the restore.",
+      "reboot_dialog_title": "Reboot to finish restoring?",
+      "reboot_dialog_description": "Some restored settings take effect after a reboot. The connection drops for about a minute.",
+      "reboot_later_button": "Later"
+    },
+    "pipeline": {
+      "title": "Restoring settings",
+      "description": "From the backup made on {{model}}.",
+      "preparing": "Preparing…",
+      "stopping": "Stopping after this section…",
+      "step_progress": "Section {{current}} of {{total}}",
+      "done_headline": "Restore complete",
+      "done_sub_one": "{{count}} section restored.",
+      "done_sub_other": "{{count}} sections restored.",
+      "partial_headline": "Restore finished with issues",
+      "partial_sub": "{{restored}} of {{total}} sections restored.",
+      "cancelled_sub": "Stopped before every section was restored.",
+      "failed_headline": "Restore failed",
+      "failed_sub": "Nothing was restored.",
+      "crashed_sub": "The restore stopped unexpectedly.",
+      "detail_incompatible": "Not compatible",
+      "detail_not_supported": "Not supported here",
+      "detail_sim_mismatch": "Different SIM",
+      "detail_unchanged": "Skipped",
+      "detail_retrying": "Retry {{n}}",
+      "detail_failed": "Failed",
+      "note_ignored_one": "{{count}} setting not supported here",
+      "note_ignored_other": "{{count}} settings not supported here",
+      "note_dropped_one": "{{count}} entry skipped (invalid)",
+      "note_dropped_other": "{{count}} entries skipped (invalid)",
+      "state_done": "Done",
+      "state_running": "Running",
+      "state_retrying": "Retrying",
+      "state_failed": "Failed",
+      "state_skipped": "Skipped",
+      "state_pending": "Waiting",
+      "progress_aria": "Restore progress",
+      "ledger_aria": "Sections",
+      "reboot_notice": "A reboot is needed to finish. You can choose when after closing this.",
+      "failed_hint": "Failed sections kept their current settings. You can restore again.",
+      "close": "Close",
+      "stop": "Stop"
+    }
+  },
+  "adaptive_polling": {
+    "page_title": "Adaptive Polling",
+    "page_description": "Query the modem less often while no one has QManager open.",
+    "card_title": "Adaptive Polling",
+    "card_description": "Status refreshes at full rate while a page is open, then slows down.",
+    "tier": {
+      "active": "Full rate",
+      "idle": "Idle (slowed)",
+      "deep": "Deep idle (minimal)"
+    },
+    "tier_aria": "Polling now: {{tier}}",
+    "enabled": {
+      "label": "Slow down when idle",
+      "on": "Polling slows after the grace period below.",
+      "off": "Status refreshes at full rate all the time.",
+      "hint_label": "What keeps running",
+      "hint": "Alerts and the connection watchdog keep working at every rate. Only status refreshes slow down."
+    },
+    "fields": {
+      "active_grace": {
+        "label": "Grace period",
+        "consequence": "Full rate continues this long after the last page closes ({{min}} to {{max}} s)."
+      },
+      "idle_interval": {
+        "label": "Idle interval",
+        "consequence": "Time between refreshes while idle ({{min}} to {{max}} s)."
+      },
+      "idle_threshold": {
+        "label": "Deep idle after",
+        "consequence": "Idle time before refreshes slow further ({{min}} to {{max}} s)."
+      },
+      "deep_idle_interval": {
+        "label": "Deep idle interval",
+        "consequence": "Time between refreshes in deep idle ({{min}} to {{max}} s)."
+      }
+    },
+    "unit_seconds": "s",
+    "error_title": "Couldn't load adaptive polling",
+    "error_description": "The settings didn't load. Try again in a moment.",
+    "save_failed_status": "Not saved",
+    "default_status": "Default timings",
+    "toast_saved": "Adaptive polling saved.",
+    "toast_failed": "Couldn't save adaptive polling."
+  },
+  "web_port": {
+    "card_title": "Web Port",
+    "card_description": "The ports this interface listens on.",
+    "http_label": "HTTP port",
+    "http_consequence": "Plain HTTP only redirects to the HTTPS port.",
+    "https_label": "HTTPS port",
+    "https_consequence": "The encrypted port this interface is served on.",
+    "pending": "Opens at {{origin}} after you apply.",
+    "moving": "Moving to {{origin}}… If your browser asks, accept the certificate for the new port.",
+    "invalid": "Use a whole number from 1 to 65535.",
+    "same": "HTTP and HTTPS need different ports.",
+    "confirm_title": "Change the web port?",
+    "confirm_description": "QManager restarts on the new port and this page moves to {{origin}}. If the new port can't start, the old one comes back on its own.",
+    "confirm_action": "Change port",
+    "toast_failed": "Couldn't change the web port.",
+    "toast_unchanged": "Web port saved.",
+    "toast_unreachable": "The new port didn't answer, so QManager stayed on the old one.",
+    "toast_back_on": "The new port didn't start, so QManager went back to {{origin}}.",
+    "toast_timeout": "The port change hasn't finished yet, so reload this page in a moment.",
+    "open_origin": "Open",
+    "error_title": "Couldn't read the web port",
+    "error_description": "The ports didn't load. Try again in a moment."
   }
 }

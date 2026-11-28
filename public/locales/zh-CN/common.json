@@ -19,7 +19,8 @@
     "reconnect_modem": "重新连接调制解调器",
     "change_display_name": "更改显示名称",
     "change_password": "更改密码",
-    "toggle_theme": "切换主题"
+    "toggle_theme": "切换主题",
+    "discard": ""
   },
   "motion": {
     "label": "动画",
@@ -78,7 +79,10 @@
       "duplex": {
         "label": "双工模式",
         "caption": "同时收发",
-        "caption_down": "需要活动链路"
+        "caption_down": "需要活动链路",
+        "caption_half": "",
+        "value_full": "",
+        "value_half": ""
       },
       "negotiation": {
         "label": "协商模式",
@@ -108,7 +112,51 @@
       "consequence_absent": "此设备上没有可配置的以太网端口。",
       "toast_success": "链路速度已更新",
       "toast_error": "设置链路速度失败",
-      "toast_confirm_error": "无法确认新速度。请检查链路。"
+      "toast_confirm_error": "无法确认新速度。请检查链路。",
+      "apply": "",
+      "discard": ""
+    },
+    "lan_config": {
+      "card_title": "",
+      "card_description": "",
+      "label_gateway": "",
+      "help_gateway": "",
+      "label_subnet": "",
+      "help_subnet": "",
+      "action_apply": "",
+      "confirm_title": "",
+      "confirm_body": "",
+      "confirm_reconnect": "",
+      "confirm_action": "",
+      "applied_title": "",
+      "applied_body": "",
+      "applied_body_auto": "",
+      "reconnecting_title": "",
+      "reconnecting_auto_note": "",
+      "reconnecting_opening": "",
+      "toast_error_save": "",
+      "error_invalid_ipaddr": "",
+      "error_invalid_host_in_subnet": "",
+      "error_invalid_prefix": "",
+      "errors": {
+        "fetch_failed": "",
+        "save_failed": "",
+        "parse_failed": ""
+      },
+      "action_discard": "",
+      "toast_no_change": "",
+      "error_invalid_private": "",
+      "server_errors": {
+        "no_body": "",
+        "invalid_ipaddr": "",
+        "invalid_prefix": "",
+        "invalid_host_in_subnet": "",
+        "lan_read_failed": "",
+        "lan_save_failed": "",
+        "invalid_private_address": "",
+        "update_in_progress": "",
+        "lan_busy": ""
+      }
     }
   },
   "profile_override": {
@@ -130,6 +178,7 @@
     "switch_aria": "切换语言"
   },
   "login": {
+    "ssh_sync_failed": "",
     "brand_label": "QManager · Quectel 调制解调器管理",
     "welcome": "欢迎使用 QManager",
     "password_label": "密码",
@@ -147,7 +196,8 @@
       "toggle": "无法登录?",
       "intro": "如果您忘记了管理员密码,有两种恢复方式:",
       "option_reset": "通过 SSH 连接到设备并运行 {{command}} 以设置新的管理员密码。(需要先启用 SSH 访问。)",
-      "option_backup": "如果您保存了 .qmbackup 文件,请重新刷写设备固件,然后从该文件中恢复。"
+      "option_backup": "如果您保存了 .qmbackup 文件,请重新刷写设备固件,然后从该文件中恢复。",
+      "option_reset_command": ""
     },
     "session_expired_title": "会话已结束",
     "locked_title": "尝试次数过多",
@@ -156,7 +206,8 @@
     "attempts_left_one": "密码错误。还剩 {{count}} 次尝试。",
     "attempts_left_other": "密码错误。还剩 {{count}} 次尝试。",
     "password_to_manage": "输入密码以管理 {{hostname}}。",
-    "password_to_manage_bare": "请输入密码。"
+    "password_to_manage_bare": "请输入密码。",
+    "locked_countdown": ""
   },
   "overview": {
     "title": "调制解调器概览",
@@ -390,96 +441,10 @@
     "toast_ttl_error": "无法应用 TTL 和跳数限制。",
     "toast_mtu_applied": "已将所有 rmnet_data 接口的 MTU 设为 {{mtu}}。",
     "toast_mtu_cleared": "MTU 已恢复为运营商协商的数值。",
-    "toast_mtu_error": "无法应用 MTU。"
-  },
-  "customDns": {
-    "page": {
-      "title": "自定义 DNS",
-      "description": "选择调制解调器将局域网查询转发到哪个解析器。客户端仍然向调制解调器发起查询，改变的只是上游。"
-    },
-    "header": {
-      "refresh": "刷新"
-    },
-    "strip": {
-      "label": "当前转发至",
-      "state_custom": "你的解析器",
-      "state_carrier": "运营商下发",
-      "state_corrupt": "配置已损坏",
-      "state_unavailable": "未启用",
-      "unavailable_title": "dnsmasq 不在转发路径上",
-      "unavailable_body": "DNS 模式为 {{mode}}，局域网客户端直接向运营商解析，本页面的设置无法改变这一点。",
-      "read_failed_title": "无法读取 DNS 配置",
-      "read_failed_body": "调制解调器没有响应上一次读取。设备上未做任何更改 — 请点击刷新重试。"
-    },
-    "tiles": {
-      "upstream": {
-        "label_one": "上游 1",
-        "label_two": "上游 2",
-        "caption_attach": "来自上一次附着",
-        "caption_yours": "由你设置",
-        "caption_absent_carrier": "运营商只下发了一个解析器",
-        "caption_absent_custom": "你只设置了一个解析器",
-        "caption_none": "尚未配置任何解析器",
-        "caption_untrusted": "可能与 dnsmasq 实际使用的不一致"
-      },
-      "source": {
-        "label": "来源",
-        "value_custom": "自定义",
-        "value_carrier": "运营商",
-        "value_unknown": "未知",
-        "caption": "dnsmasq，{{mode}} 模式",
-        "caption_implicit": "dnsmasq，代理模式"
-      },
-      "fallback": {
-        "label": "运营商回退",
-        "value_on": "开启",
-        "value_off": "关闭",
-        "caption_on": "默认行为",
-        "caption_off": "你的解析器失败时不回退"
-      }
-    },
-    "corrupt": {
-      "title": "dnsmasq.conf 中 QManager 的配置块格式异常",
-      "body": "只有开始标记而没有结束标记，或者相反。下方的上游列表可能与 dnsmasq 实际使用的不一致。保存前请通过 SSH 检查 /etc/data/dnsmasq.conf。"
-    },
-    "unavailable": {
-      "title": "DNS 模式是 {{mode}}，不是 PROXY",
-      "body": "该模式位于 /etc/data/mobileap_cfg.xml，必须在 QManager 之外修改。在它变成 PROXY 之前，这里的保存不会产生任何效果。"
-    },
-    "card": {
-      "title": "上游解析器",
-      "description": "最多四个。dnsmasq 会原地重新加载 — 无需重启，链路不中断。",
-      "save": "保存并应用",
-      "add": "添加解析器",
-      "blocked_unavailable": "dnsmasq 不在转发路径上，这样做不会有任何效果。"
-    },
-    "rows": {
-      "enabled": {
-        "label": "使用我自己的解析器",
-        "consequence": "关闭后，dnsmasq 会回到运营商在上一次附着时下发的解析器。"
-      },
-      "resolver": {
-        "label": "解析器 {{n}}",
-        "consequence": "IPv4 或 IPv6。粘贴以逗号分隔的列表可一次填入多行。",
-        "consequence_off": "先开启自定义解析器才能添加。",
-        "placeholder": "1.1.1.1",
-        "remove": "移除解析器 {{n}}"
-      },
-      "ignore_carrier": {
-        "label": "绝不回退到运营商 DNS",
-        "consequence": "开启后，当你的解析器不可达时查询直接失败，而不会泄漏给运营商。"
-      }
-    },
-    "delta": {
-      "unsaved": "未保存"
-    },
-    "errors": {
-      "invalid_address": "不是有效的 IPv4 或 IPv6 地址。",
-      "fix_rows": "保存前请修正高亮的解析器。",
-      "empty_when_enabled": "请添加一个解析器，或关闭自定义解析器。"
-    },
-    "toast_saved": "自定义 DNS 已应用。缓存刷新期间，局域网客户端可能会有短暂停顿。",
-    "toast_error": "无法应用 DNS 变更。"
+    "toast_mtu_error": "无法应用 MTU。",
+    "toast_mtu_disable_error": "",
+    "mtu_load_error": "",
+    "ttl_load_error": ""
   },
   "ipPassthrough": {
     "page": {
@@ -547,6 +512,7 @@
       "mode_eth": "以太网",
       "mode_usb": "USB",
       "target_automatic": "自动",
+      "target_device": "",
       "target_manual": "按 MAC 地址",
       "nat_on": "启用 NAT",
       "nat_off": "不启用 NAT",
@@ -573,174 +539,20 @@
       "retry": "重试",
       "card_unread": "调制解调器尚未响应，在首次读取完成前没有可更改的内容。",
       "mac_invalid": "请输入完整的 MAC 地址，即六组两位十六进制数字。",
-      "no_changes": "尚未有任何更改。"
-    }
-  },
-  "trafficEngine": {
-    "page": {
-      "title": "流量引擎",
-      "description": "通过内置的绕过引擎，规避运营商 DPI 对视频流媒体等流量的限速。"
+      "no_changes": "尚未有任何更改。",
+      "device_unpicked": ""
     },
-    "binary_op_failed": "引擎二进制操作失败",
-    "status": {
-      "running": "运行中",
-      "stopped": "已停止",
-      "restarting": "重启中",
-      "error": "错误"
-    },
-    "strip": {
-      "label": "实时状态",
-      "stale_title": "无响应",
-      "stale_body": "最近一次轮询没有响应。下面的数值沿用上一次读取的结果，引擎仍在按原状态运行。",
-      "unavailable_title": "无法读取引擎状态",
-      "unavailable_body": "调制解调器没有响应。引擎仍按原状态运行。这是上报失败，不是服务中断。"
-    },
-    "tiles": {
-      "engine": {
-        "label": "引擎",
-        "caption_uptime": "已运行 {{uptime}}",
-        "caption_stopped": "未重定向任何流量",
-        "caption_restarting": "正在应用模式变更",
-        "caption_error": "引擎无法启动"
-      },
-      "packets": {
-        "label": "已处理",
-        "caption_rate": "{{n}} 包/秒",
-        "caption_idle": "引擎未运行"
-      },
-      "scope": {
-        "label": "作用范围",
-        "value_domains": "{{count}} 个域名",
-        "value_all": "全部流量",
-        "value_none": "无",
-        "caption_list": "来自目标列表",
-        "caption_all": "所有 TCP 80/443",
-        "caption_saved": "已保存 {{count}} 个域名"
-      },
-      "rule": {
-        "label": "重定向规则",
-        "value_active": "已生效",
-        "value_removed": "已移除",
-        "caption": "tcp 80,443 → 端口 989"
-      }
-    },
-    "mode": {
-      "title": "绕过模式",
-      "description": "同一时间只有一种模式占用引擎。切换会重启引擎。",
-      "aria": "绕过模式",
-      "off": "关闭",
-      "off_hint": "不重定向任何流量。引擎停止，规则被移除。",
-      "video_optimizer": "视频优化",
-      "video_optimizer_hint": "仅处理与目标列表匹配的连接，子域名同样匹配。",
-      "full_bypass": "全量绕过",
-      "full_bypass_hint": "处理每一条 TCP 80/443 连接。无需目标列表，没有可配置项。",
-      "toast_off": "绕过引擎已停止",
-      "toast_video_optimizer": "现由视频优化处理流量",
-      "toast_full_bypass": "现由全量绕过处理流量",
-      "toast_error": "无法切换绕过模式"
-    },
-    "takeover": {
-      "title": "切换到{{mode}}？",
-      "description": "切换模式会重启引擎，正在经过引擎的所有连接会短暂中断。",
-      "confirm": "切换",
-      "cancel": "取消"
-    },
-    "targets": {
-      "title": "优化目标",
-      "description": "引擎将进行失步处理的域名。保存后立即生效，无需重启。",
-      "count": "{{count}} / {{max}}",
-      "count_saved": "已保存 {{count}} 个",
-      "idle_title": "全量绕过开启时该列表不生效",
-      "idle_body": "全量绕过会对每一条连接进行失步处理，因此没有需要匹配的列表。你保存的 {{count}} 个域名会保留，切回视频优化后立即重新生效。",
-      "idle_body_empty": "全量绕过会对每一条连接进行失步处理，因此没有需要匹配的列表。你在此添加的内容会在切回视频优化后立即生效。"
-    },
-    "hostlist": {
-      "empty": "还没有域名。添加一个开始使用。",
-      "invalid": "请输入有效域名（字母、数字、点、短横线）。",
-      "duplicate": "该域名已在列表中。",
-      "limit": "列表最多可容纳 300 个域名。",
-      "add": "添加域名",
-      "remove": "移除 {{domain}}",
-      "saved": "域名列表已保存",
-      "save_failed": "无法保存域名列表",
-      "too_long": "域名最多 {{max}} 个字符。",
-      "import_action": "从 .txt 文件导入目标",
-      "export_action": "将目标导出为 .txt 文件",
-      "import_too_large": "文件太大。请选择小于 {{limit}} KB 的目标列表。",
-      "import_unreadable": "无法读取该文件。",
-      "import_empty": "该文件中没有域名",
-      "import_none": "没有导入任何域名",
-      "import_added_one": "已导入 1 个域名",
-      "import_added_other": "已导入 {{count}} 个域名",
-      "import_invalid_one": "有 1 行不是有效域名。",
-      "import_invalid_other": "有 {{count}} 行不是有效域名。",
-      "import_duplicate_one": "有 1 个已在列表中。",
-      "import_duplicate_other": "有 {{count}} 个已在列表中。",
-      "import_dropped_one": "有 1 个超出 {{max}} 个域名的上限。",
-      "import_dropped_other": "有 {{count}} 个超出 {{max}} 个域名的上限。",
-      "restore_action": "恢复出厂目标列表",
-      "restore_title": "恢复出厂目标列表？",
-      "restore_body_one": "这会替换你已保存的 1 个域名。如需保留，请先导出列表。",
-      "restore_body_other": "这会替换你已保存的 {{count}} 个域名。如需保留，请先导出列表。",
-      "restore_body_empty": "目标列表为空，不会替换你的任何内容。",
-      "restore_body_defaults_one": "出厂列表包含 1 个域名。",
-      "restore_body_defaults_other": "出厂列表包含 {{count}} 个域名。",
-      "restore_confirm": "恢复默认",
-      "restore_cancel": "取消",
-      "restore_done": "已恢复出厂目标列表",
-      "restore_failed": "无法恢复出厂列表"
-    },
-    "verify": {
-      "title": "绕过效果测试",
-      "description": "测量在当前连接上绕过 DPI 是否能加快受限视频 CDN，并与未受限参考进行比较。测试使用临时代理，因此不会检查你当前运行的引擎。",
-      "run": "运行测试",
-      "run_again": "重新测试",
-      "idle_heading": "尚未进行测试",
-      "needs_binary_heading": "引擎尚未安装",
-      "running": "测试中…",
-      "progress": "正在下载同一个文件两次：一次直连，一次通过临时代理，另加一次参考样本。需要几分钟。",
-      "timeout": "测试未在限定时间内完成。",
-      "error": "无法启动测试",
-      "needs_binary": "请先安装引擎程序。",
-      "headline_sub": "本次测试中绕过后的提速倍数",
-      "without": "未绕过",
-      "with": "已绕过",
-      "line_speed": "线路速度",
-      "unit": "Mbps",
-      "source_speedtest": "speedtest.net",
-      "source_cloudflare": "Cloudflare",
-      "throttled": "受限速",
-      "unthrottled": "未受限速",
-      "scope": "此测试测量的是连接本身，不是正在运行的引擎。请查看上方的实时状态。",
-      "footnote": "线路速度是参照值：三项都慢说明线路本身慢，而不是被限速。"
-    },
-    "forceTcp": {
-      "title": "QUIC → 强制 TCP",
-      "description": "阻断 QUIC (UDP 443)，让 YouTube、Discord 等应用回落到基于 TCP 的 HTTPS，从而应用引擎的绕过。",
-      "independent": "独立于流量引擎",
-      "label": "将 QUIC 强制走 TCP",
-      "hint": "立即生效。两种模式下都可用，未启用任何模式时同样可用。",
-      "switch_aria": "切换 QUIC 强制走 TCP",
-      "caveat_title": "可能导致播放更慢",
-      "caveat": "可能更慢：如果网络已经以全速传输 QUIC，强制走 TCP 会增加延迟（以及绕过的额外一跳）。当 QUIC 视频受限速或不可靠时再开启。",
-      "read_error": "无法读取 QUIC 规则",
-      "toast_enabled": "已启用 QUIC 强制 TCP",
-      "toast_disabled": "已禁用 QUIC 强制 TCP"
-    },
-    "uninstall": {
-      "button": "卸载引擎二进制",
-      "title": "确定卸载引擎二进制？",
-      "description": "此操作将停止流量引擎（如正在运行）并移除引擎二进制文件。确定要继续吗？如果您改变主意，可以稍后重新安装。",
-      "confirm": "卸载",
-      "cancel": "取消"
-    },
-    "onboarding": {
-      "heading": "绕过引擎尚未安装",
-      "body": "QManager 会下载一个小的引擎程序，并在安装前用固定的校验和进行验证。安装完成后会自动启动。",
-      "installing_heading": "正在安装绕过引擎",
-      "installing_body": "正在依据发行清单和固定校验和验证下载内容。网络正常时约需一分钟。",
-      "failed_heading": "安装未能完成",
-      "install": "下载并安装"
+    "device": {
+      "label": "",
+      "placeholder": "",
+      "scanning": "",
+      "error": "",
+      "empty": "",
+      "retry": "",
+      "rescan": "",
+      "rescan_label": "",
+      "enter_manually": "",
+      "unknown": ""
     }
   },
   "networkEvents": {
@@ -1101,7 +913,6 @@
     "connection": {
       "title": "连接",
       "description": "此调制解调器是否加入 tailnet，以及加入后的行为方式。",
-      "version": "v{{version}}",
       "connect": "连接",
       "connecting": "正在连接…",
       "disconnect": "断开",
@@ -1125,7 +936,15 @@
       "sshLocked": "连接 Tailscale 后才能更改此设置。",
       "sshDialogTitle": "开启 Tailscale SSH？",
       "sshDialogDescription": "tailnet 成员将能够根据你的 Tailscale 管理后台 ACL 通过 SSH 连接此调制解调器。请先检查该策略，确保只有你允许的人能访问此设备。",
-      "sshConfirm": "开启 SSH"
+      "sshConfirm": "开启 SSH",
+      "on": "",
+      "off": "",
+      "updating": "",
+      "updateAvailable": "",
+      "updateDialogTitle": "",
+      "updateDialogDescription": "",
+      "update": "",
+      "updateLogTitle": ""
     },
     "device": {
       "title": "此设备",
@@ -1138,7 +957,8 @@
       "magicDns": "MagicDNS",
       "relay": "DERP 中继",
       "emptyTitle": "尚未加入 tailnet",
-      "emptyDescription": "连接 Tailscale 后，此调制解调器的地址、DNS 名称和中继信息会显示在这里。"
+      "emptyDescription": "连接 Tailscale 后，此调制解调器的地址、DNS 名称和中继信息会显示在这里。",
+      "version": ""
     },
     "peers": {
       "title": "网络节点",
@@ -1217,7 +1037,11 @@
       "uninstalled": "Tailscale 已卸载",
       "uninstallFailed": "无法卸载 Tailscale",
       "copied": "命令已复制",
-      "copyFailed": "无法复制命令"
+      "copyFailed": "无法复制命令",
+      "installed": "",
+      "installFailed": "",
+      "updated": "",
+      "updateFailed": ""
     }
   },
   "watchdog": {
@@ -1287,6 +1111,10 @@
       "disabled": {
         "label": "已禁用",
         "blurb": "服务正在运行，但功能已关闭。"
+      },
+      "ssr_hold": {
+        "label": "",
+        "blurb": ""
       }
     },
     "master": {
@@ -1298,6 +1126,7 @@
       "aria": "恢复阶梯",
       "status": {
         "blocked": "需要插槽",
+        "done": "",
         "running": "正在运行"
       },
       "tier1": {
@@ -1321,7 +1150,14 @@
         "capLead": "最多",
         "capUnit": "每小时"
       },
-      "tierAria": "启用此恢复步骤：{{name}}"
+      "tierAria": "启用此恢复步骤：{{name}}",
+      "failback": {
+        "name": "",
+        "consequence": "",
+        "lead": "",
+        "unit": "",
+        "intervalLabel": ""
+      }
     },
     "detection": {
       "title": "检测",
@@ -1352,11 +1188,23 @@
         "none": "没有启用任何步骤，因此不会运行。",
         "invalid": "输入有效的检测值以预览时间线。",
         "stopped": "第 3 步没有可用插槽，因此流程会在此停止。"
+      },
+      "ssr": {
+        "label": "",
+        "unit": "",
+        "caption": ""
+      },
+      "quality": {
+        "label": "",
+        "unit": "",
+        "caption": "",
+        "link": ""
       }
     },
     "activity": {
       "title": "恢复活动",
       "description": "看门狗执行过的操作，最新优先。",
+      "tier4Reboot": "",
       "type": {
         "recovery": "恢复",
         "failover": "SIM 卡故障转移"
@@ -1405,7 +1253,10 @@
       "probeInterval": "必须介于 1 到 60 秒之间",
       "cooldown": "必须介于 10 到 300 秒之间",
       "maxReboots": "必须介于 1 到 10 之间",
-      "backupSim": "选择备用 SIM 卡插槽以启用故障转移"
+      "backupSim": "选择备用 SIM 卡插槽以启用故障转移",
+      "ssrGrace": "",
+      "qualityConsecutive": "",
+      "recheckInterval": ""
     },
     "failover": {
       "title": "正在使用备用 SIM 卡",
@@ -1503,13 +1354,23 @@
       "modem": "这些数值来自设备，而设备未响应。",
       "addresses": "地址由同一次请求读取。"
     },
+    "credits": {
+      "title": "",
+      "description": "",
+      "roles": {
+        "apn": "",
+        "logos": "",
+        "icons": ""
+      }
+    },
     "qmanager": {
       "title": "关于 QManager",
       "note": "你好！我是 Rus。QManager 是 QuecManager 的最新一代，采用了比前代更新、更可靠的实现方式——同时依然把面向高级用户的技术设置与面向新手的简化界面结合在一起。特别感谢 iamromulan、clndwhr 和 Wutang Clan！",
       "copyright": "© {{year}} QManager。保留所有权利。",
       "repository": "GitHub 仓库",
       "release_notes": "发行说明",
-      "support": "支持本项目"
+      "support": "支持本项目",
+      "credits": ""
     }
   },
   "support": {
@@ -1558,5 +1419,95 @@
       "title": "支持本项目",
       "body": "QManager 是一个业余维护、完全免费的项目。如果它对你的设备有帮助，一点小小的支持就能让它继续走下去——无论如何都不会有付费墙。"
     }
+  },
+  "not_found": {
+    "scene_label": "",
+    "title": "",
+    "description": "",
+    "home": "",
+    "footer": ""
+  },
+  "account": {
+    "photo_invalid": "",
+    "photo_updated": "",
+    "change_photo_aria": "",
+    "name_placeholder": "",
+    "name_saved": "",
+    "name_save_failed": "",
+    "reconnect_description": "",
+    "disconnecting_description": "",
+    "reconnecting_description": "",
+    "reconnect_action": "",
+    "reconnect_complete": "",
+    "reconnect_failed": "",
+    "reboot_description": "",
+    "reboot_sent": "",
+    "reboot_now": ""
+  },
+  "pending_reboot": {
+    "title": "",
+    "reboot_now": "",
+    "rebooting": "",
+    "dismiss": "",
+    "reboot_failed_toast": "",
+    "description": {
+      "config_restore": "",
+      "imei": "",
+      "mbn": "",
+      "default": ""
+    },
+    "dismiss_dialog": {
+      "title": "",
+      "description": "",
+      "keep": "",
+      "confirm": ""
+    }
+  },
+  "reboot_page": {
+    "phase": {
+      "shutting_down": "",
+      "restarting": "",
+      "almost_ready": "",
+      "overtime": ""
+    },
+    "subtitle": {
+      "normal": "",
+      "overtime": ""
+    },
+    "timer_aria_one": "",
+    "timer_aria_other": "",
+    "timer_overtime_aria": "",
+    "seconds_unit": "",
+    "escape": ""
+  },
+  "change_password": {
+    "title": "",
+    "description": "",
+    "current_label": "",
+    "new_label": "",
+    "confirm_label": "",
+    "match": "",
+    "mismatch": "",
+    "error_weak": "",
+    "error_weak_strong": "",
+    "error_mismatch": "",
+    "failed_toast": "",
+    "cancel": "",
+    "submit": "",
+    "submitting": ""
+  },
+  "password_rules": {
+    "requirements_label": "",
+    "rule": {
+      "length": "",
+      "uppercase": "",
+      "lowercase": "",
+      "number": ""
+    },
+    "met": "",
+    "not_met": "",
+    "strong_label": "",
+    "strong_hint_label": "",
+    "strong_hint": ""
   }
 }
