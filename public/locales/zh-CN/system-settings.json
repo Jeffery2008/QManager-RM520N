@@ -1,10 +1,18 @@
 {
   "known_sims": {
-    "row_label": "已知 SIM 卡",
-    "info_aria": "已知 SIM 卡信息",
-    "tooltip": "QManager 会记住已识别过的 SIM 卡，仅在插入全新 SIM 卡时才提醒您。清除会忘记除当前插入之外的所有 SIM 卡。",
-    "remembered_count_one": "{{count}} 张",
-    "remembered_count_other": "{{count}} 张",
+    "section": "",
+    "rows": {
+      "count": {
+        "consequence": "",
+        "label": ""
+      }
+    },
+    "states": {
+      "empty_title": "",
+      "empty_description": "",
+      "error_title": "",
+      "error_description": ""
+    },
     "clear_button": "清除",
     "clear_dialog_title": "清除已知 SIM 卡？",
     "clear_dialog_description": "这将忘记 QManager 识别过的所有 SIM 卡，但保留当前插入的这张——因此您正在使用的 SIM 卡不会被标记为新卡。之前用过的 SIM 卡在下次插入时会再次提醒。",
@@ -12,63 +20,8 @@
     "clear_dialog_clearing": "正在清除…",
     "toast_cleared": "已清除已知 SIM 卡",
     "toast_clear_failed": "清除已知 SIM 卡失败",
-    "remembered_unknown": "无法读取已记住的数量"
-  },
-  "sim_registry": {
-    "title": "已跟踪的 SIM 卡",
-    "description": "QManager 记录过的所有 SIM 卡，以及它们是否仍会触发新卡提醒。",
-    "carrier_unknown": "未知运营商",
-    "no_phone_number": "未分配号码",
-    "added_on": "添加于 {{date}}",
-    "added_unknown": "在开始记录之前添加",
-    "badge_active": "使用中",
-    "badge_alerts_on": "提醒已开启",
-    "badge_alerts_off": "提醒已关闭",
-    "show_alert": "开启提醒",
-    "restoring": "正在开启…",
-    "retry": "重试",
-    "stale_notice": "显示的是上次成功读取的数据，设备未响应最近一次刷新。",
-    "empty_title": "尚未记录任何 SIM 卡",
-    "empty_description": "QManager 会在 SIM 卡首次插入时记录它。插入一张 SIM 卡即可开始。",
-    "toast_restored": "已重新开启提醒",
-    "toast_restored_detail": "当插入 {{carrier}} SIM 卡时，QManager 会再次提醒。",
-    "toast_restore_failed": "无法重新开启提醒",
-    "remembered_count_one": "已记住 {{count}} 张 SIM 卡",
-    "remembered_count_other": "已记住 {{count}} 张 SIM 卡",
-    "toast_cleared_partial": "已清除，但列表可能不是最新的",
-    "toast_cleared_partial_detail": "设备已忘记这些 SIM 卡，但未能更新此列表。请重新加载页面查看。",
-    "error_title": "无法读取已跟踪的 SIM 卡",
-    "error_description": "设备未响应。没有任何记录被删除——这只是读取失败，列表仍保存在调制解调器上。"
-  },
-  "ssh": {
-    "card": {
-      "title": "SSH 访问",
-      "description": "通过 SSH 登录本调制解调器的 root 密码。它与您登录 QManager 所用的密码是分开的。",
-      "save": "更新 SSH 密码"
-    },
-    "fields": {
-      "current": {
-        "label": "您的 QManager 密码",
-        "consequence": "用于验证是您本人。这是您登录网页时使用的密码，不是 SSH 密码。"
-      },
-      "new": {
-        "label": "新的 SSH 密码",
-        "consequence": "至少六个字符。立即生效——已建立的 SSH 会话不会中断。"
-      },
-      "confirm": {
-        "label": "确认新密码"
-      }
-    },
-    "toggle": {
-      "show": "显示密码",
-      "hide": "隐藏密码"
-    },
-    "errors": {
-      "too_short": "SSH 密码至少需要 6 个字符。",
-      "mismatch": "两次输入的密码不一致。",
-      "failed": "SSH 密码修改失败。"
-    },
-    "toast_saved": "SSH 密码已更新。"
+    "toast_cleared_partial": "",
+    "toast_cleared_partial_detail": ""
   },
   "page": {
     "title": "系统设置",
@@ -98,13 +51,13 @@
     "sims": {
       "eyebrow": "已跟踪的 SIM 卡",
       "caption_none": "尚未记录任何内容",
-      "caption_all_alerting": "全部会触发新卡提醒",
-      "caption_muted_one": "{{count}} 张已关闭新卡提醒",
-      "caption_muted_other": "{{count}} 张已关闭新卡提醒"
+      "caption_known": "",
+      "caption_unread": ""
     },
     "stale": "上次确认的读数"
   },
   "preferences": {
+    "section": "",
     "card": {
       "title": "时间与单位",
       "description": "本调制解调器如何计时，以及各项读数所使用的单位。",
@@ -142,7 +95,8 @@
     },
     "toast": {
       "saved": "偏好设置已保存",
-      "failed": "无法保存偏好设置"
+      "failed": "无法保存偏好设置",
+      "tz_not_applied": ""
     }
   },
   "reboot": {
@@ -166,6 +120,12 @@
         "label": "重复于",
         "consequence": "未选择任何日期时，该计划永远不会触发。",
         "rail": "每周重启日"
+      },
+      "clock": {
+        "label": "",
+        "consequence": "",
+        "unsynced": "",
+        "unsynced_consequence": ""
       }
     },
     "days": {
@@ -202,7 +162,9 @@
       "rejected": {
         "no_days": "请至少选择一天，或关闭该计划。",
         "invalid_time": "该时间无效。请使用24小时制的 HH:MM 格式。",
-        "network": "无法连接到设备以保存。请检查网络连接后重试。"
+        "network": "无法连接到设备以保存。请检查网络连接后重试。",
+        "invalid_day": "",
+        "missing_enabled": ""
       }
     }
   },
@@ -211,7 +173,8 @@
       "title": "系统日志",
       "description": "QManager 将日志保存在调制解调器的内存中，因此每次重启后都会清空，也不会磨损闪存。在这里筛选日志，查看各个组件的运行情况。",
       "refresh": "刷新",
-      "clear": "清除日志"
+      "clear": "清除日志",
+      "copy": ""
     },
     "band": {
       "head": "日志健康",
@@ -316,7 +279,9 @@
     "toast": {
       "cleared": "系统日志已清除",
       "clear_failed": "无法清除系统日志",
-      "refresh_failed": "无法读取系统日志"
+      "refresh_failed": "无法读取系统日志",
+      "copied": "",
+      "copy_failed": ""
     }
   },
   "languages": {
@@ -466,6 +431,7 @@
       "unsaved": "未保存",
       "save": "保存探测目标",
       "save_failed": "无法保存探测目标",
+      "cadence_clear_failed": "",
       "leg": {
         "host_1": "主机名目标 1",
         "host_2": "主机名目标 2",
@@ -483,7 +449,8 @@
         "action": "恢复默认值"
       },
       "toast": {
-        "saved": "探测目标已保存"
+        "saved": "探测目标已保存",
+        "cadence_cleared": ""
       },
       "validation": {
         "empty": "请输入一个目标。",
@@ -502,15 +469,24 @@
       },
       "group": {
         "hostnames": "主机名",
-        "fallback": "IPv4 回退"
+        "fallback": "IPv4 回退",
+        "sensitivity": ""
       },
       "fallback_hint": "无需 DNS，因此解析器故障不会被判定为中断。",
       "fallback_hint_label": "关于 IPv4 回退",
       "interval": {
         "label": "探测间隔",
-        "value": "每 {{seconds}} 秒"
+        "value": "每 {{seconds}} 秒",
+        "override": "",
+        "use_profile": ""
       },
-      "failed": "保存失败"
+      "failed": "保存失败",
+      "profile": {
+        "sensitive": "",
+        "regular": "",
+        "relaxed": "",
+        "quiet": ""
+      }
     },
     "thresholds": {
       "title": "质量阈值",
@@ -524,7 +500,8 @@
       "preset": {
         "standard": "标准",
         "tolerant": "宽松",
-        "very_tolerant": "非常宽松"
+        "very_tolerant": "非常宽松",
+        "custom": ""
       },
       "unsaved": "未保存",
       "save": "保存阈值",
@@ -539,13 +516,15 @@
       },
       "row": {
         "flags": "达到以下条件后标记",
-        "now": "当前"
+        "now": "当前",
+        "limit": ""
       },
       "flags": {
         "latency_one": "{{count}} 次采样超过 {{ms}} 毫秒",
         "latency_other": "{{count}} 次采样超过 {{ms}} 毫秒",
         "loss_one": "{{count}} 次采样达到 {{pct}}% 或更高",
-        "loss_other": "{{count}} 次采样达到 {{pct}}% 或更高"
+        "loss_other": "{{count}} 次采样达到 {{pct}}% 或更高",
+        "pending": ""
       },
       "now": {
         "latency": "{{ms}} 毫秒",
@@ -556,7 +535,14 @@
         "over_loss": "超过 {{pct}}% 限值"
       },
       "default_chip": "内置默认值",
-      "failed": "保存失败"
+      "failed": "保存失败",
+      "unit": {
+        "latency": "",
+        "loss": ""
+      },
+      "validation": {
+        "range": ""
+      }
     }
   },
   "software_update": {
@@ -577,7 +563,8 @@
       "read_full_notes": "阅读完整发行说明",
       "rebooting": "重启中…",
       "verifying": "校验中…",
-      "retry_download": "重新下载"
+      "retry_download": "重新下载",
+      "reboot_now": ""
     },
     "band": {
       "head": "更新状态",
@@ -712,7 +699,8 @@
       "failed_check": "QManager 未能读取版本列表。本调制解调器上的版本未被改动，这只是一次读取失败，并非损失。",
       "failed_download": "下载没有完成，因此没有安装任何内容。设备上原有的版本未被改动。",
       "versions": "这里的每个选项都会重启调制解调器，而较旧的版本可能会撤销较新版本引入的设置。",
-      "failed_install": "安装没有完成，因此调制解调器上的文件可能是混杂的。重新安装可让它回到一个确定的版本。"
+      "failed_install": "安装没有完成，因此调制解调器上的文件可能是混杂的。重新安装可让它回到一个确定的版本。",
+      "stalled": ""
     },
     "notes": {
       "title": "更新内容",
@@ -789,6 +777,12 @@
       "auto_on": "已启用自动更新",
       "auto_off": "已关闭自动更新",
       "save_failed": "无法保存该偏好设置"
+    },
+    "stall_dialog": {
+      "title": "",
+      "description": "",
+      "cancel": "",
+      "confirm": ""
     }
   },
   "at_terminal": {
@@ -831,6 +825,7 @@
       "cancel": "取消"
     },
     "rules": {
+      "not_at": "",
       "qscanfreq": "此处拒绝执行频率扫描。扫描期间射频会停止工作数分钟，而且全程没有任何显示——请改用“小区扫描”页面，它会报告进度并且可以中止。",
       "qscan": "此处拒绝执行网络扫描。扫描期间射频会停止工作数分钟，而且全程没有任何显示——请改用“小区扫描”页面，它会报告进度并且可以中止。",
       "resetfactory": "此处拒绝执行恢复出厂设置。它会一次性清空调制解调器的所有设置，包括 QManager 连接设备所需的那些，并且本页面无法撤销。",
@@ -973,5 +968,269 @@
         "description": "调制解调器上的 shell 已退出，因此这个终端已关闭。没有任何内容丢失——需要时随时开始新会话。"
       }
     }
+  },
+  "passwords": {
+    "card": {
+      "title": "",
+      "description": ""
+    },
+    "tabs": {
+      "aria": "",
+      "web": "",
+      "ssh": ""
+    },
+    "web": {
+      "label": "",
+      "consequence": "",
+      "dialog_title": "",
+      "dialog_description": ""
+    },
+    "ssh": {
+      "label": "",
+      "consequence": "",
+      "dialog_title": "",
+      "dialog_description": "",
+      "toast_saved": ""
+    },
+    "continue": "",
+    "toggle": {
+      "show": "",
+      "hide": ""
+    },
+    "dialog": {
+      "new_label": "",
+      "confirm_label": "",
+      "match": "",
+      "mismatch": "",
+      "cancel": "",
+      "save": ""
+    },
+    "errors": {
+      "too_short": "",
+      "weak": "",
+      "verify_failed": "",
+      "change_failed": "",
+      "invalid_password_one": "",
+      "invalid_password_other": "",
+      "rate_limited_one": "",
+      "rate_limited_other": ""
+    }
+  },
+  "device_access": {
+    "page": {
+      "title": "",
+      "description": ""
+    }
+  },
+  "config_backup": {
+    "page_title": "",
+    "page_description": "",
+    "excluded": "",
+    "not_supported_here": "",
+    "mutex_parent_on": "",
+    "mutex_member_on": "",
+    "group_count": "",
+    "reboot_failed_toast": "",
+    "reboot_now_button": "",
+    "groups": {
+      "connection": "",
+      "local_network": "",
+      "monitoring": "",
+      "system": ""
+    },
+    "sections": {
+      "network_mode": "",
+      "bands": "",
+      "apn": "",
+      "tower_lock": "",
+      "ttl_mtu": "",
+      "imei": "",
+      "profiles": "",
+      "scenarios": "",
+      "ip_passthrough": "",
+      "sms": "",
+      "lan": "",
+      "custom_dns": "",
+      "ethernet": "",
+      "traffic_engine": "",
+      "watchdog": "",
+      "quality": "",
+      "sites": "",
+      "alerts": "",
+      "adaptive_polling": "",
+      "system": ""
+    },
+    "create": {
+      "card_title": "",
+      "card_description": "",
+      "group_encryption": "",
+      "passphrase_label": "",
+      "warning": "",
+      "passphrase_too_short": "",
+      "confirm_label": "",
+      "confirm_match": "",
+      "confirm_mismatch": "",
+      "passphrase_show_aria": "",
+      "passphrase_hide_aria": "",
+      "selected_count_one": "",
+      "selected_count_other": "",
+      "stage_collecting": "",
+      "stage_encrypting": "",
+      "stage_downloading": "",
+      "button_default": "",
+      "toast_success": "",
+      "toast_unavailable_one": "",
+      "toast_unavailable_other": "",
+      "toast_failed": "",
+      "load_failed_title": "",
+      "load_failed_description": "",
+      "empty_title": "",
+      "empty_description": ""
+    },
+    "restore": {
+      "card_title": "",
+      "card_description": "",
+      "idle_title": "",
+      "reading_title": "",
+      "idle_description": "",
+      "upload_button": "",
+      "button_choose_another": "",
+      "read_failed": "",
+      "receipt_model": "",
+      "receipt_created": "",
+      "passphrase_label": "",
+      "passphrase_consequence": "",
+      "password_incorrect": "",
+      "button_unlock": "",
+      "model_warning": "",
+      "backup_first": "",
+      "backup_first_action": "",
+      "overwrite_label": "",
+      "note_reboot": "",
+      "note_lan": "",
+      "note_profiles_imei": "",
+      "profiles_imei_confirm_one": "",
+      "profiles_imei_confirm_other": "",
+      "imei_confirm": "",
+      "selected_count_one": "",
+      "selected_count_other": "",
+      "button_apply": "",
+      "toast_success": "",
+      "toast_partial_one": "",
+      "toast_partial_other": "",
+      "toast_cancelled_one": "",
+      "toast_cancelled_other": "",
+      "toast_crashed": "",
+      "toast_failed": "",
+      "toast_stop_failed": "",
+      "reboot_dialog_title": "",
+      "reboot_dialog_description": "",
+      "reboot_later_button": ""
+    },
+    "pipeline": {
+      "title": "",
+      "description": "",
+      "preparing": "",
+      "stopping": "",
+      "step_progress": "",
+      "done_headline": "",
+      "done_sub_one": "",
+      "done_sub_other": "",
+      "partial_headline": "",
+      "partial_sub": "",
+      "cancelled_sub": "",
+      "failed_headline": "",
+      "failed_sub": "",
+      "crashed_sub": "",
+      "detail_incompatible": "",
+      "detail_not_supported": "",
+      "detail_sim_mismatch": "",
+      "detail_unchanged": "",
+      "detail_retrying": "",
+      "detail_failed": "",
+      "note_ignored_one": "",
+      "note_ignored_other": "",
+      "note_dropped_one": "",
+      "note_dropped_other": "",
+      "state_done": "",
+      "state_running": "",
+      "state_retrying": "",
+      "state_failed": "",
+      "state_skipped": "",
+      "state_pending": "",
+      "progress_aria": "",
+      "ledger_aria": "",
+      "reboot_notice": "",
+      "failed_hint": "",
+      "close": "",
+      "stop": ""
+    }
+  },
+  "adaptive_polling": {
+    "page_title": "",
+    "page_description": "",
+    "card_title": "",
+    "card_description": "",
+    "tier": {
+      "active": "",
+      "idle": "",
+      "deep": ""
+    },
+    "tier_aria": "",
+    "enabled": {
+      "label": "",
+      "on": "",
+      "off": "",
+      "hint_label": "",
+      "hint": ""
+    },
+    "fields": {
+      "active_grace": {
+        "label": "",
+        "consequence": ""
+      },
+      "idle_interval": {
+        "label": "",
+        "consequence": ""
+      },
+      "idle_threshold": {
+        "label": "",
+        "consequence": ""
+      },
+      "deep_idle_interval": {
+        "label": "",
+        "consequence": ""
+      }
+    },
+    "unit_seconds": "",
+    "error_title": "",
+    "error_description": "",
+    "save_failed_status": "",
+    "default_status": "",
+    "toast_saved": "",
+    "toast_failed": ""
+  },
+  "web_port": {
+    "card_title": "",
+    "card_description": "",
+    "http_label": "",
+    "http_consequence": "",
+    "https_label": "",
+    "https_consequence": "",
+    "pending": "",
+    "moving": "",
+    "invalid": "",
+    "same": "",
+    "confirm_title": "",
+    "confirm_description": "",
+    "confirm_action": "",
+    "toast_failed": "",
+    "toast_unchanged": "",
+    "toast_unreachable": "",
+    "toast_back_on": "",
+    "toast_timeout": "",
+    "open_origin": "",
+    "error_title": "",
+    "error_description": ""
   }
 }
